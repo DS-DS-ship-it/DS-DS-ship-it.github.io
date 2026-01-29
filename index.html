@@ -2,18 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Living Artwork</title>
+  <title>DS-DS-ship-it • Living Apps</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Google AdSense (safe to include now or later) -->
+  <!-- Google AdSense (root site) -->
   <script async
     src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4923435985180634"
     crossorigin="anonymous"></script>
 
-  <!-- Redirect -->
-  <meta http-equiv="refresh" content="0; url=https://ds-ds-ship-it.github.io/living-artwork/">
+  <style>
+    :root { color-scheme: dark; }
+    body{ margin:0; background:#0b0c10; color:#e9eef5; font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    .wrap{ max-width:900px; margin:0 auto; padding:26px; }
+    h1{ margin:0 0 6px 0; font-size:28px; }
+    p{ margin:0 0 16px 0; opacity:.85; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-top:18px; }
+    .card{ border:1px solid rgba(255,255,255,.12); background: rgba(15,18,24,.72); border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.45); }
+    .card h2{ margin:0 0 8px 0; font-size:18px; }
+    .card p{ margin:0 0 12px 0; font-size:14px; opacity:.8; }
+    a.btn{ display:inline-block; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.16);
+      background: linear-gradient(135deg, rgba(64,240,190,.18), rgba(151,90,255,.18));
+      color:#e9eef5; text-decoration:none; font-weight:600;
+    }
+    .small{ margin-top:14px; font-size:12px; opacity:.7; }
+    code{ background:rgba(255,255,255,.08); padding:2px 6px; border-radius:6px; }
+  </style>
 </head>
 <body>
-  <p>Redirecting to Living Artwork…</p>
+  <div class="wrap">
+    <h1>Living Apps</h1>
+    <p>Select an app:</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Living Artwork (Image Painter)</h2>
+        <p>Original image painter. URL stays the same.</p>
+        <a class="btn" href="/living-artwork/">Open Image Painter</a>
+        <div class="small">Direct: <code>/living-artwork/</code></div>
+      </div>
+
+      <div class="card">
+        <h2>Video Artwork Living</h2>
+        <p>Video version + recording.</p>
+        <a class="btn" href="/video-artwork-living/">Open Video App</a>
+        <div class="small">Direct: <code>/video-artwork-living/</code></div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
