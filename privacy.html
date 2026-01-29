@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Privacy Policy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 22px; }
+    a { color:#9fe5ff; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .card { border:1px solid rgba(255,255,255,.12); background: rgba(15,18,24,.72); border-radius: 12px; padding: 16px; }
+    h1,h2 { margin: 0 0 10px 0; }
+    h2 { margin-top: 18px; font-size: 16px; opacity: .95; }
+    .small { opacity:.8; font-size: 12px; margin-top: 14px; }
+    ul { margin: 8px 0 0 18px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Privacy Policy</h1>
+      <p>This site hosts browser-based creative tools (“apps”) that run on your device. We do not run a server that collects personal data from you.</p>
+
+      <h2>Information we collect</h2>
+      <ul>
+        <li><b>No account data:</b> We do not require sign-in and we do not collect names, emails, or phone numbers.</li>
+        <li><b>No server logging:</b> This site is served via GitHub Pages. We do not operate custom server-side logging.</li>
+      </ul>
+
+      <h2>Local device data</h2>
+      <p>Some app settings and optional saved state may be stored <b>locally in your browser</b> using <code>localStorage</code>. This data stays on your device unless you clear your browser storage.</p>
+
+      <h2>Microphone / media permissions</h2>
+      <p>If you enable microphone access, audio is processed in your browser to drive visual effects. We do not transmit microphone audio to a server. You can revoke permission anytime in your browser settings.</p>
+
+      <h2>Advertising (Google AdSense)</h2>
+      <p>We may display ads served by Google AdSense. Google and its partners may use cookies or similar technologies to serve and measure ads, and to personalize ads where permitted by law.</p>
+      <p>Learn more about how Google uses information:</p>
+      <ul>
+        <li><a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">Google Advertising – How it works</a></li>
+        <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a></li>
+      </ul>
+
+      <h2>Contact</h2>
+      <p>If you need to contact the site owner, use the contact method listed on the GitHub profile for <b>DS-DS-ship-it</b>.</p>
+
+      <p class="small">Last updated: <span id="d"></span></p>
+      <p class="small"><a href="/">← Back to home</a></p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("d").textContent = new Date().toISOString().slice(0,10);
+  </script>
+</body>
+</html>
