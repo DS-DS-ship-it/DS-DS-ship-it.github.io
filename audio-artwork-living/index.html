@@ -1,0 +1,1364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Audio Artwork Living v2.5 PRO</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;background:#0b0c10;color:#e9eef5;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.wrap{display:grid;grid-template-columns:1fr 460px;gap:14px;padding:14px}
+canvas{width:100%;height:auto;border-radius:14px;background:#000;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+.panel{border:1px solid rgba(255,255,255,.10);background:rgba(15,18,24,.72);backdrop-filter:blur(10px);
+border-radius:14px;padding:14px;box-shadow:0 14px 44px rgba(0,0,0,.45)}
+h1{margin:0 0 10px;font-size:18px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.row label{opacity:.85;font-size:12px}
+.row .spacer{flex:1}
+button,select,input[type=file]{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#e9eef5;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:650}
+button:hover{background:rgba(255,255,255,.09)}
+button:disabled{opacity:.45;cursor:not-allowed}
+select{padding:10px 12px}
+input[type=range]{width:100%}
+.mini{font-size:12px;opacity:.78}
+.pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+background:rgba(255,255,255,.06);font-size:12px;opacity:.92}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:10px;background:rgba(255,255,255,.04)}
+.k{opacity:.75;font-size:12px}
+.v{font-weight:800}
+.footer{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+a{color:#9fe5ff;text-decoration:none}
+a:hover{text-decoration:underline}
+.warn{color:#ffd38a}
+.ok{color:#a7ffbd}
+.danger{color:#ff9fa7}
+.tiny{font-size:11px;opacity:.7}
+#errOverlay{position:absolute;inset:0;display:none;align-items:flex-start;justify-content:flex-start;padding:18px;
+background:radial-gradient(closest-side, rgba(255,64,80,.18), rgba(0,0,0,.80));backdrop-filter:blur(3px);border-radius:14px}
+#errOverlay pre{white-space:pre-wrap;margin:0;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
+background:rgba(0,0,0,.45);max-width:920px}
+#stageWrap{position:relative}
+#soundDB{max-height:240px;overflow:auto}
+.soundRow{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);margin-top:8px}
+.soundRow input[type=text]{width:100%;min-width:120px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);color:#e9eef5;border-radius:8px;padding:8px}
+.soundLeft{display:flex;gap:8px;align-items:center;flex:1}
+.dot{width:14px;height:14px;border-radius:999px;border:1px solid rgba(255,255,255,.20)}
+.smallBtn{padding:8px 10px;border-radius:10px;font-weight:700}
+@media (max-width: 980px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="stageWrap">
+    <canvas id="view" width="1280" height="720"></canvas>
+    <div id="errOverlay"><pre id="errText"></pre></div>
+  </div>
+
+  <div class="panel">
+    <h1>Audio Artwork Living v2.5 PRO</h1>
+
+    <div class="row">
+      <span class="pill">Status: <span id="status" class="warn">idle</span></span>
+      <span class="pill">Audio: <span id="srcLabel" class="mini">none</span></span>
+    </div>
+
+    <div class="row">
+      <input id="file" type="file" accept="audio/*"/>
+      <div class="spacer"></div>
+      <input id="pluginFile" type="file" accept=".html,.js" title="Load a plugin mode (.html or .js)"/>
+      <button id="btnLoadPlugin" class="smallBtn">Load Mode</button>
+    </div>
+
+    <div class="row">
+      <button id="btnMic">Enable Mic</button>
+      <button id="btnStopMic" disabled>Stop Mic</button>
+      <div class="spacer"></div>
+      <button id="btnPlay" disabled>Play</button>
+      <button id="btnPause" disabled>Pause</button>
+    </div>
+
+    <div class="row">
+      <label>Mode</label>
+      <select id="mode"></select>
+    </div>
+
+    <div class="row">
+      <label>Palette</label>
+      <select id="palette">
+        <option value="neon_ice">Neon Ice</option>
+        <option value="ember">Ember</option>
+        <option value="aurora">Aurora</option>
+        <option value="royal">Royal</option>
+        <option value="mono">Monochrome</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="k">Color A</div>
+        <input id="cA" type="color" value="#6df3ff" style="width:100%;height:38px;border:0;background:transparent;">
+      </div>
+      <div class="card">
+        <div class="k">Color B</div>
+        <input id="cB" type="color" value="#b78bff" style="width:100%;height:38px;border:0;background:transparent;">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div style="width:100%;">
+        <label>Intensity</label>
+        <input id="intensity" type="range" min="0" max="2" step="0.01" value="1.00">
+        <div class="mini">Brightness + motion; audio gain maps into this.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div style="width:100%;">
+        <label>Detail</label>
+        <input id="detail" type="range" min="0" max="1" step="0.01" value="0.62">
+        <div class="mini">Higher = finer structures.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div style="width:100%;">
+        <label>Clarity (smoothing)</label>
+        <input id="clarity" type="range" min="0" max="0.95" step="0.01" value="0.55">
+        <div class="mini">Higher = steadier visuals.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div style="width:100%;">
+        <label>Drift (style motion)</label>
+        <input id="drift" type="range" min="0" max="1" step="0.01" value="0.35">
+        <div class="mini">Higher = more surreal motion.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div style="width:100%;">
+        <label>Object Strength</label>
+        <input id="objectStrength" type="range" min="0" max="1" step="0.01" value="0.72">
+        <div class="mini">Higher = more recognizable forms in structure modes.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="pill">Harmonizer: <select id="harmMode" style="padding:8px 10px">
+        <option value="off">Off</option>
+        <option value="on">On</option>
+      </select></span>
+      <span class="pill">Base: <input id="harmBase" type="color" value="#35ffd2" style="width:44px;height:30px;border:0;background:transparent"></span>
+      <span class="pill">Evolve: <select id="autoEvolve" style="padding:8px 10px">
+        <option value="on">On</option>
+        <option value="off">Off</option>
+      </select></span>
+    </div>
+
+    <div class="row">
+      <button id="btnReset">Reset</button>
+      <button id="btnClearDB">Clear Sound DB</button>
+      <div class="spacer"></div>
+      <button id="btnDump">Export DB</button>
+      <button id="btnImport">Import DB</button>
+      <input id="dbFile" type="file" accept=".json" style="display:none"/>
+    </div>
+
+    <div class="grid2">
+      <div class="card"><div class="k">Bass</div><div class="v" id="mBass">0.00</div></div>
+      <div class="card"><div class="k">Mid</div><div class="v" id="mMid">0.00</div></div>
+      <div class="card"><div class="k">Treble</div><div class="v" id="mTreble">0.00</div></div>
+      <div class="card"><div class="k">Beat</div><div class="v" id="mBeat">0.00</div></div>
+    </div>
+
+    <div class="row" style="margin-top:8px;">
+      <div style="width:100%;">
+        <div class="k">Sound Identity (Crystal Bloom)</div>
+        <div id="soundDB" class="mini"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="tiny">Mic: use Chrome/Edge. If you open this as a <b>file</b>, mic may be blocked—serve via localhost for best results.</div>
+      <div class="tiny">Plugin: load a trusted local mode (.js or .html) — no external fetch required.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("view");
+  const ctx = canvas.getContext("2d", { alpha:false, desynchronized:true });
+  const errOverlay = $("errOverlay");
+  const errText = $("errText");
+
+  const statusEl = $("status");
+  const srcLabel = $("srcLabel");
+
+  const fileEl = $("file");
+  const btnMic = $("btnMic");
+  const btnStopMic = $("btnStopMic");
+  const btnPlay = $("btnPlay");
+  const btnPause = $("btnPause");
+
+  const modeEl = $("mode");
+  const paletteEl = $("palette");
+  const cA = $("cA");
+  const cB = $("cB");
+  const intensityEl = $("intensity");
+  const detailEl = $("detail");
+  const clarityEl = $("clarity");
+  const driftEl = $("drift");
+  const objectStrengthEl = $("objectStrength");
+  const harmModeEl = $("harmMode");
+  const harmBaseEl = $("harmBase");
+  const autoEvolveEl = $("autoEvolve");
+
+  const btnReset = $("btnReset");
+  const btnClearDB = $("btnClearDB");
+  const btnDump = $("btnDump");
+  const btnImport = $("btnImport");
+  const dbFile = $("dbFile");
+
+  const pluginFile = $("pluginFile");
+  const btnLoadPlugin = $("btnLoadPlugin");
+
+  const mBass = $("mBass");
+  const mMid = $("mMid");
+  const mTreble = $("mTreble");
+  const mBeat = $("mBeat");
+
+  const soundDBEl = $("soundDB");
+
+  // ---------- Utils ----------
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+
+  function hexToRgb(hex){
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return m ? {r:parseInt(m[1],16), g:parseInt(m[2],16), b:parseInt(m[3],16)} : {r:255,g:255,b:255};
+  }
+  function rgbToHex(r,g,b){
+    const h = (n)=>n.toString(16).padStart(2,'0');
+    return "#"+h(clamp(r|0,0,255))+h(clamp(g|0,0,255))+h(clamp(b|0,0,255));
+  }
+  function mixHex(a,b,t){
+    const A=hexToRgb(a), B=hexToRgb(b);
+    return rgbToHex(lerp(A.r,B.r,t), lerp(A.g,B.g,t), lerp(A.b,B.b,t));
+  }
+  function hueRotate(hex, deg){
+    // quick RGB->HSL->RGB for harmonizer
+    const {r,g,b}=hexToRgb(hex);
+    const R=r/255,G=g/255,B=b/255;
+    const max=Math.max(R,G,B), min=Math.min(R,G,B);
+    let h=0,s=0,l=(max+min)/2;
+    const d=max-min;
+    if (d!==0){
+      s = d/(1-Math.abs(2*l-1));
+      switch(max){
+        case R: h=((G-B)/d)%6; break;
+        case G: h=((B-R)/d)+2; break;
+        default: h=((R-G)/d)+4; break;
+      }
+      h*=60; if(h<0) h+=360;
+    }
+    h = (h + deg) % 360;
+    // HSL->RGB
+    const C=(1-Math.abs(2*l-1))*s;
+    const X=C*(1-Math.abs(((h/60)%2)-1));
+    const m=l-C/2;
+    let r1=0,g1=0,b1=0;
+    if (h<60){r1=C;g1=X;b1=0}
+    else if (h<120){r1=X;g1=C;b1=0}
+    else if (h<180){r1=0;g1=C;b1=X}
+    else if (h<240){r1=0;g1=X;b1=C}
+    else if (h<300){r1=X;g1=0;b1=C}
+    else {r1=C;g1=0;b1=X}
+    return rgbToHex((r1+m)*255,(g1+m)*255,(b1+m)*255);
+  }
+
+  function setStatus(text, cls){
+    statusEl.textContent = text;
+    statusEl.className = cls || "";
+  }
+
+  function showError(e){
+    const msg = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
+    errText.textContent = "Render error:\n\n" + msg + "\n\n(Visualizer recovered—switch modes or hit Reset.)";
+    errOverlay.style.display = "flex";
+    setTimeout(()=>{ errOverlay.style.display="none"; }, 3500);
+  }
+
+  // ---------- Palettes ----------
+  const palettes = {
+    neon_ice: ["#6df3ff", "#b78bff"],
+    ember: ["#ffb86c", "#ff3a6e"],
+    aurora: ["#4cffc0", "#2d7dff"],
+    royal: ["#ffd36a", "#7a5cff"],
+    mono: ["#e9eef5", "#7a8aa0"],
+    custom: null,
+  };
+  function applyPalette(){
+    const p = paletteEl.value;
+    if (p !== "custom" && palettes[p]){
+      cA.value = palettes[p][0];
+      cB.value = palettes[p][1];
+    }
+  }
+  paletteEl.addEventListener("change", applyPalette);
+
+  // ---------- Audio ----------
+  let audioCtx=null, analyser=null, gainNode=null;
+  let sourceNode=null, mediaStream=null;
+  let audioEl=null, mediaElSource=null;
+
+  // Use smaller arrays for speed
+  let FFT_N = 1024;
+  let freq = new Uint8Array(FFT_N);
+  let time = new Uint8Array(FFT_N);
+
+  function ensureAudio(){
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = FFT_N*2;
+    analyser.smoothingTimeConstant = clamp(parseFloat(clarityEl.value), 0, 0.95);
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = 1.0;
+
+    analyser.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+  }
+
+  function disconnectSource(){
+    try{
+      if (mediaElSource){ mediaElSource.disconnect(); mediaElSource=null; }
+      if (sourceNode){ sourceNode.disconnect(); sourceNode=null; }
+    }catch(_){}
+  }
+
+  function stopAudioFile(){
+    if (audioEl){
+      try{ audioEl.pause(); }catch(_){}
+      audioEl.src="";
+      audioEl.load();
+      audioEl=null;
+    }
+    disconnectSource();
+    btnPlay.disabled = true;
+    btnPause.disabled = true;
+  }
+
+  function stopMic(){
+    if (mediaStream){
+      mediaStream.getTracks().forEach(tr=>tr.stop());
+      mediaStream=null;
+    }
+    disconnectSource();
+    btnStopMic.disabled=true;
+    btnMic.disabled=false;
+    setStatus("idle","warn");
+    srcLabel.textContent="none";
+  }
+
+  async function startMic(){
+    ensureAudio();
+    await audioCtx.resume();
+
+    // stop audio file if any
+    stopAudioFile();
+
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true }
+    });
+
+    disconnectSource();
+    sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+    sourceNode.connect(analyser);
+
+    btnStopMic.disabled=false;
+    btnMic.disabled=true;
+    btnPlay.disabled=true;
+    btnPause.disabled=true;
+
+    setStatus("mic live","ok");
+    srcLabel.textContent="microphone";
+  }
+
+  function loadAudioFile(file){
+    ensureAudio();
+    stopMic();
+
+    const url = URL.createObjectURL(file);
+    audioEl = new Audio();
+    audioEl.src = url;
+    audioEl.crossOrigin = "anonymous";
+    audioEl.loop = true;
+
+    disconnectSource();
+    mediaElSource = audioCtx.createMediaElementSource(audioEl);
+    mediaElSource.connect(analyser);
+
+    btnPlay.disabled=false;
+    btnPause.disabled=false;
+
+    setStatus("ready","warn");
+    srcLabel.textContent=file.name;
+  }
+
+  async function playAudio(){
+    if (!audioEl) return;
+    ensureAudio();
+    await audioCtx.resume();
+    await audioEl.play();
+    setStatus("playing","ok");
+  }
+  function pauseAudio(){
+    if (!audioEl) return;
+    audioEl.pause();
+    setStatus("paused","warn");
+  }
+
+  // ---------- Audio features / meters ----------
+  let sBass=0, sMid=0, sTreble=0, sBeat=0, beatHold=0;
+  let lastCentroid=0;
+
+  function computeBands(){
+    if (!analyser) return {bass:0, mid:0, treble:0, beat:0, rms:0, centroid:0};
+    analyser.getByteFrequencyData(freq);
+    analyser.getByteTimeDomainData(time);
+
+    const n=freq.length;
+    const bassEnd=Math.floor(n*0.10);
+    const midEnd=Math.floor(n*0.35);
+    const treEnd=Math.floor(n*0.80);
+
+    let bass=0, mid=0, tre=0, all=0;
+    let centroidNum=0, centroidDen=0;
+
+    for (let i=0;i<n;i++){
+      const v=freq[i]/255;
+      all += v;
+      centroidNum += i*v;
+      centroidDen += v;
+      if (i<bassEnd) bass += v;
+      else if (i<midEnd) mid += v;
+      else if (i<treEnd) tre += v;
+    }
+    bass /= Math.max(1,bassEnd);
+    mid  /= Math.max(1,(midEnd-bassEnd));
+    tre  /= Math.max(1,(treEnd-midEnd));
+    all  /= n;
+
+    let rms=0;
+    for (let i=0;i<time.length;i++){
+      const x=(time[i]-128)/128;
+      rms += x*x;
+    }
+    rms = Math.sqrt(rms/time.length);
+
+    let beat = clamp(all*0.75 + bass*1.05 + rms*0.65, 0, 1.8);
+    beat = clamp(beat/1.45, 0, 1);
+
+    const sm = clamp(parseFloat(clarityEl.value), 0, 0.95);
+    const a = 1 - sm;
+    sBass = sBass*sm + bass*a;
+    sMid  = sMid *sm + mid *a;
+    sTreble = sTreble*sm + tre*a;
+
+    beatHold = Math.max(beatHold*0.92, beat);
+    sBeat = beatHold;
+
+    const centroid = centroidDen>1e-6 ? (centroidNum/centroidDen)/n : 0;
+    lastCentroid = lastCentroid*0.85 + centroid*0.15;
+
+    mBass.textContent=sBass.toFixed(2);
+    mMid.textContent=sMid.toFixed(2);
+    mTreble.textContent=sTreble.toFixed(2);
+    mBeat.textContent=sBeat.toFixed(2);
+
+    return {bass:sBass, mid:sMid, treble:sTreble, beat:sBeat, rms, centroid:lastCentroid};
+  }
+
+  clarityEl.addEventListener("input", ()=>{
+    if (analyser) analyser.smoothingTimeConstant = clamp(parseFloat(clarityEl.value), 0, 0.95);
+  });
+
+  // ---------- Sound Identity DB (lightweight, browser-only) ----------
+  // We do NOT do full voiceprint/separation in-browser here. Instead: detect recurring percussive "event fingerprints"
+  // (band-energy ratios + centroid + attack) and persist label+color.
+  const DB_KEY="aal_sound_db_v1";
+  let soundDB = new Map(); // id -> entry
+  let lastEventT = 0;
+
+  function loadDB(){
+    soundDB.clear();
+    try{
+      const raw = localStorage.getItem(DB_KEY);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      for (const e of arr){
+        soundDB.set(e.id, e);
+      }
+    }catch(_){}
+  }
+  function saveDB(){
+    try{
+      localStorage.setItem(DB_KEY, JSON.stringify(Array.from(soundDB.values())));
+    }catch(_){}
+  }
+
+  function stableIdFromFeatures(f){
+    // quantize to make repeats match
+    const q = (x, s)=>Math.max(0, Math.min(99, Math.round(x*s)));
+    const a=q(f.attack,40);
+    const b=q(f.bass,50);
+    const m=q(f.mid,50);
+    const t=q(f.treble,50);
+    const c=q(f.centroid,80);
+    return `E${a}-${b}-${m}-${t}-${c}`;
+  }
+
+  function harmonizedColor(index){
+    if (harmModeEl.value!=="on") return null;
+    const base = harmBaseEl.value;
+    // spread around base hue gently
+    const deg = (index*29) % 180; // cohesive family
+    return hueRotate(base, deg);
+  }
+
+  function pickNiceColor(index, A, B){
+    const h = harmonizedColor(index);
+    if (h) return h;
+    // otherwise interpolate between A and B but avoid drifting to white
+    const t = (0.15 + (index*0.17)%0.70);
+    return mixHex(A, B, t);
+  }
+
+  function renderSoundDBUI(){
+    const entries = Array.from(soundDB.values()).sort((a,b)=> (b.freq||0)-(a.freq||0));
+    if (!entries.length){
+      soundDBEl.innerHTML = "<div class='mini'>No recurring events yet. Play audio and let Crystal Bloom learn.</div>";
+      return;
+    }
+    soundDBEl.innerHTML = "";
+    for (const e of entries.slice(0,30)){
+      const row = document.createElement("div");
+      row.className="soundRow";
+      const left = document.createElement("div");
+      left.className="soundLeft";
+
+      const dot = document.createElement("div");
+      dot.className="dot";
+      dot.style.background = e.color || "#ffffff33";
+      left.appendChild(dot);
+
+      const inp = document.createElement("input");
+      inp.type="text";
+      inp.value = e.label || e.id;
+      inp.addEventListener("change", ()=>{
+        e.label = inp.value.trim() || e.id;
+        saveDB();
+      });
+      left.appendChild(inp);
+
+      const col = document.createElement("input");
+      col.type="color";
+      col.value = e.color || "#ffffff";
+      col.addEventListener("input", ()=>{
+        e.color = col.value;
+        e.userColor = true;
+        saveDB();
+      });
+
+      const right = document.createElement("div");
+      right.style.display="flex";
+      right.style.gap="8px";
+      right.style.alignItems="center";
+
+      const meta = document.createElement("div");
+      meta.className="mini";
+      meta.textContent = `×${e.freq||0} • ${(e.conf||0).toFixed(2)}`;
+      right.appendChild(meta);
+      right.appendChild(col);
+
+      row.appendChild(left);
+      row.appendChild(right);
+      soundDBEl.appendChild(row);
+    }
+  }
+
+  btnClearDB.addEventListener("click", ()=>{
+    soundDB.clear();
+    saveDB();
+    renderSoundDBUI();
+  });
+
+  btnDump.addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(Array.from(soundDB.values()), null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="aal_sound_db.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  btnImport.addEventListener("click", ()=> dbFile.click());
+  dbFile.addEventListener("change", async ()=>{
+    const f = dbFile.files && dbFile.files[0];
+    if (!f) return;
+    try{
+      const txt = await f.text();
+      const arr = JSON.parse(txt);
+      soundDB.clear();
+      for (const e of arr) soundDB.set(e.id, e);
+      saveDB();
+      renderSoundDBUI();
+      setStatus("imported db","ok");
+    }catch(e){
+      alert("Invalid DB JSON.");
+    }
+    dbFile.value="";
+  });
+
+  // ---------- Auto-evolve physical properties (background) ----------
+  const evo = {
+    seed: 1337,
+    phase: 0,
+    geoN: 7,
+    geoK: 0.5,
+    voroJitter: 0.2,
+    plasmaCurl: 1.0,
+    nebulaSwirl: 0.9,
+    lissaA: 3,
+    lissaB: 4,
+    lissaD: 0.0
+  };
+  function rand(){
+    // xorshift32
+    evo.seed |= 0;
+    evo.seed ^= evo.seed << 13;
+    evo.seed ^= evo.seed >>> 17;
+    evo.seed ^= evo.seed << 5;
+    return ((evo.seed>>>0) / 4294967296);
+  }
+  function evolvePhysics(bands, dt){
+    if (autoEvolveEl.value!=="on") return;
+    // evolve mostly on beat but also on quiet audio (slow drift)
+    const drive = clamp(0.12 + bands.beat*0.9 + bands.rms*0.25, 0, 1);
+    evo.phase += dt * (0.00010 + drive*0.00045);
+
+    // occasional discrete mutations
+    const now = performance.now();
+    if (bands.beat > 0.70 && (now - lastEventT) > 350){
+      lastEventT = now;
+      if (rand()<0.33) evo.geoN = 5 + Math.floor(rand()*10);
+      if (rand()<0.33) evo.lissaA = 2 + Math.floor(rand()*9);
+      if (rand()<0.33) evo.lissaB = 2 + Math.floor(rand()*9);
+      if (rand()<0.25) evo.seed = (rand()*2**31)|0;
+    }
+
+    // continuous evolution
+    evo.geoK = clamp(evo.geoK + (rand()*2-1)*0.002*drive, 0.12, 0.92);
+    evo.voroJitter = clamp(evo.voroJitter + (rand()*2-1)*0.004*drive, 0.02, 0.95);
+    evo.plasmaCurl = clamp(evo.plasmaCurl + (rand()*2-1)*0.003*drive, 0.30, 2.50);
+    evo.nebulaSwirl = clamp(evo.nebulaSwirl + (rand()*2-1)*0.004*drive, 0.25, 2.80);
+    evo.lissaD = (evo.lissaD + dt*(0.0006 + drive*0.0022)) % (Math.PI*2);
+  }
+
+  // ---------- Modes registry (built-in + plugins) ----------
+  const MODES = new Map(); // id -> {id,name,draw}
+  window.AAL_REGISTER_MODE = (mode)=>{
+    try{
+      if (!mode || !mode.id || typeof mode.draw!=="function") throw new Error("Invalid mode. Requires {id, name, draw(ctx, W, H, bands, colors, params, evo)}");
+      MODES.set(mode.id, {id:mode.id, name:mode.name||mode.id, draw:mode.draw});
+      rebuildModeSelect(mode.id);
+      setStatus("mode loaded","ok");
+    }catch(e){
+      showError(e);
+    }
+  };
+
+  function rebuildModeSelect(selectId){
+    const cur = selectId || modeEl.value;
+    modeEl.innerHTML = "";
+    for (const m of Array.from(MODES.values())){
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.name;
+      modeEl.appendChild(opt);
+    }
+    if (MODES.has(cur)) modeEl.value = cur;
+    else modeEl.value = Array.from(MODES.keys())[0] || "";
+  }
+
+  // ---------- Drawing primitives ----------
+  function clearBG(bg){
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+  function glowCircle(x,y,r,color,alpha){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = r*0.9;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function strokeGlow(pathFn,color,width,alpha,blur){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    pathFn();
+    ctx.stroke();
+    ctx.restore();
+  }
+  function fillGlowRect(x,y,w,h,color,alpha,blur){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+    ctx.fillStyle = color;
+    ctx.fillRect(x,y,w,h);
+    ctx.restore();
+  }
+
+  // ---------- Built-in modes ----------
+  function colorsFromUI(){
+    const A = cA.value, B = cB.value;
+    return {A,B};
+  }
+  function paramsFromUI(){
+    return {
+      intensity: parseFloat(intensityEl.value),
+      detail: parseFloat(detailEl.value),
+      clarity: parseFloat(clarityEl.value),
+      drift: parseFloat(driftEl.value),
+      objectStrength: parseFloat(objectStrengthEl.value),
+      harmOn: harmModeEl.value==="on",
+      harmBase: harmBaseEl.value
+    };
+  }
+
+  // Crystal Bloom PRO (fast + Sound Identity color coding)
+  function modeCrystalBloom(ctx, W, H, bands, colors, p, evo){
+    const {A,B} = colors;
+    const inten = p.intensity;
+    const cx=W*0.5, cy=H*0.5;
+
+    clearBG("#05060a");
+
+    // detect "events" (attacks) and create Sound IDs
+    const now = performance.now();
+    // simple attack estimate: beat slope + treble spike
+    const attack = clamp((bands.beat - sBeat*0.85) + (bands.treble*0.35), 0, 1);
+    if (attack > 0.22 && (now - lastEventT) > 110){
+      lastEventT = now;
+      const feat = {attack, bass:bands.bass, mid:bands.mid, treble:bands.treble, centroid:bands.centroid};
+      const id = stableIdFromFeatures(feat);
+      let e = soundDB.get(id);
+      if (!e){
+        const idx = soundDB.size;
+        e = {
+          id,
+          label: `Event ${String(idx+1).padStart(2,"0")}`,
+          color: pickNiceColor(idx, A, B),
+          userColor: false,
+          conf: 0.55,
+          freq: 0,
+          lastSeen: now
+        };
+        soundDB.set(id, e);
+      }
+      e.freq = (e.freq||0) + 1;
+      e.lastSeen = now;
+      e.conf = clamp((e.conf||0.55) + 0.02, 0.5, 0.95);
+
+      // if harmonizer is on and user hasn't overridden this id, keep it cohesive
+      if (harmModeEl.value==="on" && !e.userColor){
+        e.color = pickNiceColor(Array.from(soundDB.keys()).indexOf(id), A, B);
+      }
+
+      saveDB();
+      renderSoundDBUI();
+
+      // stash current active color for burst
+      modeCrystalBloom._lastEventColor = e.color;
+      modeCrystalBloom._lastEventLabel = e.label;
+    }
+
+    const eventColor = modeCrystalBloom._lastEventColor || mixHex(A,B,0.5);
+
+    // bloom core (no hard circle artifact)
+    const bloomR = (Math.min(W,H)*0.11) * (0.55 + bands.beat*1.15 + bands.bass*0.55) * inten;
+    glowCircle(cx, cy, bloomR*1.2, mixHex(eventColor, "#ffffff", 0.12), 0.06 + bands.beat*0.18);
+
+    // spokes using FFT (reduced bins for speed)
+    const bins = 180 + Math.floor(p.detail*260);
+    const rBase = Math.min(W,H)*0.15;
+    const rMax  = Math.min(W,H)*0.46*(0.85+inten*0.20);
+    const spin = evo.phase*(0.8 + bands.treble*1.2) + bands.mid*0.7;
+
+    for (let i=0;i<bins;i++){
+      const fi = Math.floor((i/bins) * (freq.length*0.90));
+      const v = (freq[fi]/255);
+      if (v < 0.03 && i%3!==0) continue; // skip tiny values for speed
+      const ang = (i/bins)*Math.PI*2 + spin;
+      const r = rBase + v*v*(rMax-rBase) * (0.30 + inten*0.95);
+      const x = cx + Math.cos(ang)*r;
+      const y = cy + Math.sin(ang)*r;
+
+      const col = mixHex(eventColor, mixHex(A,B,i/bins), 0.35);
+      const lw = 1.0 + v*2.2 + bands.beat*1.4;
+      strokeGlow(()=>{ ctx.moveTo(cx,cy); ctx.lineTo(x,y); }, col, lw, 0.09 + v*0.26 + bands.beat*0.10, 10 + 36*bands.beat);
+    }
+
+    // Event label HUD (if recently seen)
+    if (modeCrystalBloom._lastEventLabel && (now - lastEventT) < 950){
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = mixHex(eventColor, "#ffffff", 0.12);
+      ctx.font = "700 14px system-ui,-apple-system,Segoe UI";
+      ctx.fillText(`Sound: ${modeCrystalBloom._lastEventLabel}`, 18, 52);
+      ctx.restore();
+    }
+
+    // osc ribbon
+    const ribbonY = H*0.84;
+    strokeGlow(()=>{
+      for (let x=0;x<=W;x+=6){
+        const ti = Math.floor((x/W)*time.length);
+        const s = (time[ti]-128)/128;
+        const y = ribbonY + s*(16 + 70*bands.beat)*(0.35 + p.drift);
+        if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+    }, mixHex(A,B,0.62), 2.1, 0.30, 18+55*bands.beat);
+  }
+
+  // Plasma Field (audio-driven, no random drift)
+  function modePlasma(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    // cheap plasma using low-res grid sampled into imageData
+    const scale = 2; // 2x -> fast
+    const w = Math.floor(W/scale), h = Math.floor(H/scale);
+    const img = ctx.getImageData(0,0,w,h);
+    const data = img.data;
+
+    const t = evo.phase* (0.8 + bands.mid*1.1) * evo.plasmaCurl;
+    const amp = 1.2 + bands.beat*2.2 + bands.bass*1.2;
+    const A1 = hexToRgb(A), B1=hexToRgb(B);
+
+    for (let y=0;y<h;y++){
+      const ny = (y/h - 0.5);
+      for (let x=0;x<w;x++){
+        const nx = (x/w - 0.5);
+        const v = Math.sin((nx*3.0 + t)*amp) + Math.cos((ny*4.0 - t*1.3)*amp)
+                + Math.sin((nx+ny)*4.0 + t*1.6) * (0.6 + bands.treble*1.2);
+        const u = (v/3 + 0.5);
+        const c = clamp(u,0,1);
+        const r = lerp(A1.r,B1.r,c);
+        const g = lerp(A1.g,B1.g,c);
+        const b = lerp(A1.b,B1.b,c);
+        const i = (y*w + x)*4;
+        data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=255;
+      }
+    }
+    // draw scaled up
+    const off = document.createElement("canvas");
+    off.width=w; off.height=h;
+    off.getContext("2d").putImageData(img,0,0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off,0,0,W,H);
+
+    // add glow highlights on beat
+    const cx=W*0.5, cy=H*0.5;
+    glowCircle(cx,cy,Math.min(W,H)*(0.10+bands.beat*0.16), mixHex(A,B,0.5), 0.08+bands.beat*0.15);
+  }
+
+  // Voronoi Crack Mesh (audio-driven crack jitter)
+  function modeVoronoi(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    clearBG("#06070a");
+    const ptsN = 18 + Math.floor(p.detail*28);
+    const jitter = evo.voroJitter * (0.2 + bands.beat*1.2 + bands.mid*0.6);
+    const os = p.objectStrength;
+
+    // deterministic points based on seed (stable)
+    const pts = [];
+    let s = (evo.seed>>>0);
+    const r = ()=>{
+      s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+      return ((s>>>0)/4294967296);
+    };
+    for (let i=0;i<ptsN;i++){
+      const x = r()*W;
+      const y = r()*H;
+      pts.push({x,y});
+    }
+
+    // draw cell edges by sampling nearest two points on a coarse grid
+    const step = 10 - Math.floor(p.detail*6); // 10..4
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 1.2 + os*1.2;
+    ctx.lineJoin="round";
+    for (let y=0;y<H;y+=step){
+      for (let x=0;x<W;x+=step){
+        // animate sample point by audio
+        const xx = x + Math.sin((x*0.01)+(evo.phase*3.0))*jitter*10;
+        const yy = y + Math.cos((y*0.01)-(evo.phase*2.0))*jitter*10;
+
+        let d1=1e18,d2=1e18,i1=-1,i2=-1;
+        for (let i=0;i<pts.length;i++){
+          const dx=pts[i].x-xx, dy=pts[i].y-yy;
+          const d=dx*dx+dy*dy;
+          if (d<d1){ d2=d1; i2=i1; d1=d; i1=i; }
+          else if (d<d2){ d2=d; i2=i; }
+        }
+        // boundary if distances close
+        const boundary = Math.abs(Math.sqrt(d1)-Math.sqrt(d2));
+        if (boundary < step*0.55){
+          const t = clamp(boundary/(step*0.55),0,1);
+          ctx.strokeStyle = mixHex(A,B, 0.25 + 0.60*(1-t));
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.shadowBlur = 16 + 55*bands.beat;
+          ctx.beginPath();
+          ctx.moveTo(x,y);
+          ctx.lineTo(x+step,y+step);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+
+    // crack pulses on beat
+    const cracks = 6 + Math.floor(bands.beat*10);
+    for (let i=0;i<cracks;i++){
+      const x = W*(0.1 + 0.8*Math.abs(Math.sin(i*7.1 + evo.phase*2.2)));
+      const y = H*(0.1 + 0.8*Math.abs(Math.cos(i*5.9 + evo.phase*1.9)));
+      glowCircle(x,y, 6 + 26*bands.beat, mixHex(B,A,0.6), 0.10 + bands.beat*0.18);
+    }
+  }
+
+  // Sacred Geometry Kaleidoscope (improved evolving center geometry)
+  function modeKaleido(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    clearBG("#04050a");
+    const cx=W*0.5, cy=H*0.5;
+    const baseR = Math.min(W,H)*0.34*(0.8 + p.objectStrength*0.3);
+    const petals = evo.geoN; // evolves
+    const k = evo.geoK;
+    const spin = evo.phase*(0.8 + bands.treble*1.3) + bands.mid*0.9;
+
+    // center morphing polygon + rosette
+    const layers = 3 + Math.floor(p.detail*4);
+    for (let L=0; L<layers; L++){
+      const r = baseR*(0.25 + L*(0.22 + p.detail*0.10))*(0.85 + bands.beat*0.25);
+      const wob = (0.12 + bands.beat*0.55 + bands.rms*0.25) * (0.45 + p.drift);
+      const col = mixHex(A,B, (L/(layers-1||1))*0.85);
+      strokeGlow(()=>{
+        for (let i=0;i<=petals;i++){
+          const a = (i/petals)*Math.PI*2 + spin;
+          const rr = r*(1 + Math.sin(a*petals*k + evo.phase*4.0)*wob);
+          const x = cx + Math.cos(a)*rr;
+          const y = cy + Math.sin(a)*rr;
+          if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+      }, col, 2.0 + L*0.6, 0.35 + bands.beat*0.25, 18 + 80*bands.beat);
+    }
+
+    // kaleido spokes
+    const spokes = 36 + Math.floor(p.detail*84);
+    for (let i=0;i<spokes;i++){
+      const a = (i/spokes)*Math.PI*2 + spin;
+      const v = freq[Math.floor((i/spokes)*freq.length*0.9)]/255;
+      const rr = baseR*(0.25 + v*v*(0.90))*(0.65 + p.intensity*0.35);
+      const col = mixHex(mixHex(A,B,0.5), mixHex(B,A, v), 0.55);
+      strokeGlow(()=>{ ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr); }, col, 1.0+v*2.2, 0.10+v*0.25, 12+60*bands.beat);
+    }
+
+    // central evolving "seed" glyph (random geometry algorithm)
+    const glyphN = 5 + Math.floor((petals%7));
+    const gR = baseR*(0.13 + bands.beat*0.07);
+    strokeGlow(()=>{
+      for (let i=0;i<=glyphN;i++){
+        const a = (i/glyphN)*Math.PI*2 + spin*1.6;
+        const rr = gR*(1 + Math.sin(a*(glyphN+petals*0.5) + evo.phase*6.0)*0.22*(0.3+bands.beat));
+        const x = cx + Math.cos(a)*rr;
+        const y = cy + Math.sin(a)*rr;
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+    }, mixHex(A,B,0.7), 2.4, 0.55, 26+110*bands.beat);
+  }
+
+  // Lissajous Curves (keep the improved look)
+  function modeLissajous(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    clearBG("#04060a");
+    const cx=W*0.5, cy=H*0.5;
+
+    const a = evo.lissaA;
+    const b = evo.lissaB;
+    const d = evo.lissaD;
+
+    const samples = 2200 + Math.floor(p.detail*1800);
+    const scale = Math.min(W,H)*0.33*(0.9 + p.objectStrength*0.2);
+    const amp = 0.55 + bands.beat*0.55 + bands.mid*0.20;
+    const lw = 2.2 + bands.beat*2.2;
+
+    strokeGlow(()=>{
+      for (let i=0;i<=samples;i++){
+        const t = (i/samples)*Math.PI*2;
+        const x = cx + Math.sin(a*t + d)*scale*(0.55+amp);
+        const y = cy + Math.sin(b*t)*scale*(0.55+amp);
+        if (i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      }
+    }, mixHex(A,B,0.55), lw, 0.75, 26+120*bands.beat);
+
+    // inner echo lines
+    const echoes = 2 + Math.floor(p.detail*3);
+    for (let e=1;e<=echoes;e++){
+      const s = 1 - e*0.12;
+      strokeGlow(()=>{
+        for (let i=0;i<=samples;i+=2){
+          const t = (i/samples)*Math.PI*2;
+          const x = cx + Math.sin(a*t + d*1.1)*scale*s*(0.55+amp);
+          const y = cy + Math.sin(b*t)*scale*s*(0.55+amp);
+          if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+      }, mixHex(B,A,0.35+0.2*e), lw*(0.55), 0.25, 18+70*bands.beat);
+    }
+  }
+
+  // Particle Nebula Swarm (remove center circle artifact; audio-reactive colors)
+  function modeNebula(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    // fade for trails
+    ctx.save();
+    ctx.globalAlpha = 0.14 + (0.10*(1-p.clarity));
+    ctx.fillStyle = "#02030a";
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    const N = 800 + Math.floor(p.detail*1400);
+    const cx=W*0.5, cy=H*0.5;
+    const swirl = evo.nebulaSwirl * (0.35 + bands.beat*1.25 + bands.treble*0.35);
+    const rad = Math.min(W,H)*0.42;
+    const inten = p.intensity;
+
+    // no hard "center circle": we avoid drawing a static disk; only particles
+    for (let i=0;i<N;i++){
+      const fi = (i % freq.length);
+      const v = freq[fi]/255;
+      const ang = (i/N)*Math.PI*2 + evo.phase*2.8 + v*swirl;
+      const r = (Math.sqrt(i/N)) * rad * (0.65 + v*v*0.55) * (0.75 + bands.bass*0.35);
+      const x = cx + Math.cos(ang)*r + Math.sin(evo.phase*3.2 + i)*swirl*22*bands.beat;
+      const y = cy + Math.sin(ang)*r + Math.cos(evo.phase*2.7 + i)*swirl*18*bands.beat;
+
+      const col = mixHex(A,B, clamp(0.10 + v*0.85 + bands.centroid*0.10, 0, 1));
+      const a = 0.03 + v*0.10 + bands.beat*0.10;
+      const size = (0.8 + v*2.8 + bands.beat*3.2) * (0.55 + inten*0.55);
+      glowCircle(x,y,size,col,a);
+    }
+
+    // beat bursts (color responsive)
+    if (bands.beat > 0.65){
+      const burst = 12 + Math.floor(bands.beat*20);
+      for (let i=0;i<burst;i++){
+        const ang = (i/burst)*Math.PI*2 + evo.phase*5.2;
+        const rr = rad*(0.18 + 0.18*Math.sin(evo.phase*6.0));
+        glowCircle(cx+Math.cos(ang)*rr, cy+Math.sin(ang)*rr, 6+bands.beat*22, mixHex(B,A,0.5), 0.05+bands.beat*0.12);
+      }
+    }
+  }
+
+  // Blueprint House (stable)
+  function modeBlueprintHouse(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    const os=p.objectStrength;
+
+    ctx.fillStyle="#07111d"; ctx.fillRect(0,0,W,H);
+    const grid=Math.floor(22 + p.detail*40);
+    ctx.save();
+    ctx.globalAlpha=0.22 + bands.treble*0.14;
+    ctx.strokeStyle=mixHex(A,B,0.5);
+    ctx.lineWidth=1;
+    for (let x=0;x<=W;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+    for (let y=0;y<=H;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+    ctx.restore();
+
+    const cx=W*0.5, baseY=H*0.78;
+    const houseW=W*(0.42 + os*0.18);
+    const houseH=H*(0.34 + os*0.10);
+    const roofH=houseH*(0.35 + os*0.15);
+    const wob = (bands.beat*0.5 + bands.bass*0.4) * (0.6 + p.drift*1.2);
+    const left=cx-houseW/2, right=cx+houseW/2, top=baseY-houseH;
+
+    const line=mixHex(A,B,0.35);
+    const glow=12+36*bands.beat;
+
+    strokeGlow(()=>{ctx.moveTo(left,baseY);ctx.lineTo(left,top+roofH);ctx.lineTo(right,top+roofH);ctx.lineTo(right,baseY);ctx.closePath();},
+      line,2+os*2,0.9,glow);
+    strokeGlow(()=>{ctx.moveTo(left,top+roofH);ctx.lineTo(cx,top+wob*18);ctx.lineTo(right,top+roofH);},
+      mixHex(A,B,0.65),2+os*2,0.9,glow);
+
+    const doorW=houseW*(0.12+os*0.08), doorH=houseH*(0.22+os*0.10);
+    const doorX=cx-doorW/2 + Math.sin(evo.phase*6 + bands.bass*3)*wob*8;
+    const doorY=baseY-doorH;
+    strokeGlow(()=>ctx.rect(doorX,doorY,doorW,doorH), mixHex(A,B,0.2),2,0.9,glow*0.8);
+
+    const winY=top+roofH+houseH*0.18;
+    const winW=houseW*(0.12+os*0.05), winH=houseH*(0.10+os*0.04);
+    const gap=houseW*0.18;
+    for (let s=-1;s<=1;s+=2){
+      const wx=cx+s*gap-winW/2 + Math.sin(evo.phase*7 + bands.treble*5 + s)*wob*10;
+      strokeGlow(()=>ctx.rect(wx,winY,winW,winH), mixHex(A,B,0.85),2,0.9,glow);
+      strokeGlow(()=>{ctx.moveTo(wx,winY+winH/2);ctx.lineTo(wx+winW,winY+winH/2);ctx.moveTo(wx+winW/2,winY);ctx.lineTo(wx+winW/2,winY+winH);},
+        mixHex(A,B,0.5),1.3,0.7,glow*0.6);
+    }
+  }
+
+  // Map / Cartography
+  function modeCartography(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    ctx.fillStyle="#0b0f14"; ctx.fillRect(0,0,W,H);
+
+    const lines=18+Math.floor(p.detail*26);
+    const amp=(10+85*bands.beat)*(0.2+p.drift*0.9);
+    for (let i=0;i<lines;i++){
+      const y0=(i/(lines-1))*H;
+      strokeGlow(()=>{
+        for (let x=0;x<=W;x+=12){
+          const n=Math.sin(x*0.01+i*0.7+evo.phase*8)*amp + Math.cos(x*0.017+evo.phase*10+bands.mid*6)*amp*0.4;
+          const y=y0 + n*(0.15 + p.objectStrength*0.75);
+          if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+      }, mixHex(A,B,i/(lines-1)), 1.2+p.objectStrength*1.0, 0.35, 10+24*bands.beat);
+    }
+
+    const routes=2+Math.floor(p.objectStrength*3);
+    for (let r=0;r<routes;r++){
+      const phase=r*2.1 + evo.phase*4 + bands.bass*2;
+      const c=mixHex(B,A, r/(routes-1||1));
+      strokeGlow(()=>{
+        for (let x=0;x<=W;x+=10){
+          const y=H*0.5 + Math.sin(x*0.008+phase)*H*(0.08+bands.beat*0.18) + Math.cos(x*0.015+phase*1.3)*H*(0.04+bands.treble*0.10);
+          if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+      }, c, 2.0+bands.beat*2.2, 0.75, 18+60*bands.beat);
+    }
+  }
+
+  // City Towers
+  function modeCity(ctx, W, H, bands, colors, p, evo){
+    const {A,B}=colors;
+    ctx.fillStyle="#07080b"; ctx.fillRect(0,0,W,H);
+    const os=p.objectStrength;
+    const ground=H*0.86;
+    fillGlowRect(0,ground-10,W,20,mixHex(A,B,0.5),0.08+bands.beat*0.16,60+140*bands.beat);
+
+    const towers=14+Math.floor(p.detail*26);
+    const glow=14+55*bands.beat;
+    for (let i=0;i<towers;i++){
+      const x=(i/(towers-1))*W;
+      const w=lerp(12,50,Math.abs(Math.sin(i*3.21+0.7))*0.9)*(0.65+os*0.8);
+      const h=lerp(H*0.10,H*0.72,(0.25+bands.bass*0.75)*(0.5+os*0.65)*(0.5+Math.abs(Math.cos(i*2.2))*0.5));
+      const sway=Math.sin(evo.phase*6 + i*0.7)*(10+50*bands.beat)*(0.2+p.drift);
+      const c=mixHex(A,B,i/(towers-1));
+      ctx.save();
+      ctx.globalAlpha=0.10+bands.beat*0.12;
+      ctx.fillStyle=c;
+      ctx.fillRect(x-w/2+sway, ground-h, w, h);
+      ctx.restore();
+
+      strokeGlow(()=>ctx.rect(x-w/2+sway, ground-h, w, h), c, 2.0, 0.8, glow);
+      const bandsN=4+Math.floor(bands.treble*10);
+      for (let b=1;b<=bandsN;b++){
+        const yy=ground-(b/(bandsN+1))*h;
+        fillGlowRect(x-w/2+sway,yy,w,2,mixHex(c,"#ffffff",0.25),0.12+bands.treble*0.22,20+60*bands.beat);
+      }
+      glowCircle(x+sway,ground-h,3+bands.beat*18,mixHex(B,A,0.6),0.22+bands.beat*0.35);
+    }
+  }
+
+  // Register built-ins
+  window.AAL_REGISTER_MODE({id:"crystal", name:"Crystal Bloom PRO (Sound ID)", draw:modeCrystalBloom});
+  window.AAL_REGISTER_MODE({id:"plasma", name:"Plasma Field", draw:modePlasma});
+  window.AAL_REGISTER_MODE({id:"voronoi", name:"Voronoi Crack Mesh", draw:modeVoronoi});
+  window.AAL_REGISTER_MODE({id:"kaleido", name:"Sacred Geometry Kaleidoscope", draw:modeKaleido});
+  window.AAL_REGISTER_MODE({id:"lissajous", name:"Lissajous Curves", draw:modeLissajous});
+  window.AAL_REGISTER_MODE({id:"nebula", name:"Particle Nebula Swarm", draw:modeNebula});
+  window.AAL_REGISTER_MODE({id:"blueprint_house", name:"Blueprint House", draw:modeBlueprintHouse});
+  window.AAL_REGISTER_MODE({id:"cartography", name:"Map / Cartography", draw:modeCartography});
+  window.AAL_REGISTER_MODE({id:"city", name:"City Towers", draw:modeCity});
+
+  // ---------- Plugin Loader (NO folder dependency) ----------
+  async function loadPluginFromFile(file){
+    const txt = await file.text();
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".js")){
+      // JS plugin should call window.AAL_REGISTER_MODE(...)
+      // Sandbox-ish: run in Function with only window/document exposed
+      const fn = new Function("window","document", txt + "\n//# sourceURL=" + file.name);
+      fn(window, document);
+      return;
+    }
+
+    // HTML plugin: expects a <script> that calls AAL_REGISTER_MODE. We'll extract scripts and eval.
+    const scripts = [];
+    const re = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while((m=re.exec(txt))){ scripts.push(m[1]); }
+    if (!scripts.length) throw new Error("Plugin HTML had no <script> blocks.");
+
+    for (const s of scripts){
+      const fn = new Function("window","document", s + "\n//# sourceURL=" + file.name);
+      fn(window, document);
+    }
+  }
+
+  btnLoadPlugin.addEventListener("click", async ()=>{
+    const f = pluginFile.files && pluginFile.files[0];
+    if (!f){ alert("Choose a plugin file (.js or .html) first."); return; }
+    try{
+      await loadPluginFromFile(f);
+      pluginFile.value="";
+    }catch(e){
+      showError(e);
+      alert("Plugin load failed. See on-screen error overlay / console.");
+    }
+  });
+
+  // ---------- Reset ----------
+  btnReset.addEventListener("click", ()=>{
+    paletteEl.value="neon_ice";
+    applyPalette();
+    intensityEl.value="1.00";
+    detailEl.value="0.62";
+    clarityEl.value="0.55";
+    driftEl.value="0.35";
+    objectStrengthEl.value="0.72";
+    harmModeEl.value="off";
+    autoEvolveEl.value="on";
+    if (analyser) analyser.smoothingTimeConstant = clamp(parseFloat(clarityEl.value), 0, 0.95);
+    setStatus("reset","warn");
+  });
+
+  // ---------- Events ----------
+  fileEl.addEventListener("change", ()=>{
+    const f = fileEl.files && fileEl.files[0];
+    if (!f) return;
+    try{ loadAudioFile(f); }catch(e){ showError(e); }
+  });
+
+  btnMic.addEventListener("click", async ()=>{
+    try{
+      await startMic();
+    }catch(e){
+      console.error(e);
+      setStatus("mic blocked","danger");
+      alert("Microphone permission blocked. If you opened this as a file, try serving via localhost (Safari is stricter).");
+    }
+  });
+  btnStopMic.addEventListener("click", stopMic);
+  btnPlay.addEventListener("click", ()=>playAudio().catch(showError));
+  btnPause.addEventListener("click", pauseAudio);
+
+  // ---------- Main loop ----------
+  let lastFrame = performance.now();
+  function tick(now){
+    const dt = now - lastFrame;
+    lastFrame = now;
+
+    try{
+      if (!analyser){
+        // idle screen
+        ctx.fillStyle="#05060a"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save();
+        ctx.globalAlpha=0.9;
+        ctx.fillStyle="#e9eef5";
+        ctx.font="800 20px system-ui,-apple-system,Segoe UI";
+        ctx.fillText("Audio Artwork Living v2.5 PRO", 26, 52);
+        ctx.globalAlpha=0.7;
+        ctx.font="14px system-ui,-apple-system,Segoe UI";
+        ctx.fillText("Upload audio or enable microphone to start.", 26, 78);
+        ctx.restore();
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      const bands = computeBands();
+      evolvePhysics(bands, dt);
+
+      const colors = colorsFromUI();
+      const p = paramsFromUI();
+
+      // keep sound colors cohesive if harmonizer turned on
+      if (harmModeEl.value==="on"){
+        // do not override user-chosen colors
+        let idx=0;
+        for (const e of soundDB.values()){
+          if (!e.userColor) e.color = pickNiceColor(idx, colors.A, colors.B);
+          idx++;
+        }
+        if (idx>0) saveDB();
+      }
+
+      const modeId = modeEl.value;
+      const mode = MODES.get(modeId) || MODES.get("crystal");
+
+      mode.draw(ctx, canvas.width, canvas.height, bands, colors, p, evo);
+
+      // vignette
+      ctx.save();
+      const W=canvas.width,H=canvas.height;
+      const g = ctx.createRadialGradient(W*0.5,H*0.5,Math.min(W,H)*0.2,W*0.5,H*0.5,Math.max(W,H)*0.65);
+      g.addColorStop(0,"rgba(0,0,0,0)");
+      g.addColorStop(1,"rgba(0,0,0,0.35)");
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      ctx.restore();
+
+    }catch(e){
+      showError(e);
+      // recover with a safe frame
+      ctx.fillStyle="#05060a"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle="#e9eef5";
+      ctx.font="800 18px system-ui,-apple-system,Segoe UI";
+      ctx.fillText("Recovered from render error.", 26, 52);
+      ctx.globalAlpha=0.7; ctx.font="14px system-ui,-apple-system,Segoe UI";
+      ctx.fillText("Try switching Mode, or hit Reset.", 26, 78);
+      ctx.restore();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // Boot
+  loadDB();
+  renderSoundDBUI();
+  applyPalette();
+  rebuildModeSelect("crystal");
+  setStatus("idle","warn");
+  requestAnimationFrame(tick);
+
+})();
+</script>
+</body>
+</html>
+
