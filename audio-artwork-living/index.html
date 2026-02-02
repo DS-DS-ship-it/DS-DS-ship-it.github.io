@@ -1238,7 +1238,8 @@ background:rgba(0,0,0,.45);max-width:920px}
     if (!f){ alert("Choose a plugin file (.js or .html) first."); return; }
     try{
       await loadPluginFromFile(f);
-      pluginFile.value="";
+      setStatus(`loaded: ${f.name}`, "ok");
+      // pluginFile.value=""; // keep selected so you can retry // see errors
     }catch(e){
       showError(e);
       alert("Plugin load failed. See on-screen error overlay / console.");
