@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Motion Tracker Pro (Stable + Record + Draggable PiP)</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#07090d; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden; }
+  .wrap { display:grid; grid-template-columns: 1fr 360px; gap:12px; padding:12px; height:100vh; box-sizing:border-box; }
+  .stage { position:relative; border-radius:14px; overflow:hidden; background:#000; box-shadow: 0 16px 60px rgba(0,0,0,.55); }
+  canvas#view { width:100%; height:100%; display:block; background:#000; }
+  .hud { position:absolute; left:10px; top:10px; display:flex; gap:10px; align-items:center; font-size:12px; opacity:.95; }
+  .pill { background:rgba(20,24,32,.72); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:6px 10px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; vertical-align:-1px; background:#777; }
+  .dot.on { background:#31ffb6; box-shadow:0 0 12px rgba(49,255,182,.45); }
+  .dot.rec { background:#ff3b3b; box-shadow:0 0 14px rgba(255,59,59,.55); }
+  .bar { position:absolute; left:0; right:0; bottom:0; padding:10px; display:flex; flex-wrap:wrap; gap:8px; background:linear-gradient(180deg, transparent, rgba(0,0,0,.70)); }
+  button {
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(22,26,34,.72);
+    color:#e9eef5;
+    border-radius:10px;
+    padding:8px 10px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  button:hover{ filter:brightness(1.08); }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .panel {
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(15,18,24,.72);
+    backdrop-filter: blur(10px);
+    padding:12px;
+    overflow:auto;
+  }
+  .panel h3{ margin:6px 0 10px; font-size:14px; }
+  .row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0; }
+  .row label{ opacity:.9; }
+  .row input[type="range"]{ width:170px; }
+  .row input[type="checkbox"]{ transform: scale(1.1); }
+  .small{ font-size:12px; opacity:.72; }
+  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+  /* Floating PiP window (inside app) */
+  #pipWin{
+    position:absolute;
+    left:14px;
+    bottom:80px;
+    width:320px;
+    height:200px;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(0,0,0,.65);
+    box-shadow:0 16px 60px rgba(0,0,0,.55);
+    display:none;
+    touch-action:none;
+  }
+  #pipHeader{
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 8px;
+    background:rgba(18,22,30,.85);
+    border-bottom:1px solid rgba(255,255,255,.10);
+    cursor:grab;
+    user-select:none;
+  }
+  #pipHeader:active{ cursor:grabbing; }
+  #pipTitle{ font-size:12px; opacity:.9; }
+  #pipBtns{ display:flex; gap:6px; }
+  #pipBtns button{ padding:4px 8px; border-radius:8px; font-size:12px; }
+  #pipBody{
+    position:relative;
+    width:100%;
+    height:calc(100% - 30px);
+    background:#000;
+  }
+  #pipCanvas{ width:100%; height:100%; display:block; }
+  #pipResize{
+    position:absolute;
+    right:0; bottom:0;
+    width:16px; height:16px;
+    background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,.35) 50%);
+    cursor:nwse-resize;
+  }
+  #toast{
+}
+#toastClose{
+  position:absolute;
+  right:10px; top:8px;
+  width:22px; height:22px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.35);
+  color:#e9eef5;
+  cursor:pointer;
+  pointer-events:auto;
+}
+#toastClose:hover{ filter:brightness(1.15); }
+#toast{
+
+  z-index: 150;
+  pointer-events: none;
+
+    position:absolute;
+    left:12px; right:12px; bottom:12px;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(15,18,24,.70);
+    opacity:.9;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage" id="stage">
+    <canvas id="view"></canvas>
+
+    <div class="hud">
+      <div class="pill"><span id="camDot" class="dot"></span><span class="mono" id="camTxt">cam: off</span></div>
+      <div class="pill"><span id="detDot" class="dot"></span><span class="mono" id="detTxt">motion: idle</span></div>
+      <div class="pill"><span id="recDot" class="dot"></span><span class="mono" id="recTxt">rec: off</span></div>
+    </div>
+
+    <div class="bar">
+      <button id="btnCam">Enable camera</button>
+      <button id="btnRec" disabled>Start recording</button>
+      <button id="btnDl" disabled>Download last clip</button>
+      <button id="btnSnap" disabled>Snapshot</button>
+      <button id="btnClearMask">Clear mask</button>
+      <button id="btnPause" disabled>Pause detection</button>
+    </div>
+
+    <!-- draggable PiP -->
+    <div id="pipWin">
+      <div id="pipHeader">
+        <div id="pipTitle" class="mono">Motion Zoom</div>
+        <div id="pipBtns">
+          <button id="pipMax">Max</button>
+          <button id="pipClose">×</button>
+        </div>
+      </div>
+      <div id="pipBody">
+        <canvas id="pipCanvas"></canvas>
+        <div id="pipResize" title="Resize"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="small">
+      <button id="toastClose" aria-label="Dismiss">×</button>
+      Tip: **Double-click** the PiP to maximize/restore. Drag by the PiP header. Resize from the corner.
+      Recording is **segmented** by default to keep memory stable.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Controls</h3>
+
+    <div class="row">
+      <label><input type="checkbox" id="chkDetect" checked> Enable detection</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="chkAutoRec" checked> Auto-record on motion</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="chkPip" checked> Show PiP motion zoom</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="chkFollow" checked> Follow strongest track</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="chkSafariSafe" checked> Auto downshift (Safari-safe)</label>
+    </div>
+
+    <h3>Performance / Quality</h3>
+
+    <div class="row">
+      <label>Detection FPS</label>
+      <input id="rngFps" type="range" min="6" max="30" step="1" value="15">
+      <span class="mono" id="valFps">15</span>
+    </div>
+
+    <div class="row">
+      <label>Render scale</label>
+      <input id="rngRender" type="range" min="0.5" max="1.0" step="0.05" value="0.85">
+      <span class="mono" id="valRender">0.85</span>
+    </div>
+
+    <div class="row">
+      <label>Processing width</label>
+      <input id="rngProcW" type="range" min="480" max="1920" step="80" value="1280">
+      <span class="mono" id="valProcW">1280</span>
+    </div>
+
+    <div class="row">
+      <label>PiP size</label>
+      <input id="rngPipSize" type="range" min="180" max="700" step="10" value="320">
+      <span class="mono" id="valPipSize">320</span>
+    </div>
+
+    <div class="row">
+      <label>PiP zoom</label>
+      <input id="rngPipZoom" type="range" min="1.0" max="6.0" step="0.1" value="3.0">
+      <span class="mono" id="valPipZoom">3.0</span>
+    </div>
+
+    <h3>Robustness</h3>
+
+    <div class="row">
+      <label>Background adapt</label>
+      <input id="rngAlpha" type="range" min="0.01" max="0.15" step="0.01" value="0.06">
+      <span class="mono" id="valAlpha">0.06</span>
+    </div>
+
+    <div class="row">
+      <label>Threshold</label>
+      <input id="rngThr" type="range" min="8" max="60" step="1" value="22">
+      <span class="mono" id="valThr">22</span>
+    </div>
+
+    <div class="row">
+      <label>Min blob area</label>
+      <input id="rngMinArea" type="range" min="10" max="2000" step="10" value="120">
+      <span class="mono" id="valMinArea">120</span>
+    </div>
+
+    <div class="row">
+      <label>Morph radius</label>
+      <input id="rngMorph" type="range" min="0" max="5" step="1" value="2">
+      <span class="mono" id="valMorph">2</span>
+    </div>
+
+    <div class="row">
+      <label>Hold (sec)</label>
+      <input id="rngHold" type="range" min="0.2" max="4.0" step="0.1" value="1.5">
+      <span class="mono" id="valHold">1.5</span>
+    </div>
+
+    <div class="row">
+      <label>Stop after quiet (sec)</label>
+      <input id="rngQuiet" type="range" min="0.5" max="15.0" step="0.5" value="5.0">
+      <span class="mono" id="valQuiet">5.0</span>
+    </div>
+
+    <div class="row">
+      <label>Max tracks</label>
+      <input id="rngTracks" type="range" min="1" max="10" step="1" value="6">
+      <span class="mono" id="valTracks">6</span>
+    </div>
+
+    <h3>Recording</h3>
+
+    <div class="row">
+      <label>Record FPS</label>
+      <input id="rngRecFps" type="range" min="15" max="60" step="1" value="30">
+      <span class="mono" id="valRecFps">30</span>
+    </div>
+
+    <div class="row">
+      <label>Bitrate (Mbps)</label>
+      <input id="rngMbps" type="range" min="2" max="30" step="1" value="12">
+      <span class="mono" id="valMbps">12</span>
+    </div>
+
+    <div class="row">
+      <label>Segment (sec) <span class="small">(keeps RAM stable)</span></label>
+      <input id="rngSeg" type="range" min="0" max="300" step="10" value="60">
+      <span class="mono" id="valSeg">60</span>
+    </div>
+
+    <div class="small">
+      If recording still fails on Safari, it’s usually codec support. This app auto-picks the best supported type (mp4/webm).
+      Run on <span class="mono">http://localhost</span> or HTTPS for camera access.
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- elements ----------
+  const stage = document.getElementById('stage');
+  const view = document.getElementById('view');
+  const vctx = view.getContext('2d', { alpha:false, desynchronized:true });
+
+  // processing canvases (single pipeline)
+  const proc = document.createElement('canvas');
+  const pctx = proc.getContext('2d', { willReadFrequently:true });
+
+  const diff = document.createElement('canvas');
+  const dctx = diff.getContext('2d', { willReadFrequently:true });
+
+  const pipWin = document.getElementById('pipWin');
+  const pipCanvas = document.getElementById('pipCanvas');
+  const pipCtx = pipCanvas.getContext('2d', { alpha:false, desynchronized:true });
+
+  const camDot = document.getElementById('camDot');
+  const detDot = document.getElementById('detDot');
+  const recDot = document.getElementById('recDot');
+  const camTxt = document.getElementById('camTxt');
+  const detTxt = document.getElementById('detTxt');
+  const recTxt = document.getElementById('recTxt');
+
+  const btnCam = document.getElementById('btnCam');
+  const btnRec = document.getElementById('btnRec');
+  const btnDl  = document.getElementById('btnDl');
+  const btnSnap = document.getElementById('btnSnap');
+  const btnClearMask = document.getElementById('btnClearMask');
+  const btnPause = document.getElementById('btnPause');
+
+  const chkDetect = document.getElementById('chkDetect');
+  const chkAutoRec = document.getElementById('chkAutoRec');
+  const chkPip = document.getElementById('chkPip');
+  const chkFollow = document.getElementById('chkFollow');
+  const chkSafariSafe = document.getElementById('chkSafariSafe');
+
+  const rngFps = document.getElementById('rngFps');
+  const rngRender = document.getElementById('rngRender');
+  const rngProcW = document.getElementById('rngProcW');
+  const rngPipSize = document.getElementById('rngPipSize');
+  const rngPipZoom = document.getElementById('rngPipZoom');
+
+  const rngAlpha = document.getElementById('rngAlpha');
+  const rngThr = document.getElementById('rngThr');
+  const rngMinArea = document.getElementById('rngMinArea');
+  const rngMorph = document.getElementById('rngMorph');
+  const rngHold = document.getElementById('rngHold');
+  const rngQuiet = document.getElementById('rngQuiet');
+  const rngTracks = document.getElementById('rngTracks');
+
+  const rngRecFps = document.getElementById('rngRecFps');
+  const rngMbps = document.getElementById('rngMbps');
+  const rngSeg = document.getElementById('rngSeg');
+
+  const bindVal = (rng, el, fmt=(v)=>v) => {
+    const update = () => el.textContent = fmt(rng.value);
+    rng.addEventListener('input', update);
+    update();
+  };
+
+  bindVal(rngFps, document.getElementById('valFps'));
+  bindVal(rngRender, document.getElementById('valRender'));
+  bindVal(rngProcW, document.getElementById('valProcW'));
+  bindVal(rngPipSize, document.getElementById('valPipSize'));
+  bindVal(rngPipZoom, document.getElementById('valPipZoom'), v => (+v).toFixed(1));
+
+  bindVal(rngAlpha, document.getElementById('valAlpha'), v => (+v).toFixed(2));
+  bindVal(rngThr, document.getElementById('valThr'));
+  bindVal(rngMinArea, document.getElementById('valMinArea'));
+  bindVal(rngMorph, document.getElementById('valMorph'));
+  bindVal(rngHold, document.getElementById('valHold'), v => (+v).toFixed(1));
+  bindVal(rngQuiet, document.getElementById('valQuiet'), v => (+v).toFixed(1));
+  bindVal(rngTracks, document.getElementById('valTracks'));
+
+  bindVal(rngRecFps, document.getElementById('valRecFps'));
+  bindVal(rngMbps, document.getElementById('valMbps'));
+  bindVal(rngSeg, document.getElementById('valSeg'));
+
+  // ---------- state ----------
+  let stream = null;
+  let video = null;
+  let running = false;
+  let paused = false;
+  let lastT = 0;
+
+  // background model
+  let bg = null;           // Float32Array (grayscale)
+  let prev = null;         // Uint8ClampedArray (grayscale)
+  let gray = null;         // Uint8ClampedArray (grayscale)
+  let mask = null;         // Uint8ClampedArray (0/255)
+
+  // detection/tracking
+  let tracks = [];
+  let nextId = 1;
+  let lastMotionAt = 0;
+
+  // recording
+  let recorder = null;
+  let chunks = [];
+  let lastBlob = null;
+  let lastFilename = null;
+  let segTimer = null;
+
+  // selection for pip zoom
+  let strongest = null; // {x,y,w,h}
+  let pipMaxed = false;
+
+  // zone mask painting (optional)
+  let maskEnabled = false; // not drawing by default; hook if you want
+  // (You can extend with an actual mask UI later.)
+
+  // unified box color (no rainbow)
+  const BOX_HUE = 160; // teal family
+  const boxColorFor = (id) => {
+    // same hue, tiny lightness variation only
+    const l = 62 + ((id * 7) % 10); // 62..71
+    return `hsl(${BOX_HUE} 90% ${l}%)`;
+  };
+
+  function setHud(camOn, motionOn, recOn) {
+    camDot.classList.toggle('on', !!camOn);
+    detDot.classList.toggle('on', !!motionOn);
+    recDot.classList.toggle('rec', !!recOn);
+
+    camTxt.textContent = camOn ? 'cam: on' : 'cam: off';
+    detTxt.textContent = motionOn ? 'motion: ACTIVE' : 'motion: idle';
+    recTxt.textContent = recOn ? 'rec: ON' : 'rec: off';
+  }
+
+  function fitWH(srcW, srcH, targetW) {
+    const s = Math.min(targetW / srcW, 1);
+    return { w: Math.max(2, Math.round(srcW * s)), h: Math.max(2, Math.round(srcH * s)) };
+  }
+
+  function ensureBuffers(w, h) {
+    proc.width = w; proc.height = h;
+    diff.width = w; diff.height = h;
+
+    view.width = Math.round(w * parseFloat(rngRender.value));
+    view.height = Math.round(h * parseFloat(rngRender.value));
+
+    // reuse buffers
+    bg = new Float32Array(w * h);
+    prev = new Uint8ClampedArray(w * h);
+    gray = new Uint8ClampedArray(w * h);
+    mask = new Uint8ClampedArray(w * h);
+    // init bg with zeros; will warm up after first frame
+  }
+
+  // ---------- camera ----------
+  async function startCamera() {
+    if (running) return;
+
+    video = document.createElement('video');
+    video.playsInline = true;
+    video.muted = true;
+
+    // Safari-friendly caps
+    const idealW = Math.min(1920, parseInt(rngProcW.value, 10));
+    const idealH = Math.round(idealW * 9 / 16);
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width:  { ideal: idealW },
+        height: { ideal: idealH },
+        frameRate: { ideal: 30, max: 30 }
+      },
+      audio: false
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    const procW = parseInt(rngProcW.value, 10);
+    const dims = fitWH(video.videoWidth, video.videoHeight, procW);
+
+    ensureBuffers(dims.w, dims.h);
+
+    // PiP canvas internal size (kept light)
+    pipCanvas.width = 640;
+    pipCanvas.height = 360;
+
+    running = true;
+    paused = false;
+
+    btnRec.disabled = false;
+    btnSnap.disabled = false;
+    btnPause.disabled = false;
+
+    setHud(true, false, false);
+    requestAnimationFrame(loop);
+  }
+
+  function stopCamera() {
+    running = false;
+    paused = false;
+    if (recorder && recorder.state !== 'inactive') stopRecording(true);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video = null;
+    btnRec.disabled = true;
+    btnSnap.disabled = true;
+    btnPause.disabled = true;
+    setHud(false, false, false);
+  }
+
+  // ---------- motion detection ----------
+  function toGrayFromRGBA(imgData, outGray) {
+    const d = imgData.data;
+    // integer luminance approx: 0.299R + 0.587G + 0.114B
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      outGray[p] = (d[i] * 77 + d[i+1] * 150 + d[i+2] * 29) >> 8;
+    }
+  }
+
+  function updateBackground(outGray) {
+    const a = parseFloat(rngAlpha.value); // running average alpha
+    for (let i = 0; i < bg.length; i++) {
+      bg[i] = bg[i] + a * (outGray[i] - bg[i]);
+    }
+  }
+
+  function buildDiffMask(outGray) {
+    const thr = parseInt(rngThr.value, 10);
+    let motionCount = 0;
+
+    // abs(gray - bg) > thr
+    for (let i = 0; i < outGray.length; i++) {
+      const v = outGray[i];
+      const dv = Math.abs(v - bg[i]);
+      const m = (dv > thr) ? 255 : 0;
+      mask[i] = m;
+      motionCount += (m ? 1 : 0);
+    }
+    return motionCount;
+  }
+
+  function morphMask(radius) {
+    if (radius <= 0) return;
+
+    // simple 2-pass box erosion/dilation-ish (cheap)
+    // (This is intentionally lightweight; good enough to reduce noise.)
+    const w = proc.width, h = proc.height;
+    const tmp = new Uint8ClampedArray(mask.length);
+
+    // dilate
+    for (let y = 0; y < h; y++) {
+      const y0 = Math.max(0, y - radius);
+      const y1 = Math.min(h - 1, y + radius);
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - radius);
+        const x1 = Math.min(w - 1, x + radius);
+        let on = 0;
+        for (let yy = y0; yy <= y1 && !on; yy++) {
+          const row = yy * w;
+          for (let xx = x0; xx <= x1; xx++) {
+            if (mask[row + xx]) { on = 255; break; }
+          }
+        }
+        tmp[y*w + x] = on;
+      }
+    }
+
+    // erode (slightly)
+    for (let y = 0; y < h; y++) {
+      const y0 = Math.max(0, y - radius);
+      const y1 = Math.min(h - 1, y + radius);
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - radius);
+        const x1 = Math.min(w - 1, x + radius);
+        let all = 255;
+        for (let yy = y0; yy <= y1 && all; yy++) {
+          const row = yy * w;
+          for (let xx = x0; xx <= x1; xx++) {
+            if (!tmp[row + xx]) { all = 0; break; }
+          }
+        }
+        mask[y*w + x] = all;
+      }
+    }
+  }
+
+  function findBlobs() {
+    // connected components on mask (cheap BFS), returns bounding boxes
+    const w = proc.width, h = proc.height;
+    const visited = new Uint8Array(mask.length);
+    const boxes = [];
+    const minArea = parseInt(rngMinArea.value, 10);
+
+    const qx = new Int32Array(1_000_000); // large enough for typical use; avoids realloc
+    const qy = new Int32Array(1_000_000);
+
+    for (let i = 0; i < mask.length; i++) {
+      if (!mask[i] || visited[i]) continue;
+
+      let head = 0, tail = 0;
+      const sx = i % w, sy = (i / w) | 0;
+      qx[tail] = sx; qy[tail] = sy; tail++;
+      visited[i] = 1;
+
+      let minX = sx, maxX = sx, minY = sy, maxY = sy, area = 0;
+
+      while (head < tail) {
+        const x = qx[head], y = qy[head]; head++;
+        area++;
+
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+
+        // 4-neighborhood
+        const n = (y-1)*w + x;
+        const s = (y+1)*w + x;
+        const e = y*w + (x+1);
+        const wv= y*w + (x-1);
+
+        if (y > 0 && mask[n] && !visited[n]) { visited[n]=1; qx[tail]=x; qy[tail]=y-1; tail++; }
+        if (y < h-1 && mask[s] && !visited[s]) { visited[s]=1; qx[tail]=x; qy[tail]=y+1; tail++; }
+        if (x < w-1 && mask[e] && !visited[e]) { visited[e]=1; qx[tail]=x+1; qy[tail]=y; tail++; }
+        if (x > 0 && mask[wv] && !visited[wv]) { visited[wv]=1; qx[tail]=x-1; qy[tail]=y; tail++; }
+
+        if (tail >= qx.length - 4) break; // safety
+      }
+
+      if (area >= minArea) {
+        boxes.push({ x:minX, y:minY, w:(maxX-minX+1), h:(maxY-minY+1), area });
+      }
+    }
+
+    // largest first
+    boxes.sort((a,b)=>b.area-a.area);
+    return boxes;
+  }
+
+  function iou(a,b){
+    const x1 = Math.max(a.x,b.x), y1 = Math.max(a.y,b.y);
+    const x2 = Math.min(a.x+a.w,b.x+b.w), y2 = Math.min(a.y+a.h,b.y+b.h);
+    const iw = Math.max(0, x2-x1), ih = Math.max(0, y2-y1);
+    const inter = iw*ih;
+    const uni = a.w*a.h + b.w*b.h - inter;
+    return uni ? inter/uni : 0;
+  }
+
+  function updateTracks(boxes, now) {
+    const maxTracks = parseInt(rngTracks.value, 10);
+    const holdMs = parseFloat(rngHold.value) * 1000;
+
+    // mark unmatched
+    for (const t of tracks) t.matched = false;
+
+    // greedy match by IoU
+    for (const b of boxes.slice(0, maxTracks)) {
+      let best = null, bestScore = 0;
+      for (const t of tracks) {
+        const score = iou(t, b);
+        if (score > bestScore) { bestScore = score; best = t; }
+      }
+      if (best && bestScore > 0.15) {
+        // smooth follow
+        const k = chkFollow.checked ? 0.25 : 0.0;
+        if (k > 0) {
+          best.x = best.x + (b.x - best.x) * k;
+          best.y = best.y + (b.y - best.y) * k;
+          best.w = best.w + (b.w - best.w) * k;
+          best.h = best.h + (b.h - best.h) * k;
+          best.area = b.area;
+        } else {
+          best.x=b.x; best.y=b.y; best.w=b.w; best.h=b.h; best.area=b.area;
+        }
+        best.lastSeen = now;
+        best.matched = true;
+      } else {
+        tracks.push({ id: nextId++, ...b, lastSeen: now, matched:true });
+      }
+    }
+
+    // drop expired
+    tracks = tracks.filter(t => (now - t.lastSeen) <= holdMs);
+
+    // cap
+    tracks.sort((a,b)=>b.area-a.area);
+    tracks = tracks.slice(0, maxTracks);
+
+    // strongest for PiP
+    strongest = tracks.length ? { x:tracks[0].x, y:tracks[0].y, w:tracks[0].w, h:tracks[0].h, id:tracks[0].id } : null;
+  }
+
+  // ---------- drawing ----------
+  function drawMainFrame() {
+    // draw source video into proc (scaled)
+    pctx.drawImage(video, 0, 0, proc.width, proc.height);
+
+    // main view: render proc up to view size
+    vctx.imageSmoothingEnabled = true;
+    vctx.drawImage(proc, 0, 0, view.width, view.height);
+
+    // draw boxes (single hue family, not rainbow)
+    const sx = view.width / proc.width;
+    const sy = view.height / proc.height;
+
+    vctx.lineWidth = Math.max(2, Math.round(2 * (sx+sy)/2));
+    vctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    vctx.textBaseline = "top";
+
+    for (const t of tracks) {
+      const color = boxColorFor(t.id);
+      vctx.strokeStyle = color;
+      vctx.fillStyle = "rgba(0,0,0,.55)";
+      const x = t.x * sx, y = t.y * sy, w = t.w * sx, h = t.h * sy;
+
+      vctx.strokeRect(x, y, w, h);
+
+      const label = `ID ${t.id}  area ${(t.area|0)}`;
+      const pad = 4;
+      const tw = vctx.measureText(label).width + pad*2;
+      vctx.fillRect(x, y, tw, 18);
+      vctx.fillStyle = "#e9eef5";
+      vctx.fillText(label, x + pad, y + 2);
+    }
+  }
+
+  function drawPiP() {
+    if (!chkPip.checked) { pipWin.style.display = "none"; return; }
+    pipWin.style.display = "block";
+
+    // resize from slider (and allow huge)
+    const size = parseInt(rngPipSize.value, 10);
+    if (!pipMaxed) {
+      pipWin.style.width = size + "px";
+      pipWin.style.height = Math.round(size * 0.62) + "px";
+    }
+
+    // if no strongest, show full frame
+    const zoom = parseFloat(rngPipZoom.value);
+    const W = proc.width, H = proc.height;
+
+    let cx = W/2, cy = H/2, bw = W, bh = H;
+    if (strongest) {
+      cx = strongest.x + strongest.w/2;
+      cy = strongest.y + strongest.h/2;
+      // crop size shrinks as zoom increases
+      bw = Math.max(40, Math.min(W, (pipCanvas.width  / zoom) * (W / pipCanvas.width)));
+      bh = Math.max(40, Math.min(H, (pipCanvas.height / zoom) * (H / pipCanvas.height)));
+    } else {
+      // gentle zoom even without target
+      bw = Math.min(W, W/zoom);
+      bh = Math.min(H, H/zoom);
+    }
+
+    const x0 = Math.max(0, Math.min(W - bw, cx - bw/2));
+    const y0 = Math.max(0, Math.min(H - bh, cy - bh/2));
+
+    pipCtx.imageSmoothingEnabled = true;
+    pipCtx.drawImage(proc, x0, y0, bw, bh, 0, 0, pipCanvas.width, pipCanvas.height);
+
+    // overlay target box
+    if (strongest) {
+      const scaleX = pipCanvas.width / bw;
+      const scaleY = pipCanvas.height / bh;
+      const bx = (strongest.x - x0) * scaleX;
+      const by = (strongest.y - y0) * scaleY;
+      const bw2 = strongest.w * scaleX;
+      const bh2 = strongest.h * scaleY;
+
+      pipCtx.strokeStyle = boxColorFor(strongest.id);
+      pipCtx.lineWidth = 3;
+      pipCtx.strokeRect(bx, by, bw2, bh2);
+
+      pipCtx.fillStyle = "rgba(0,0,0,.55)";
+      pipCtx.fillRect(10, 10, 180, 22);
+      pipCtx.fillStyle = "#e9eef5";
+      pipCtx.font = "12px ui-monospace, Menlo, monospace";
+      pipCtx.fillText(`Zoom ${zoom.toFixed(1)} • ID ${strongest.id}`, 16, 14);
+    }
+  }
+
+  // ---------- recording ----------
+  function pickMimeType() {
+    const candidates = [
+      // Safari often supports mp4 here; Chrome/Edge usually do webm.
+      'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+      'video/mp4',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    for (const t of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return ''; // let browser decide
+  }
+
+  function blobExtFromType(type) {
+    const t = (type || '').toLowerCase();
+    if (t.includes('mp4')) return 'mp4';
+    if (t.includes('webm')) return 'webm';
+    return 'webm';
+  }
+
+  function startRecording() {
+    if (!stream || !video) return;
+    if (recorder && recorder.state !== 'inactive') return;
+
+    // record the COMPOSITED output (canvas) so overlays + boxes are included
+    const recFps = parseInt(rngRecFps.value, 10);
+    const outStream = view.captureStream(recFps);
+
+    // (optional) add mic later; keeping off for stability
+    const mimeType = pickMimeType();
+    const mbps = parseInt(rngMbps.value, 10);
+    const bits = mbps * 1_000_000;
+
+    chunks = [];
+    lastBlob = null;
+    lastFilename = null;
+
+    recorder = new MediaRecorder(outStream, {
+      mimeType: mimeType || undefined,
+      videoBitsPerSecond: bits
+    });
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+
+    recorder.onerror = (e) => {
+      console.error("MediaRecorder error:", e);
+      stopRecording(true);
+      alert("Recorder error. Try lowering bitrate or switching browser. (Safari sometimes only supports MP4/H.264.)");
+    };
+
+    recorder.onstop = () => {
+      try {
+        if (!chunks.length) {
+          btnDl.disabled = true;
+          return;
+        }
+        const type = recorder.mimeType || mimeType || 'video/webm';
+        lastBlob = new Blob(chunks, { type });
+        const ext = blobExtFromType(type);
+        const ts = new Date().toISOString().replace(/[:.]/g,'-');
+        lastFilename = `motion-${ts}.${ext}`;
+        btnDl.disabled = false;
+        recorder = null;
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    // IMPORTANT: timeslice keeps encoder flushing; helps Safari stability.
+    recorder.start(2000);
+
+    // segmentation to keep RAM stable
+    const segSec = parseInt(rngSeg.value, 10);
+    if (segTimer) { clearInterval(segTimer); segTimer = null; }
+    if (segSec > 0) {
+      segTimer = setInterval(() => {
+        // rotate: stop -> download -> restart (prevents RAM growth)
+        if (recorder && recorder.state === 'recording') {
+          stopRecording(false, true); // stop without killing auto-rec state; then restart
+        }
+      }, segSec * 1000);
+    }
+
+    btnRec.textContent = "Stop recording";
+    setHud(true, (Date.now()-lastMotionAt)<800, true);
+  }
+
+  function stopRecording(forceSilent=false, autoRotate=false) {
+    if (!recorder) return;
+
+    if (segTimer) { clearInterval(segTimer); segTimer = null; }
+
+    const wasRec = (recorder.state === 'recording');
+    try { if (wasRec) recorder.stop(); } catch {}
+
+    btnRec.textContent = "Start recording";
+    setHud(true, (Date.now()-lastMotionAt)<800, false);
+
+    // If rotating, auto-download immediately after stop resolves
+    if (autoRotate) {
+      // wait a tick for onstop to build blob
+      setTimeout(() => {
+        if (lastBlob) downloadLastClip(true);
+        // restart if still supposed to be recording (auto mode)
+        if (!forceSilent) startRecording();
+      }, 250);
+    }
+  }
+
+  function downloadLastClip(silent=false) {
+    if (!lastBlob) { if (!silent) alert("No clip yet. Start recording first."); return; }
+    const url = URL.createObjectURL(lastBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = lastFilename || 'motion-clip.webm';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  // ---------- auto record on motion ----------
+  function handleAutoRecord(motionOn, now) {
+    if (!chkAutoRec.checked) return;
+
+    const quietMs = parseFloat(rngQuiet.value) * 1000;
+
+    if (motionOn) {
+      if (!recorder || recorder.state !== 'recording') startRecording();
+    } else {
+      // stop after quiet period
+      if (recorder && recorder.state === 'recording') {
+        if ((now - lastMotionAt) > quietMs) stopRecording(false);
+      }
+    }
+  }
+
+  // ---------- main loop ----------
+  function loop(t) {
+    if (!running) return;
+    if (document.hidden) { requestAnimationFrame(loop); return; } // keep light; no work
+
+    const targetFps = parseInt(rngFps.value, 10);
+    if (t - lastT < 1000 / targetFps) { requestAnimationFrame(loop); return; }
+    lastT = t;
+
+    if (!paused && chkDetect.checked && video && !video.paused && !video.ended) {
+      // grab frame
+      pctx.drawImage(video, 0, 0, proc.width, proc.height);
+
+      // read pixels (only once per tick; reused buffers)
+      const img = pctx.getImageData(0, 0, proc.width, proc.height);
+      toGrayFromRGBA(img, gray);
+
+      // warmup bg quickly on first frames
+      if (bg && bg.length) {
+        if (bg[0] === 0 && bg[1] === 0 && bg[2] === 0) {
+          for (let i = 0; i < gray.length; i++) bg[i] = gray[i];
+        } else {
+          updateBackground(gray);
+        }
+      }
+
+      let motionCount = buildDiffMask(gray);
+
+      const morphR = parseInt(rngMorph.value, 10);
+      if (morphR > 0) morphMask(morphR);
+
+      // blobs & tracks
+      const boxes = findBlobs();
+      const now = Date.now();
+      updateTracks(boxes, now);
+
+      const motionOn = boxes.length > 0 && motionCount > 0;
+      if (motionOn) lastMotionAt = now;
+
+      // draw main
+      drawMainFrame();
+      drawPiP();
+
+      setHud(true, motionOn, (recorder && recorder.state === 'recording'));
+      handleAutoRecord(motionOn, now);
+    } else if (video) {
+      // still draw video and overlays even if detection paused
+      pctx.drawImage(video, 0, 0, proc.width, proc.height);
+      drawMainFrame();
+      drawPiP();
+      setHud(true, false, (recorder && recorder.state === 'recording'));
+    }
+
+    // Safari-safe downshift if needed
+    if (chkSafariSafe.checked) maybeDownshiftSafari();
+
+    requestAnimationFrame(loop);
+  }
+
+  let downshiftedOnce = false;
+  function maybeDownshiftSafari() {
+    // If Safari is struggling, you can manually tune too.
+    // This is a minimal “safety valve”: after a bit of runtime, reduce procW and fps if huge.
+    if (downshiftedOnce) return;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (!isSafari) return;
+
+    const procW = parseInt(rngProcW.value, 10);
+    const fps = parseInt(rngFps.value, 10);
+    const mbps = parseInt(rngMbps.value, 10);
+
+    if (procW > 1280 || fps > 18 || mbps > 18) {
+      // gentle downshift once
+      rngProcW.value = "1280";
+      rngFps.value = "15";
+      rngMbps.value = String(Math.min(12, mbps));
+      document.getElementById('valProcW').textContent = rngProcW.value;
+      document.getElementById('valFps').textContent = rngFps.value;
+      document.getElementById('valMbps').textContent = rngMbps.value;
+
+      downshiftedOnce = true;
+    }
+  }
+
+  // ---------- snapshot ----------
+  function snapshot() {
+    const url = view.toDataURL("image/png");
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snapshot-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // ---------- PiP window interactions (drag + resize + maximize) ----------
+  const pipHeader = document.getElementById('pipHeader');
+  const pipClose = document.getElementById('pipClose');
+  const pipMax = document.getElementById('pipMax');
+  const pipResize = document.getElementById('pipResize');
+
+  let drag = null;
+  pipHeader.addEventListener('pointerdown', (e) => {
+    if (pipMaxed) return;
+    pipHeader.setPointerCapture(e.pointerId);
+    const r = pipWin.getBoundingClientRect();
+    drag = { id:e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, mode:'move' };
+  });
+  pipHeader.addEventListener('pointermove', (e) => {
+    if (!drag || drag.id !== e.pointerId || drag.mode !== 'move') return;
+    const stageR = stage.getBoundingClientRect();
+    let x = e.clientX - stageR.left - drag.dx;
+    let y = e.clientY - stageR.top - drag.dy;
+    x = Math.max(0, Math.min(stageR.width - pipWin.offsetWidth, x));
+    y = Math.max(0, Math.min(stageR.height - pipWin.offsetHeight, y));
+    pipWin.style.left = x + "px";
+    pipWin.style.top = y + "px";
+    pipWin.style.bottom = "auto";
+  });
+  pipHeader.addEventListener('pointerup', (e) => {
+    drag = null;
+  });
+
+  let rsz = null;
+  pipResize.addEventListener('pointerdown', (e) => {
+    if (pipMaxed) return;
+    pipResize.setPointerCapture(e.pointerId);
+    const r = pipWin.getBoundingClientRect();
+    rsz = { id:e.pointerId, w:r.width, h:r.height, x:e.clientX, y:e.clientY };
+  });
+  pipResize.addEventListener('pointermove', (e) => {
+    if (!rsz || rsz.id !== e.pointerId) return;
+    const dx = e.clientX - rsz.x;
+    const dy = e.clientY - rsz.y;
+    const nw = Math.max(180, Math.min(1100, rsz.w + dx));
+    const nh = Math.max(140, Math.min(800, rsz.h + dy));
+    pipWin.style.width = nw + "px";
+    pipWin.style.height = nh + "px";
+  });
+  pipResize.addEventListener('pointerup', () => { rsz = null; });
+
+  function setPipMaxed(on) {
+    pipMaxed = !!on;
+    if (pipMaxed) {
+      // fill a large portion of stage
+      pipWin.style.left = "10px";
+      pipWin.style.top = "50px";
+      pipWin.style.bottom = "auto";
+      pipWin.style.width = Math.min(stage.clientWidth - 20, 980) + "px";
+      pipWin.style.height = Math.min(stage.clientHeight - 120, 600) + "px";
+      pipMax.textContent = "Restore";
+    } else {
+      pipMax.textContent = "Max";
+      // return to slider sizing
+      const size = parseInt(rngPipSize.value, 10);
+      pipWin.style.width = size + "px";
+      pipWin.style.height = Math.round(size * 0.62) + "px";
+    }
+  }
+
+  pipMax.addEventListener('click', () => setPipMaxed(!pipMaxed));
+  pipClose.addEventListener('click', () => { chkPip.checked = false; pipWin.style.display = "none"; });
+  pipWin.addEventListener('dblclick', () => setPipMaxed(!pipMaxed));
+
+  rngPipSize.addEventListener('input', () => { if (!pipMaxed) { pipWin.style.width = rngPipSize.value + "px"; pipWin.style.height = Math.round(rngPipSize.value * 0.62) + "px"; } });
+
+  // ---------- buttons ----------
+  btnCam.addEventListener('click', async () => {
+    try {
+      if (!running) {
+        await startCamera();
+        btnCam.textContent = "Disable camera";
+      } else {
+        stopCamera();
+        btnCam.textContent = "Enable camera";
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Camera failed. Use HTTPS or http://localhost and allow camera access.");
+    }
+  });
+
+  btnRec.addEventListener('click', () => {
+    if (!running) return;
+    if (!recorder || recorder.state === 'inactive') startRecording();
+    else stopRecording(false);
+  });
+
+  btnDl.addEventListener('click', () => downloadLastClip(false));
+  btnSnap.addEventListener('click', snapshot);
+
+  btnPause.addEventListener('click', () => {
+    paused = !paused;
+    btnPause.textContent = paused ? "Resume detection" : "Pause detection";
+  });
+
+  btnClearMask.addEventListener('click', () => {
+    // placeholder if you later add a real zone mask painting feature
+    tracks = [];
+    strongest = null;
+  });
+
+  // ---------- visibility ----------
+  document.addEventListener('visibilitychange', () => {
+    // do NOT keep processing when hidden
+    if (document.hidden) {
+      // (keep recording if you want, but Safari may kill background tabs anyway)
+    } else {
+      requestAnimationFrame(loop);
+    }
+  });
+
+  // show PiP initially if checked
+  pipWin.style.display = chkPip.checked ? "block" : "none";
+  // toast: click-through + dismiss
+  const toast = document.getElementById("toast");
+  const toastClose = document.getElementById("toastClose");
+  if (toast) {
+    toast.style.pointerEvents = "none";
+  }
+  if (toastClose) {
+    toastClose.style.pointerEvents = "auto";
+    toastClose.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const t = document.getElementById("toast");
+      if (t) t.style.display = "none";
+    });
+  }
+  setTimeout(() => { const t=document.getElementById("toast"); if (t) t.style.display="none"; }, 6000);
+
+})();
+</script>
+</body>
+</html>
