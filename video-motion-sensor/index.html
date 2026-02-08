@@ -1,1122 +1,1329 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Motion Tracker Pro (Stable + Record + Draggable PiP)</title>
-<style>
-  :root { color-scheme: dark; }
-  body { margin:0; background:#07090d; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden; }
-  .wrap { display:grid; grid-template-columns: 1fr 360px; gap:12px; padding:12px; height:100vh; box-sizing:border-box; }
-  .stage { position:relative; border-radius:14px; overflow:hidden; background:#000; box-shadow: 0 16px 60px rgba(0,0,0,.55); }
-  canvas#view { width:100%; height:100%; display:block; background:#000; }
-  .hud { position:absolute; left:10px; top:10px; display:flex; gap:10px; align-items:center; font-size:12px; opacity:.95; }
-  .pill { background:rgba(20,24,32,.72); border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:6px 10px; }
-  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; vertical-align:-1px; background:#777; }
-  .dot.on { background:#31ffb6; box-shadow:0 0 12px rgba(49,255,182,.45); }
-  .dot.rec { background:#ff3b3b; box-shadow:0 0 14px rgba(255,59,59,.55); }
-  .bar { position:absolute; left:0; right:0; bottom:0; padding:10px; display:flex; flex-wrap:wrap; gap:8px; background:linear-gradient(180deg, transparent, rgba(0,0,0,.70)); }
-  button {
-    border:1px solid rgba(255,255,255,.14);
-    background:rgba(22,26,34,.72);
-    color:#e9eef5;
-    border-radius:10px;
-    padding:8px 10px;
-    font-weight:600;
-    cursor:pointer;
-  }
-  button:hover{ filter:brightness(1.08); }
-  button:disabled{ opacity:.5; cursor:not-allowed; }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Motion Tracker (Safari Memory Safe) + Auto Record + PiP Zoom</title>
+  <style>
+    :root { color-scheme: dark; }
+    body{ margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    .wrap{ display:grid; grid-template-columns: 1fr 380px; gap:12px; padding:12px; }
+    .stage{
+      position:relative;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      overflow:hidden;
+      background:#000;
+      box-shadow:0 12px 40px rgba(0,0,0,.45);
+      min-height: 380px;
+    }
+    canvas#view{ width:100%; height:auto; display:block; background:#000; }
 
-  .panel {
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(15,18,24,.72);
-    backdrop-filter: blur(10px);
-    padding:12px;
-    overflow:auto;
-  }
-  .panel h3{ margin:6px 0 10px; font-size:14px; }
-  .row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0; }
-  .row label{ opacity:.9; }
-  .row input[type="range"]{ width:170px; }
-  .row input[type="checkbox"]{ transform: scale(1.1); }
-  .small{ font-size:12px; opacity:.72; }
-  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .hud{
+      position:absolute; left:10px; bottom:10px; right:10px;
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+      pointer-events:auto;
+    }
+    button{
+      background: rgba(15,18,24,.75);
+      border:1px solid rgba(255,255,255,.16);
+      color:#e9eef5;
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    button:hover{ filter:brightness(1.08); }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .pill{
+      position:absolute; left:10px; top:10px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(15,18,24,.65);
+      backdrop-filter: blur(8px);
+      font-size:12px;
+      display:flex; gap:10px; align-items:center;
+      z-index: 5;
+    }
+    .dot{ width:10px; height:10px; border-radius:50%; background:#777; }
+    .dot.ok{ background:#39d353; }
+    .dot.rec{ background:#ff4d4d; box-shadow:0 0 0 0 rgba(255,77,77,.55); animation:pulse 1.1s infinite; }
+    .dot.warn{ background:#ffcc00; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,77,77,.55);} 100%{box-shadow:0 0 0 10px rgba(255,77,77,0);} }
 
-  /* Floating PiP window (inside app) */
-  #pipWin{
-    position:absolute;
-    left:14px;
-    bottom:80px;
-    width:320px;
-    height:200px;
-    border-radius:12px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.16);
-    background:rgba(0,0,0,.65);
-    box-shadow:0 16px 60px rgba(0,0,0,.55);
-    display:none;
-    touch-action:none;
-  }
-  #pipHeader{
-    height:30px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 8px;
-    background:rgba(18,22,30,.85);
-    border-bottom:1px solid rgba(255,255,255,.10);
-    cursor:grab;
-    user-select:none;
-  }
-  #pipHeader:active{ cursor:grabbing; }
-  #pipTitle{ font-size:12px; opacity:.9; }
-  #pipBtns{ display:flex; gap:6px; }
-  #pipBtns button{ padding:4px 8px; border-radius:8px; font-size:12px; }
-  #pipBody{
-    position:relative;
-    width:100%;
-    height:calc(100% - 30px);
-    background:#000;
-  }
-  #pipCanvas{ width:100%; height:100%; display:block; }
-  #pipResize{
-    position:absolute;
-    right:0; bottom:0;
-    width:16px; height:16px;
-    background:linear-gradient(135deg, transparent 50%, rgba(255,255,255,.35) 50%);
-    cursor:nwse-resize;
-  }
-  #toast{
-}
-#toastClose{
-  position:absolute;
-  right:10px; top:8px;
-  width:22px; height:22px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(0,0,0,.35);
-  color:#e9eef5;
-  cursor:pointer;
-  pointer-events:auto;
-}
-#toastClose:hover{ filter:brightness(1.15); }
-#toast{
+    .panel{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      background: rgba(15,18,24,.72);
+      box-shadow:0 12px 40px rgba(0,0,0,.35);
+      padding:12px;
+      height: fit-content;
+    }
+    .row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0; }
+    .row label{ display:flex; gap:8px; align-items:center; user-select:none; }
+    input[type="range"]{ width:190px; }
+    .small{ opacity:.8; font-size:12px; }
+    code{ background:rgba(255,255,255,.08); padding:2px 6px; border-radius:6px; }
 
-  z-index: 150;
-  pointer-events: none;
+    /* PiP window */
+    .pip{
+      position:fixed;      right:12px; bottom:12px;
+      border-radius:12px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.18);
+      background:#000;
+      box-shadow:0 12px 30px rgba(0,0,0,.55);
+      display:none;
+      z-index: 6;
+      user-select:none;
+      touch-action:none;
+    
+      position:fixed;
+      isolation:isolate;
+    }
+    .pip.smallMode{ width:240px; height:150px; }
+    /* large = ~ 1/4 screen-ish (click to toggle) */
+    .pip.largeMode{ width:min(52vw, 760px); height:min(34vw, 460px); }
+    canvas#pipView{ width:100%; height:100%; display:block; background:#000; 
+      position:absolute; inset:0; z-index:1;
+    }
 
-    position:absolute;
-    left:12px; right:12px; bottom:12px;
-    padding:10px 12px;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(15,18,24,.70);
-    opacity:.9;
-  }
-</style>
+    /* draggable header */
+    .pipHeader{
+      position:absolute; left:0; top:0; right:0;
+      height:30px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 8px;
+      background: rgba(15,18,24,.62);
+      border-bottom:1px solid rgba(255,255,255,.12);
+      cursor: grab;
+      z-index:2;
+    
+      z-index:3;
+    }
+    .pipHeader:active{ cursor:grabbing; }
+    .pipTitle{
+      font-size:11px;
+      opacity:.95;
+      pointer-events:none;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 75%;
+    }
+    .pipHint{
+      font-size:11px;
+      opacity:.7;
+      pointer-events:none;
+    }
+
+    .hint{
+      margin-top:8px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size:12px;
+      opacity:.9;
+    }
+
+    video#cam { position:absolute; left:-99999px; top:-99999px; width:1px; height:1px; opacity:0; }
+    /* PiP header button */
+    .pipBtn{
+      pointer-events:auto;
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.18);
+      color:#e9eef5;
+      padding:4px 8px;
+      border-radius:10px;
+      font:11px/1.0 ui-monospace, Menlo, monospace;
+      cursor:pointer;
+    }
+    .pipBtn:hover{ filter:brightness(1.15); }
+    .pipBtn:disabled{ opacity:.55; cursor:not-allowed; }
+
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="stage" id="stage">
-    <canvas id="view"></canvas>
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <div class="pill">
+        <span class="dot" id="dot"></span>
+        <span id="status">Idle</span>
+        <span class="small" id="fps">—</span>
+        <span class="small" id="work">work —</span>
+      </div>
 
-    <div class="hud">
-      <div class="pill"><span id="camDot" class="dot"></span><span class="mono" id="camTxt">cam: off</span></div>
-      <div class="pill"><span id="detDot" class="dot"></span><span class="mono" id="detTxt">motion: idle</span></div>
-      <div class="pill"><span id="recDot" class="dot"></span><span class="mono" id="recTxt">rec: off</span></div>
-    </div>
+      <canvas id="view"></canvas>
 
-    <div class="bar">
-      <button id="btnCam">Enable camera</button>
-      <button id="btnRec" disabled>Start recording</button>
-      <button id="btnDl" disabled>Download last clip</button>
-      <button id="btnSnap" disabled>Snapshot</button>
-      <button id="btnClearMask">Clear mask</button>
-      <button id="btnPause" disabled>Pause detection</button>
-    </div>
+      <div class="pip smallMode" id="pip" title="Click canvas to enlarge / shrink">
+        <div class="pipHeader" id="pipHeader">
+          <div class="pipTitle" id="pipTitle">Motion Zoom</div>
+          <div class="pipHint">drag • click</div>
+          <button class="pipBtn" id="pipRec" type="button">Rec PiP</button>
+          <button class="pipBtn" id="pipDl" type="button" disabled>DL PiP</button>
 
-    <!-- draggable PiP -->
-    <div id="pipWin">
-      <div id="pipHeader">
-        <div id="pipTitle" class="mono">Motion Zoom</div>
-        <div id="pipBtns">
-          <button id="pipMax">Max</button>
-          <button id="pipClose">×</button>
+          <button class="pipBtn" id="pipToggle" type="button">Enlarge</button>
         </div>
+        <canvas id="pipView"></canvas>
       </div>
-      <div id="pipBody">
-        <canvas id="pipCanvas"></canvas>
-        <div id="pipResize" title="Resize"></div>
+
+      <div class="hud">
+        <button id="btnStart">Enable camera</button>
+        <button id="btnMask">Mask draw: OFF</button>
+        <button id="btnSnap" disabled>Snapshot</button>
+        <button id="btnRec" disabled>Start recording</button>
+        <button id="btnDownload" disabled>Download last clip</button>
+        <button id="btnClearMask" disabled>Clear mask</button>
+        <button id="btnPause" disabled>Pause detection</button>
       </div>
+
+      <video id="cam" playsinline muted autoplay></video>
     </div>
 
-    <div id="toast" class="small">
-      <button id="toastClose" aria-label="Dismiss">×</button>
-      Tip: **Double-click** the PiP to maximize/restore. Drag by the PiP header. Resize from the corner.
-      Recording is **segmented** by default to keep memory stable.
+    <div class="panel">
+      <div class="row">
+        <label><input type="checkbox" id="chkDetect" checked> Enable detection</label>
+      </div>
+      <div class="row">
+        <!-- ✅ not selected on boot -->
+        <label><input type="checkbox" id="chkAutoRec"> Auto-record on motion</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="chkShowPip" checked> Show PiP zoom</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="chkFollow" checked> Follow (smooth) track</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="chkAutoDownshift" checked> Auto downshift (Safari-safe)</label>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:10px 0;">
+
+      <div class="small" style="margin-bottom:6px; font-weight:700;">Performance / Quality</div>
+
+      <div class="row">
+        <div>Detection FPS</div>
+        <div><input type="range" id="rngDetFps" min="4" max="24" step="1" value="10"><span class="small" id="valDetFps">10</span></div>
+      </div>
+
+      <div class="row">
+        <div>Render scale</div>
+        <div><input type="range" id="rngScale" min="0.45" max="1.00" step="0.05" value="0.70"><span class="small" id="valScale">0.70</span></div>
+      </div>
+
+      <div class="row">
+        <div>Processing width</div>
+        <div><input type="range" id="rngProcW" min="224" max="640" step="16" value="288"><span class="small" id="valProcW">288px</span></div>
+      </div>
+
+      <div class="row">
+        <div>PiP size</div>
+        <div><input type="range" id="rngPip" min="180" max="520" step="10" value="260"><span class="small" id="valPip">260px</span></div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:10px 0;">
+
+      <div class="small" style="margin-bottom:6px; font-weight:700;">Robustness Controls</div>
+
+      <div class="row">
+        <div>Background adapt</div>
+        <div><input type="range" id="rngAlpha" min="0.01" max="0.25" step="0.01" value="0.06"><span class="small" id="valAlpha">0.06</span></div>
+      </div>
+
+      <div class="row">
+        <div>Threshold</div>
+        <div><input type="range" id="rngThr" min="5" max="60" step="1" value="22"><span class="small" id="valThr">22</span></div>
+      </div>
+
+      <div class="row">
+        <div>Min blob area</div>
+        <div><input type="range" id="rngMinArea" min="10" max="2500" step="10" value="70"><span class="small" id="valMinArea">70</span></div>
+      </div>
+
+      <div class="row">
+        <div>Morph radius</div>
+        <div><input type="range" id="rngMorph" min="0" max="2" step="1" value="1"><span class="small" id="valMorph">1</span></div>
+      </div>
+
+      <div class="row">
+        <div>Hold (sec)</div>
+        <div><input type="range" id="rngHold" min="0.2" max="5.0" step="0.1" value="1.5"><span class="small" id="valHold">1.5</span></div>
+      </div>
+
+      <div class="row">
+        <div>Stop after quiet (sec)</div>
+        <div><input type="range" id="rngQuiet" min="0.5" max="12" step="0.5" value="5.0"><span class="small" id="valQuiet">5.0</span></div>
+      </div>
+
+      <div class="row">
+        <div>Max tracks</div>
+        <div><input type="range" id="rngMaxTracks" min="1" max="10" step="1" value="5"><span class="small" id="valMaxTracks">5</span></div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:10px 0;">
+
+      <div class="small" style="margin-bottom:6px; font-weight:700;">Recording (stable)</div>
+
+      <div class="row">
+        <div>Rec FPS</div>
+        <div><input type="range" id="rngRecFps" min="10" max="30" step="1" value="30"><span class="small" id="valRecFps">30</span></div>
+      </div>
+
+      <div class="row">
+        <div>Bitrate (Mbps)</div>
+        <div><input type="range" id="rngMbps" min="2" max="18" step="1" value="8"><span class="small" id="valMbps">8</span></div>
+      </div>
+
+      <div class="row">
+        <div>Timeslice (ms)</div>
+        <div><input type="range" id="rngSlice" min="500" max="4000" step="100" value="1500"><span class="small" id="valSlice">1500</span></div>
+      </div>
+
+      <div class="hint">
+        <b>Recording stability:</b> records the <code>view</code> canvas (boxes included) with timesliced chunks, and releases the capture stream on stop to prevent tab memory growth.
+      </div>
+      <div class="hint">
+        <b>PiP:</b> drag by the header; click the PiP canvas to toggle small ⇄ ~¼ screen.
+      </div>
     </div>
   </div>
-
-  <div class="panel">
-    <h3>Controls</h3>
-
-    <div class="row">
-      <label><input type="checkbox" id="chkDetect" checked> Enable detection</label>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="chkAutoRec" checked> Auto-record on motion</label>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="chkPip" checked> Show PiP motion zoom</label>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="chkFollow" checked> Follow strongest track</label>
-    </div>
-    <div class="row">
-      <label><input type="checkbox" id="chkSafariSafe" checked> Auto downshift (Safari-safe)</label>
-    </div>
-
-    <h3>Performance / Quality</h3>
-
-    <div class="row">
-      <label>Detection FPS</label>
-      <input id="rngFps" type="range" min="6" max="30" step="1" value="15">
-      <span class="mono" id="valFps">15</span>
-    </div>
-
-    <div class="row">
-      <label>Render scale</label>
-      <input id="rngRender" type="range" min="0.5" max="1.0" step="0.05" value="0.85">
-      <span class="mono" id="valRender">0.85</span>
-    </div>
-
-    <div class="row">
-      <label>Processing width</label>
-      <input id="rngProcW" type="range" min="480" max="1920" step="80" value="1280">
-      <span class="mono" id="valProcW">1280</span>
-    </div>
-
-    <div class="row">
-      <label>PiP size</label>
-      <input id="rngPipSize" type="range" min="180" max="700" step="10" value="320">
-      <span class="mono" id="valPipSize">320</span>
-    </div>
-
-    <div class="row">
-      <label>PiP zoom</label>
-      <input id="rngPipZoom" type="range" min="1.0" max="6.0" step="0.1" value="3.0">
-      <span class="mono" id="valPipZoom">3.0</span>
-    </div>
-
-    <h3>Robustness</h3>
-
-    <div class="row">
-      <label>Background adapt</label>
-      <input id="rngAlpha" type="range" min="0.01" max="0.15" step="0.01" value="0.06">
-      <span class="mono" id="valAlpha">0.06</span>
-    </div>
-
-    <div class="row">
-      <label>Threshold</label>
-      <input id="rngThr" type="range" min="8" max="60" step="1" value="22">
-      <span class="mono" id="valThr">22</span>
-    </div>
-
-    <div class="row">
-      <label>Min blob area</label>
-      <input id="rngMinArea" type="range" min="10" max="2000" step="10" value="120">
-      <span class="mono" id="valMinArea">120</span>
-    </div>
-
-    <div class="row">
-      <label>Morph radius</label>
-      <input id="rngMorph" type="range" min="0" max="5" step="1" value="2">
-      <span class="mono" id="valMorph">2</span>
-    </div>
-
-    <div class="row">
-      <label>Hold (sec)</label>
-      <input id="rngHold" type="range" min="0.2" max="4.0" step="0.1" value="1.5">
-      <span class="mono" id="valHold">1.5</span>
-    </div>
-
-    <div class="row">
-      <label>Stop after quiet (sec)</label>
-      <input id="rngQuiet" type="range" min="0.5" max="15.0" step="0.5" value="5.0">
-      <span class="mono" id="valQuiet">5.0</span>
-    </div>
-
-    <div class="row">
-      <label>Max tracks</label>
-      <input id="rngTracks" type="range" min="1" max="10" step="1" value="6">
-      <span class="mono" id="valTracks">6</span>
-    </div>
-
-    <h3>Recording</h3>
-
-    <div class="row">
-      <label>Record FPS</label>
-      <input id="rngRecFps" type="range" min="15" max="60" step="1" value="30">
-      <span class="mono" id="valRecFps">30</span>
-    </div>
-
-    <div class="row">
-      <label>Bitrate (Mbps)</label>
-      <input id="rngMbps" type="range" min="2" max="30" step="1" value="12">
-      <span class="mono" id="valMbps">12</span>
-    </div>
-
-    <div class="row">
-      <label>Segment (sec) <span class="small">(keeps RAM stable)</span></label>
-      <input id="rngSeg" type="range" min="0" max="300" step="10" value="60">
-      <span class="mono" id="valSeg">60</span>
-    </div>
-
-    <div class="small">
-      If recording still fails on Safari, it’s usually codec support. This app auto-picks the best supported type (mp4/webm).
-      Run on <span class="mono">http://localhost</span> or HTTPS for camera access.
-    </div>
-  </div>
-</div>
 
 <script>
 (() => {
   "use strict";
 
-  // ---------- elements ----------
-  const stage = document.getElementById('stage');
-  const view = document.getElementById('view');
-  const vctx = view.getContext('2d', { alpha:false, desynchronized:true });
+  // ---- DOM ----
+  const stage = document.getElementById("stage");
+  const video = document.getElementById("cam");
 
-  // processing canvases (single pipeline)
-  const proc = document.createElement('canvas');
-  const pctx = proc.getContext('2d', { willReadFrequently:true });
+  const view = document.getElementById("view");
+  const vctx = view.getContext("2d", { alpha:false, desynchronized:true });
 
-  const diff = document.createElement('canvas');
-  const dctx = diff.getContext('2d', { willReadFrequently:true });
+  const pipWrap = document.getElementById("pip");
+  const pipHeader = document.getElementById("pipHeader");
+  const pipView = document.getElementById("pipView");
+  const pctx = pipView.getContext("2d", { alpha:false, desynchronized:true });
 
-  const pipWin = document.getElementById('pipWin');
-  const pipCanvas = document.getElementById('pipCanvas');
-  const pipCtx = pipCanvas.getContext('2d', { alpha:false, desynchronized:true });
+  const pipRecBtn = document.getElementById("pipRec");
+  const pipDlBtn  = document.getElementById("pipDl");
+  const pipToggle = document.getElementById("pipToggle");
+  const pipTitle = document.getElementById("pipTitle");
 
-  const camDot = document.getElementById('camDot');
-  const detDot = document.getElementById('detDot');
-  const recDot = document.getElementById('recDot');
-  const camTxt = document.getElementById('camTxt');
-  const detTxt = document.getElementById('detTxt');
-  const recTxt = document.getElementById('recTxt');
+  const dot = document.getElementById("dot");
+  const statusEl = document.getElementById("status");
+  const fpsEl = document.getElementById("fps");
+  const workEl = document.getElementById("work");
 
-  const btnCam = document.getElementById('btnCam');
-  const btnRec = document.getElementById('btnRec');
-  const btnDl  = document.getElementById('btnDl');
-  const btnSnap = document.getElementById('btnSnap');
-  const btnClearMask = document.getElementById('btnClearMask');
-  const btnPause = document.getElementById('btnPause');
+  const btnStart = document.getElementById("btnStart");
+  const btnMask = document.getElementById("btnMask");
+  const btnSnap = document.getElementById("btnSnap");
+  const btnRec = document.getElementById("btnRec");
+  const btnDownload = document.getElementById("btnDownload");
+  const btnClearMask = document.getElementById("btnClearMask");
+  const btnPause = document.getElementById("btnPause");
 
-  const chkDetect = document.getElementById('chkDetect');
-  const chkAutoRec = document.getElementById('chkAutoRec');
-  const chkPip = document.getElementById('chkPip');
-  const chkFollow = document.getElementById('chkFollow');
-  const chkSafariSafe = document.getElementById('chkSafariSafe');
+  const chkDetect = document.getElementById("chkDetect");
+  const chkAutoRec = document.getElementById("chkAutoRec");     // ✅ default OFF in HTML
+  const chkShowPip = document.getElementById("chkShowPip");
+  const chkFollow = document.getElementById("chkFollow");
+  const chkAutoDownshift = document.getElementById("chkAutoDownshift");
 
-  const rngFps = document.getElementById('rngFps');
-  const rngRender = document.getElementById('rngRender');
-  const rngProcW = document.getElementById('rngProcW');
-  const rngPipSize = document.getElementById('rngPipSize');
-  const rngPipZoom = document.getElementById('rngPipZoom');
+  const rngDetFps = document.getElementById("rngDetFps");
+  const rngScale  = document.getElementById("rngScale");
+  const rngProcW  = document.getElementById("rngProcW");
+  const rngPip    = document.getElementById("rngPip");
 
-  const rngAlpha = document.getElementById('rngAlpha');
-  const rngThr = document.getElementById('rngThr');
-  const rngMinArea = document.getElementById('rngMinArea');
-  const rngMorph = document.getElementById('rngMorph');
-  const rngHold = document.getElementById('rngHold');
-  const rngQuiet = document.getElementById('rngQuiet');
-  const rngTracks = document.getElementById('rngTracks');
+  const rngAlpha = document.getElementById("rngAlpha");
+  const rngThr = document.getElementById("rngThr");
+  const rngMinArea = document.getElementById("rngMinArea");
+  const rngMorph = document.getElementById("rngMorph");
+  const rngHold = document.getElementById("rngHold");
+  const rngQuiet = document.getElementById("rngQuiet");
+  const rngMaxTracks = document.getElementById("rngMaxTracks");
 
-  const rngRecFps = document.getElementById('rngRecFps');
-  const rngMbps = document.getElementById('rngMbps');
-  const rngSeg = document.getElementById('rngSeg');
+  const rngRecFps = document.getElementById("rngRecFps");
+  const rngMbps = document.getElementById("rngMbps");
+  const rngSlice = document.getElementById("rngSlice");
 
-  const bindVal = (rng, el, fmt=(v)=>v) => {
-    const update = () => el.textContent = fmt(rng.value);
-    rng.addEventListener('input', update);
-    update();
-  };
+  const valDetFps = document.getElementById("valDetFps");
+  const valScale  = document.getElementById("valScale");
+  const valProcW  = document.getElementById("valProcW");
+  const valPip    = document.getElementById("valPip");
 
-  bindVal(rngFps, document.getElementById('valFps'));
-  bindVal(rngRender, document.getElementById('valRender'));
-  bindVal(rngProcW, document.getElementById('valProcW'));
-  bindVal(rngPipSize, document.getElementById('valPipSize'));
-  bindVal(rngPipZoom, document.getElementById('valPipZoom'), v => (+v).toFixed(1));
+  const valAlpha = document.getElementById("valAlpha");
+  const valThr = document.getElementById("valThr");
+  const valMinArea = document.getElementById("valMinArea");
+  const valMorph = document.getElementById("valMorph");
+  const valHold = document.getElementById("valHold");
+  const valQuiet = document.getElementById("valQuiet");
+  const valMaxTracks = document.getElementById("valMaxTracks");
 
-  bindVal(rngAlpha, document.getElementById('valAlpha'), v => (+v).toFixed(2));
-  bindVal(rngThr, document.getElementById('valThr'));
-  bindVal(rngMinArea, document.getElementById('valMinArea'));
-  bindVal(rngMorph, document.getElementById('valMorph'));
-  bindVal(rngHold, document.getElementById('valHold'), v => (+v).toFixed(1));
-  bindVal(rngQuiet, document.getElementById('valQuiet'), v => (+v).toFixed(1));
-  bindVal(rngTracks, document.getElementById('valTracks'));
+  const valRecFps = document.getElementById("valRecFps");
+  const valMbps = document.getElementById("valMbps");
+  const valSlice = document.getElementById("valSlice");
 
-  bindVal(rngRecFps, document.getElementById('valRecFps'));
-  bindVal(rngMbps, document.getElementById('valMbps'));
-  bindVal(rngSeg, document.getElementById('valSeg'));
+  function syncLabels(){
+    valDetFps.textContent = `${rngDetFps.value}`;
+    valScale.textContent  = `${Number(rngScale.value).toFixed(2)}`;
+    valProcW.textContent  = `${rngProcW.value}px`;
+    valPip.textContent    = `${rngPip.value}px`;
 
-  // ---------- state ----------
-  let stream = null;
-  let video = null;
-  let running = false;
-  let paused = false;
-  let lastT = 0;
+    valAlpha.textContent = `${Number(rngAlpha.value).toFixed(2)}`;
+    valThr.textContent = `${rngThr.value}`;
+    valMinArea.textContent = `${rngMinArea.value}`;
+    valMorph.textContent = `${rngMorph.value}`;
+    valHold.textContent = `${Number(rngHold.value).toFixed(1)}`;
+    valQuiet.textContent = `${Number(rngQuiet.value).toFixed(1)}`;
+    valMaxTracks.textContent = `${rngMaxTracks.value}`;
 
-  // background model
-  let bg = null;           // Float32Array (grayscale)
-  let prev = null;         // Uint8ClampedArray (grayscale)
-  let gray = null;         // Uint8ClampedArray (grayscale)
-  let mask = null;         // Uint8ClampedArray (0/255)
+    valRecFps.textContent = `${rngRecFps.value}`;
+    valMbps.textContent = `${rngMbps.value}`;
+    valSlice.textContent = `${rngSlice.value}`;
+  }
+  [
+    rngDetFps,rngScale,rngProcW,rngPip,
+    rngAlpha,rngThr,rngMinArea,rngMorph,rngHold,rngQuiet,rngMaxTracks,
+    rngRecFps,rngMbps,rngSlice
+  ].forEach(el => el.addEventListener("input", syncLabels));
+  syncLabels();
 
-  // detection/tracking
+  // ---- Helpers ----
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const now = ()=>performance.now();
+
+  function setStatus(text, mode){
+    statusEl.textContent = text;
+    dot.classList.remove("ok","rec","warn");
+    dot.classList.add(mode || "ok");
+  }
+
+  // ---- Processing canvases (small) ----
+  const proc = document.createElement("canvas");
+  const prc = proc.getContext("2d", { willReadFrequently:true });
+
+  const maskC = document.createElement("canvas");
+  const mctx = maskC.getContext("2d");
+
+  // ---- Reused buffers (NO per-frame allocations) ----
+  let maskBits = null;       // Uint8Array(w*h)
+  let maskDirty = true;
+
+  let bgF = null;            // Float32Array(w*h*3)
+
+  let binA = null;           // Uint8Array(w*h)
+  let binB = null;           // Uint8Array(w*h) (for morph)
+  let visited = null;        // Uint8Array(w*h)
+  let queue = null;          // Uint32Array(w*h) BFS queue (max)
+  let queueHead = 0, queueTail = 0;
+
+  // Tracks
   let tracks = [];
   let nextId = 1;
-  let lastMotionAt = 0;
 
-  // recording
+  // Mask drawing
+  let maskDraw = false;
+  let painting = false;
+  let lastPt = null;
+
+  // Detection throttle + load control
+  let lastWorkMs = 0;
+  let heavyStrikes = 0;
+  let pausedUntil = 0;
+
+  // Bitmap caching (reduces internal copies in Safari)
+  let lastBitmapAt = 0;
+  let lastBitmap = null;
+
+  // Recording (STABLE + DOWNLOADABLE)
   let recorder = null;
-  let chunks = [];
-  let lastBlob = null;
-  let lastFilename = null;
-  let segTimer = null;
+  let recStream = null;              // ✅ keep reference so we can stop tracks (prevents leaks/crashes)
+  let recBlobs = [];
+  let lastClipBlob = null;
+  let recording = false;
 
-  // selection for pip zoom
-  let strongest = null; // {x,y,w,h}
-  let pipMaxed = false;
+  // ---- PiP recording ----
+  let pipRecorder = null;
+  let pipStream = null;
+  let pipBlobs = [];
+  let lastPipBlob = null;
+  let pipRecording = false;
+  let pipRecStartAt = 0;
 
-  // zone mask painting (optional)
-  let maskEnabled = false; // not drawing by default; hook if you want
-  // (You can extend with an actual mask UI later.)
+  // Auto recording gate
+  let lastMotionAt = 0;
+  let motionHoldUntil = 0;
 
-  // unified box color (no rainbow)
-  const BOX_HUE = 160; // teal family
-  const boxColorFor = (id) => {
-    // same hue, tiny lightness variation only
-    const l = 62 + ((id * 7) % 10); // 62..71
-    return `hsl(${BOX_HUE} 90% ${l}%)`;
-  };
+  // PiP state
+  let pipLarge = false;
+  let pipDrag = { on:false, dx:0, dy:0 };
 
-  function setHud(camOn, motionOn, recOn) {
-    camDot.classList.toggle('on', !!camOn);
-    detDot.classList.toggle('on', !!motionOn);
-    recDot.classList.toggle('rec', !!recOn);
+  // Ensure drag always releases even if pointerup occurs outside header
+  window.addEventListener("pointerup", function(){ pipDrag.on = false; }, {passive:true});
+  window.addEventListener("pointercancel", function(){ pipDrag.on = false; }, {passive:true});
+  // store pip position (so it stays where you drag it)
+  let pipPos = { left:null, top:null, right:12, bottom:12 };
 
-    camTxt.textContent = camOn ? 'cam: on' : 'cam: off';
-    detTxt.textContent = motionOn ? 'motion: ACTIVE' : 'motion: idle';
-    recTxt.textContent = recOn ? 'rec: ON' : 'rec: off';
+  function allocBuffers(){
+    const w = proc.width, h = proc.height;
+    maskBits = new Uint8Array(w*h);
+    binA = new Uint8Array(w*h);
+    binB = new Uint8Array(w*h);
+    visited = new Uint8Array(w*h);
+    queue = new Uint32Array(w*h);
+    bgF = null;
+    tracks = [];
+    maskDirty = true;
   }
 
-  function fitWH(srcW, srcH, targetW) {
-    const s = Math.min(targetW / srcW, 1);
-    return { w: Math.max(2, Math.round(srcW * s)), h: Math.max(2, Math.round(srcH * s)) };
+  function resizeAll(){
+    const vw0 = video.videoWidth || 1280;
+    const vh0 = video.videoHeight || 720;
+
+    const scale = Number(rngScale.value);
+    const vw = Math.max(320, Math.round(vw0 * scale));
+    const vh = Math.max(240, Math.round(vh0 * scale));
+
+    view.width = vw; view.height = vh;
+
+    // keep pip internal reasonable (avoid GPU bloat)
+    pipView.width = 640;
+    pipView.height = 400;
+
+    const pw = Number(rngProcW.value);
+    const ph = Math.max(160, Math.round(pw * (vh0 / vw0)));
+
+    proc.width = pw; proc.height = ph;
+    maskC.width = pw; maskC.height = ph;
+    mctx.clearRect(0,0,pw,ph);
+
+    allocBuffers();
+    workEl.textContent = `proc ${pw}×${ph}`;
   }
 
-  function ensureBuffers(w, h) {
-    proc.width = w; proc.height = h;
-    diff.width = w; diff.height = h;
-
-    view.width = Math.round(w * parseFloat(rngRender.value));
-    view.height = Math.round(h * parseFloat(rngRender.value));
-
-    // reuse buffers
-    bg = new Float32Array(w * h);
-    prev = new Uint8ClampedArray(w * h);
-    gray = new Uint8ClampedArray(w * h);
-    mask = new Uint8ClampedArray(w * h);
-    // init bg with zeros; will warm up after first frame
+  function viewToProc(x, y){
+    const pw = proc.width, ph = proc.height;
+    const vw = view.width, vh = view.height;
+    return { x: x * (pw / vw), y: y * (ph / vh) };
   }
 
-  // ---------- camera ----------
-  async function startCamera() {
-    if (running) return;
-
-    video = document.createElement('video');
-    video.playsInline = true;
-    video.muted = true;
-
-    // Safari-friendly caps
-    const idealW = Math.min(1920, parseInt(rngProcW.value, 10));
-    const idealH = Math.round(idealW * 9 / 16);
-
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width:  { ideal: idealW },
-        height: { ideal: idealH },
-        frameRate: { ideal: 30, max: 30 }
-      },
-      audio: false
-    });
-
-    video.srcObject = stream;
-    await video.play();
-
-    const procW = parseInt(rngProcW.value, 10);
-    const dims = fitWH(video.videoWidth, video.videoHeight, procW);
-
-    ensureBuffers(dims.w, dims.h);
-
-    // PiP canvas internal size (kept light)
-    pipCanvas.width = 640;
-    pipCanvas.height = 360;
-
-    running = true;
-    paused = false;
-
-    btnRec.disabled = false;
-    btnSnap.disabled = false;
-    btnPause.disabled = false;
-
-    setHud(true, false, false);
-    requestAnimationFrame(loop);
+  function rebuildMaskBits(){
+    const w = proc.width, h = proc.height;
+    const img = mctx.getImageData(0,0,w,h).data;
+    for (let i=0, p=0; i<img.length; i+=4, p++){
+      maskBits[p] = img[i] > 10 ? 1 : 0;
+    }
+    maskDirty = false;
   }
 
-  function stopCamera() {
-    running = false;
-    paused = false;
-    if (recorder && recorder.state !== 'inactive') stopRecording(true);
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = null;
-    video = null;
-    btnRec.disabled = true;
-    btnSnap.disabled = true;
-    btnPause.disabled = true;
-    setHud(false, false, false);
+  function drawMaskBrush(px, py, erase){
+    const r = 18;
+    mctx.save();
+    mctx.globalCompositeOperation = erase ? "destination-out" : "source-over";
+    mctx.fillStyle = "rgba(255,255,255,0.92)";
+    mctx.beginPath();
+    mctx.arc(px, py, r, 0, Math.PI*2);
+    mctx.fill();
+    mctx.restore();
+    maskDirty = true;
   }
 
-  // ---------- motion detection ----------
-  function toGrayFromRGBA(imgData, outGray) {
-    const d = imgData.data;
-    // integer luminance approx: 0.299R + 0.587G + 0.114B
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      outGray[p] = (d[i] * 77 + d[i+1] * 150 + d[i+2] * 29) >> 8;
+  function bgInitOrUpdate(d, alpha){
+    const w = proc.width, h = proc.height;
+    if (!bgF){
+      bgF = new Float32Array(w*h*3);
+      for (let i=0, p=0; i<d.length; i+=4, p+=3){
+        bgF[p]   = d[i];
+        bgF[p+1] = d[i+1];
+        bgF[p+2] = d[i+2];
+      }
+      return;
+    }
+    const a = alpha;
+    for (let i=0, p=0; i<d.length; i+=4, p+=3){
+      bgF[p]   += a * (d[i]   - bgF[p]);
+      bgF[p+1] += a * (d[i+1] - bgF[p+1]);
+      bgF[p+2] += a * (d[i+2] - bgF[p+2]);
     }
   }
 
-  function updateBackground(outGray) {
-    const a = parseFloat(rngAlpha.value); // running average alpha
-    for (let i = 0; i < bg.length; i++) {
-      bg[i] = bg[i] + a * (outGray[i] - bg[i]);
+  function computeBinary(d, thr){
+    if (maskDirty) rebuildMaskBits();
+    const t = thr;
+    for (let i=0, p=0, b=0; i<d.length; i+=4, p++, b+=3){
+      if (maskBits[p]) { binA[p] = 0; continue; }
+      const dr = d[i]   - bgF[b];
+      const dg = d[i+1] - bgF[b+1];
+      const db = d[i+2] - bgF[b+2];
+      const adr = dr<0? -dr: dr;
+      const adg = dg<0? -dg: dg;
+      const adb = db<0? -db: db;
+      binA[p] = ((adr+adg+adb)/3 >= t) ? 1 : 0;
     }
   }
 
-  function buildDiffMask(outGray) {
-    const thr = parseInt(rngThr.value, 10);
-    let motionCount = 0;
-
-    // abs(gray - bg) > thr
-    for (let i = 0; i < outGray.length; i++) {
-      const v = outGray[i];
-      const dv = Math.abs(v - bg[i]);
-      const m = (dv > thr) ? 255 : 0;
-      mask[i] = m;
-      motionCount += (m ? 1 : 0);
-    }
-    return motionCount;
-  }
-
-  function morphMask(radius) {
+  function morphClose(radius){
     if (radius <= 0) return;
-
-    // simple 2-pass box erosion/dilation-ish (cheap)
-    // (This is intentionally lightweight; good enough to reduce noise.)
     const w = proc.width, h = proc.height;
-    const tmp = new Uint8ClampedArray(mask.length);
 
-    // dilate
-    for (let y = 0; y < h; y++) {
-      const y0 = Math.max(0, y - radius);
-      const y1 = Math.min(h - 1, y + radius);
-      for (let x = 0; x < w; x++) {
-        const x0 = Math.max(0, x - radius);
-        const x1 = Math.min(w - 1, x + radius);
+    // Dilate binA -> binB
+    for (let y=0;y<h;y++){
+      const yw = y*w;
+      for (let x=0;x<w;x++){
         let on = 0;
-        for (let yy = y0; yy <= y1 && !on; yy++) {
-          const row = yy * w;
-          for (let xx = x0; xx <= x1; xx++) {
-            if (mask[row + xx]) { on = 255; break; }
+        for (let yy=y-radius; yy<=y+radius && !on; yy++){
+          if (yy<0||yy>=h) continue;
+          const yyw = yy*w;
+          for (let xx=x-radius; xx<=x+radius; xx++){
+            if (xx<0||xx>=w) continue;
+            if (binA[yyw+xx]) { on=1; break; }
           }
         }
-        tmp[y*w + x] = on;
+        binB[yw+x] = on;
       }
     }
 
-    // erode (slightly)
-    for (let y = 0; y < h; y++) {
-      const y0 = Math.max(0, y - radius);
-      const y1 = Math.min(h - 1, y + radius);
-      for (let x = 0; x < w; x++) {
-        const x0 = Math.max(0, x - radius);
-        const x1 = Math.min(w - 1, x + radius);
-        let all = 255;
-        for (let yy = y0; yy <= y1 && all; yy++) {
-          const row = yy * w;
-          for (let xx = x0; xx <= x1; xx++) {
-            if (!tmp[row + xx]) { all = 0; break; }
+    // Erode binB -> binA
+    for (let y=0;y<h;y++){
+      const yw = y*w;
+      for (let x=0;x<w;x++){
+        let on = 1;
+        for (let yy=y-radius; yy<=y+radius && on; yy++){
+          if (yy<0||yy>=h) { on=0; break; }
+          const yyw = yy*w;
+          for (let xx=x-radius; xx<=x+radius; xx++){
+            if (xx<0||xx>=w) { on=0; break; }
+            if (!binB[yyw+xx]) { on=0; break; }
           }
         }
-        mask[y*w + x] = all;
+        binA[yw+x] = on;
       }
     }
   }
 
-  function findBlobs() {
-    // connected components on mask (cheap BFS), returns bounding boxes
+  function findBlobs(minArea, maxBlobs){
     const w = proc.width, h = proc.height;
-    const visited = new Uint8Array(mask.length);
-    const boxes = [];
-    const minArea = parseInt(rngMinArea.value, 10);
+    visited.fill(0);
+    const blobs = [];
 
-    const qx = new Int32Array(1_000_000); // large enough for typical use; avoids realloc
-    const qy = new Int32Array(1_000_000);
+    for (let y=0; y<h; y++){
+      const yw = y*w;
+      for (let x=0; x<w; x++){
+        const p0 = yw + x;
+        if (visited[p0] || !binA[p0]) continue;
 
-    for (let i = 0; i < mask.length; i++) {
-      if (!mask[i] || visited[i]) continue;
+        queueHead = 0; queueTail = 0;
+        queue[queueTail++] = p0;
+        visited[p0] = 1;
 
-      let head = 0, tail = 0;
-      const sx = i % w, sy = (i / w) | 0;
-      qx[tail] = sx; qy[tail] = sy; tail++;
-      visited[i] = 1;
+        let minX=x, minY=y, maxX=x, maxY=y, area=0;
 
-      let minX = sx, maxX = sx, minY = sy, maxY = sy, area = 0;
+        while (queueHead < queueTail){
+          const cur = queue[queueHead++];
+          const cx = cur % w;
+          const cy = (cur / w) | 0;
 
-      while (head < tail) {
-        const x = qx[head], y = qy[head]; head++;
-        area++;
+          area++;
+          if (cx<minX) minX=cx; if (cy<minY) minY=cy;
+          if (cx>maxX) maxX=cx; if (cy>maxY) maxY=cy;
 
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
+          for (let yy=cy-1; yy<=cy+1; yy++){
+            if (yy<0||yy>=h) continue;
+            const yyw2 = yy*w;
+            for (let xx=cx-1; xx<=cx+1; xx++){
+              if (xx<0||xx>=w) continue;
+              const pp = yyw2 + xx;
+              if (visited[pp] || !binA[pp]) continue;
+              visited[pp] = 1;
+              queue[queueTail++] = pp;
+            }
+          }
+        }
 
-        // 4-neighborhood
-        const n = (y-1)*w + x;
-        const s = (y+1)*w + x;
-        const e = y*w + (x+1);
-        const wv= y*w + (x-1);
-
-        if (y > 0 && mask[n] && !visited[n]) { visited[n]=1; qx[tail]=x; qy[tail]=y-1; tail++; }
-        if (y < h-1 && mask[s] && !visited[s]) { visited[s]=1; qx[tail]=x; qy[tail]=y+1; tail++; }
-        if (x < w-1 && mask[e] && !visited[e]) { visited[e]=1; qx[tail]=x+1; qy[tail]=y; tail++; }
-        if (x > 0 && mask[wv] && !visited[wv]) { visited[wv]=1; qx[tail]=x-1; qy[tail]=y; tail++; }
-
-        if (tail >= qx.length - 4) break; // safety
-      }
-
-      if (area >= minArea) {
-        boxes.push({ x:minX, y:minY, w:(maxX-minX+1), h:(maxY-minY+1), area });
+        if (area >= minArea){
+          blobs.push({x:minX,y:minY,w:(maxX-minX+1),h:(maxY-minY+1),area});
+          if (blobs.length >= maxBlobs) return blobs;
+        }
       }
     }
-
-    // largest first
-    boxes.sort((a,b)=>b.area-a.area);
-    return boxes;
+    return blobs;
   }
 
   function iou(a,b){
-    const x1 = Math.max(a.x,b.x), y1 = Math.max(a.y,b.y);
-    const x2 = Math.min(a.x+a.w,b.x+b.w), y2 = Math.min(a.y+a.h,b.y+b.h);
-    const iw = Math.max(0, x2-x1), ih = Math.max(0, y2-y1);
-    const inter = iw*ih;
-    const uni = a.w*a.h + b.w*b.h - inter;
-    return uni ? inter/uni : 0;
+    const ax2=a.x+a.w, ay2=a.y+a.h;
+    const bx2=b.x+b.w, by2=b.y+b.h;
+    const ix1=Math.max(a.x,b.x), iy1=Math.max(a.y,b.y);
+    const ix2=Math.min(ax2,bx2), iy2=Math.min(ay2,by2);
+    const iw=Math.max(0, ix2-ix1), ih=Math.max(0, iy2-iy1);
+    const inter=iw*ih;
+    const ua=a.w*a.h + b.w*b.h - inter;
+    return ua>0 ? inter/ua : 0;
   }
 
-  function updateTracks(boxes, now) {
-    const maxTracks = parseInt(rngTracks.value, 10);
-    const holdMs = parseFloat(rngHold.value) * 1000;
-
-    // mark unmatched
-    for (const t of tracks) t.matched = false;
-
-    // greedy match by IoU
-    for (const b of boxes.slice(0, maxTracks)) {
-      let best = null, bestScore = 0;
-      for (const t of tracks) {
-        const score = iou(t, b);
-        if (score > bestScore) { bestScore = score; best = t; }
+  function updateTracks(blobs, t, maxTracks){
+    const used = new Uint8Array(blobs.length);
+    for (const tr of tracks){
+      let best=-1, bestJ=-1;
+      for (let j=0;j<blobs.length;j++){
+        if (used[j]) continue;
+        const s = iou(tr, blobs[j]);
+        if (s > best){ best=s; bestJ=j; }
       }
-      if (best && bestScore > 0.15) {
-        // smooth follow
-        const k = chkFollow.checked ? 0.25 : 0.0;
-        if (k > 0) {
-          best.x = best.x + (b.x - best.x) * k;
-          best.y = best.y + (b.y - best.y) * k;
-          best.w = best.w + (b.w - best.w) * k;
-          best.h = best.h + (b.h - best.h) * k;
-          best.area = b.area;
-        } else {
-          best.x=b.x; best.y=b.y; best.w=b.w; best.h=b.h; best.area=b.area;
-        }
-        best.lastSeen = now;
-        best.matched = true;
-      } else {
-        tracks.push({ id: nextId++, ...b, lastSeen: now, matched:true });
+      if (bestJ >= 0 && best >= 0.12){
+        const b = blobs[bestJ];
+        used[bestJ] = 1;
+        tr.x=b.x; tr.y=b.y; tr.w=b.w; tr.h=b.h;
+        tr.area=b.area; tr.lastSeen=t;
+        tr.score = tr.score*0.85 + b.area*0.15;
       }
     }
 
-    // drop expired
-    tracks = tracks.filter(t => (now - t.lastSeen) <= holdMs);
+    for (let j=0;j<blobs.length && tracks.length<maxTracks;j++){
+      if (used[j]) continue;
+      const b = blobs[j];
+      tracks.push({id: nextId++, x:b.x,y:b.y,w:b.w,h:b.h, area:b.area, score:b.area, lastSeen:t});
+    }
 
-    // cap
-    tracks.sort((a,b)=>b.area-a.area);
-    tracks = tracks.slice(0, maxTracks);
-
-    // strongest for PiP
-    strongest = tracks.length ? { x:tracks[0].x, y:tracks[0].y, w:tracks[0].w, h:tracks[0].h, id:tracks[0].id } : null;
+    tracks = tracks.filter(tr => (t - tr.lastSeen) < 2000);
   }
 
-  // ---------- drawing ----------
-  function drawMainFrame() {
-    // draw source video into proc (scaled)
-    pctx.drawImage(video, 0, 0, proc.width, proc.height);
+  function strongestTrack(){
+    if (!tracks.length) return null;
+    let best = tracks[0];
+    for (const t of tracks) if (t.score > best.score) best = t;
+    return best;
+  }
 
-    // main view: render proc up to view size
-    vctx.imageSmoothingEnabled = true;
-    vctx.drawImage(proc, 0, 0, view.width, view.height);
+  // ---------- Recording (UPGRADED: stable + downloadable + no leak) ----------
+  function pickMime(){
+    const cands = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+    for (const m of cands){
+      try{ if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }catch{}
+    }
+    return "";
+  }
 
-    // draw boxes (single hue family, not rainbow)
-    const sx = view.width / proc.width;
-    const sy = view.height / proc.height;
+  async function addMicTo(stream){
+    try{
+      const mic = await navigator.mediaDevices.getUserMedia({ audio:true });
+      mic.getAudioTracks().forEach(t => stream.addTrack(t));
+      // Keep a handle so we can stop mic tracks too:
+      stream.__mic = mic;
+    }catch{}
+    return stream;
+  }
 
-    vctx.lineWidth = Math.max(2, Math.round(2 * (sx+sy)/2));
-    vctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+  async function startRecording(){
+    if (recording) return;
+    if (!video.videoWidth) return;
+
+    // always stop any previous clip URL
+    lastClipBlob = null;
+    btnDownload.disabled = true;
+    recBlobs = [];
+
+    const fps = Number(rngRecFps.value);
+    const mbps = Number(rngMbps.value);
+    const slice = Number(rngSlice.value);
+
+    // IMPORTANT: record the *view canvas* (includes overlays)
+    recStream = view.captureStream(fps);
+    await addMicTo(recStream);
+
+    const mime = pickMime();
+    const opts = {
+      videoBitsPerSecond: mbps * 1_000_000
+    };
+    if (mime) opts.mimeType = mime;
+
+    try{
+      recorder = new MediaRecorder(recStream, opts);
+    }catch(e){
+      console.error(e);
+      setStatus("Recorder init failed", "warn");
+      // cleanup stream
+      stopRecStream();
+      return;
+    }
+
+    recorder.ondataavailable = (e)=>{ if (e.data && e.data.size) recBlobs.push(e.data); };
+    recorder.onerror = (e)=>{
+      console.error("Recorder error", e);
+      setStatus("Recorder error", "warn");
+      stopRecording(true);
+    };
+    recorder.onstop = ()=>{
+      // assemble one blob and enable download
+      try{
+        lastClipBlob = new Blob(recBlobs, { type: (recBlobs[0] && recBlobs[0].type) || (mime || "video/webm") });
+        btnDownload.disabled = !lastClipBlob || lastClipBlob.size === 0;
+      }catch{
+        btnDownload.disabled = true;
+      }
+      stopRecStream(); // ✅ critical: stops capture + mic tracks so Safari doesn’t grow memory
+    };
+
+    recorder.start(slice); // timeslice => memory stable
+    recording = true;
+    pipWrap.__mainRecStartAt = performance.now();
+    btnRec.textContent = "Stop recording";
+    setStatus("Recording…", "rec");
+  }
+
+  function stopRecStream(){
+    try{
+      if (recStream){
+        if (recStream.getTracks) recStream.getTracks().forEach(t=>t.stop());
+        if (recStream.__mic && recStream.__mic.getTracks) recStream.__mic.getTracks().forEach(t=>t.stop());
+      }
+    }catch{}
+    recStream = null;
+  }
+
+  function stopRecording(silent=false){
+    if (!recording) return;
+    recording = false;
+    btnRec.textContent = "Start recording";
+    if (!silent) setStatus("Stopping…", "ok");
+    try{ recorder && recorder.state !== "inactive" && recorder.stop(); }catch{}
+
+    // stop PiP recorder too
+    try { stopPipRecording(true); } catch {}
+    if (pipSegTimer) { clearInterval(pipSegTimer); pipSegTimer = null; }
+
+    recorder = null;
+  }
+
+
+  function downloadBlob(blob, name){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2500);
+  }
+
+
+  function stopPipStream(){
+    try{
+      if (pipStream && pipStream.getTracks) pipStream.getTracks().forEach(t=>t.stop());
+    }catch{}
+    pipStream = null;
+  }
+
+  function startPipRecording(){
+    if (pipRecording) return;
+    lastPipBlob = null;
+    pipBlobs = [];
+    pipRecStartAt = performance.now();
+    try{
+      pipStream = pipView.captureStream(Number(rngRecFps.value));
+      pipRecorder = new MediaRecorder(pipStream, { videoBitsPerSecond: Number(rngMbps.value) * 1_000_000 });
+    }catch(e){
+      console.error(e);
+      stopPipStream();
+      return;
+    }
+    pipRecorder.ondataavailable = (e)=>{ if (e.data && e.data.size) pipBlobs.push(e.data); };
+    pipRecorder.onstop = ()=>{
+      try{
+        lastPipBlob = new Blob(pipBlobs, { type: (pipBlobs[0] && pipBlobs[0].type) || "video/webm" });
+      }catch{}
+      stopPipStream();
+      try{ syncPipButtons(); }catch{}
+    };
+    pipRecorder.start(Number(rngSlice.value));
+    pipRecording = true;
+  }
+
+  function stopPipRecording(silent=false){
+    if (!pipRecording) return;
+    pipRecording = false;
+    try{ if (pipRecorder && pipRecorder.state !== "inactive") pipRecorder.stop(); }catch{}
+    pipRecorder = null;
+    if (!silent) { try{ syncPipButtons(); }catch{} }
+  }
+
+
+
+  function syncPipButtons(){
+    if (pipRecBtn) pipRecBtn.textContent = pipRecording ? "Stop PiP" : "Rec PiP";
+    if (pipDlBtn)  pipDlBtn.disabled = !(lastPipBlob && lastPipBlob.size);
+  }
+
+  if (pipRecBtn){
+    pipRecBtn.addEventListener("click", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if (!pipRecording) startPipRecording();
+      else stopPipRecording();
+      syncPipButtons();
+    });
+  }
+
+  if (pipDlBtn){
+    pipDlBtn.addEventListener("click", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if (lastPipBlob && lastPipBlob.size){
+        const ts = new Date().toISOString().replace(/[:.]/g,"-");
+        downloadBlob(lastPipBlob, `motion-zoom-${ts}.webm`);
+      }
+    });
+  }
+
+  if (pipToggle){
+    pipToggle.addEventListener("click", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      pipLarge = !pipLarge;
+      pipWrap.classList.toggle("largeMode", pipLarge);
+      pipWrap.classList.toggle("smallMode", !pipLarge);
+      pipToggle.textContent = pipLarge ? "Restore" : "Enlarge";
+    });
+  }
+
+  try{ syncPipButtons(); }catch{}
+  function downloadLast(){
+    if (!lastClipBlob) return;
+    const url = URL.createObjectURL(lastClipBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `motion-${new Date().toISOString().replace(/[:.]/g,"-")}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
+  // ---- Memory / load circuit breaker ----
+  function downshiftIfNeeded(){
+    if (!chkAutoDownshift.checked) return;
+
+    if (lastWorkMs > 20) heavyStrikes++; else heavyStrikes = Math.max(0, heavyStrikes-1);
+
+    if (heavyStrikes >= 6){
+      heavyStrikes = 0;
+
+      const pw = Number(rngProcW.value);
+      const fps = Number(rngDetFps.value);
+
+      if (pw > 224){
+        rngProcW.value = String(Math.max(224, pw - 32));
+        syncLabels();
+        resizeAll();
+        setStatus("Auto downshift: lower processing", "warn");
+        pausedUntil = now() + 1500;
+      } else if (fps > 6){
+        rngDetFps.value = String(Math.max(6, fps - 1));
+        syncLabels();
+        setStatus("Auto downshift: lower FPS", "warn");
+        pausedUntil = now() + 1500;
+      } else {
+        setStatus("Cooling down (Safari)", "warn");
+        pausedUntil = now() + 3500;
+      }
+    }
+  }
+
+  // ---- Main loop ----
+  let lastFrameT = 0;
+  let lastDetectT = 0;
+
+  async function getBitmap(){
+    const t = now();
+    if (lastBitmap && (t - lastBitmapAt) < 66) return lastBitmap;
+    if (lastBitmap) { try { lastBitmap.close(); } catch {} lastBitmap = null; }
+    try{
+      lastBitmap = await createImageBitmap(video);
+      lastBitmapAt = t;
+      return lastBitmap;
+    }catch{
+      return null;
+    }
+  }
+
+  function drawOverlays(){
+    const pw = proc.width, ph = proc.height;
+    const scaleX = view.width / pw;
+    const scaleY = view.height / ph;
+
+    vctx.lineWidth = 3;
+    vctx.font = "14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
     vctx.textBaseline = "top";
 
-    for (const t of tracks) {
-      const color = boxColorFor(t.id);
-      vctx.strokeStyle = color;
-      vctx.fillStyle = "rgba(0,0,0,.55)";
-      const x = t.x * sx, y = t.y * sy, w = t.w * sx, h = t.h * sy;
+    for (const tr of tracks){
+      const x = tr.x * scaleX;
+      const y = tr.y * scaleY;
+      const w = tr.w * scaleX;
+      const h = tr.h * scaleY;
 
+      vctx.strokeStyle = "rgba(57,211,83,.95)";
       vctx.strokeRect(x, y, w, h);
 
-      const label = `ID ${t.id}  area ${(t.area|0)}`;
-      const pad = 4;
-      const tw = vctx.measureText(label).width + pad*2;
-      vctx.fillRect(x, y, tw, 18);
-      vctx.fillStyle = "#e9eef5";
-      vctx.fillText(label, x + pad, y + 2);
+      vctx.fillStyle = "rgba(0,0,0,.55)";
+      vctx.fillRect(x, y-18, Math.max(120, w*0.6), 18);
+
+      vctx.fillStyle = "rgba(255,255,255,.92)";
+      vctx.fillText(`ID ${tr.id}  area ${Math.round(tr.area)}`, x+6, y-16);
+    }
+
+    if (maskDraw){
+      vctx.save();
+      vctx.globalAlpha = 0.18;
+      vctx.imageSmoothingEnabled = false;
+      vctx.drawImage(maskC, 0,0,proc.width,proc.height, 0,0,view.width,view.height);
+      vctx.restore();
     }
   }
 
-  function drawPiP() {
-    if (!chkPip.checked) { pipWin.style.display = "none"; return; }
-    pipWin.style.display = "block";
-
-    // resize from slider (and allow huge)
-    const size = parseInt(rngPipSize.value, 10);
-    if (!pipMaxed) {
-      pipWin.style.width = size + "px";
-      pipWin.style.height = Math.round(size * 0.62) + "px";
-    }
-
-    // if no strongest, show full frame
-    const zoom = parseFloat(rngPipZoom.value);
-    const W = proc.width, H = proc.height;
-
-    let cx = W/2, cy = H/2, bw = W, bh = H;
-    if (strongest) {
-      cx = strongest.x + strongest.w/2;
-      cy = strongest.y + strongest.h/2;
-      // crop size shrinks as zoom increases
-      bw = Math.max(40, Math.min(W, (pipCanvas.width  / zoom) * (W / pipCanvas.width)));
-      bh = Math.max(40, Math.min(H, (pipCanvas.height / zoom) * (H / pipCanvas.height)));
+  function ensurePipPos(){
+    // Apply persisted style if user dragged
+    if (pipPos.left !== null){
+      pipWrap.style.left = pipPos.left + "px";
+      pipWrap.style.top = pipPos.top + "px";
+      pipWrap.style.right = "auto";
+      pipWrap.style.bottom = "auto";
     } else {
-      // gentle zoom even without target
-      bw = Math.min(W, W/zoom);
-      bh = Math.min(H, H/zoom);
-    }
-
-    const x0 = Math.max(0, Math.min(W - bw, cx - bw/2));
-    const y0 = Math.max(0, Math.min(H - bh, cy - bh/2));
-
-    pipCtx.imageSmoothingEnabled = true;
-    pipCtx.drawImage(proc, x0, y0, bw, bh, 0, 0, pipCanvas.width, pipCanvas.height);
-
-    // overlay target box
-    if (strongest) {
-      const scaleX = pipCanvas.width / bw;
-      const scaleY = pipCanvas.height / bh;
-      const bx = (strongest.x - x0) * scaleX;
-      const by = (strongest.y - y0) * scaleY;
-      const bw2 = strongest.w * scaleX;
-      const bh2 = strongest.h * scaleY;
-
-      pipCtx.strokeStyle = boxColorFor(strongest.id);
-      pipCtx.lineWidth = 3;
-      pipCtx.strokeRect(bx, by, bw2, bh2);
-
-      pipCtx.fillStyle = "rgba(0,0,0,.55)";
-      pipCtx.fillRect(10, 10, 180, 22);
-      pipCtx.fillStyle = "#e9eef5";
-      pipCtx.font = "12px ui-monospace, Menlo, monospace";
-      pipCtx.fillText(`Zoom ${zoom.toFixed(1)} • ID ${strongest.id}`, 16, 14);
+      pipWrap.style.left = "auto";
+      pipWrap.style.top = "auto";
+      pipWrap.style.right = pipPos.right + "px";
+      pipWrap.style.bottom = pipPos.bottom + "px";
     }
   }
 
-  // ---------- recording ----------
-  function pickMimeType() {
-    const candidates = [
-      // Safari often supports mp4 here; Chrome/Edge usually do webm.
-      'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
-      'video/mp4',
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm'
-    ];
-    for (const t of candidates) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
-    }
-    return ''; // let browser decide
-  }
+  function drawPip(){
+    const st = strongestTrack();
+    const show = chkShowPip.checked && !!st;
+    pipWrap.style.display = show ? "block" : "none";
+    if (!show) return;
 
-  function blobExtFromType(type) {
-    const t = (type || '').toLowerCase();
-    if (t.includes('mp4')) return 'mp4';
-    if (t.includes('webm')) return 'webm';
-    return 'webm';
-  }
+    ensurePipPos();
 
-  function startRecording() {
-    if (!stream || !video) return;
-    if (recorder && recorder.state !== 'inactive') return;
-
-    // record the COMPOSITED output (canvas) so overlays + boxes are included
-    const recFps = parseInt(rngRecFps.value, 10);
-    const outStream = view.captureStream(recFps);
-
-    // (optional) add mic later; keeping off for stability
-    const mimeType = pickMimeType();
-    const mbps = parseInt(rngMbps.value, 10);
-    const bits = mbps * 1_000_000;
-
-    chunks = [];
-    lastBlob = null;
-    lastFilename = null;
-
-    recorder = new MediaRecorder(outStream, {
-      mimeType: mimeType || undefined,
-      videoBitsPerSecond: bits
-    });
-
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size) chunks.push(e.data);
-    };
-
-    recorder.onerror = (e) => {
-      console.error("MediaRecorder error:", e);
-      stopRecording(true);
-      alert("Recorder error. Try lowering bitrate or switching browser. (Safari sometimes only supports MP4/H.264.)");
-    };
-
-    recorder.onstop = () => {
-      try {
-        if (!chunks.length) {
-          btnDl.disabled = true;
-          return;
-        }
-        const type = recorder.mimeType || mimeType || 'video/webm';
-        lastBlob = new Blob(chunks, { type });
-        const ext = blobExtFromType(type);
-        const ts = new Date().toISOString().replace(/[:.]/g,'-');
-        lastFilename = `motion-${ts}.${ext}`;
-        btnDl.disabled = false;
-        recorder = null;
-
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    // IMPORTANT: timeslice keeps encoder flushing; helps Safari stability.
-    recorder.start(2000);
-
-    // segmentation to keep RAM stable
-    const segSec = parseInt(rngSeg.value, 10);
-    if (segTimer) { clearInterval(segTimer); segTimer = null; }
-    if (segSec > 0) {
-      segTimer = setInterval(() => {
-        // rotate: stop -> download -> restart (prevents RAM growth)
-        if (recorder && recorder.state === 'recording') {
-          stopRecording(false, true); // stop without killing auto-rec state; then restart
-        }
-      }, segSec * 1000);
-    }
-
-    btnRec.textContent = "Stop recording";
-    setHud(true, (Date.now()-lastMotionAt)<800, true);
-  }
-
-  function stopRecording(forceSilent=false, autoRotate=false) {
-    if (!recorder) return;
-
-    if (segTimer) { clearInterval(segTimer); segTimer = null; }
-
-    const wasRec = (recorder.state === 'recording');
-    try { if (wasRec) recorder.stop(); } catch {}
-
-    btnRec.textContent = "Start recording";
-    setHud(true, (Date.now()-lastMotionAt)<800, false);
-
-    // If rotating, auto-download immediately after stop resolves
-    if (autoRotate) {
-      // wait a tick for onstop to build blob
-      setTimeout(() => {
-        if (lastBlob) downloadLastClip(true);
-        // restart if still supposed to be recording (auto mode)
-        if (!forceSilent) startRecording();
-      }, 250);
-    }
-  }
-
-  function downloadLastClip(silent=false) {
-    if (!lastBlob) { if (!silent) alert("No clip yet. Start recording first."); return; }
-    const url = URL.createObjectURL(lastBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = lastFilename || 'motion-clip.webm';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-
-  // ---------- auto record on motion ----------
-  function handleAutoRecord(motionOn, now) {
-    if (!chkAutoRec.checked) return;
-
-    const quietMs = parseFloat(rngQuiet.value) * 1000;
-
-    if (motionOn) {
-      if (!recorder || recorder.state !== 'recording') startRecording();
+    if (!pipLarge){
+      const px = Number(rngPip.value);
+      pipWrap.style.width = `${px}px`;
+      pipWrap.style.height = `${Math.round(px * 0.62)}px`;
     } else {
-      // stop after quiet period
-      if (recorder && recorder.state === 'recording') {
-        if ((now - lastMotionAt) > quietMs) stopRecording(false);
-      }
-    }
-  }
-
-  // ---------- main loop ----------
-  function loop(t) {
-    if (!running) return;
-    if (document.hidden) { requestAnimationFrame(loop); return; } // keep light; no work
-
-    const targetFps = parseInt(rngFps.value, 10);
-    if (t - lastT < 1000 / targetFps) { requestAnimationFrame(loop); return; }
-    lastT = t;
-
-    if (!paused && chkDetect.checked && video && !video.paused && !video.ended) {
-      // grab frame
-      pctx.drawImage(video, 0, 0, proc.width, proc.height);
-
-      // read pixels (only once per tick; reused buffers)
-      const img = pctx.getImageData(0, 0, proc.width, proc.height);
-      toGrayFromRGBA(img, gray);
-
-      // warmup bg quickly on first frames
-      if (bg && bg.length) {
-        if (bg[0] === 0 && bg[1] === 0 && bg[2] === 0) {
-          for (let i = 0; i < gray.length; i++) bg[i] = gray[i];
-        } else {
-          updateBackground(gray);
-        }
-      }
-
-      let motionCount = buildDiffMask(gray);
-
-      const morphR = parseInt(rngMorph.value, 10);
-      if (morphR > 0) morphMask(morphR);
-
-      // blobs & tracks
-      const boxes = findBlobs();
-      const now = Date.now();
-      updateTracks(boxes, now);
-
-      const motionOn = boxes.length > 0 && motionCount > 0;
-      if (motionOn) lastMotionAt = now;
-
-      // draw main
-      drawMainFrame();
-      drawPiP();
-
-      setHud(true, motionOn, (recorder && recorder.state === 'recording'));
-      handleAutoRecord(motionOn, now);
-    } else if (video) {
-      // still draw video and overlays even if detection paused
-      pctx.drawImage(video, 0, 0, proc.width, proc.height);
-      drawMainFrame();
-      drawPiP();
-      setHud(true, false, (recorder && recorder.state === 'recording'));
+      pipWrap.style.width = "";
+      pipWrap.style.height = "";
     }
 
-    // Safari-safe downshift if needed
-    if (chkSafariSafe.checked) maybeDownshiftSafari();
+    // Leave room for header
+    const headerH = 30;
+    const dstW = pipView.width;
+    const dstH = pipView.height;
 
-    requestAnimationFrame(loop);
-  }
+    // Crop around track on main view
+    const scaleX = view.width / proc.width;
+    const scaleY = view.height / proc.height;
 
-  let downshiftedOnce = false;
-  function maybeDownshiftSafari() {
-    // If Safari is struggling, you can manually tune too.
-    // This is a minimal “safety valve”: after a bit of runtime, reduce procW and fps if huge.
-    if (downshiftedOnce) return;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (!isSafari) return;
+    const pad = 1.9;
+    const cx = (st.x + st.w/2) * scaleX;
+    const cy = (st.y + st.h/2) * scaleY;
+    const ww = (st.w * scaleX) * pad;
+    const hh = (st.h * scaleY) * pad;
 
-    const procW = parseInt(rngProcW.value, 10);
-    const fps = parseInt(rngFps.value, 10);
-    const mbps = parseInt(rngMbps.value, 10);
+    let sx = clamp(cx - ww/2, 0, view.width-1);
+    let sy = clamp(cy - hh/2, 0, view.height-1);
+    let sw = clamp(ww, 20, view.width - sx);
+    let sh = clamp(hh, 20, view.height - sy);
 
-    if (procW > 1280 || fps > 18 || mbps > 18) {
-      // gentle downshift once
-      rngProcW.value = "1280";
-      rngFps.value = "15";
-      rngMbps.value = String(Math.min(12, mbps));
-      document.getElementById('valProcW').textContent = rngProcW.value;
-      document.getElementById('valFps').textContent = rngFps.value;
-      document.getElementById('valMbps').textContent = rngMbps.value;
-
-      downshiftedOnce = true;
-    }
-  }
-
-  // ---------- snapshot ----------
-  function snapshot() {
-    const url = view.toDataURL("image/png");
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `snapshot-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  // ---------- PiP window interactions (drag + resize + maximize) ----------
-  const pipHeader = document.getElementById('pipHeader');
-  const pipClose = document.getElementById('pipClose');
-  const pipMax = document.getElementById('pipMax');
-  const pipResize = document.getElementById('pipResize');
-
-  let drag = null;
-  pipHeader.addEventListener('pointerdown', (e) => {
-    if (pipMaxed) return;
-    pipHeader.setPointerCapture(e.pointerId);
-    const r = pipWin.getBoundingClientRect();
-    drag = { id:e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, mode:'move' };
-  });
-  pipHeader.addEventListener('pointermove', (e) => {
-    if (!drag || drag.id !== e.pointerId || drag.mode !== 'move') return;
-    const stageR = stage.getBoundingClientRect();
-    let x = e.clientX - stageR.left - drag.dx;
-    let y = e.clientY - stageR.top - drag.dy;
-    x = Math.max(0, Math.min(stageR.width - pipWin.offsetWidth, x));
-    y = Math.max(0, Math.min(stageR.height - pipWin.offsetHeight, y));
-    pipWin.style.left = x + "px";
-    pipWin.style.top = y + "px";
-    pipWin.style.bottom = "auto";
-  });
-  pipHeader.addEventListener('pointerup', (e) => {
-    drag = null;
-  });
-
-  let rsz = null;
-  pipResize.addEventListener('pointerdown', (e) => {
-    if (pipMaxed) return;
-    pipResize.setPointerCapture(e.pointerId);
-    const r = pipWin.getBoundingClientRect();
-    rsz = { id:e.pointerId, w:r.width, h:r.height, x:e.clientX, y:e.clientY };
-  });
-  pipResize.addEventListener('pointermove', (e) => {
-    if (!rsz || rsz.id !== e.pointerId) return;
-    const dx = e.clientX - rsz.x;
-    const dy = e.clientY - rsz.y;
-    const nw = Math.max(180, Math.min(1100, rsz.w + dx));
-    const nh = Math.max(140, Math.min(800, rsz.h + dy));
-    pipWin.style.width = nw + "px";
-    pipWin.style.height = nh + "px";
-  });
-  pipResize.addEventListener('pointerup', () => { rsz = null; });
-
-  function setPipMaxed(on) {
-    pipMaxed = !!on;
-    if (pipMaxed) {
-      // fill a large portion of stage
-      pipWin.style.left = "10px";
-      pipWin.style.top = "50px";
-      pipWin.style.bottom = "auto";
-      pipWin.style.width = Math.min(stage.clientWidth - 20, 980) + "px";
-      pipWin.style.height = Math.min(stage.clientHeight - 120, 600) + "px";
-      pipMax.textContent = "Restore";
+    if (chkFollow.checked){
+      const prev = pipWrap._crop || {sx,sy,sw,sh};
+      const k = 0.18;
+      sx = prev.sx + (sx - prev.sx)*k;
+      sy = prev.sy + (sy - prev.sy)*k;
+      sw = prev.sw + (sw - prev.sw)*k;
+      sh = prev.sh + (sh - prev.sh)*k;
+      pipWrap._crop = {sx,sy,sw,sh};
     } else {
-      pipMax.textContent = "Max";
-      // return to slider sizing
-      const size = parseInt(rngPipSize.value, 10);
-      pipWin.style.width = size + "px";
-      pipWin.style.height = Math.round(size * 0.62) + "px";
+      pipWrap._crop = {sx,sy,sw,sh};
     }
+
+    // draw crop
+    pctx.drawImage(view, sx, sy, sw, sh, 0, 0, dstW, dstH);
+
+    // border
+    pctx.strokeStyle = "rgba(57,211,83,.95)";
+    pctx.lineWidth = 3;
+    pctx.strokeRect(2,2,dstW-4,dstH-4);
+
+    pipTitle.textContent = `Motion Zoom (ID ${st.id}) • click to ${pipLarge ? "shrink" : "enlarge"}`;
   }
 
-  pipMax.addEventListener('click', () => setPipMaxed(!pipMaxed));
-  pipClose.addEventListener('click', () => { chkPip.checked = false; pipWin.style.display = "none"; });
-  pipWin.addEventListener('dblclick', () => setPipMaxed(!pipMaxed));
+  async function render(){
+    requestAnimationFrame(render);
 
-  rngPipSize.addEventListener('input', () => { if (!pipMaxed) { pipWin.style.width = rngPipSize.value + "px"; pipWin.style.height = Math.round(rngPipSize.value * 0.62) + "px"; } });
+    if (!video.videoWidth || video.readyState < 2){
+      vctx.fillStyle = "#000";
+      vctx.fillRect(0,0,view.width||1280, view.height||720);
+      vctx.fillStyle = "rgba(255,255,255,.75)";
+      vctx.font = "16px system-ui";
+      vctx.fillText("Waiting for camera…", 20, 40);
+      return;
+    }
 
-  // ---------- buttons ----------
-  btnCam.addEventListener('click', async () => {
-    try {
-      if (!running) {
-        await startCamera();
-        btnCam.textContent = "Disable camera";
-      } else {
-        stopCamera();
-        btnCam.textContent = "Enable camera";
-      }
-    } catch (e) {
+    const t = now();
+    const dt = t - lastFrameT;
+    lastFrameT = t;
+    if (dt > 0) fpsEl.textContent = `${Math.round(1000/dt)} fps`;
+
+    // Draw main view always
+    vctx.drawImage(video, 0, 0, view.width, view.height);
+
+    // cool down if needed
+    if (t < pausedUntil){
+      drawOverlays();
+      drawPip();
+      return;
+    }
+
+    // Detection throttle
+    const targetFps = Number(rngDetFps.value);
+    const minStep = 1000 / targetFps;
+    const doDetect = chkDetect.checked && (t - lastDetectT >= minStep);
+
+    if (!doDetect){
+      drawOverlays();
+      drawPip();
+      return;
+    }
+    lastDetectT = t;
+
+    const t0 = now();
+
+    // Draw into proc
+    const bmp = await getBitmap();
+    if (bmp){
+      prc.drawImage(bmp, 0, 0, proc.width, proc.height);
+    } else {
+      prc.drawImage(video, 0, 0, proc.width, proc.height);
+    }
+
+    const frame = prc.getImageData(0,0,proc.width,proc.height);
+    const d = frame.data;
+
+    bgInitOrUpdate(d, Number(rngAlpha.value));
+    if (!bgF){
+      lastWorkMs = now() - t0;
+      workEl.textContent = `work ${lastWorkMs.toFixed(1)}ms`;
+      return;
+    }
+
+    computeBinary(d, Number(rngThr.value));
+    morphClose(Number(rngMorph.value));
+
+    const maxTracks = Number(rngMaxTracks.value);
+    const blobs = findBlobs(Number(rngMinArea.value), maxTracks*3);
+    updateTracks(blobs, t, maxTracks);
+
+    // Auto record gate (only if user enables checkbox)
+    const holdSec = Number(rngHold.value);
+    const quietSec = Number(rngQuiet.value);
+
+    const motion = tracks.length > 0;
+    if (motion){
+      lastMotionAt = t;
+      motionHoldUntil = Math.max(motionHoldUntil, t + holdSec*1000);
+    }
+    const stillHolding = t < motionHoldUntil;
+    const quietLongEnough = (t - lastMotionAt) > quietSec*1000;
+
+    if (chkAutoRec.checked){
+      if ((motion || stillHolding) && !recording) startRecording();
+      if (recording && quietLongEnough) stopRecording();
+    }
+
+    drawOverlays();
+    drawPip();
+
+    lastWorkMs = now() - t0;
+    workEl.textContent = `work ${lastWorkMs.toFixed(1)}ms • proc ${proc.width}px • det ${targetFps}fps`;
+    downshiftIfNeeded();
+
+    if (!recording) setStatus(chkDetect.checked ? "Armed" : "Detection OFF", "ok");
+  }
+
+  // ---- UI ----
+  btnStart.addEventListener("click", async () => {
+    try{
+      setStatus("Requesting camera…", "ok");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width:{ ideal:1920 }, height:{ ideal:1080 }, frameRate:{ ideal:30 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      resizeAll();
+      setStatus("Armed", "ok");
+      btnStart.textContent = "Camera enabled";
+      btnStart.disabled = true;
+
+      // enable controls
+      btnSnap.disabled = false;
+      btnRec.disabled = false;
+      btnClearMask.disabled = false;
+      btnPause.disabled = false;
+
+    }catch(e){
       console.error(e);
-      alert("Camera failed. Use HTTPS or http://localhost and allow camera access.");
+      setStatus("Camera blocked / unavailable", "warn");
+      alert("Camera access failed. Check browser permissions and reload.");
     }
   });
 
-  btnRec.addEventListener('click', () => {
-    if (!running) return;
-    if (!recorder || recorder.state === 'inactive') startRecording();
-    else stopRecording(false);
+  btnDownload.addEventListener("click", downloadLast);
+
+  btnSnap.addEventListener("click", () => {
+    const url = view.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `snapshot-${new Date().toISOString().replace(/[:.]/g,"-")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   });
 
-  btnDl.addEventListener('click', () => downloadLastClip(false));
-  btnSnap.addEventListener('click', snapshot);
-
-  btnPause.addEventListener('click', () => {
-    paused = !paused;
-    btnPause.textContent = paused ? "Resume detection" : "Pause detection";
+  btnRec.addEventListener("click", () => {
+    if (!recording) startRecording();
+    else stopRecording();
   });
 
-  btnClearMask.addEventListener('click', () => {
-    // placeholder if you later add a real zone mask painting feature
-    tracks = [];
-    strongest = null;
+  btnMask.addEventListener("click", () => {
+    maskDraw = !maskDraw;
+    btnMask.textContent = maskDraw ? "Mask draw: ON" : "Mask draw: OFF";
   });
 
-  // ---------- visibility ----------
-  document.addEventListener('visibilitychange', () => {
-    // do NOT keep processing when hidden
-    if (document.hidden) {
-      // (keep recording if you want, but Safari may kill background tabs anyway)
+  btnClearMask.addEventListener("click", () => {
+    mctx.clearRect(0,0,maskC.width,maskC.height);
+    maskDirty = true;
+  });
+
+  btnPause.addEventListener("click", () => {
+    if (chkDetect.checked){
+      chkDetect.checked = false;
+      setStatus("Detection paused", "warn");
+      btnPause.textContent = "Resume detection";
     } else {
-      requestAnimationFrame(loop);
+      chkDetect.checked = true;
+      setStatus("Armed", "ok");
+      btnPause.textContent = "Pause detection";
+      pausedUntil = now() + 250;
     }
   });
 
-  // show PiP initially if checked
-  pipWin.style.display = chkPip.checked ? "block" : "none";
+  btnDownload.disabled = true;
+
+  rngScale.addEventListener("change", resizeAll);
+  rngProcW.addEventListener("change", resizeAll);
+
+  // PiP click to toggle size (same behavior), but only on canvas area, not header
+  pipView.addEventListener("click", (e) => {
+    pipLarge = !pipLarge;
+    pipWrap.classList.toggle("largeMode", pipLarge);
+    pipWrap.classList.toggle("smallMode", !pipLarge);
+  });
+
+  // ---- PiP DRAG (by header) ----
+  function stageRect(){ return { left:0, top:0, width: window.innerWidth, height: window.innerHeight }; }
+  function pipRect(){ return pipWrap.getBoundingClientRect(); }
+
+  pipWrap.addEventListener("pointerdown", (e) => {
+    // drag ONLY on primary button; ignore header buttons
+    if (typeof e.button === "number" && e.button !== 0) return;
+    if (e.target && e.target.closest && e.target.closest("button")) return;
+    pipDrag.on = true;
+    pipWrap.setPointerCapture(e.pointerId);
+    const pr = pipRect();
+    pipDrag.dx = e.clientX - pr.left;
+    pipDrag.dy = e.clientY - pr.top;
+  });
+
+  pipWrap.addEventListener("pointermove", (e) => {
+    if (!pipDrag.on) return;
+    e.preventDefault();
+
+    // sr no longer needed for fixed-position dragging
+    const pr = pipRect();
+
+    let left = e.clientX - pipDrag.dx;
+    let top  = e.clientY - pipDrag.dy;
+
+    // clamp inside viewport
+    left = clamp(left, 6, window.innerWidth - pr.width - 6);
+    top  = clamp(top, 6, window.innerHeight - pr.height - 6);
+
+    pipPos.left = left;
+    pipPos.top = top;
+    pipPos.right = null;
+    pipPos.bottom = null;
+
+    ensurePipPos();
+  });
+
+  pipWrap.addEventListener("pointerup", (e) => {
+
+    pipDrag.on = false;
+  });
+
+  // Mask painting
+  view.addEventListener("mousedown", (e) => {
+    if (!maskDraw) return;
+    painting = true;
+    lastPt = null;
+    paintAt(e);
+  });
+  window.addEventListener("mouseup", () => { painting = false; lastPt = null; });
+  view.addEventListener("mousemove", (e) => {
+    if (!maskDraw || !painting) return;
+    paintAt(e);
+  });
+
+  function paintAt(e){
+    const rect = view.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (view.width / rect.width);
+    const y = (e.clientY - rect.top) * (view.height / rect.height);
+    const p = viewToProc(x,y);
+    const erase = e.shiftKey;
+
+    if (!lastPt){
+      drawMaskBrush(p.x, p.y, erase);
+      lastPt = p;
+      return;
+    }
+    const dx = p.x - lastPt.x, dy = p.y - lastPt.y;
+    const steps = Math.max(1, Math.ceil(Math.hypot(dx,dy)/7));
+    for (let i=1;i<=steps;i++){
+      const px = lastPt.x + dx*(i/steps);
+      const py = lastPt.y + dy*(i/steps);
+      drawMaskBrush(px, py, erase);
+    }
+    lastPt = p;
+  }
+
+  video.addEventListener("loadedmetadata", resizeAll);
+
+  // Cleanup (avoid Safari keeping GPU resources forever)
+  window.addEventListener("pagehide", () => {
+    try { if (lastBitmap) lastBitmap.close(); } catch {}
+    try { stopRecording(true); } catch {}
+    try {
+      const s = video.srcObject;
+      if (s && s.getTracks) s.getTracks().forEach(t=>t.stop());
+    } catch {}
+  });
+
+  // Default boot state
+  chkAutoRec.checked = false;     // ✅ ensure off even if browser restores form state
+  setStatus("Idle", "ok");
+  render();
   // toast: click-through + dismiss
   const toast = document.getElementById("toast");
   const toastClose = document.getElementById("toastClose");
