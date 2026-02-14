@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Privacy Policy • DS-DS-ship-it Living Apps</title>
-  <meta name="description" content="Privacy policy for DS-DS-ship-it Living Apps, including microphone usage, local processing, and advertising disclosures." />
+  <title>About • DS-DS-ship-it Living Apps</title>
+  <meta name="description" content="About DS-DS-ship-it Living Apps: browser-based generative artwork demos for audio, video, and interactive experimentation." />
   <style>
     :root { color-scheme: dark; }
     body { margin:0; font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:#0b0c10; color:#e9eef5; }
@@ -15,7 +15,6 @@
     main { max-width:980px; margin:0 auto; padding:20px 16px 60px; }
     .card { border:1px solid rgba(255,255,255,.10); border-radius:14px; background:rgba(15,18,24,.55); padding:16px; margin:14px 0; }
     .muted { color: rgba(233,238,245,.72); }
-    ul { margin: 10px 0 10px 20px; }
   </style>
 </head>
 <body>
@@ -23,39 +22,35 @@
   <div class="wrap">
     <div>
       <div class="muted" style="font-size:13px;">DS-DS-ship-it • Living Apps</div>
-      <div style="font-weight:700;">Privacy Policy</div>
+      <div style="font-weight:700;">About</div>
     </div>
     <nav style="display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end;">
       <a href="./index.html">Home</a>
       <a href="./how-it-works.html">How it works</a>
-      <a href="./about.html">About</a>
+      <a href="./privacy.html">Privacy</a>
     </nav>
   </div>
 </header>
 
 <main>
-  <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: <span id="d"></span></p>
-  <script>document.getElementById('d').textContent = new Date().toISOString().slice(0,10);</script>
-
+  <h1>About DS-DS-ship-it Living Apps</h1>
   <div class="card">
     <p>
-      Microphone access is optional and only enabled after you tap a button that requests permission. Audio analysis
-      (FFT and loudness) occurs locally in your browser.
+      Living Apps is a collection of browser-based creative demos that transform audio and video input into evolving
+      animated visuals. Everything runs locally in your browser using standard web APIs (Canvas + Web Audio).
+    </p>
+    <p class="muted">
+      The public site focuses on stable base programs. Experimental plugin systems may exist in development builds, but
+      are not required for the hosted demos to run.
     </p>
   </div>
 
-  <h2>Advertising and cookies</h2>
-  <p>
-    This site may display advertising (e.g., via Google AdSense). Advertising providers may use cookies or similar
-    technologies to show ads, measure performance, and limit frequency.
-  </p>
-
-  <h2>Files you choose</h2>
-  <p>
-    If you load audio/video files, they are used locally by your browser for visualization. The demo does not require
-    uploading your files in order to function.
-  </p>
+  <p>Explore:</p>
+  <ul>
+    <li><a href="./living-artwork/">Living Artwork</a></li>
+    <li><a href="./video-artwork-living/">Video Artwork Living</a></li>
+    <li><a href="./audio-artwork-living/">Audio Artwork Living</a></li>
+  </ul>
 </main>
 </body>
 </html>
