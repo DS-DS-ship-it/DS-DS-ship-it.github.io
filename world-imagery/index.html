@@ -1,371 +1,569 @@
 <!doctype html>
-<!-- ESRI World Imagery Interactive — v1.2 (Zoom fixes + Labels overlay + Better UI + Debug) -->
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ESRI World Imagery — Interactive (v1.2)</title>
+  <meta charset="utf-8" />
+  <title>World Imagery Explorer • DS-DS-ship-it</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 
   <style>
-    :root { color-scheme: dark; }
-    html, body { height:100%; margin:0; background:#0b0c10; color:#e9eef5; font: 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    :root{
+      color-scheme: dark;
+      --bg:#0b0c10;
+      --panel: rgba(15,18,24,.70);
+      --panel2: rgba(15,18,24,.82);
+      --stroke: rgba(255,255,255,.14);
+      --text:#e9eef5;
+      --muted: rgba(233,238,245,.72);
+      --accent: rgba(64,240,190,.18);
+      --accent2: rgba(151,90,255,.18);
+      --radius: 14px;
+      --shadow: 0 14px 44px rgba(0,0,0,.55);
+      --btnbg: rgba(255,255,255,.06);
+      --btnbg2: rgba(255,255,255,.10);
+      --safeTop: env(safe-area-inset-top);
+      --safeBottom: env(safe-area-inset-bottom);
+      --safeLeft: env(safe-area-inset-left);
+      --safeRight: env(safe-area-inset-right);
+    }
+
+    html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font: 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
     #map { height:100%; width:100%; }
 
-    .panel{
-      position:absolute; top:12px; left:12px; z-index:9999;
-      width: 360px; max-height: calc(100vh - 24px); overflow:auto;
-      background: rgba(15,18,24,.78);
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 12px;
-      padding: 10px;
+    /* --- Floating launcher button (mobile-friendly) --- */
+    .fab {
+      position: fixed;
+      right: calc(14px + var(--safeRight));
+      bottom: calc(14px + var(--safeBottom));
+      z-index: 10000;
+      display: none; /* shown when drawer minimized */
+      gap: 8px;
+      align-items: center;
+    }
+    .fab button{
+      border: 1px solid var(--stroke);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--text);
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-weight: 700;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* --- Drawer (bottom sheet on mobile, side panel on desktop) --- */
+    .drawer {
+      position: fixed;
+      z-index: 9999;
+      border: 1px solid var(--stroke);
+      background: var(--panel);
       backdrop-filter: blur(10px);
-      box-shadow: 0 16px 48px rgba(0,0,0,.55);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
     }
-    .title{ font-weight:700; font-size:14px; margin-bottom:6px; }
-    .sub{ opacity:.85; margin-bottom:10px; }
-    .row{ display:flex; gap:8px; align-items:center; margin:8px 0; flex-wrap:wrap; }
-    input[type="text"]{
-      flex:1;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.15);
-      background: rgba(0,0,0,.25);
-      color:#e9eef5;
-      outline:none;
-      min-width: 160px;
+
+    /* Desktop: left panel */
+    @media (min-width: 900px){
+      .drawer{
+        left: calc(14px + var(--safeLeft));
+        top: calc(14px + var(--safeTop));
+        width: 360px;
+        max-height: calc(100vh - 28px - var(--safeTop) - var(--safeBottom));
+      }
     }
-    button{
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.16);
-      background: rgba(255,255,255,.06);
-      color:#e9eef5;
+
+    /* Mobile/tablet: bottom sheet */
+    @media (max-width: 899px){
+      .drawer{
+        left: calc(10px + var(--safeLeft));
+        right: calc(10px + var(--safeRight));
+        bottom: calc(10px + var(--safeBottom));
+        top: auto;
+        width: auto;
+        border-radius: 18px;
+      }
+    }
+
+    .drawerHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      background: var(--panel2);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .titleRow{
+      display:flex; flex-direction:column;
+      min-width: 0;
+    }
+    .titleRow .t{
+      font-weight:800; letter-spacing:.2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .titleRow .s{
+      font-size:12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .hdrBtns{ display:flex; gap:8px; }
+    .iconBtn{
+      border:1px solid var(--stroke);
+      background: var(--btnbg);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 10px;
+      font-weight: 700;
       cursor:pointer;
       user-select:none;
+      min-width: 44px; /* touch target */
+      min-height: 40px;
     }
-    button:hover{ background: rgba(255,255,255,.10); }
-    .pill{
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.25);
-      white-space:nowrap;
-    }
-    .ok{ color:#66ff99; }
-    .bad{ color:#ff6b6b; }
-    pre{
-      margin:8px 0 0;
-      padding:10px;
-      border-radius:10px;
-      background: rgba(0,0,0,.30);
-      border:1px solid rgba(255,255,255,.10);
+    .iconBtn:hover{ background: var(--btnbg2); }
+    .iconBtn:active{ transform: translateY(1px); }
+
+    .drawerBody{
+      padding: 12px;
       overflow:auto;
-      white-space:pre-wrap;
-      word-break:break-word;
+      max-height: 70vh; /* mobile fallback */
     }
-    .small{ font-size:12px; opacity:.9; }
-    .hr{ height:1px; background: rgba(255,255,255,.12); margin:10px 0; }
-    .leaflet-control-attribution{ background: rgba(0,0,0,.35) !important; }
+    @media (min-width: 900px){
+      .drawerBody{ max-height: none; }
+    }
 
-    /* Custom mini zoom buttons (in panel) */
-    .btn-mini { padding:6px 10px; border-radius:10px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row + .row{ margin-top:10px; }
 
-    /* Make sure Leaflet tiles render crisp-ish while moving */
-    .leaflet-tile { image-rendering: auto; }
+    input[type="text"]{
+      flex: 1 1 160px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline:none;
+      min-height: 40px;
+    }
+
+    .btn{
+      border:1px solid var(--stroke);
+      background: var(--btnbg);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor:pointer;
+      user-select:none;
+      min-height: 40px;
+    }
+    .btn:hover{ background: var(--btnbg2); }
+    .btn:active{ transform: translateY(1px); }
+
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius: 999px;
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .pill b{ color: var(--text); }
+
+    .sectionTitle{
+      margin: 12px 0 8px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      opacity: .95;
+    }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      border-radius: 12px;
+      padding: 10px;
+      color: rgba(233,238,245,.82);
+    }
+
+    /* Debug block can be hidden */
+    .hidden{ display:none !important; }
+
+    /* Minimized state: hide body, keep header */
+    .drawer.minimized .drawerBody{ display:none; }
+
+    /* When minimized on mobile, show FAB */
+    .drawer.minimized + .fab{ display:flex; }
+
+    /* Leaflet tweaks for touch */
+    .leaflet-control-zoom a{
+      width: 42px; height: 42px; line-height: 42px;
+    }
+    .leaflet-container{
+      background:#000;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
 
-  <div class="panel">
-    <div class="title">ESRI World Imagery — Interactive (v1.2)</div>
-    <div class="sub small">
-      Fixes: reliable zoom in/out, no bounds-lock, labels overlay (towns/cities), tile grid debug, search jump.
-      <br/>Note: satellite imagery has coverage/resolution limits by location; “Street View” is ground photos (different dataset).
+<div id="map"></div>
+
+<!-- Drawer -->
+<div id="drawer" class="drawer">
+  <div class="drawerHeader">
+    <div class="titleRow">
+      <div class="t">Esri World Imagery — Explorer</div>
+      <div class="s">Tap-drag to pan • pinch to zoom • double-tap to zoom</div>
+    </div>
+
+    <div class="hdrBtns">
+      <button id="btnMin" class="iconBtn" title="Minimize">▾</button>
+      <button id="btnDebugToggle" class="iconBtn" title="Toggle Debug">🐞</button>
+    </div>
+  </div>
+
+  <div class="drawerBody">
+    <div class="row">
+      <input id="q" type="text" placeholder="Search (e.g., Orlando, Tokyo, 2846 Bella Vista Dr Davenport FL)" />
+      <button id="go" class="btn">Go</button>
+      <button id="home" class="btn">Home</button>
     </div>
 
     <div class="row">
-      <input id="q" type="text" placeholder="Search (e.g., Orlando, Tokyo, 2846 Bella Vista Dr)"/>
-      <button id="go">Go</button>
-      <button id="home">Home</button>
+      <button id="zin" class="btn">Zoom +</button>
+      <button id="zout" class="btn">Zoom −</button>
+      <button id="reset" class="btn">Reset View</button>
     </div>
 
     <div class="row">
-      <button class="btn-mini" id="zin">Zoom +</button>
-      <button class="btn-mini" id="zout">Zoom −</button>
-      <button class="btn-mini" id="reset">Reset View</button>
+      <span class="pill"><b>Zoom:</b> <span id="zoomVal">—</span></span>
+      <span class="pill"><b>Center:</b> <span id="centerVal">—</span></span>
     </div>
 
     <div class="row">
-      <span class="pill" id="zoomPill">Zoom: …</span>
-      <span class="pill" id="centerPill">Center: …</span>
+      <button id="labels" class="btn">Toggle Labels</button>
+      <button id="grid" class="btn">Tile Grid</button>
+      <button id="selftest" class="btn">Self-Test</button>
+      <button id="reload" class="btn">Reload</button>
     </div>
 
-    <div class="row">
-      <button id="toggleLabels">Toggle Labels</button>
-      <button id="toggleGrid">Tile Grid</button>
-      <button id="selfTest">Self-Test</button>
-      <button id="hardReload">Reload</button>
-    </div>
+    <div id="debugWrap">
+      <div class="sectionTitle">Live Debug</div>
+      <div id="debug" class="mono">Debug loading…</div>
 
-    <div class="hr"></div>
-
-    <div class="title" style="font-size:13px;">Live Debug</div>
-    <pre id="dbg">Loading…</pre>
-
-    <div class="hr"></div>
-
-    <div class="title" style="font-size:13px;">Keyboard</div>
-    <pre class="small">+ / = : zoom in
+      <div class="sectionTitle">Keyboard</div>
+      <div class="mono">+ / = : zoom in
 - / _ : zoom out
 0     : reset view
-</pre>
+D     : toggle debug</div>
 
-    <div class="hr"></div>
+      <div class="sectionTitle">Notes</div>
+      <div class="mono">• This viewer streams real map tiles by zoom level (LOD), not scaling one raster.
+• ESRI World Imagery is a mosaic with varying dates; this tile endpoint does not expose per-pixel time.
+• For date/time imagery: use a time-enabled dataset (Sentinel-2, Landsat, etc.).</div>
+    </div>
 
-    <div class="title" style="font-size:13px;">Notes</div>
-    <pre class="small">
-• This viewer streams real map tiles by zoom level (LOD), not scaling one raster.
-• For "date/time" imagery: you need a time-enabled dataset (e.g., Sentinel-2, Landsat, Planet, etc.).
-  ESRI World Imagery is a mosaic with varying dates; the tile endpoint does not expose a per-pixel timestamp.
-    </pre>
   </div>
+</div>
+
+<!-- Floating button appears when minimized -->
+<div class="fab">
+  <button id="btnOpen">Map Controls</button>
+</div>
 
 <script>
 (() => {
-  // ---- Providers ----
-  const ESRI_IMAGERY =
-    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  // --- Constants ---
+  const ESRI_IMAGERY = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  const ESRI_REF     = 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
-  // Very useful: town/city labels overlay
-  const ESRI_LABELS =
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  const isMobile = matchMedia('(max-width: 899px)').matches;
 
-  // ---- Map init (PATCHED: no bounds lock, reliable zoom out) ----
+  // Home: Davenport, FL area (you can change)
+  const HOME = { lat: 28.2000, lon: -81.5500, z: 10 };
+
+  // --- Map setup ---
   const map = L.map('map', {
     zoomControl: true,
-    scrollWheelZoom: true,
-    doubleClickZoom: true,
-    keyboard: true,
-    inertia: true,
-    worldCopyJump: false,
-    minZoom: 1,
-    maxZoom: 19
-  });
+    attributionControl: true,
+    worldCopyJump: true
+  }).setView([HOME.lat, HOME.lon], HOME.z);
 
-  // Start view
-  map.setView([20, 0], 2);
-
-  // Base imagery
   const imagery = L.tileLayer(ESRI_IMAGERY, {
-    minZoom: 1,
     maxZoom: 19,
-    noWrap: false,
-    keepBuffer: 6,
+    crossOrigin: true,
     updateWhenIdle: true,
-    updateWhenZooming: false
+    keepBuffer: 6
   }).addTo(map);
 
-  // Labels overlay
-  let labelsOn = true;
-  const labels = L.tileLayer(ESRI_LABELS, {
-    minZoom: 1,
+  const labels = L.tileLayer(ESRI_REF, {
     maxZoom: 19,
-    opacity: 0.95
+    crossOrigin: true,
+    opacity: 0.95,
+    updateWhenIdle: true,
+    keepBuffer: 6
   }).addTo(map);
 
-  // ---- Tile Grid Debug Layer ----
+  let labelsOn = true;
   let gridOn = false;
-  const gridLayer = L.gridLayer({ tileSize: 256, opacity: 0.35 });
-  gridLayer.createTile = function(coords) {
-    const tile = document.createElement('div');
-    tile.style.outline = '1px solid rgba(255,255,255,.35)';
-    tile.style.color = 'rgba(255,255,255,.9)';
-    tile.style.font = '12px system-ui';
-    tile.style.display = 'flex';
-    tile.style.alignItems = 'center';
-    tile.style.justifyContent = 'center';
-    tile.style.textShadow = '0 2px 10px rgba(0,0,0,.8)';
-    tile.innerHTML = `z${coords.z}<br>x${coords.x}<br>y${coords.y}`;
-    return tile;
-  };
+  let gridLayer = null;
 
-  function toggleGrid() {
-    gridOn = !gridOn;
-    if (gridOn) gridLayer.addTo(map);
-    else map.removeLayer(gridLayer);
-    updateLiveDebug(gridOn ? "Tile grid ON." : "Tile grid OFF.");
+  // --- UI elements ---
+  const drawer = document.getElementById('drawer');
+  const btnMin = document.getElementById('btnMin');
+  const btnOpen = document.getElementById('btnOpen');
+  const btnDebugToggle = document.getElementById('btnDebugToggle');
+  const debugWrap = document.getElementById('debugWrap');
+  const debugEl = document.getElementById('debug');
+  const zoomVal = document.getElementById('zoomVal');
+  const centerVal = document.getElementById('centerVal');
+
+  const q = document.getElementById('q');
+  const go = document.getElementById('go');
+  const home = document.getElementById('home');
+  const zin = document.getElementById('zin');
+  const zout = document.getElementById('zout');
+  const reset = document.getElementById('reset');
+  const labelsBtn = document.getElementById('labels');
+  const gridBtn = document.getElementById('grid');
+  const selftest = document.getElementById('selftest');
+  const reload = document.getElementById('reload');
+
+  // Default: debug OFF on mobile
+  let debugOn = !isMobile;
+  if (!debugOn) debugWrap.classList.add('hidden');
+
+  // --- Drawer behavior ---
+  function minimizeDrawer() {
+    drawer.classList.add('minimized');
+    btnMin.textContent = '▸';
+  }
+  function openDrawer() {
+    drawer.classList.remove('minimized');
+    btnMin.textContent = '▾';
+  }
+  btnMin.addEventListener('click', () => {
+    drawer.classList.contains('minimized') ? openDrawer() : minimizeDrawer();
+  });
+  btnOpen.addEventListener('click', openDrawer);
+
+  // Auto minimize on mobile after interaction (keeps map visible)
+  if (isMobile) {
+    let t = null;
+    const autoMin = () => {
+      clearTimeout(t);
+      t = setTimeout(() => minimizeDrawer(), 650);
+    };
+    map.on('movestart', autoMin);
+    map.on('zoomstart', autoMin);
   }
 
-  // ---- UI Controls (PATCHED zoom out) ----
-  const $ = (id) => document.getElementById(id);
-  const dbg = $("dbg");
-  const zoomPill = $("zoomPill");
-  const centerPill = $("centerPill");
-
-  function setHome() { map.setView([20, 0], 2, { animate: false }); }
-  function resetView() { setHome(); }
-
-  $("home").onclick = setHome;
-  $("reset").onclick = resetView;
-
-  // Guaranteed zoom buttons
-  $("zin").onclick = () => map.zoomIn();
-  $("zout").onclick = () => map.zoomOut();
+  // --- Debug toggle ---
+  function setDebug(on) {
+    debugOn = on;
+    debugWrap.classList.toggle('hidden', !debugOn);
+    // If debug is off on mobile, also minimize to keep map view clean
+    if (isMobile && !debugOn) minimizeDrawer();
+    updateDebug();
+  }
+  btnDebugToggle.addEventListener('click', () => setDebug(!debugOn));
 
   // Keyboard shortcuts
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "+" || e.key === "=") map.zoomIn();
-    if (e.key === "-" || e.key === "_") map.zoomOut();
-    if (e.key === "0") resetView();
+  window.addEventListener('keydown', (e) => {
+    if (e.key === '+' || e.key === '=') map.zoomIn();
+    if (e.key === '-' || e.key === '_') map.zoomOut();
+    if (e.key === '0') map.setView([HOME.lat, HOME.lon], HOME.z);
+    if (e.key.toLowerCase() === 'd') setDebug(!debugOn);
   });
 
-  $("toggleLabels").onclick = () => {
-    labelsOn = !labelsOn;
-    if (labelsOn) labels.addTo(map);
-    else map.removeLayer(labels);
-    updateLiveDebug(labelsOn ? "Labels ON." : "Labels OFF.");
-  };
-
-  $("toggleGrid").onclick = toggleGrid;
-
-  $("hardReload").onclick = () => location.reload(true);
-
-  // ---- Search (Nominatim) ----
-  async function geocode(q) {
-    const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
-                encodeURIComponent(q.trim());
-    const r = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!r.ok) throw new Error("Geocode failed HTTP " + r.status);
-    const j = await r.json();
-    return (j && j[0]) ? { lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name } : null;
-  }
-
-  async function doSearch() {
-    const q = ($("q").value || "").trim();
-    if (!q) return;
-    updateLiveDebug("Searching…");
-    try {
-      const hit = await geocode(q);
-      if (!hit) {
-        updateLiveDebug("No results. Try simpler terms (city, state, country).");
-        return;
-      }
-      map.setView([hit.lat, hit.lon], Math.max(map.getZoom(), 14), { animate: true });
-      updateLiveDebug("Found: " + hit.name);
-    } catch (e) {
-      updateLiveDebug("Search error: " + e);
-    }
-  }
-
-  $("go").onclick = doSearch;
-  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
-
-  // ---- Diagnostics ----
-  function tileXY(z, lat, lon) {
-    const latRad = lat * Math.PI / 180;
+  // --- Utility: lon/lat to tile xyz at zoom (WebMercator) ---
+  function lonLatToTileXY(lon, lat, z) {
     const n = Math.pow(2, z);
     const x = Math.floor((lon + 180) / 360 * n);
-    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
-    return {x, y};
+    const latRad = lat * Math.PI / 180;
+    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+    return { x, y };
   }
 
-  function tileUrl(tpl, z, x, y) {
-    return tpl.replace("{z}", z).replace("{x}", x).replace("{y}", y);
-  }
+  // --- Tile grid overlay (visualize tiles) ---
+  function makeGridLayer() {
+    // A simple canvas overlay drawing tile boundaries
+    const Grid = L.Layer.extend({
+      onAdd: function(map) {
+        this._canvas = L.DomUtil.create('canvas', 'leaflet-layer');
+        this._ctx = this._canvas.getContext('2d');
+        const pane = map.getPane('overlayPane');
+        pane.appendChild(this._canvas);
 
-  async function probeTile(url) {
-    // Use GET (some servers don't like HEAD)
-    const r = await fetch(url, { cache: "no-store" });
-    return { ok: r.ok, status: r.status, type: r.headers.get("content-type") || "" };
-  }
+        map.on('move zoom resize', this._reset, this);
+        this._reset();
+      },
+      onRemove: function(map) {
+        map.off('move zoom resize', this._reset, this);
+        if (this._canvas && this._canvas.parentNode) this._canvas.parentNode.removeChild(this._canvas);
+      },
+      _reset: function() {
+        const map = this._map;
+        const size = map.getSize();
+        const canvas = this._canvas;
+        canvas.width = size.x;
+        canvas.height = size.y;
 
-  async function runSelfTest() {
-    const z = map.getZoom();
-    const c = map.getCenter();
-    const {x, y} = tileXY(z, c.lat, c.lng);
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, size.x, size.y);
 
-    const urls = [
-      tileUrl(ESRI_IMAGERY, 2, 2, 1),
-      tileUrl(ESRI_IMAGERY, z, x, y),
-      tileUrl(ESRI_LABELS, z, x, y)
-    ];
+        const z = map.getZoom();
+        const tileSize = 256;
 
-    let lines = [];
-    lines.push(`Time: ${new Date().toISOString()}`);
-    lines.push(`URL: ${location.href}`);
-    lines.push(`Leaflet: ${L.version}`);
-    lines.push(`Zoom: ${z}  Center: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`);
-    lines.push(`Imagery: ESRI World_Imagery`);
-    lines.push(`Labels: ${labelsOn ? "ON" : "OFF"}`);
-    lines.push("");
+        const pixelBounds = map.getPixelBounds();
+        const tileBounds = L.bounds(
+          pixelBounds.min.divideBy(tileSize).floor(),
+          pixelBounds.max.divideBy(tileSize).floor()
+        );
 
-    for (const u of urls) {
-      try {
-        const r = await probeTile(u);
-        lines.push(`${u}`);
-        lines.push(`  -> ${r.ok ? "OK" : "FAIL"} (${r.status}) ${r.type}`);
-      } catch (e) {
-        lines.push(`${u}`);
-        lines.push(`  -> FAIL (network) ${e}`);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,.25)';
+        ctx.fillStyle = 'rgba(0,0,0,.25)';
+        ctx.font = '12px ui-monospace, Menlo, monospace';
+
+        for (let y = tileBounds.min.y; y <= tileBounds.max.y; y++) {
+          for (let x = tileBounds.min.x; x <= tileBounds.max.x; x++) {
+            const p = L.point(x, y).multiplyBy(tileSize);
+            const topLeft = p.subtract(pixelBounds.min);
+            ctx.strokeRect(topLeft.x, topLeft.y, tileSize, tileSize);
+            ctx.fillText(`${z}/${x}/${y}`, topLeft.x + 6, topLeft.y + 16);
+          }
+        }
       }
+    });
+    return new Grid();
+  }
+
+  // --- Reverse geocode via Nominatim (best-effort) ---
+  async function geocodeNominatim(query) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+    if (!res.ok) throw new Error(`Geocode HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data || !data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
+
+  // --- Actions ---
+  go.addEventListener('click', async () => {
+    const s = (q.value || '').trim();
+    if (!s) return;
+    go.textContent = '…';
+    go.disabled = true;
+    try{
+      const r = await geocodeNominatim(s);
+      if (!r) {
+        alert('Not found. Try a simpler query (city, state, country).');
+      } else {
+        map.setView([r.lat, r.lon], Math.max(map.getZoom(), 13));
+        if (isMobile) minimizeDrawer();
+      }
+    } catch(e){
+      alert('Search failed (network or rate limit). Try again.');
+    } finally{
+      go.textContent = 'Go';
+      go.disabled = false;
     }
-
-    lines.push("");
-    lines.push("If it looks blurry at max zoom:");
-    lines.push("- That area may not have higher-res imagery in ESRI mosaic.");
-    lines.push("- Try another location or another provider.");
-    dbg.textContent = lines.join("\n");
-  }
-
-  $("selfTest").onclick = runSelfTest;
-
-  function updatePills() {
-    zoomPill.textContent = `Zoom: ${map.getZoom()}`;
-    const c = map.getCenter();
-    centerPill.textContent = `Center: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
-  }
-
-  function updateLiveDebug(extra="") {
-    const z = map.getZoom();
-    const c = map.getCenter();
-    const {x, y} = tileXY(z, c.lat, c.lng);
-    const url = tileUrl(ESRI_IMAGERY, z, x, y);
-
-    const lines = [];
-    lines.push(`Zoom: ${z}`);
-    lines.push(`Center: ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`);
-    lines.push(`Expected tile: z=${z} x=${x} y=${y}`);
-    lines.push(`Tile URL: ${url}`);
-    lines.push(`Labels: ${labelsOn ? "ON" : "OFF"}`);
-    lines.push(`Tile grid: ${gridOn ? "ON" : "OFF"}`);
-    lines.push("");
-    lines.push("Tip: ESRI imagery date/time is not directly queryable from this tile endpoint.");
-    if (extra) lines.push("\n" + extra);
-
-    dbg.textContent = lines.join("\n");
-  }
-
-  map.on("zoomend moveend", () => {
-    updatePills();
-    updateLiveDebug();
   });
 
-  // Initial
-  updatePills();
-  updateLiveDebug("Ready.");
-
-  // Click debug
-  map.on("click", (e) => {
-    const z = map.getZoom();
-    const {x, y} = tileXY(z, e.latlng.lat, e.latlng.lng);
-    const url = tileUrl(ESRI_IMAGERY, z, x, y);
-    updateLiveDebug(`Click @ ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}\nTile: z=${z} x=${x} y=${y}\n${url}`);
+  home.addEventListener('click', () => {
+    map.setView([HOME.lat, HOME.lon], HOME.z);
+    if (isMobile) minimizeDrawer();
   });
+
+  zin.addEventListener('click', () => map.zoomIn());
+  zout.addEventListener('click', () => map.zoomOut());
+  reset.addEventListener('click', () => {
+    map.setView([HOME.lat, HOME.lon], HOME.z);
+    if (isMobile) minimizeDrawer();
+  });
+
+  labelsBtn.addEventListener('click', () => {
+    labelsOn = !labelsOn;
+    if (labelsOn) labels.addTo(map); else map.removeLayer(labels);
+    updateDebug();
+  });
+
+  gridBtn.addEventListener('click', () => {
+    gridOn = !gridOn;
+    if (gridOn) {
+      if (!gridLayer) gridLayer = makeGridLayer();
+      gridLayer.addTo(map);
+    } else {
+      if (gridLayer) map.removeLayer(gridLayer);
+    }
+    updateDebug();
+  });
+
+  reload.addEventListener('click', () => location.reload());
+
+  selftest.addEventListener('click', async () => {
+    const z = map.getZoom();
+    const c = map.getCenter();
+    const { x, y } = lonLatToTileXY(c.lng, c.lat, z);
+    const url = ESRI_IMAGERY.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+    try {
+      const r = await fetch(url, { method: 'GET', mode: 'cors' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      alert(`Self-Test OK ✅\nFetched tile:\n${z}/${y}/${x}`);
+    } catch (e) {
+      alert(`Self-Test FAILED ❌\n${String(e)}`);
+    }
+  });
+
+  // --- Debug/info panel update ---
+  function updateInfoPills() {
+    const z = map.getZoom();
+    const c = map.getCenter();
+    zoomVal.textContent = String(z);
+    centerVal.textContent = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+  }
+
+  function updateDebug() {
+    updateInfoPills();
+    if (!debugOn) return;
+
+    const z = map.getZoom();
+    const c = map.getCenter();
+    const { x, y } = lonLatToTileXY(c.lng, c.lat, z);
+    const tileUrl = ESRI_IMAGERY.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+
+    debugEl.textContent =
+`Zoom:  ${z}
+Center: ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}
+Expected tile: z=${z} x=${x} y=${y}
+Tile URL:
+${tileUrl}
+
+Labels: ${labelsOn ? 'ON' : 'OFF'}
+Tile grid: ${gridOn ? 'ON' : 'OFF'}
+
+Tip: ESRI imagery date/time is not directly queryable from this tile endpoint.`;
+  }
+
+  map.on('move', updateDebug);
+  map.on('zoom', updateDebug);
+  updateDebug();
+
+  // Start minimized on mobile to prioritize map view
+  if (isMobile) minimizeDrawer();
 })();
 </script>
+
 </body>
 </html>
