@@ -1,0 +1,371 @@
+<!doctype html>
+<!-- ESRI World Imagery Interactive — v1.2 (Zoom fixes + Labels overlay + Better UI + Debug) -->
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ESRI World Imagery — Interactive (v1.2)</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height:100%; margin:0; background:#0b0c10; color:#e9eef5; font: 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    #map { height:100%; width:100%; }
+
+    .panel{
+      position:absolute; top:12px; left:12px; z-index:9999;
+      width: 360px; max-height: calc(100vh - 24px); overflow:auto;
+      background: rgba(15,18,24,.78);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      padding: 10px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 48px rgba(0,0,0,.55);
+    }
+    .title{ font-weight:700; font-size:14px; margin-bottom:6px; }
+    .sub{ opacity:.85; margin-bottom:10px; }
+    .row{ display:flex; gap:8px; align-items:center; margin:8px 0; flex-wrap:wrap; }
+    input[type="text"]{
+      flex:1;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.15);
+      background: rgba(0,0,0,.25);
+      color:#e9eef5;
+      outline:none;
+      min-width: 160px;
+    }
+    button{
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:#e9eef5;
+      cursor:pointer;
+      user-select:none;
+    }
+    button:hover{ background: rgba(255,255,255,.10); }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      white-space:nowrap;
+    }
+    .ok{ color:#66ff99; }
+    .bad{ color:#ff6b6b; }
+    pre{
+      margin:8px 0 0;
+      padding:10px;
+      border-radius:10px;
+      background: rgba(0,0,0,.30);
+      border:1px solid rgba(255,255,255,.10);
+      overflow:auto;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .small{ font-size:12px; opacity:.9; }
+    .hr{ height:1px; background: rgba(255,255,255,.12); margin:10px 0; }
+    .leaflet-control-attribution{ background: rgba(0,0,0,.35) !important; }
+
+    /* Custom mini zoom buttons (in panel) */
+    .btn-mini { padding:6px 10px; border-radius:10px; }
+
+    /* Make sure Leaflet tiles render crisp-ish while moving */
+    .leaflet-tile { image-rendering: auto; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="title">ESRI World Imagery — Interactive (v1.2)</div>
+    <div class="sub small">
+      Fixes: reliable zoom in/out, no bounds-lock, labels overlay (towns/cities), tile grid debug, search jump.
+      <br/>Note: satellite imagery has coverage/resolution limits by location; “Street View” is ground photos (different dataset).
+    </div>
+
+    <div class="row">
+      <input id="q" type="text" placeholder="Search (e.g., Orlando, Tokyo, 2846 Bella Vista Dr)"/>
+      <button id="go">Go</button>
+      <button id="home">Home</button>
+    </div>
+
+    <div class="row">
+      <button class="btn-mini" id="zin">Zoom +</button>
+      <button class="btn-mini" id="zout">Zoom −</button>
+      <button class="btn-mini" id="reset">Reset View</button>
+    </div>
+
+    <div class="row">
+      <span class="pill" id="zoomPill">Zoom: …</span>
+      <span class="pill" id="centerPill">Center: …</span>
+    </div>
+
+    <div class="row">
+      <button id="toggleLabels">Toggle Labels</button>
+      <button id="toggleGrid">Tile Grid</button>
+      <button id="selfTest">Self-Test</button>
+      <button id="hardReload">Reload</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title" style="font-size:13px;">Live Debug</div>
+    <pre id="dbg">Loading…</pre>
+
+    <div class="hr"></div>
+
+    <div class="title" style="font-size:13px;">Keyboard</div>
+    <pre class="small">+ / = : zoom in
+- / _ : zoom out
+0     : reset view
+</pre>
+
+    <div class="hr"></div>
+
+    <div class="title" style="font-size:13px;">Notes</div>
+    <pre class="small">
+• This viewer streams real map tiles by zoom level (LOD), not scaling one raster.
+• For "date/time" imagery: you need a time-enabled dataset (e.g., Sentinel-2, Landsat, Planet, etc.).
+  ESRI World Imagery is a mosaic with varying dates; the tile endpoint does not expose a per-pixel timestamp.
+    </pre>
+  </div>
+
+<script>
+(() => {
+  // ---- Providers ----
+  const ESRI_IMAGERY =
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
+  // Very useful: town/city labels overlay
+  const ESRI_LABELS =
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+
+  // ---- Map init (PATCHED: no bounds lock, reliable zoom out) ----
+  const map = L.map('map', {
+    zoomControl: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    keyboard: true,
+    inertia: true,
+    worldCopyJump: false,
+    minZoom: 1,
+    maxZoom: 19
+  });
+
+  // Start view
+  map.setView([20, 0], 2);
+
+  // Base imagery
+  const imagery = L.tileLayer(ESRI_IMAGERY, {
+    minZoom: 1,
+    maxZoom: 19,
+    noWrap: false,
+    keepBuffer: 6,
+    updateWhenIdle: true,
+    updateWhenZooming: false
+  }).addTo(map);
+
+  // Labels overlay
+  let labelsOn = true;
+  const labels = L.tileLayer(ESRI_LABELS, {
+    minZoom: 1,
+    maxZoom: 19,
+    opacity: 0.95
+  }).addTo(map);
+
+  // ---- Tile Grid Debug Layer ----
+  let gridOn = false;
+  const gridLayer = L.gridLayer({ tileSize: 256, opacity: 0.35 });
+  gridLayer.createTile = function(coords) {
+    const tile = document.createElement('div');
+    tile.style.outline = '1px solid rgba(255,255,255,.35)';
+    tile.style.color = 'rgba(255,255,255,.9)';
+    tile.style.font = '12px system-ui';
+    tile.style.display = 'flex';
+    tile.style.alignItems = 'center';
+    tile.style.justifyContent = 'center';
+    tile.style.textShadow = '0 2px 10px rgba(0,0,0,.8)';
+    tile.innerHTML = `z${coords.z}<br>x${coords.x}<br>y${coords.y}`;
+    return tile;
+  };
+
+  function toggleGrid() {
+    gridOn = !gridOn;
+    if (gridOn) gridLayer.addTo(map);
+    else map.removeLayer(gridLayer);
+    updateLiveDebug(gridOn ? "Tile grid ON." : "Tile grid OFF.");
+  }
+
+  // ---- UI Controls (PATCHED zoom out) ----
+  const $ = (id) => document.getElementById(id);
+  const dbg = $("dbg");
+  const zoomPill = $("zoomPill");
+  const centerPill = $("centerPill");
+
+  function setHome() { map.setView([20, 0], 2, { animate: false }); }
+  function resetView() { setHome(); }
+
+  $("home").onclick = setHome;
+  $("reset").onclick = resetView;
+
+  // Guaranteed zoom buttons
+  $("zin").onclick = () => map.zoomIn();
+  $("zout").onclick = () => map.zoomOut();
+
+  // Keyboard shortcuts
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "+" || e.key === "=") map.zoomIn();
+    if (e.key === "-" || e.key === "_") map.zoomOut();
+    if (e.key === "0") resetView();
+  });
+
+  $("toggleLabels").onclick = () => {
+    labelsOn = !labelsOn;
+    if (labelsOn) labels.addTo(map);
+    else map.removeLayer(labels);
+    updateLiveDebug(labelsOn ? "Labels ON." : "Labels OFF.");
+  };
+
+  $("toggleGrid").onclick = toggleGrid;
+
+  $("hardReload").onclick = () => location.reload(true);
+
+  // ---- Search (Nominatim) ----
+  async function geocode(q) {
+    const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
+                encodeURIComponent(q.trim());
+    const r = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!r.ok) throw new Error("Geocode failed HTTP " + r.status);
+    const j = await r.json();
+    return (j && j[0]) ? { lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name } : null;
+  }
+
+  async function doSearch() {
+    const q = ($("q").value || "").trim();
+    if (!q) return;
+    updateLiveDebug("Searching…");
+    try {
+      const hit = await geocode(q);
+      if (!hit) {
+        updateLiveDebug("No results. Try simpler terms (city, state, country).");
+        return;
+      }
+      map.setView([hit.lat, hit.lon], Math.max(map.getZoom(), 14), { animate: true });
+      updateLiveDebug("Found: " + hit.name);
+    } catch (e) {
+      updateLiveDebug("Search error: " + e);
+    }
+  }
+
+  $("go").onclick = doSearch;
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+  // ---- Diagnostics ----
+  function tileXY(z, lat, lon) {
+    const latRad = lat * Math.PI / 180;
+    const n = Math.pow(2, z);
+    const x = Math.floor((lon + 180) / 360 * n);
+    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
+    return {x, y};
+  }
+
+  function tileUrl(tpl, z, x, y) {
+    return tpl.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+  }
+
+  async function probeTile(url) {
+    // Use GET (some servers don't like HEAD)
+    const r = await fetch(url, { cache: "no-store" });
+    return { ok: r.ok, status: r.status, type: r.headers.get("content-type") || "" };
+  }
+
+  async function runSelfTest() {
+    const z = map.getZoom();
+    const c = map.getCenter();
+    const {x, y} = tileXY(z, c.lat, c.lng);
+
+    const urls = [
+      tileUrl(ESRI_IMAGERY, 2, 2, 1),
+      tileUrl(ESRI_IMAGERY, z, x, y),
+      tileUrl(ESRI_LABELS, z, x, y)
+    ];
+
+    let lines = [];
+    lines.push(`Time: ${new Date().toISOString()}`);
+    lines.push(`URL: ${location.href}`);
+    lines.push(`Leaflet: ${L.version}`);
+    lines.push(`Zoom: ${z}  Center: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`);
+    lines.push(`Imagery: ESRI World_Imagery`);
+    lines.push(`Labels: ${labelsOn ? "ON" : "OFF"}`);
+    lines.push("");
+
+    for (const u of urls) {
+      try {
+        const r = await probeTile(u);
+        lines.push(`${u}`);
+        lines.push(`  -> ${r.ok ? "OK" : "FAIL"} (${r.status}) ${r.type}`);
+      } catch (e) {
+        lines.push(`${u}`);
+        lines.push(`  -> FAIL (network) ${e}`);
+      }
+    }
+
+    lines.push("");
+    lines.push("If it looks blurry at max zoom:");
+    lines.push("- That area may not have higher-res imagery in ESRI mosaic.");
+    lines.push("- Try another location or another provider.");
+    dbg.textContent = lines.join("\n");
+  }
+
+  $("selfTest").onclick = runSelfTest;
+
+  function updatePills() {
+    zoomPill.textContent = `Zoom: ${map.getZoom()}`;
+    const c = map.getCenter();
+    centerPill.textContent = `Center: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+  }
+
+  function updateLiveDebug(extra="") {
+    const z = map.getZoom();
+    const c = map.getCenter();
+    const {x, y} = tileXY(z, c.lat, c.lng);
+    const url = tileUrl(ESRI_IMAGERY, z, x, y);
+
+    const lines = [];
+    lines.push(`Zoom: ${z}`);
+    lines.push(`Center: ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`);
+    lines.push(`Expected tile: z=${z} x=${x} y=${y}`);
+    lines.push(`Tile URL: ${url}`);
+    lines.push(`Labels: ${labelsOn ? "ON" : "OFF"}`);
+    lines.push(`Tile grid: ${gridOn ? "ON" : "OFF"}`);
+    lines.push("");
+    lines.push("Tip: ESRI imagery date/time is not directly queryable from this tile endpoint.");
+    if (extra) lines.push("\n" + extra);
+
+    dbg.textContent = lines.join("\n");
+  }
+
+  map.on("zoomend moveend", () => {
+    updatePills();
+    updateLiveDebug();
+  });
+
+  // Initial
+  updatePills();
+  updateLiveDebug("Ready.");
+
+  // Click debug
+  map.on("click", (e) => {
+    const z = map.getZoom();
+    const {x, y} = tileXY(z, e.latlng.lat, e.latlng.lng);
+    const url = tileUrl(ESRI_IMAGERY, z, x, y);
+    updateLiveDebug(`Click @ ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}\nTile: z=${z} x=${x} y=${y}\n${url}`);
+  });
+})();
+</script>
+</body>
+</html>
