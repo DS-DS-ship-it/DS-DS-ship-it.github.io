@@ -1,1168 +1,783 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Earth Cockpit — Multi-Mode Explorer (v2.0)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <title>Earth Cockpit — Multi-Mode Explorer (v2.1)</title>
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
-
-  <!-- Leaflet Draw (measure tools) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="anonymous">
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin="anonymous"></script>
-
-  <!-- Proj4 + MGRS -->
-  <script src="https://unpkg.com/proj4@2.9.2/dist/proj4.js"></script>
-  <script src="https://unpkg.com/mgrs@1.0.0/dist/mgrs.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    :root{
-      color-scheme: dark;
-      --bg: rgba(12, 14, 18, .72);
-      --card: rgba(20, 23, 30, .70);
-      --stroke: rgba(255,255,255,.12);
-      --text: #e9eef5;
-      --muted: rgba(233,238,245,.74);
-      --shadow: 0 18px 55px rgba(0,0,0,.55);
-      --radius: 16px;
-      --btn: rgba(255,255,255,.08);
-      --btn2: rgba(255,255,255,.12);
-      --accent: rgba(90, 255, 200, .22);
-      --accent2: rgba(160, 120, 255, .22);
-    }
-    html, body { height:100%; margin:0; background:#0b0c10; font: 15px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: var(--text); }
-    #map { position: fixed; inset: 0; }
+    :root { color-scheme: dark; }
+    html, body { height: 100%; margin: 0; background: #0b0c10; overflow: hidden; }
+    #map { position: absolute; inset: 0; }
 
-    /* Crosshair */
-    .crosshair {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      width: 28px;
-      height: 28px;
-      margin-left: -14px;
-      margin-top: -14px;
-      pointer-events: none;
-      z-index: 1200;
-      opacity: .95;
-      display: none;
-    }
-    .crosshair:before, .crosshair:after {
-      content: "";
+    /* ===== Panel / Drawer ===== */
+    .panel {
       position: absolute;
-      background: rgba(255,255,255,.85);
-      border-radius: 2px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.35);
-    }
-    .crosshair:before { left: 13px; top: 0; width: 2px; height: 28px; }
-    .crosshair:after  { left: 0; top: 13px; width: 28px; height: 2px; }
-
-    /* Drawer */
-    .drawer {
-      position: fixed;
-      z-index: 1400;
-      top: 12px;
-      left: 12px;
-      width: min(420px, calc(100vw - 24px));
-      max-height: calc(100vh - 24px);
-      overflow: auto;
-      border: 1px solid var(--stroke);
-      background: var(--bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 14px;
-    }
-    .drawer h1 { font-size: 17px; margin:0 0 6px 0; letter-spacing:.2px; }
-    .drawer .sub { color: var(--muted); font-size: 12px; margin:0 0 10px 0; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
-    .row > * { flex: 0 0 auto; }
-    .spacer { height: 10px; }
-
-    .card {
-      border:1px solid var(--stroke);
-      background: var(--card);
+      top: 10px;
+      left: 10px;
+      width: 360px;
+      max-width: calc(100vw - 20px);
+      max-height: calc(100vh - 20px);
+      overflow: hidden;
       border-radius: 14px;
-      padding: 10px;
-      margin-top: 10px;
-    }
-    .cardTitle { font-weight: 700; font-size: 13px; margin: 0 0 8px 0; opacity:.95; }
-
-    input[type="text"], input[type="range"], select {
-      width: 100%;
       border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 12px;
-      outline: none;
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
     }
-    select { padding: 10px 10px; }
-    input[type="range"] { padding: 0; height: 34px; }
+
+    .panelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 10px 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .titleWrap { min-width: 0; }
+    .title { font: 800 14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .subtitle { font: 12px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; opacity: .8; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .panelBody {
+      padding: 10px 12px 12px 12px;
+      overflow: auto;
+    }
+
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+    .row.tight { margin: 6px 0; }
+
+    input[type="text"], input[type="date"], select {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.25);
+      color: #e9eef5;
+      outline: none;
+      font: 14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
 
     .btn {
-      border: 1px solid rgba(255,255,255,.14);
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 12px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: #e9eef5;
+      font: 700 13px/1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
       cursor: pointer;
       user-select: none;
-      font-weight: 700;
-      letter-spacing: .2px;
-    }
-    .btn.secondary {
-      background: var(--btn);
-      font-weight: 650;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
     .btn:active { transform: translateY(1px); }
+    .btn.primary { background: linear-gradient(135deg, rgba(64,240,190,.18), rgba(151,90,255,.18)); }
+    .btn.small { padding: 7px 9px; font-weight: 700; font-size: 12px; border-radius: 9px; }
+    .btn.icon { width: 40px; padding: 9px 0; }
+    .btn.wide { flex: 1; }
 
-    .chip {
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.18);
-      padding: 8px 10px;
+    .pill {
+      padding: 7px 10px;
       border-radius: 999px;
-      font-size: 12px;
-      color: rgba(233,238,245,.9);
-      white-space: nowrap;
-    }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
-    .miniDock {
-      position: fixed;
-      z-index: 1500;
-      left: 12px;
-      bottom: 12px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      pointer-events: none;
-    }
-    .miniDock > * { pointer-events: auto; }
-
-    .fab {
       border: 1px solid rgba(255,255,255,.14);
-      background: rgba(10, 12, 16, .72);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: var(--text);
-      padding: 12px 14px;
-      border-radius: 999px;
-      box-shadow: 0 14px 45px rgba(0,0,0,.55);
-      cursor: pointer;
-      user-select: none;
-      font-weight: 750;
-      display: inline-flex;
-      gap: 10px;
-      align-items: center;
+      background: rgba(0,0,0,.22);
+      font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      opacity: .95;
     }
-    .fab small { opacity: .8; font-weight: 650; }
+
+    .sectionTitle {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      font: 900 12px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      letter-spacing: .16em;
+      opacity: .75;
+    }
 
     .toggle {
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.18);
-      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
       border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      cursor: pointer;
+      user-select: none;
+      width: 100%;
+      justify-content: space-between;
     }
-    .toggle label { font-size: 13px; color: rgba(233,238,245,.9); }
-    .toggle input { transform: scale(1.2); }
+    .toggle span { font: 700 13px/1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; opacity: .92; }
+    .switch {
+      width: 44px; height: 24px; border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      position: relative;
+      border: 1px solid rgba(255,255,255,.16);
+      flex: 0 0 auto;
+    }
+    .switch::after {
+      content:"";
+      width: 20px; height: 20px; border-radius: 999px;
+      background: rgba(255,255,255,.80);
+      position: absolute; top: 1px; left: 1px;
+      transition: transform .18s ease;
+    }
+    .toggle.on .switch { background: rgba(64,240,190,.18); }
+    .toggle.on .switch::after { transform: translateX(20px); }
 
-    .hr { height:1px; background: rgba(255,255,255,.10); margin: 12px 0; }
-
-    /* Drawer collapsed state */
-    .drawer.collapsed {
-      display: none;
+    .hint {
+      font: 12px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      opacity: .76;
+      margin-top: 6px;
     }
 
-    /* “Flight mode” effect while moving fast */
-    body.moving #map { filter: saturate(.92) contrast(.98); }
-
-    /* Mobile tweaks */
-    @media (max-width: 760px){
-      .drawer { top: 10px; left: 10px; width: calc(100vw - 20px); padding: 12px; }
-      .btn { padding: 11px 12px; }
-      .miniDock { left: 10px; bottom: 10px; }
-    }
-
-    /* Leaflet control tweaks for dark */
-    .leaflet-control-attribution { background: rgba(0,0,0,.35) !important; color: rgba(233,238,245,.75) !important; }
-    .leaflet-control-attribution a { color: rgba(160,220,255,.9) !important; }
-
-    /* Debug area */
-    pre {
-      margin: 0;
+    .debugBox {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.24);
+      font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
       white-space: pre-wrap;
       word-break: break-word;
-      font-size: 12px;
-      color: rgba(233,238,245,.86);
-      line-height: 1.25;
+    }
+
+    /* ===== Minimized state ===== */
+    .panel.minimized { width: 220px; }
+    .panel.minimized .panelBody { display: none; }
+    .panel.minimized .subtitle { display: none; }
+
+    /* ===== Mobile: make it a bottom sheet ===== */
+    @media (max-width: 760px) {
+      .panel {
+        left: 10px; right: 10px;
+        width: auto;
+        top: auto; bottom: 10px;
+      }
+      .panel.minimized {
+        width: auto;
+        max-width: calc(100vw - 20px);
+      }
+    }
+
+    /* Leaflet control area tweak so it doesn't fight the panel */
+    .leaflet-control-container .leaflet-top.leaflet-left { margin-top: 6px; }
+
+    /* Tiny floating mini-controls (always visible) */
+    .miniControls {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 9998;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
     }
   </style>
 </head>
 
 <body>
   <div id="map"></div>
-  <div class="crosshair" id="crosshair"></div>
 
-  <div class="drawer" id="drawer">
-    <div class="row" style="justify-content:space-between; align-items:flex-start;">
-      <div>
-        <h1>Earth Cockpit — Multi-Mode Explorer (v2.0)</h1>
-        <div class="sub">
-          Satellite + true time slider (NASA GIBS) + live overlays (radar/quakes/thermal) + pro tools.
-        </div>
+  <div class="panel" id="panel">
+    <div class="panelHeader">
+      <div class="titleWrap">
+        <div class="title">Earth Cockpit — Multi-Mode Explorer (v2.1)</div>
+        <div class="subtitle">Esri Satellite + NASA GIBS time slider + live overlays</div>
       </div>
-      <div class="row">
-        <button class="btn secondary" id="btnMinimize" title="Hide panel (mobile-friendly)">Minimize</button>
+      <div class="row tight" style="margin:0; flex-wrap:nowrap;">
+        <button class="btn icon" id="btnMin" title="Minimize / Expand">▾</button>
+        <button class="btn icon" id="btnHide" title="Hide panel">✕</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="cardTitle">Search / Jump</div>
+    <div class="panelBody" id="panelBody">
+      <div class="sectionTitle">SEARCH / JUMP</div>
       <div class="row">
-        <input id="searchBox" type="text" placeholder="Search (e.g., Orlando, Tokyo, 2846 Bella Vista Dr Davenport FL)" />
-        <button class="btn secondary" id="btnGo">Go</button>
-        <button class="btn secondary" id="btnHome">Home</button>
+        <input id="q" type="text" placeholder="Search (e.g., Orlando, Tokyo, 2846 Bella Vista Dr Davenport FL)"/>
       </div>
-      <div class="spacer"></div>
       <div class="row">
-        <div class="chip"><span class="mono" id="chipZoom">Z: —</span></div>
-        <div class="chip"><span class="mono" id="chipCenter">Center: —</span></div>
-        <div class="chip"><span class="mono" id="chipMGRS">MGRS: —</span></div>
+        <button class="btn primary wide" id="btnGo">Go</button>
+        <button class="btn wide" id="btnHome">Home</button>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="cardTitle">Mode Switch</div>
 
       <div class="row">
-        <select id="modeSelect">
+        <div class="pill" id="pillZoom">Z: —</div>
+        <div class="pill" id="pillCenter">Center: —</div>
+      </div>
+
+      <div class="sectionTitle">MODE SWITCH</div>
+      <div class="row">
+        <select id="mode">
           <option value="esri">Satellite (Esri World Imagery)</option>
-          <option value="gibs_modis">Historical (NASA GIBS MODIS True Color)</option>
-          <option value="gibs_viirs">Historical (NASA GIBS VIIRS True Color)</option>
+          <option value="gibs_truecolor">Historical (NASA GIBS MODIS True Color)</option>
+          <option value="gibs_viirs">Historical (NASA GIBS VIIRS City Lights)</option>
+          <option value="hybrid">Hybrid: Esri Satellite + GIBS overlays</option>
         </select>
       </div>
 
-      <div class="spacer"></div>
-
-      <div id="timeControls" style="display:none;">
-        <div class="row" style="justify-content:space-between;">
-          <div class="chip"><span class="mono" id="chipDate">Date: —</span></div>
-          <div class="row">
-            <button class="btn secondary" id="btnPlay">Play</button>
-            <button class="btn secondary" id="btnPause">Pause</button>
-            <button class="btn secondary" id="btnToday">Today</button>
-          </div>
+      <div id="timeControls">
+        <div class="row">
+          <input id="date" type="date"/>
         </div>
-        <div class="spacer"></div>
-        <input type="range" id="dateSlider" min="0" max="365" value="30" />
-        <div class="sub" style="margin-top:8px;">
-          Time-enabled basemap uses NASA GIBS daily mosaics. Some days have clouds; “best” is not guaranteed.
+        <div class="row">
+          <button class="btn wide" id="btnPlay">Play</button>
+          <button class="btn wide" id="btnPause">Pause</button>
+          <button class="btn wide" id="btnToday">Today</button>
+        </div>
+        <div class="hint">
+          NASA GIBS updates are not truly “real-time”; they’re near-daily for many layers.
+          If a date looks cloudy/odd, try a nearby date.
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="cardTitle">Live / Near-Real-Time Overlays</div>
-
-      <div class="toggle">
-        <label>Weather Radar (RainViewer)</label>
-        <input type="checkbox" id="togRadar">
-      </div>
-      <div class="spacer"></div>
-
-      <div class="toggle">
-        <label>Earthquakes (USGS past day)</label>
-        <input type="checkbox" id="togQuakes">
-      </div>
-      <div class="spacer"></div>
-
-      <div class="toggle">
-        <label>Thermal Anomalies (NASA GIBS)</label>
-        <input type="checkbox" id="togThermal">
-      </div>
-
-      <div class="sub" style="margin-top:10px;">
-        Notes: Radar is a third-party public endpoint; availability varies. Thermal overlay is satellite heat detections (not guaranteed “fires”).
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="cardTitle">Pro Tools</div>
-
+      <div class="sectionTitle">OVERLAYS</div>
       <div class="row">
-        <button class="btn secondary" id="btnZoomIn">Zoom +</button>
-        <button class="btn secondary" id="btnZoomOut">Zoom −</button>
-        <button class="btn secondary" id="btnReset">Reset View</button>
+        <div class="toggle" id="togLabels"><span>Labels (cities/towns)</span><div class="switch"></div></div>
       </div>
-
-      <div class="spacer"></div>
-
-      <div class="toggle">
-        <label>Crosshair (lock center)</label>
-        <input type="checkbox" id="togCrosshair">
-      </div>
-      <div class="spacer"></div>
-
-      <div class="toggle">
-        <label>Auto-minimize while panning (mobile)</label>
-        <input type="checkbox" id="togAutoHide" checked>
-      </div>
-
-      <div class="spacer"></div>
-
       <div class="row">
-        <button class="btn secondary" id="btnMeasure">Measure (draw)</button>
-        <button class="btn secondary" id="btnClearDraw">Clear</button>
-        <button class="btn secondary" id="btnBearing">Bearing tool</button>
+        <div class="toggle" id="togRadar"><span>Weather Radar (RainViewer)</span><div class="switch"></div></div>
       </div>
-
-      <div class="spacer"></div>
-
       <div class="row">
-        <button class="btn secondary" id="btnStreet">Street (Mapillary)</button>
-        <button class="btn secondary" id="btnCopyLink">Copy link</button>
+        <div class="toggle" id="togQuakes"><span>Earthquakes (USGS past day)</span><div class="switch"></div></div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="cardTitle">Offline / Cache</div>
       <div class="row">
-        <button class="btn secondary" id="btnOfflineSave">Save visible area</button>
-        <button class="btn secondary" id="btnOfflineClear">Clear cache</button>
+        <div class="toggle" id="togThermal"><span>Thermal Anomalies (NASA GIBS)</span><div class="switch"></div></div>
       </div>
-      <div class="sub" style="margin-top:10px;">
-        Best-effort caching: works great for the app + any same-origin assets; cross-origin tiles may be cached as “opaque” depending on browser rules.
+
+      <div class="sectionTitle">PRO TOOLS</div>
+      <div class="row">
+        <button class="btn wide" id="btnZoomIn">Zoom +</button>
+        <button class="btn wide" id="btnZoomOut">Zoom −</button>
+        <button class="btn wide" id="btnReset">Reset</button>
       </div>
-    </div>
+      <div class="row">
+        <button class="btn wide" id="btnMeasure">Measure</button>
+        <button class="btn wide" id="btnClearMeasure">Clear</button>
+      </div>
+      <div class="row">
+        <button class="btn wide" id="btnShare">Copy Link</button>
+        <button class="btn wide" id="btnStreet">Street (Mapillary)</button>
+      </div>
 
-    <div class="card" id="debugCard">
-      <div class="cardTitle">Live Debug</div>
-      <pre id="debug"></pre>
-    </div>
+      <div class="sectionTitle">MOBILE</div>
+      <div class="row">
+        <div class="toggle on" id="togAutoMin"><span>Auto-minimize while moving</span><div class="switch"></div></div>
+      </div>
 
-    <div class="sub" style="margin-top:10px;">
-      Tip: This cockpit is designed to be extensible. Next upgrades: time-enabled Sentinel/Landsat providers with keys, PMTiles packs, and your own COG layers.
+      <div class="sectionTitle">DEBUG</div>
+      <div class="row">
+        <div class="toggle" id="togDebug"><span>Show Debug</span><div class="switch"></div></div>
+      </div>
+      <div class="debugBox" id="debug" style="display:none;"></div>
+
+      <div class="hint" style="margin-top:10px;">
+        Reality check: “Street View realism” requires ground panoramas (different dataset). This app beats typical map apps by
+        combining satellite + time + live overlays + pro tools in one fast cockpit.
+      </div>
     </div>
   </div>
 
-  <div class="miniDock">
-    <button class="fab" id="fabShow" style="display:none;">
-      ☰ <small>Panel</small>
-    </button>
-    <button class="fab" id="fabHome">
-      ⌂ <small>Home</small>
-    </button>
-    <button class="fab" id="fabPlus">
-      ＋ <small>Zoom</small>
-    </button>
-    <button class="fab" id="fabMinus">
-      − <small>Zoom</small>
-    </button>
+  <div class="miniControls">
+    <button class="btn icon" id="miniPanel" title="Show / Hide panel">☰</button>
+    <button class="btn icon" id="miniPlus" title="Zoom in">＋</button>
+    <button class="btn icon" id="miniMinus" title="Zoom out">－</button>
+    <button class="btn icon" id="miniHome" title="Home">⌂</button>
   </div>
 
-<script>
-(() => {
-  // ----------------------------
-  // Utilities
-  // ----------------------------
-  const $ = (id) => document.getElementById(id);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const fmt6 = (n) => (Math.round(n * 1e6) / 1e6).toFixed(6);
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  <script>
+    // ---------- Helpers ----------
+    const $ = (id) => document.getElementById(id);
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const isoDate = (d) => d.toISOString().slice(0,10);
 
-  function ymdUTC(d){
-    // GIBS wants YYYY-MM-DD
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth()+1).padStart(2,'0');
-    const day = String(d.getUTCDate()).padStart(2,'0');
-    return `${y}-${m}-${day}`;
-  }
-
-  function dateFromSlider(daysAgo){
-    const d = new Date();
-    d.setUTCHours(0,0,0,0);
-    d.setUTCDate(d.getUTCDate() - daysAgo);
-    return d;
-  }
-
-  function mgrsFromLatLng(lat, lng){
-    try {
-      // mgrs.forward expects [lon, lat]
-      return window.mgrs.forward([lng, lat], 5);
-    } catch (e){
-      return "—";
+    function setToggle(el, on){
+      el.classList.toggle('on', !!on);
     }
-  }
+    function isOn(el){ return el.classList.contains('on'); }
 
-  function makeShareURL(map){
-    const c = map.getCenter();
-    const z = map.getZoom();
-    const mode = $('modeSelect').value;
-    const daysAgo = Number($('dateSlider').value || 30);
-    const radar = $('togRadar').checked ? 1 : 0;
-    const quakes = $('togQuakes').checked ? 1 : 0;
-    const thermal = $('togThermal').checked ? 1 : 0;
-    const params = new URLSearchParams({
-      lat: c.lat.toFixed(6),
-      lng: c.lng.toFixed(6),
-      z: String(z),
-      mode,
-      days: String(daysAgo),
-      radar: String(radar),
-      quakes: String(quakes),
-      thermal: String(thermal),
-    });
-    return `${location.origin}${location.pathname}?${params.toString()}`;
-  }
+    // ---------- Map ----------
+    const HOME = { lat: 28.3628, lng: -81.4294, z: 11 }; // Davenport-ish; change if you want
+    const map = L.map('map', {
+      zoomControl: false,
+      worldCopyJump: true
+    }).setView([HOME.lat, HOME.lng], HOME.z);
 
-  async function copyText(s){
-    try {
-      await navigator.clipboard.writeText(s);
-      return true;
-    } catch (e){
-      return false;
+    // Make zooming feel premium
+    map.options.zoomSnap = 1;
+    map.options.zoomDelta = 1;
+    map.options.wheelPxPerZoomLevel = 120;
+
+    // ---------- Base layers ----------
+    // Esri World Imagery (EPSG:3857)
+    const esriImagery = L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "Esri" }
+    );
+
+    // Esri labels / places reference (works as overlay)
+    const esriLabels = L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, opacity: 0.95, attribution: "Esri (Reference)" }
+    );
+
+    // NASA GIBS (EPSG:3857 GoogleMapsCompatible) — THIS FIXES THE STRIPES/WARPING
+    function gibsLayer(layerName, dateStr, format="jpg") {
+      // Example:
+      // https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2025-01-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg
+      // We can omit LevelN and just use GoogleMapsCompatible; GIBS supports {z}/{y}/{x} with Leaflet.
+      // Some layers prefer png for transparency; base true color is jpg.
+      const ext = format;
+      const url =
+        `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerName}/default/${dateStr}/GoogleMapsCompatible/{z}/{y}/{x}.${ext}`;
+      return L.tileLayer(url, {
+        maxZoom: 9, // GIBS best-effort; keep reasonable (MODIS/VIIRS aren’t 19-level street detail)
+        attribution: "NASA GIBS"
+      });
     }
-  }
 
-  // ----------------------------
-  // Map setup
-  // ----------------------------
-  const homeView = { lat: 20.0, lng: 0.0, z: 3 };
+    // Default GIBS layers
+    const GIBS_TRUECOLOR = "MODIS_Terra_CorrectedReflectance_TrueColor";
+    const GIBS_CITYLIGHTS = "VIIRS_CityLights_2012";
 
-  const map = L.map('map', {
-    center: [homeView.lat, homeView.lng],
-    zoom: homeView.z,
-    worldCopyJump: true,
-    zoomControl: false,
-    inertia: true,
-    inertiaDeceleration: 2800,
-    inertiaMaxSpeed: 1900,
-    preferCanvas: true
-  });
+    // Thermal anomalies overlay (png)
+    // This is not guaranteed “real-time”; it’s a data product layer.
+    const GIBS_THERMAL = "MODIS_Terra_Thermal_Anomalies_All";
 
-  // Scale bar
-  L.control.scale({ imperial: true, metric: true, maxWidth: 170 }).addTo(map);
+    let currentBase = null;
+    let currentGibsBase = null;
+    let thermalOverlay = null;
 
-  // Draw layer group
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
+    // ---------- Live overlays ----------
+    // RainViewer radar tiles
+    // Note: RainViewer provides multiple frames; we’ll use the latest "nowcast" style tile endpoint.
+    // If RainViewer changes their API, this may need updating.
+    const radar = L.tileLayer(
+      "https://tilecache.rainviewer.com/v2/radar/nowcast_0/256/{z}/{x}/{y}/2/1_1.png",
+      { maxZoom: 19, opacity: 0.65, attribution: "RainViewer" }
+    );
 
-  const drawControl = new L.Control.Draw({
-    position: 'topright',
-    draw: {
-      polygon: true,
-      polyline: true,
-      rectangle: false,
-      circle: false,
-      circlemarker: false,
-      marker: false
-    },
-    edit: {
-      featureGroup: drawnItems,
-      remove: true
-    }
-  });
-
-  // ----------------------------
-  // Basemaps (Mode Switch)
-  // ----------------------------
-
-  // Esri World Imagery
-  const esri = L.tileLayer(
-    'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {
-      maxZoom: 19,
-      maxNativeZoom: 19,
-      attribution: 'Esri World Imagery'
-    }
-  );
-
-  // Esri reference labels (cities/roads-ish)
-  const esriRef = L.tileLayer(
-    'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-    {
-      maxZoom: 19,
-      maxNativeZoom: 19,
-      opacity: 0.95,
-      attribution: 'Esri Reference'
-    }
-  );
-
-  // NASA GIBS WMTS (time-enabled). Uses GoogleMapsCompatible.
-  // IMPORTANT: GIBS has lower native zoom levels than Esri.
-  function gibsLayer(layerName, levelMax){
-    // levelMax: e.g., 9 or 8 (GIBS "GoogleMapsCompatible_LevelX")
-    // Leaflet z beyond maxNativeZoom will upscale; we clamp maxZoom too.
-    const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerName}/default/{time}/GoogleMapsCompatible_Level${levelMax}/{z}/{y}/{x}.png`;
-    return L.tileLayer(url, {
-      maxZoom: levelMax,
-      maxNativeZoom: levelMax,
-      attribution: 'NASA GIBS (WMTS)',
-      time: ymdUTC(dateFromSlider(Number($('dateSlider')?.value || 30))),
-      tileSize: 256,
-      updateWhenIdle: true,
-      keepBuffer: 4,
-      crossOrigin: true
-    });
-  }
-
-  const gibsMODIS = gibsLayer('MODIS_Terra_CorrectedReflectance_TrueColor', 9);
-  const gibsVIIRS = gibsLayer('VIIRS_SNPP_CorrectedReflectance_TrueColor', 9);
-
-  // Current basemap references
-  let currentBase = esri;
-  let labelsOn = true;
-
-  // Start with Esri + labels
-  esri.addTo(map);
-  esriRef.addTo(map);
-
-  // ----------------------------
-  // Overlays (Live / Near Real-time)
-  // ----------------------------
-
-  // Radar via RainViewer
-  let radarLayer = null;
-  let radarTimer = null;
-  async function getRainViewerLatest(){
-    // returns { host, path } for latest radar frame
-    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json', { cache: 'no-store' });
-    const j = await r.json();
-    const frames = (j && j.radar && j.radar.past) ? j.radar.past : [];
-    const last = frames.length ? frames[frames.length - 1] : null;
-    if (!last) return null;
-    // tile format: https://tilecache.rainviewer.com/v2/radar/{time}/256/{z}/{x}/{y}/2/1_1.png
-    return last.time;
-  }
-  async function enableRadar(on){
-    if (!on){
-      if (radarLayer){ map.removeLayer(radarLayer); radarLayer = null; }
-      if (radarTimer){ clearInterval(radarTimer); radarTimer = null; }
-      return;
-    }
-    try {
-      const t = await getRainViewerLatest();
-      if (!t) throw new Error('No radar frames available.');
-      if (radarLayer) map.removeLayer(radarLayer);
-      radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${t}/256/{z}/{x}/{y}/2/1_1.png`, {
-        opacity: 0.55,
-        maxZoom: 19,
-        maxNativeZoom: 19,
-        attribution: 'RainViewer Radar',
-        crossOrigin: true,
-        updateWhenIdle: true,
-        keepBuffer: 4
-      }).addTo(map);
-
-      // refresh every 2 minutes
-      if (radarTimer) clearInterval(radarTimer);
-      radarTimer = setInterval(async () => {
-        try {
-          const t2 = await getRainViewerLatest();
-          if (!t2) return;
-          if (radarLayer){
-            radarLayer.setUrl(`https://tilecache.rainviewer.com/v2/radar/${t2}/256/{z}/{x}/{y}/2/1_1.png`);
-          }
-        } catch {}
-      }, 120000);
-
-    } catch (e){
-      $('togRadar').checked = false;
-      log(`Radar failed: ${String(e.message || e)}`);
-      alert('Radar overlay failed to load right now (endpoint may be blocked or temporarily down).');
-    }
-  }
-
-  // Quakes (USGS GeoJSON)
-  let quakeLayer = null;
-  async function enableQuakes(on){
-    if (!on){
-      if (quakeLayer){ map.removeLayer(quakeLayer); quakeLayer = null; }
-      return;
-    }
-    try {
-      const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
-      const r = await fetch(url, { cache: 'no-store' });
-      const g = await r.json();
-
-      if (quakeLayer) map.removeLayer(quakeLayer);
-
-      quakeLayer = L.geoJSON(g, {
-        pointToLayer: (f, latlng) => {
-          const m = (f.properties && f.properties.mag) ? f.properties.mag : 0;
-          const rad = clamp(3 + m * 2.2, 3, 22);
-          return L.circleMarker(latlng, {
-            radius: rad,
+    // USGS earthquakes GeoJSON (past day)
+    const quakesLayer = L.layerGroup();
+    async function refreshQuakes(){
+      quakesLayer.clearLayers();
+      try{
+        const r = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson", { cache: "no-store" });
+        if(!r.ok) throw new Error("USGS fetch failed");
+        const gj = await r.json();
+        const pts = gj.features || [];
+        pts.forEach(f=>{
+          const c = f.geometry && f.geometry.coordinates;
+          if(!c) return;
+          const [lng, lat, depth] = c;
+          const mag = (f.properties && f.properties.mag) ?? 0;
+          const t = f.properties && f.properties.time ? new Date(f.properties.time).toLocaleString() : "";
+          const title = f.properties && f.properties.place ? f.properties.place : "Earthquake";
+          const radius = clamp(3 + (mag*3), 3, 18);
+          const m = L.circleMarker([lat,lng], {
+            radius,
             weight: 1,
-            color: 'rgba(255,255,255,.85)',
-            fillColor: 'rgba(255,110,110,.55)',
-            fillOpacity: 0.75
-          });
-        },
-        onEachFeature: (f, layer) => {
-          const p = f.properties || {};
-          const title = p.title || 'Earthquake';
-          const t = p.time ? new Date(p.time).toISOString() : '—';
-          layer.bindPopup(`<div style="font:13px system-ui;color:#111">
-            <b>${title}</b><br>
-            Time: ${t}<br>
-            <a href="${p.url || '#'}" target="_blank" rel="noreferrer">Details</a>
-          </div>`);
+            opacity: 0.85,
+            fillOpacity: 0.35
+          }).bindPopup(`<b>${title}</b><br>Mag: ${mag}<br>Depth: ${depth} km<br>${t}`);
+          quakesLayer.addLayer(m);
+        });
+      }catch(e){
+        // silently fail; show in debug
+        log(`Quakes: ${e.message}`);
+      }
+    }
+
+    // ---------- Measure tool ----------
+    let measureOn = false;
+    let measureLine = null;
+    let measurePts = [];
+    function haversineMeters(a,b){
+      const R = 6371000;
+      const toRad = (x)=>x*Math.PI/180;
+      const dLat = toRad(b.lat-a.lat);
+      const dLng = toRad(b.lng-a.lng);
+      const s1 = Math.sin(dLat/2), s2 = Math.sin(dLng/2);
+      const q = s1*s1 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*s2*s2;
+      return 2*R*Math.asin(Math.sqrt(q));
+    }
+    function totalMeters(pts){
+      let m=0;
+      for(let i=1;i<pts.length;i++) m += haversineMeters(pts[i-1], pts[i]);
+      return m;
+    }
+    function formatDist(m){
+      if(m < 1000) return `${m.toFixed(0)} m`;
+      return `${(m/1000).toFixed(2)} km`;
+    }
+
+    function clearMeasure(){
+      measurePts = [];
+      if(measureLine){ map.removeLayer(measureLine); measureLine=null; }
+    }
+
+    // ---------- UI state ----------
+    const panel = $("panel");
+    const panelBody = $("panelBody");
+    const debugBox = $("debug");
+
+    let debugOn = false;
+    function log(s){
+      if(!debugOn) return;
+      debugBox.textContent = (debugBox.textContent + "\n" + s).trim();
+      debugBox.scrollTop = debugBox.scrollHeight;
+    }
+
+    function setPanelMinimized(min){
+      panel.classList.toggle("minimized", !!min);
+      $("btnMin").textContent = panel.classList.contains("minimized") ? "▸" : "▾";
+    }
+
+    function setPanelHidden(hide){
+      panel.style.display = hide ? "none" : "flex";
+    }
+
+    // ---------- Mode switching ----------
+    function getDate(){
+      const v = $("date").value;
+      if(v) return v;
+      const d = new Date();
+      return isoDate(d);
+    }
+
+    function applyBase(){
+      const mode = $("mode").value;
+      const date = getDate();
+
+      // remove existing bases
+      if(currentBase){ map.removeLayer(currentBase); currentBase = null; }
+      if(currentGibsBase){ map.removeLayer(currentGibsBase); currentGibsBase = null; }
+
+      // Show/hide time controls depending on mode
+      const needsTime = (mode !== "esri");
+      $("timeControls").style.display = needsTime ? "block" : "none";
+
+      if(mode === "esri"){
+        currentBase = esriImagery.addTo(map);
+      } else if(mode === "gibs_truecolor"){
+        currentGibsBase = gibsLayer(GIBS_TRUECOLOR, date, "jpg").addTo(map);
+      } else if(mode === "gibs_viirs"){
+        currentGibsBase = gibsLayer(GIBS_CITYLIGHTS, date, "jpg").addTo(map);
+      } else if(mode === "hybrid"){
+        // Esri base + optional GIBS overlays (thermal can be toggled)
+        currentBase = esriImagery.addTo(map);
+      }
+
+      // Re-apply labels toggle for every mode
+      syncLabels();
+
+      // Re-apply thermal overlay if enabled (works in any mode)
+      syncThermal();
+
+      // Overlays sync
+      syncRadar();
+      syncQuakes();
+
+      updatePills();
+      updateURLHash();
+    }
+
+    // ---------- Labels ----------
+    function syncLabels(){
+      const on = isOn($("togLabels"));
+      if(on){
+        if(!map.hasLayer(esriLabels)) esriLabels.addTo(map);
+      } else {
+        if(map.hasLayer(esriLabels)) map.removeLayer(esriLabels);
+      }
+      updateURLHash();
+    }
+
+    // ---------- Radar ----------
+    function syncRadar(){
+      const on = isOn($("togRadar"));
+      if(on){
+        if(!map.hasLayer(radar)) radar.addTo(map);
+      } else {
+        if(map.hasLayer(radar)) map.removeLayer(radar);
+      }
+      updateURLHash();
+    }
+
+    // ---------- Quakes ----------
+    function syncQuakes(){
+      const on = isOn($("togQuakes"));
+      if(on){
+        if(!map.hasLayer(quakesLayer)) quakesLayer.addTo(map);
+        refreshQuakes();
+      } else {
+        if(map.hasLayer(quakesLayer)) map.removeLayer(quakesLayer);
+      }
+      updateURLHash();
+    }
+
+    // ---------- Thermal overlay (GIBS) ----------
+    function syncThermal(){
+      const on = isOn($("togThermal"));
+      const date = getDate();
+      if(on){
+        // build (or rebuild) overlay for current date
+        if(thermalOverlay){
+          map.removeLayer(thermalOverlay);
+          thermalOverlay = null;
         }
-      }).addTo(map);
-
-    } catch (e){
-      $('togQuakes').checked = false;
-      log(`Quakes failed: ${String(e.message || e)}`);
-      alert('Earthquakes overlay failed to load (network/CORS issue).');
-    }
-  }
-
-  // Thermal anomalies overlay from NASA GIBS (no key)
-  // This is a satellite heat product; not a guarantee of “fire points”.
-  const thermalOverlay = gibsLayer('MODIS_Terra_Thermal_Anomalies_All', 8);
-  thermalOverlay.setOpacity?.(0.65);
-
-  function enableThermal(on){
-    if (on) thermalOverlay.addTo(map);
-    else map.removeLayer(thermalOverlay);
-  }
-
-  // ----------------------------
-  // Drawer UX (minimize + auto-hide)
-  // ----------------------------
-  const drawer = $('drawer');
-  const fabShow = $('fabShow');
-
-  function setDrawerVisible(vis){
-    if (vis){
-      drawer.classList.remove('collapsed');
-      fabShow.style.display = 'none';
-    } else {
-      drawer.classList.add('collapsed');
-      fabShow.style.display = 'inline-flex';
-    }
-  }
-
-  $('btnMinimize').onclick = () => setDrawerVisible(false);
-  fabShow.onclick = () => setDrawerVisible(true);
-
-  // Auto-hide while panning (mobile-friendly)
-  let autoHide = true;
-  $('togAutoHide').addEventListener('change', e => { autoHide = !!e.target.checked; });
-
-  let movingTimer = null;
-  map.on('movestart', () => {
-    document.body.classList.add('moving');
-    if (autoHide && window.innerWidth <= 900){
-      setDrawerVisible(false);
-    }
-    if (movingTimer) clearTimeout(movingTimer);
-  });
-  map.on('moveend', () => {
-    movingTimer = setTimeout(() => document.body.classList.remove('moving'), 120);
-    refreshHUD();
-  });
-
-  // ----------------------------
-  // Crosshair lock-center
-  // ----------------------------
-  const crosshair = $('crosshair');
-  $('togCrosshair').addEventListener('change', (e) => {
-    const on = !!e.target.checked;
-    crosshair.style.display = on ? 'block' : 'none';
-  });
-
-  // ----------------------------
-  // Time controls for GIBS modes
-  // ----------------------------
-  let playing = false;
-  let playTimer = null;
-
-  function showTimeControls(show){
-    $('timeControls').style.display = show ? 'block' : 'none';
-  }
-
-  function setGibsTime(ymd){
-    // Update all GIBS-backed layers
-    gibsMODIS.options.time = ymd;
-    gibsVIIRS.options.time = ymd;
-    thermalOverlay.options.time = ymd;
-
-    // Force redraw if active
-    if (map.hasLayer(gibsMODIS)) gibsMODIS.redraw();
-    if (map.hasLayer(gibsVIIRS)) gibsVIIRS.redraw();
-    if (map.hasLayer(thermalOverlay)) thermalOverlay.redraw();
-  }
-
-  function updateDateFromSlider(){
-    const daysAgo = Number($('dateSlider').value);
-    const d = dateFromSlider(daysAgo);
-    const s = ymdUTC(d);
-    $('chipDate').textContent = `Date: ${s} (UTC)`;
-    setGibsTime(s);
-  }
-
-  $('dateSlider').addEventListener('input', () => {
-    updateDateFromSlider();
-  });
-
-  $('btnToday').onclick = () => {
-    $('dateSlider').value = 0;
-    updateDateFromSlider();
-  };
-
-  $('btnPlay').onclick = () => {
-    if (playing) return;
-    playing = true;
-    // step “daysAgo” down toward 0, or wrap
-    playTimer = setInterval(() => {
-      const v = Number($('dateSlider').value);
-      const next = (v <= 0) ? 90 : v - 1; // loop through last ~3 months
-      $('dateSlider').value = next;
-      updateDateFromSlider();
-    }, 500);
-  };
-
-  $('btnPause').onclick = () => {
-    playing = false;
-    if (playTimer){ clearInterval(playTimer); playTimer = null; }
-  };
-
-  // ----------------------------
-  // Mode switching (Esri vs GIBS)
-  // ----------------------------
-  function setMode(mode){
-    // Remove current base
-    if (currentBase) map.removeLayer(currentBase);
-
-    // Clamp zoom if switching to GIBS (lower max native)
-    if (mode === 'esri'){
-      currentBase = esri;
-      showTimeControls(false);
-      // allow up to 19
-      map.setMaxZoom(19);
-    } else if (mode === 'gibs_modis'){
-      currentBase = gibsMODIS;
-      showTimeControls(true);
-      map.setMaxZoom(9);
-      updateDateFromSlider();
-      if (map.getZoom() > 9) map.setZoom(9);
-    } else if (mode === 'gibs_viirs'){
-      currentBase = gibsVIIRS;
-      showTimeControls(true);
-      map.setMaxZoom(9);
-      updateDateFromSlider();
-      if (map.getZoom() > 9) map.setZoom(9);
+        thermalOverlay = gibsLayer(GIBS_THERMAL, date, "png");
+        thermalOverlay.setOpacity(0.55);
+        thermalOverlay.addTo(map);
+      } else {
+        if(thermalOverlay){
+          map.removeLayer(thermalOverlay);
+          thermalOverlay = null;
+        }
+      }
+      updateURLHash();
     }
 
-    currentBase.addTo(map);
+    // ---------- Search ----------
+    async function geocode(q){
+      // OSM Nominatim (public). Keep it light; don't spam.
+      const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q);
+      const r = await fetch(url, { headers: { "Accept": "application/json" } });
+      if(!r.ok) throw new Error("Search failed");
+      const j = await r.json();
+      if(!j || !j[0]) throw new Error("No results");
+      return { lat: parseFloat(j[0].lat), lng: parseFloat(j[0].lon) };
+    }
 
-    // Keep labels always available (Esri reference). For GIBS modes it can still overlay at z<=19,
-    // but it may look “map-like” (you can toggle it).
-    if (labelsOn && !map.hasLayer(esriRef)) esriRef.addTo(map);
-    if (!labelsOn && map.hasLayer(esriRef)) map.removeLayer(esriRef);
+    // ---------- URL state (shareable) ----------
+    function updateURLHash(){
+      const c = map.getCenter();
+      const z = map.getZoom();
+      const mode = $("mode").value;
+      const date = getDate();
+      const st = new URLSearchParams();
+      st.set("z", String(z));
+      st.set("lat", c.lat.toFixed(6));
+      st.set("lng", c.lng.toFixed(6));
+      st.set("mode", mode);
+      st.set("date", date);
+      st.set("labels", isOn($("togLabels")) ? "1" : "0");
+      st.set("radar", isOn($("togRadar")) ? "1" : "0");
+      st.set("quakes", isOn($("togQuakes")) ? "1" : "0");
+      st.set("thermal", isOn($("togThermal")) ? "1" : "0");
+      location.hash = st.toString();
+    }
 
-    refreshHUD();
-  }
+    function loadFromURLHash(){
+      if(!location.hash || location.hash.length < 2) return;
+      const st = new URLSearchParams(location.hash.slice(1));
 
-  $('modeSelect').addEventListener('change', (e) => {
-    setMode(e.target.value);
-  });
+      const z = parseInt(st.get("z") || HOME.z, 10);
+      const lat = parseFloat(st.get("lat") || HOME.lat);
+      const lng = parseFloat(st.get("lng") || HOME.lng);
+      const mode = st.get("mode") || "esri";
+      const date = st.get("date") || isoDate(new Date());
 
-  // Toggle labels
-  let labelsToggleState = true;
-  function toggleLabels(){
-    labelsToggleState = !labelsToggleState;
-    labelsOn = labelsToggleState;
-    if (labelsOn) esriRef.addTo(map);
-    else map.removeLayer(esriRef);
-    refreshHUD();
-  }
+      $("mode").value = mode;
+      $("date").value = date;
 
-  // ----------------------------
-  // Search (Nominatim)
-  // ----------------------------
-  async function geocode(q){
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-    const r = await fetch(url, {
-      headers: { 'Accept': 'application/json' }
+      setToggle($("togLabels"), st.get("labels")==="1");
+      setToggle($("togRadar"), st.get("radar")==="1");
+      setToggle($("togQuakes"), st.get("quakes")==="1");
+      setToggle($("togThermal"), st.get("thermal")==="1");
+
+      map.setView([lat,lng], z, { animate: false });
+    }
+
+    // ---------- Pills / debug ----------
+    function updatePills(){
+      const c = map.getCenter();
+      $("pillZoom").textContent = `Z: ${map.getZoom()}`;
+      $("pillCenter").textContent = `Center: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+
+      if(debugOn){
+        const mode = $("mode").value;
+        const date = getDate();
+        const s = [
+          `Mode: ${mode}`,
+          `Date: ${date}`,
+          `Zoom: ${map.getZoom()}`,
+          `Center: ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`,
+          `Labels: ${isOn($("togLabels")) ? "ON" : "OFF"}`,
+          `Radar: ${isOn($("togRadar")) ? "ON" : "OFF"}`,
+          `Quakes: ${isOn($("togQuakes")) ? "ON" : "OFF"}`,
+          `Thermal: ${isOn($("togThermal")) ? "ON" : "OFF"}`,
+          ``,
+          `Tip: If historical imagery looks torn/striped, it's almost always a projection mismatch.`,
+          `This build uses GIBS EPSG:3857 GoogleMapsCompatible (correct for Leaflet).`
+        ].join("\n");
+        debugBox.textContent = s;
+      }
+    }
+
+    // ---------- Play/Pause time ----------
+    let playTimer = null;
+    function play(){
+      if(playTimer) return;
+      playTimer = setInterval(()=>{
+        const d = new Date(getDate() + "T00:00:00Z");
+        d.setUTCDate(d.getUTCDate() + 1);
+        $("date").value = isoDate(d);
+        applyBase();
+      }, 900);
+    }
+    function pause(){
+      if(playTimer){ clearInterval(playTimer); playTimer = null; }
+    }
+
+    // ---------- Buttons ----------
+    $("btnMin").onclick = () => setPanelMinimized(!panel.classList.contains("minimized"));
+    $("btnHide").onclick = () => setPanelHidden(true);
+
+    $("miniPanel").onclick = () => setPanelHidden(panel.style.display !== "none" ? true : false) || (panel.style.display === "none" && setPanelHidden(false));
+    $("miniPlus").onclick = () => map.zoomIn();
+    $("miniMinus").onclick = () => map.zoomOut();
+    $("miniHome").onclick = () => map.setView([HOME.lat, HOME.lng], HOME.z);
+
+    $("btnGo").onclick = async ()=>{
+      const q = $("q").value.trim();
+      if(!q) return;
+      try{
+        const p = await geocode(q);
+        map.setView([p.lat, p.lng], Math.max(map.getZoom(), 14), { animate: true });
+      }catch(e){
+        alert("Search failed: " + e.message);
+      }
+    };
+
+    $("btnHome").onclick = () => map.setView([HOME.lat, HOME.lng], HOME.z, { animate: true });
+
+    $("btnZoomIn").onclick = () => map.zoomIn();
+    $("btnZoomOut").onclick = () => map.zoomOut();
+    $("btnReset").onclick = () => map.setView([HOME.lat, HOME.lng], HOME.z, { animate: true });
+
+    $("btnPlay").onclick = ()=>play();
+    $("btnPause").onclick = ()=>pause();
+    $("btnToday").onclick = ()=>{
+      $("date").value = isoDate(new Date());
+      applyBase();
+    };
+
+    $("mode").onchange = ()=>applyBase();
+    $("date").onchange = ()=>applyBase();
+
+    $("togLabels").onclick = ()=>{ setToggle($("togLabels"), !isOn($("togLabels"))); syncLabels(); };
+    $("togRadar").onclick = ()=>{ setToggle($("togRadar"), !isOn($("togRadar"))); syncRadar(); };
+    $("togQuakes").onclick = ()=>{ setToggle($("togQuakes"), !isOn($("togQuakes"))); syncQuakes(); };
+    $("togThermal").onclick = ()=>{ setToggle($("togThermal"), !isOn($("togThermal"))); syncThermal(); };
+
+    $("togDebug").onclick = ()=>{
+      debugOn = !debugOn;
+      setToggle($("togDebug"), debugOn);
+      debugBox.style.display = debugOn ? "block" : "none";
+      updatePills();
+    };
+
+    $("togAutoMin").onclick = ()=>{
+      setToggle($("togAutoMin"), !isOn($("togAutoMin")));
+    };
+
+    $("btnMeasure").onclick = ()=>{
+      measureOn = !measureOn;
+      $("btnMeasure").classList.toggle("primary", measureOn);
+      if(!measureOn) return;
+      alert("Measure mode: click points on the map. Total distance will update. Tap Clear to remove.");
+    };
+    $("btnClearMeasure").onclick = ()=>clearMeasure();
+
+    $("btnShare").onclick = async ()=>{
+      updateURLHash();
+      const url = location.href;
+      try{
+        await navigator.clipboard.writeText(url);
+        alert("Link copied.");
+      }catch{
+        prompt("Copy link:", url);
+      }
+    };
+
+    $("btnStreet").onclick = ()=>{
+      const c = map.getCenter();
+      // Mapillary viewer/search (open ecosystem)
+      const url = `https://www.mapillary.com/app/?lat=${c.lat}&lng=${c.lng}&z=${Math.max(map.getZoom(), 16)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+    };
+
+    // ---------- Map interactions ----------
+    map.on("move", ()=>{
+      updatePills();
+      if(isOn($("togAutoMin"))){
+        // only auto-minimize while actively moving
+        setPanelMinimized(true);
+      }
     });
-    const j = await r.json();
-    if (!j || !j.length) return null;
-    return { lat: Number(j[0].lat), lng: Number(j[0].lon), display: j[0].display_name };
-  }
-
-  $('btnGo').onclick = async () => {
-    const q = $('searchBox').value.trim();
-    if (!q) return;
-    log(`Search: ${q}`);
-    try{
-      const res = await geocode(q);
-      if (!res) return alert('No results found. Try “City, State” or add country.');
-      map.flyTo([res.lat, res.lng], clamp(map.getZoom() + 4, 5, map.getMaxZoom()), { duration: 1.2 });
-    }catch(e){
-      alert('Search failed (network).');
-    }
-  };
-
-  $('searchBox').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') $('btnGo').click();
-  });
-
-  // ----------------------------
-  // Buttons (zoom/home/reset)
-  // ----------------------------
-  function resetView(){
-    map.setView([homeView.lat, homeView.lng], homeView.z, { animate: true });
-  }
-
-  $('btnHome').onclick = resetView;
-  $('btnReset').onclick = () => {
-    $('togRadar').checked = false; enableRadar(false);
-    $('togQuakes').checked = false; enableQuakes(false);
-    $('togThermal').checked = false; enableThermal(false);
-    resetView();
-  };
-
-  $('btnZoomIn').onclick = () => map.zoomIn();
-  $('btnZoomOut').onclick = () => map.zoomOut();
-
-  $('fabHome').onclick = resetView;
-  $('fabPlus').onclick = () => map.zoomIn();
-  $('fabMinus').onclick = () => map.zoomOut();
-
-  // ----------------------------
-  // Overlays toggles
-  // ----------------------------
-  $('togRadar').addEventListener('change', e => enableRadar(!!e.target.checked));
-  $('togQuakes').addEventListener('change', e => enableQuakes(!!e.target.checked));
-  $('togThermal').addEventListener('change', e => enableThermal(!!e.target.checked));
-
-  // ----------------------------
-  // Measure + Bearing tools
-  // ----------------------------
-  let drawEnabled = false;
-  let bearingMode = false;
-  let bearingPts = [];
-
-  function stopBearing(){
-    bearingMode = false;
-    bearingPts = [];
-    $('btnBearing').textContent = 'Bearing tool';
-  }
-
-  function bearingDeg(a, b){
-    // Initial bearing from a -> b
-    const toRad = (x) => x * Math.PI / 180;
-    const toDeg = (x) => x * 180 / Math.PI;
-    const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
-    const dLon = toRad(b.lng - a.lng);
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    const brng = (toDeg(Math.atan2(y, x)) + 360) % 360;
-    return brng;
-  }
-
-  $('btnMeasure').onclick = () => {
-    if (!drawEnabled){
-      map.addControl(drawControl);
-      drawEnabled = true;
-      $('btnMeasure').textContent = 'Measure: ON';
-    } else {
-      map.removeControl(drawControl);
-      drawEnabled = false;
-      $('btnMeasure').textContent = 'Measure (draw)';
-    }
-  };
-
-  $('btnClearDraw').onclick = () => {
-    drawnItems.clearLayers();
-    stopBearing();
-  };
-
-  $('btnBearing').onclick = () => {
-    bearingMode = !bearingMode;
-    bearingPts = [];
-    $('btnBearing').textContent = bearingMode ? 'Bearing: click 2 points' : 'Bearing tool';
-  };
-
-  map.on(L.Draw.Event.CREATED, function (event) {
-    const layer = event.layer;
-    drawnItems.addLayer(layer);
-
-    // Report measurements
-    if (event.layerType === 'polyline'){
-      const latlngs = layer.getLatLngs();
-      let dist = 0;
-      for (let i=1;i<latlngs.length;i++){
-        dist += latlngs[i-1].distanceTo(latlngs[i]);
+    map.on("moveend", ()=>{
+      updatePills();
+      updateURLHash();
+      // restore after stop moving (mobile UX)
+      if(isOn($("togAutoMin"))){
+        // stay minimized; user can expand when needed
       }
-      log(`Measure: distance ${(dist/1000).toFixed(3)} km (${(dist*3.28084).toFixed(0)} ft)`);
-      layer.bindPopup(`Distance: <b>${(dist/1000).toFixed(3)} km</b><br>${(dist*3.28084).toFixed(0)} ft`).openPopup();
-    }
-    if (event.layerType === 'polygon'){
-      const latlngs = layer.getLatLngs()[0];
-      // Leaflet has internal geometry util for area via geodesic approximation:
-      const area = L.GeometryUtil.geodesicArea(latlngs);
-      const acres = area * 0.000247105;
-      log(`Measure: area ${(area/1e6).toFixed(3)} km² (${acres.toFixed(2)} acres)`);
-      layer.bindPopup(`Area: <b>${(area/1e6).toFixed(3)} km²</b><br>${acres.toFixed(2)} acres`).openPopup();
-    }
-  });
+    });
+    map.on("zoomend", ()=>{
+      updatePills();
+      updateURLHash();
+    });
 
-  map.on('click', (e) => {
-    if (!bearingMode) return;
-    bearingPts.push({ lat: e.latlng.lat, lng: e.latlng.lng });
-    if (bearingPts.length === 2){
-      const a = bearingPts[0], b = bearingPts[1];
-      const br = bearingDeg(a, b);
-      const line = L.polyline([a, b], { weight: 3, opacity: .95 }).addTo(drawnItems);
-      line.bindPopup(`Bearing: <b>${br.toFixed(1)}°</b>`).openPopup();
-      log(`Bearing: ${br.toFixed(1)}°`);
-      stopBearing();
-    } else {
-      log(`Bearing: point 1 set @ ${fmt6(e.latlng.lat)}, ${fmt6(e.latlng.lng)}`);
-    }
-  });
-
-  // ----------------------------
-  // Street-level substitute (Mapillary)
-  // ----------------------------
-  $('btnStreet').onclick = () => {
-    const c = map.getCenter();
-    const url = `https://www.mapillary.com/app/?lat=${c.lat.toFixed(6)}&lng=${c.lng.toFixed(6)}&z=${clamp(map.getZoom(), 15, 19)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  // ----------------------------
-  // Copy share link
-  // ----------------------------
-  $('btnCopyLink').onclick = async () => {
-    const url = makeShareURL(map);
-    const ok = await copyText(url);
-    if (!ok) alert('Copy failed. Long-press and copy from the address bar instead.');
-    else log('Copied share link.');
-  };
-
-  // ----------------------------
-  // Offline caching (Service Worker)
-  // ----------------------------
-  async function swRegister(){
-    if (!('serviceWorker' in navigator)) return;
-    try {
-      await navigator.serviceWorker.register('./sw.js', { scope: './' });
-      log('Service worker registered.');
-    } catch (e){
-      log('SW register failed (some browsers block SW on file:// or certain contexts).');
-    }
-  }
-  swRegister();
-
-  $('btnOfflineClear').onclick = async () => {
-    if (!('caches' in window)) return alert('Cache API not available in this browser.');
-    const keys = await caches.keys();
-    await Promise.all(keys.map(k => caches.delete(k)));
-    log('Caches cleared.');
-    alert('Offline cache cleared.');
-  };
-
-  $('btnOfflineSave').onclick = async () => {
-    if (!('caches' in window)) return alert('Cache API not available in this browser.');
-    const bounds = map.getBounds();
-    const z = map.getZoom();
-    const minZ = clamp(z - 1, 1, map.getMaxZoom());
-    const maxZ = clamp(z + 1, 1, map.getMaxZoom());
-
-    // Which tile layers are active?
-    const layers = [];
-    if (map.hasLayer(currentBase)) layers.push(currentBase);
-    if (labelsOn && map.hasLayer(esriRef)) layers.push(esriRef);
-    if (radarLayer && map.hasLayer(radarLayer)) layers.push(radarLayer);
-    if (quakeLayer && map.hasLayer(quakeLayer)) {
-      // quakes are vector, nothing to cache via tiles
-    }
-    if (map.hasLayer(thermalOverlay)) layers.push(thermalOverlay);
-
-    // Convert bounds to tile range for each zoom and cache tile URLs
-    // Uses WebMercator tile math.
-    function lngLatToTileXY(lng, lat, zoom){
-      const latRad = lat * Math.PI/180;
-      const n = Math.pow(2, zoom);
-      const x = Math.floor((lng + 180) / 360 * n);
-      const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
-      return { x, y };
-    }
-
-    const swTime = (currentBase && currentBase.options && currentBase.options.time) ? currentBase.options.time : null;
-
-    let urls = [];
-    for (let zoom=minZ; zoom<=maxZ; zoom++){
-      const nw = bounds.getNorthWest();
-      const se = bounds.getSouthEast();
-      const tNW = lngLatToTileXY(nw.lng, nw.lat, zoom);
-      const tSE = lngLatToTileXY(se.lng, se.lat, zoom);
-
-      const xMin = clamp(Math.min(tNW.x, tSE.x), 0, (1<<zoom)-1);
-      const xMax = clamp(Math.max(tNW.x, tSE.x), 0, (1<<zoom)-1);
-      const yMin = clamp(Math.min(tNW.y, tSE.y), 0, (1<<zoom)-1);
-      const yMax = clamp(Math.max(tNW.y, tSE.y), 0, (1<<zoom)-1);
-
-      for (let x=xMin; x<=xMax; x++){
-        for (let y=yMin; y<=yMax; y++){
-          for (const LAYER of layers){
-            // Leaflet has getTileUrl via internal object.
-            // We create a fake point consistent with Leaflet API:
-            const tilePoint = { x, y, z: zoom };
-            let u = null;
-
-            // Handle GIBS {time} placeholder by using the layer's current options.time
-            // Leaflet's template handles it if we pass in as a placeholder in options.
-            try {
-              // Leaflet internal template uses {s} etc. We rely on its templating:
-              u = LAYER.getTileUrl(tilePoint);
-            } catch(e){
-              // fallback: skip
-            }
-            if (u) urls.push(u);
-          }
+    map.on("click", (e)=>{
+      if(measureOn){
+        measurePts.push(e.latlng);
+        if(measureLine) map.removeLayer(measureLine);
+        measureLine = L.polyline(measurePts, { weight: 3, opacity: 0.85 }).addTo(map);
+        const dist = totalMeters(measurePts);
+        if(measurePts.length >= 2){
+          measureLine.bindTooltip(`Distance: ${formatDist(dist)}`, { sticky: true }).openTooltip(e.latlng);
         }
       }
-    }
+    });
 
-    // De-dupe
-    urls = Array.from(new Set(urls));
-    log(`Offline: caching ~${urls.length} tiles (z ${minZ}..${maxZ}).`);
+    // Keyboard shortcuts (desktop)
+    window.addEventListener("keydown", (ev)=>{
+      if(ev.key === "+" || ev.key === "=") map.zoomIn();
+      if(ev.key === "-" || ev.key === "_") map.zoomOut();
+      if(ev.key === "0") map.setView([HOME.lat, HOME.lng], HOME.z);
+      if(ev.key.toLowerCase() === "d"){ debugOn = !debugOn; setToggle($("togDebug"), debugOn); debugBox.style.display = debugOn ? "block" : "none"; updatePills(); }
+      if(ev.key.toLowerCase() === "m"){ setPanelMinimized(!panel.classList.contains("minimized")); }
+    });
 
-    try {
-      const cache = await caches.open('earth-cockpit-tiles-v1');
-      // Fetch in small batches to avoid locking the browser
-      const batchSize = 24;
-      for (let i=0;i<urls.length;i+=batchSize){
-        const batch = urls.slice(i, i+batchSize);
-        await Promise.all(batch.map(async (u) => {
-          try {
-            // mode: 'no-cors' allows caching opaque tiles too (browser dependent).
-            const req = new Request(u, { mode: 'no-cors' });
-            const res = await fetch(req);
-            await cache.put(req, res);
-          } catch {}
-        }));
-        await sleep(40);
+    // ---------- Init ----------
+    // defaults
+    $("date").value = isoDate(new Date(Date.now() - 2*86400000)); // slightly back to avoid "future/no data" hiccups
+    setToggle($("togLabels"), true);
+    setToggle($("togRadar"), false);
+    setToggle($("togQuakes"), false);
+    setToggle($("togThermal"), false);
+
+    loadFromURLHash();
+    applyBase(); // also applies labels/overlays
+
+    // If panel was hidden, mini button brings it back
+    $("miniPanel").onclick = ()=>{
+      if(panel.style.display === "none"){
+        setPanelHidden(false);
+      } else {
+        setPanelMinimized(!panel.classList.contains("minimized"));
       }
-      log('Offline: cache save complete.');
-      alert('Saved visible area for offline use (best-effort).');
-    } catch (e){
-      log('Offline: cache save failed.');
-      alert('Offline save failed in this browser (Cache/SW restrictions).');
-    }
-  };
-
-  // ----------------------------
-  // Debug + HUD
-  // ----------------------------
-  const debugEl = $('debug');
-
-  function log(s){
-    const ts = new Date().toLocaleTimeString();
-    debugEl.textContent = `[${ts}] ${s}\n` + debugEl.textContent.slice(0, 2400);
-  }
-
-  function refreshHUD(){
-    const c = map.getCenter();
-    $('chipZoom').textContent = `Z: ${map.getZoom()}`;
-    $('chipCenter').textContent = `Center: ${fmt6(c.lat)}, ${fmt6(c.lng)}`;
-    $('chipMGRS').textContent = `MGRS: ${mgrsFromLatLng(c.lat, c.lng)}`;
-
-    // Debug dump
-    const mode = $('modeSelect').value;
-    const baseName =
-      mode === 'esri' ? 'Esri World Imagery' :
-      mode === 'gibs_modis' ? 'NASA GIBS MODIS TrueColor (time)' :
-      'NASA GIBS VIIRS TrueColor (time)';
-
-    const lines = [];
-    lines.push(`Mode: ${baseName}`);
-    lines.push(`Zoom: ${map.getZoom()}   (Max for mode: ${map.getMaxZoom()})`);
-    lines.push(`Center: ${fmt6(c.lat)}, ${fmt6(c.lng)}`);
-    lines.push(`MGRS: ${mgrsFromLatLng(c.lat, c.lng)}`);
-    if (mode !== 'esri'){
-      const daysAgo = Number($('dateSlider').value);
-      lines.push(`Date (UTC): ${ymdUTC(dateFromSlider(daysAgo))}  (days ago: ${daysAgo})`);
-    }
-    lines.push(`Labels overlay: ${labelsOn ? 'ON' : 'OFF'}`);
-    lines.push(`Radar: ${$('togRadar').checked ? 'ON' : 'OFF'}   Quakes: ${$('togQuakes').checked ? 'ON' : 'OFF'}   Thermal: ${$('togThermal').checked ? 'ON' : 'OFF'}`);
-    lines.push('');
-    lines.push('Tip: “Street View” is a different dataset. Use Street (Mapillary) for community street-level imagery.');
-    debugEl.textContent = lines.join('\n');
-  }
-
-  map.on('zoomend', refreshHUD);
-
-  // ----------------------------
-  // Keyboard shortcuts (desktop)
-  // ----------------------------
-  window.addEventListener('keydown', (e) => {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    if (e.key === '+' || e.key === '=' ) map.zoomIn();
-    if (e.key === '-' || e.key === '_' ) map.zoomOut();
-    if (e.key === '0') resetView();
-    if (e.key.toLowerCase() === 'l') toggleLabels();
-    if (e.key.toLowerCase() === 'h') setDrawerVisible(!drawer.classList.contains('collapsed'));
-  });
-
-  // ----------------------------
-  // URL state restore
-  // ----------------------------
-  function restoreFromURL(){
-    const p = new URLSearchParams(location.search);
-    const lat = Number(p.get('lat'));
-    const lng = Number(p.get('lng'));
-    const z = Number(p.get('z'));
-    const mode = p.get('mode');
-    const days = Number(p.get('days'));
-    const radar = p.get('radar') === '1';
-    const quakes = p.get('quakes') === '1';
-    const thermal = p.get('thermal') === '1';
-
-    if (Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(z)){
-      map.setView([lat,lng], clamp(z, 1, 19), { animate:false });
-    }
-
-    if (mode){
-      $('modeSelect').value = mode;
-      setMode(mode);
-    } else {
-      setMode('esri');
-    }
-
-    if (Number.isFinite(days)){
-      $('dateSlider').value = clamp(days, 0, 365);
-      updateDateFromSlider();
-    }
-
-    $('togRadar').checked = radar;
-    $('togQuakes').checked = quakes;
-    $('togThermal').checked = thermal;
-
-    if (radar) enableRadar(true);
-    if (quakes) enableQuakes(true);
-    if (thermal) enableThermal(true);
-
-    refreshHUD();
-  }
-
-  // Initial
-  restoreFromURL();
-  refreshHUD();
-  log('Ready.');
-})();
-</script>
+    };
+  </script>
 </body>
 </html>
