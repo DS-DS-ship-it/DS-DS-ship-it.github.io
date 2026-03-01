@@ -1,64 +1,48 @@
-// Earth Cockpit SW (best-effort caching for GitHub Pages)
-const VERSION = 'earth-cockpit-v2.0.1';
-const APP_CACHE = `${VERSION}-app`;
-const RUNTIME_CACHE = `${VERSION}-runtime`;
-
-const APP_SHELL = [
-  './',
-  './index.html',
-  './sw.js',
+/* sw.js — Earth Cockpit shell cache (best-effort) */
+const CACHE_NAME = "earth-cockpit-shell-v1";
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./sw.js"
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(APP_CACHE);
-    await cache.addAll(APP_SHELL);
-    self.skipWaiting();
-  })());
+// Install: cache the shell
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map(k => {
-      if (!k.startsWith(VERSION)) return caches.delete(k);
-    }));
-    self.clients.claim();
-  })());
+// Activate: clean old caches
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))))
+      .then(() => self.clients.claim())
+  );
 });
 
-self.addEventListener('fetch', (event) => {
+// Fetch: cache-first for same-origin shell; network-first otherwise.
+// Note: cross-origin tiles are often "opaque" and may or may not be cacheable depending on browser rules.
+self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  if (req.method !== 'GET') return;
+  // Only guarantee caching for our own origin + our shell
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        return cached || fetch(req).then((resp) => {
+          const copy = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(()=>{});
+          return resp;
+        });
+      })
+    );
+    return;
+  }
 
-  event.respondWith((async () => {
-    // Same-origin: cache-first
-    if (url.origin === location.origin) {
-      const cached = await caches.match(req);
-      if (cached) return cached;
-      try {
-        const fresh = await fetch(req);
-        const cache = await caches.open(APP_CACHE);
-        cache.put(req, fresh.clone());
-        return fresh;
-      } catch (e) {
-        const fallback = await caches.match('./index.html');
-        if (fallback) return fallback;
-        throw e;
-      }
-    }
-
-    // Cross-origin runtime: stale-while-revalidate
-    const cache = await caches.open(RUNTIME_CACHE);
-    const cached = await cache.match(req);
-
-    const fetchPromise = fetch(req).then((fresh) => {
-      cache.put(req, fresh.clone()).catch(() => {});
-      return fresh;
-    }).catch(() => cached);
-
-    return cached || fetchPromise;
-  })());
+  // For cross-origin: try network, fallback to cache (best-effort)
+  event.respondWith(
+    fetch(req).catch(() => caches.match(req))
+  );
 });
