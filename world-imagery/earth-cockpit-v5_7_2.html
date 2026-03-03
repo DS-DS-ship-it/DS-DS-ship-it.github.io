@@ -416,7 +416,13 @@ https://ds-ds-ship-it.github.io/world-imagery/earth-cockpit-v5_7_2.html
   function isMobile(){ return window.matchMedia("(max-width: 720px)").matches; }
 
   // -----------------------------
-  // Panel minimize
+  const panel=document.getElementById("panel");
+if(panel){
+panel.addEventListener("touchstart",e=>e.stopPropagation(),{passive:true});
+panel.addEventListener("touchmove",e=>e.stopPropagation(),{passive:true});
+}
+
+// Panel minimize
   // -----------------------------
   function pokeMapSize(){
     try { map.invalidateSize(true); } catch {}
