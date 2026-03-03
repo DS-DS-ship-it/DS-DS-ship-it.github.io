@@ -2,14 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>World Imagery Explorer</title>
-  <meta http-equiv="refresh" content="0; url=earth-cockpit-v5_7_0.html?v=1" />
+
+  <!-- Cache-bust: change this number when you publish a new build -->
   <script>
-    location.replace("earth-cockpit-v5_7_0.html?v=1");
+    const BUILD = "572"; // ← bump to 573, 574, etc when you update
+    location.replace("earth-cockpit-v5_7_2.html?v=" + BUILD);
   </script>
+
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=earth-cockpit-v5_7_2.html?v=572" />
+  </noscript>
 </head>
 <body>
-Redirecting… <a href="earth-cockpit-v5_7_0.html?v=1">Click here</a>
+Redirecting… <a href="earth-cockpit-v5_7_2.html?v=572">Click here</a>
 </body>
 </html>
