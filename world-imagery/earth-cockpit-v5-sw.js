@@ -1,5 +1,5 @@
 /* earth-cockpit-v5-sw.js — minimal offline shell cache */
-const VERSION = "earth-cockpit-v5-7-0";
+const VERSION = "earth-cockpit-v5-7-2-b573";
 const CACHE = `${VERSION}-shell`;
 
 const ASSETS = [
