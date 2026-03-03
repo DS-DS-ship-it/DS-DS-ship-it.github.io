@@ -1334,7 +1334,7 @@ https://ds-ds-ship-it.github.io/world-imagery/earth-cockpit-v5_7_2.html
   map.on("layeradd", () => { if (state.mode === "2d") ensure2DOrdering(); });
 
   // If user starts dragging on mobile, keep panel out of the way
-  window.addEventListener("touchstart", () => { if (isMobile()) setMinimized(true); }, {passive:true});
+  const viewWrapEl=document.getElementById("viewWrap");if(viewWrapEl){viewWrapEl.addEventListener("touchstart",(e)=>{if(!isMobile())return;if(!document.body.classList.contains("minimized")){setMinimized(true);}},{passive:true});}
 
   // -----------------------------
   // Initialize
