@@ -422,10 +422,35 @@ https://ds-ds-ship-it.github.io/world-imagery/earth-cockpit-v5_7_2.html
     try { map.invalidateSize(true); } catch {}
     try { if (viewer) viewer.resize(); } catch {}
   }
+
+  function setMapInteractivity(enabled){
+    try{
+      if(enabled){
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+        map.boxZoom.enable();
+        map.keyboard.enable();
+        if(map.tap) map.tap.enable();
+      } else {
+        map.dragging.disable();
+        map.touchZoom.disable();
+        map.doubleClickZoom.disable();
+        map.scrollWheelZoom.disable();
+        map.boxZoom.disable();
+        map.keyboard.disable();
+        if(map.tap) map.tap.disable();
+      }
+    }catch(e){}
+  }
+
   function setMinimized(on){
     document.body.classList.toggle("minimized", !!on);
     $("panelFab").classList.toggle("show", !!on);
+    
     $("minBtn").textContent = on ? "Show" : "Minimize";
+    setMapInteractivity(on); // minimized => map ON, panel open => map OFF
     // multiple pokes: iOS needs it
     pokeMapSize();
     setTimeout(pokeMapSize, 60);
