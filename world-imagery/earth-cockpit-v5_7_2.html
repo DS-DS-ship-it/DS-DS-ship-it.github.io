@@ -463,7 +463,18 @@ https://ds-ds-ship-it.github.io/world-imagery/earth-cockpit-v5_7_2.html
   });
   $("panelFab").addEventListener("click", () => setMinimized(false));
 
-  // Auto-minimize on mobile so map is visible instantly
+  const viewWrapEl=document.getElementById("viewWrap");
+if(viewWrapEl){
+  viewWrapEl.addEventListener("touchstart",(e)=>{
+    if(!isMobile()) return;
+    const t=e.target;
+    const hitUI=(t&&(t.closest&&(t.closest("#panel")||t.closest("#panelFab")||t.closest("#minBtn"))));
+    if(hitUI) return;
+    if(!document.body.classList.contains("minimized")) setMinimized(true);
+  },{passive:true});
+}
+
+// Auto-minimize on mobile so map is visible instantly
   if (isMobile()) setMinimized(true);
 
   // -----------------------------
