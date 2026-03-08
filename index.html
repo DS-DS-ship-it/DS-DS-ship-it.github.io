@@ -11,162 +11,347 @@
     crossorigin="anonymous"></script>
 
   <style>
-    :root { color-scheme: dark; }
+    :root{
+      color-scheme: dark;
+      --bg:#0b0c10;
+      --panel:#0f1218;
+      --panel2:#141a22;
+      --text:#e9eef5;
+      --muted:rgba(233,238,245,.78);
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.18);
+      --shadow:0 12px 40px rgba(0,0,0,.45);
+      --hero1:rgba(64,240,190,.16);
+      --hero2:rgba(151,90,255,.16);
+      --hero3:rgba(90,170,255,.16);
+      --accent:#9fe5ff;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:
+        radial-gradient(circle at top right, rgba(95,125,255,.10), transparent 28%),
+        radial-gradient(circle at top left, rgba(64,240,190,.08), transparent 26%),
+        var(--bg);
+      color:var(--text);
+      font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
 
     body{
-      margin:0;
-      background:#0b0c10;
-      color:#e9eef5;
-      font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      padding:0;
     }
 
     .wrap{
-      max-width:900px;
+      max-width:1120px;
       margin:0 auto;
-      padding:26px;
+      padding:28px 18px 34px;
+    }
+
+    .hero{
+      border:1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(64,240,190,.08), rgba(151,90,255,.08) 50%, rgba(90,170,255,.08));
+      border-radius:20px;
+      padding:24px 22px;
+      box-shadow:var(--shadow);
+      margin-bottom:20px;
+    }
+
+    .eyebrow{
+      display:inline-block;
+      margin:0 0 10px 0;
+      padding:6px 10px;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:999px;
+      background:rgba(255,255,255,.05);
+      font-size:12px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--muted);
     }
 
     h1{
-      margin:0 0 6px 0;
-      font-size:28px;
+      margin:0 0 8px 0;
+      font-size:clamp(28px, 4vw, 40px);
+      line-height:1.1;
     }
 
-    p{
-      margin:0 0 16px 0;
-      opacity:.85;
+    .hero p{
+      margin:0;
+      max-width:760px;
+      color:var(--muted);
+      font-size:15px;
     }
 
     .grid{
       display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap:14px;
+      grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+      gap:16px;
       margin-top:18px;
     }
 
     .card{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(15,18,24,.72);
-      border-radius:14px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(15,18,24,.90), rgba(15,18,24,.72));
+      border-radius:16px;
       padding:16px;
-      box-shadow:0 12px 40px rgba(0,0,0,.45);
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      min-height:220px;
+    }
+
+    .card.featured{
+      border-color:rgba(151,90,255,.45);
+      background:
+        linear-gradient(180deg, rgba(26,21,40,.95), rgba(15,18,24,.80)),
+        linear-gradient(135deg, var(--hero1), var(--hero2));
+    }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      width:max-content;
+      margin:0 0 10px 0;
+      padding:5px 9px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);
+      font-size:12px;
+      color:var(--muted);
     }
 
     .card h2{
       margin:0 0 8px 0;
-      font-size:18px;
+      font-size:19px;
+      line-height:1.2;
     }
 
     .card p{
       margin:0 0 12px 0;
       font-size:14px;
-      opacity:.8;
+      color:var(--muted);
+    }
+
+    .features{
+      margin:0 0 14px 0;
+      padding-left:18px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .features li{
+      margin:4px 0;
+    }
+
+    .actions{
+      margin-top:auto;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
     a.btn{
       display:inline-block;
-      padding:10px 12px;
+      padding:10px 13px;
       border-radius:10px;
-      border:1px solid rgba(255,255,255,.16);
-      background: linear-gradient(135deg, rgba(64,240,190,.18), rgba(151,90,255,.18));
-      color:#e9eef5;
+      border:1px solid var(--line2);
+      background:linear-gradient(135deg, rgba(64,240,190,.18), rgba(151,90,255,.18));
+      color:var(--text);
       text-decoration:none;
-      font-weight:600;
+      font-weight:700;
+      transition:transform .14s ease, filter .14s ease, border-color .14s ease;
     }
 
     a.btn:hover{
-      filter: brightness(1.08);
+      filter:brightness(1.08);
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,.28);
+    }
+
+    a.btn.secondary{
+      background:rgba(255,255,255,.05);
+      font-weight:600;
     }
 
     .small{
-      margin-top:14px;
+      margin-top:12px;
       font-size:12px;
-      opacity:.7;
+      color:rgba(233,238,245,.68);
+      line-height:1.5;
     }
 
     code{
       background:rgba(255,255,255,.08);
       padding:2px 6px;
       border-radius:6px;
+      font-size:.95em;
     }
 
     .footer{
-      margin-top:18px;
-      opacity:.8;
+      margin-top:22px;
+      padding-top:16px;
+      border-top:1px solid rgba(255,255,255,.08);
+      color:rgba(233,238,245,.72);
       font-size:12px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
     }
 
     .footer a{
-      color:#9fe5ff;
+      color:var(--accent);
       text-decoration:none;
     }
 
     .footer a:hover{
       text-decoration:underline;
     }
+
+    @media (max-width: 640px){
+      .wrap{
+        padding:16px 12px 26px;
+      }
+
+      .hero{
+        padding:18px 16px;
+        border-radius:16px;
+      }
+
+      .card{
+        min-height:auto;
+      }
+
+      .footer{
+        justify-content:flex-start;
+      }
+    }
   </style>
 </head>
 
 <body>
+  <div class="wrap">
 
-<div class="wrap">
-
-  <h1>Living Apps</h1>
-  <p>Select an app:</p>
-
-  <div class="grid">
-
-    <div class="card">
-      <h2>Living Artwork (Image Painter)</h2>
-      <p>Original image painter. URL stays the same.</p>
-      <a class="btn" href="/living-artwork/">Open Image Painter</a>
-      <div class="small">Direct: <code>/living-artwork/</code></div>
-    </div>
-
-    <div class="card">
-      <h2>Video Artwork Living</h2>
-      <p>Video version + recording.</p>
-      <a class="btn" href="/video-artwork-living/">Open Video App</a>
-      <div class="small">Direct: <code>/video-artwork-living/</code></div>
-    </div>
-
-    <div class="card">
-      <h2>Audio Artwork Living</h2>
-      <p>Audio visualizer + microphone input + recording.</p>
-      <a class="btn" href="/audio-artwork-living/">Open Audio Visualizer</a>
-      <div class="small">Direct: <code>/audio-artwork-living/</code></div>
-    </div>
-
-    <div class="card">
-      <h2>Video Motion Sensor</h2>
-      <p>Motion tracking + PiP zoom + stable recording + download.</p>
-      <a class="btn" href="/video-motion-sensor/">Open Video Motion Sensor</a>
-      <div class="small">Direct: <code>/video-motion-sensor/</code></div>
-    </div>
-
-    <div class="card">
-      <h2>World Imagery</h2>
-      <p>Earth Cockpit (2D/3D + radar + globe).</p>
-      <a class="btn" href="/world-imagery/?v=574">Open World Imagery</a>
-      <div class="small">Direct: <code>/world-imagery/</code></div>
-    </div>
-
-    <div class="card">
-      <h2>Earth Cockpit v14</h2>
-      <p>Next-generation Earth + Space command center.</p>
+    <section class="hero">
+      <div class="eyebrow">DS-DS-ship-it</div>
+      <h1>Living Apps</h1>
       <p>
-        2D map • Cesium 3D globe • astronomy viewer • radar • satellites • aircraft • ships • earthquakes.
+        Interactive visual, camera, audio, and Earth-space tools built for mobile and desktop.
+        Launch any app below.
       </p>
-      <a class="btn" href="/earth-cockpit-v7.html">Launch Earth Cockpit</a>
-      <div class="small">Direct: <code>/earth-cockpit-v7.html</code></div>
+    </section>
+
+    <div class="grid">
+
+      <div class="card">
+        <div class="tag">Image</div>
+        <h2>Living Artwork (Image Painter)</h2>
+        <p>Original image painter with evolving visual effects.</p>
+        <ul class="features">
+          <li>Interactive image processing</li>
+          <li>Creative visual transformations</li>
+          <li>Stable original URL</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/living-artwork/">Open Image Painter</a>
+        </div>
+        <div class="small">Direct: <code>/living-artwork/</code></div>
+      </div>
+
+      <div class="card">
+        <div class="tag">Video</div>
+        <h2>Video Artwork Living</h2>
+        <p>Video-based generative artwork with recording support.</p>
+        <ul class="features">
+          <li>Video reactive effects</li>
+          <li>Recording workflow</li>
+          <li>Browser-based experience</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/video-artwork-living/">Open Video App</a>
+        </div>
+        <div class="small">Direct: <code>/video-artwork-living/</code></div>
+      </div>
+
+      <div class="card">
+        <div class="tag">Audio</div>
+        <h2>Audio Artwork Living</h2>
+        <p>Audio visualizer with microphone input and recording tools.</p>
+        <ul class="features">
+          <li>Microphone-driven visuals</li>
+          <li>Audio-responsive rendering</li>
+          <li>Recording support</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/audio-artwork-living/">Open Audio Visualizer</a>
+        </div>
+        <div class="small">Direct: <code>/audio-artwork-living/</code></div>
+      </div>
+
+      <div class="card">
+        <div class="tag">Camera</div>
+        <h2>Video Motion Sensor</h2>
+        <p>Motion tracking with PiP zoom, stable recording, and downloads.</p>
+        <ul class="features">
+          <li>Motion sensing</li>
+          <li>Zoom / picture-in-picture</li>
+          <li>Stable browser recording</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/video-motion-sensor/">Open Video Motion Sensor</a>
+        </div>
+        <div class="small">Direct: <code>/video-motion-sensor/</code></div>
+      </div>
+
+      <div class="card">
+        <div class="tag">Maps</div>
+        <h2>World Imagery</h2>
+        <p>Earlier Earth Cockpit environment with globe, imagery, and weather layers.</p>
+        <ul class="features">
+          <li>2D / 3D Earth viewing</li>
+          <li>Radar and imagery layers</li>
+          <li>Legacy world imagery workspace</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/world-imagery/?v=574">Open World Imagery</a>
+        </div>
+        <div class="small">Direct: <code>/world-imagery/</code></div>
+      </div>
+
+      <div class="card featured">
+        <div class="tag">Featured • Mobile Friendly</div>
+        <h2>Earth Cockpit v18</h2>
+        <p>Next-generation Earth + Space command center optimized for phones, tablets, and laptops.</p>
+        <ul class="features">
+          <li>2D map and Cesium 3D globe</li>
+          <li>Astronomy / Astro mode</li>
+          <li>Radar, satellites, aircraft, ships, and earthquakes</li>
+          <li>Mobile minimizable menu</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/earth-cockpit-v18.html">Launch Earth Cockpit v18</a>
+          <a class="btn secondary" href="/earth-cockpit-v17.html">Open v17</a>
+        </div>
+        <div class="small">
+          Primary mobile version: <code>/earth-cockpit-v18.html</code><br>
+          Previous version: <code>/earth-cockpit-v17.html</code>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <div>DS-DS-ship-it • Living Apps Portal</div>
+      <a href="/privacy.html">Privacy Policy</a>
     </div>
 
   </div>
-
-  <div class="footer">
-    <a href="/privacy.html">Privacy Policy</a>
-  </div>
-
-</div>
-
 </body>
 </html>
