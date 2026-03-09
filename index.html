@@ -25,6 +25,8 @@
       --hero2:rgba(151,90,255,.16);
       --hero3:rgba(90,170,255,.16);
       --accent:#9fe5ff;
+      --good:#71f2ba;
+      --new:#ffcc66;
     }
 
     *{ box-sizing:border-box; }
@@ -40,9 +42,7 @@
       font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
     }
 
-    body{
-      padding:0;
-    }
+    body{ padding:0; }
 
     .wrap{
       max-width:1120px;
@@ -81,7 +81,7 @@
 
     .hero p{
       margin:0;
-      max-width:760px;
+      max-width:800px;
       color:var(--muted);
       font-size:15px;
     }
@@ -109,6 +109,13 @@
       background:
         linear-gradient(180deg, rgba(26,21,40,.95), rgba(15,18,24,.80)),
         linear-gradient(135deg, var(--hero1), var(--hero2));
+    }
+
+    .card.drive{
+      border-color:rgba(255,204,102,.45);
+      background:
+        linear-gradient(180deg, rgba(38,28,14,.96), rgba(15,18,24,.84)),
+        linear-gradient(135deg, rgba(255,204,102,.10), rgba(90,170,255,.10));
     }
 
     .tag{
@@ -144,9 +151,7 @@
       font-size:13px;
     }
 
-    .features li{
-      margin:4px 0;
-    }
+    .features li{ margin:4px 0; }
 
     .actions{
       margin-top:auto;
@@ -179,8 +184,13 @@
       font-weight:600;
     }
 
+    a.btn.drive{
+      background:linear-gradient(135deg, rgba(255,204,102,.24), rgba(90,170,255,.18));
+      border-color:rgba(255,204,102,.35);
+    }
+
     .small{
-      margin-top:12px;
+      margin-top:auto;
       font-size:12px;
       color:rgba(233,238,245,.68);
       line-height:1.5;
@@ -216,22 +226,16 @@
     }
 
     @media (max-width: 640px){
-      .wrap{
-        padding:16px 12px 26px;
-      }
+      .wrap{ padding:16px 12px 26px; }
 
       .hero{
         padding:18px 16px;
         border-radius:16px;
       }
 
-      .card{
-        min-height:auto;
-      }
+      .card{ min-height:auto; }
 
-      .footer{
-        justify-content:flex-start;
-      }
+      .footer{ justify-content:flex-start; }
     }
   </style>
 </head>
@@ -243,8 +247,8 @@
       <div class="eyebrow">DS-DS-ship-it</div>
       <h1>Living Apps</h1>
       <p>
-        Interactive visual, camera, audio, and Earth-space tools built for mobile and desktop.
-        Launch any app below.
+        Interactive visual, camera, audio, Earth, astronomy, and navigation tools built for mobile and desktop.
+        Launch any app below without affecting the others.
       </p>
     </section>
 
@@ -323,6 +327,50 @@
           <a class="btn" href="/world-imagery/?v=574">Open World Imagery</a>
         </div>
         <div class="small">Direct: <code>/world-imagery/</code></div>
+      </div>
+
+      <div class="card drive">
+        <div class="tag">Drive • Navigation • New</div>
+        <h2>Earth Cockpit Drive / Navigation Map</h2>
+        <p>
+          Your new travel and navigation map added as a separate app, alongside the others,
+          with routing, traffic, radar, geography, and astronomy support.
+        </p>
+        <ul class="features">
+          <li>Drive / navigation workspace</li>
+          <li>Traffic, route, and geography tools</li>
+          <li>2D + 3D + Astro map integration</li>
+          <li>Keeps all existing apps intact</li>
+        </ul>
+        <div class="actions">
+          <a class="btn drive" href="/earth-cockpit-v22-nova-atlas-fixed.html">Launch Drive Map</a>
+          <a class="btn secondary" href="/world-imagery/?v=574">Open World Imagery</a>
+        </div>
+        <div class="small">
+          Direct: <code>/earth-cockpit-v22-nova-atlas-fixed.html</code>
+        </div>
+      </div>
+
+      <div class="card featured">
+        <div class="tag">Maps • Traffic • Advanced</div>
+        <h2>OpenStreetMap Traffic Tracker</h2>
+        <p>
+          Advanced Earth + space map with OpenStreetMap options, 2D and 3D viewing,
+          astronomy mode, radar timeline, aircraft, satellites, and expandable live-data endpoints.
+        </p>
+        <ul class="features">
+          <li>2D map, Cesium 3D globe, and Astro mode</li>
+          <li>Radar timeline and historical playback</li>
+          <li>Aircraft, satellites, weather, and hazard layers</li>
+          <li>Traffic, infrastructure, and analytics endpoint slots</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/earth-cockpit-v20-nova-atlas-fixed.html">Launch Traffic Tracker</a>
+          <a class="btn secondary" href="/world-imagery/?v=574">Open World Imagery</a>
+        </div>
+        <div class="small">
+          Direct: <code>/earth-cockpit-v20-nova-atlas-fixed.html</code>
+        </div>
       </div>
 
       <div class="card featured">
