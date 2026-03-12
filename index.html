@@ -27,6 +27,7 @@
       --accent:#9fe5ff;
       --good:#71f2ba;
       --new:#ffcc66;
+      --space:#9b8cff;
     }
 
     *{ box-sizing:border-box; }
@@ -124,6 +125,13 @@
         linear-gradient(135deg, rgba(255,204,102,.10), rgba(90,170,255,.10));
     }
 
+    .card.space{
+      border-color:rgba(155,140,255,.45);
+      background:
+        linear-gradient(180deg, rgba(24,20,40,.96), rgba(15,18,24,.84)),
+        linear-gradient(135deg, rgba(155,140,255,.14), rgba(90,170,255,.10));
+    }
+
     .tag{
       display:inline-flex;
       align-items:center;
@@ -193,6 +201,11 @@
     a.btn.drive{
       background:linear-gradient(135deg, rgba(255,204,102,.24), rgba(90,170,255,.18));
       border-color:rgba(255,204,102,.35);
+    }
+
+    a.btn.space{
+      background:linear-gradient(135deg, rgba(155,140,255,.26), rgba(90,170,255,.18));
+      border-color:rgba(155,140,255,.36);
     }
 
     .small{
@@ -379,6 +392,28 @@
         </div>
         <div class="small">
           Direct: <code>/earth-cockpit-v20-nova-atlas-fixed.html?v=2</code>
+        </div>
+      </div>
+
+      <div class="card space">
+        <div class="tag">Astronomy • Space • New</div>
+        <h2>Astronomy Travel Map</h2>
+        <p>
+          Space-focused Earth Cockpit build for astronomy travel routes, sky navigation,
+          Earth / ICRS route inputs, and mobile-friendly exploration.
+        </p>
+        <ul class="features">
+          <li>Catalog or manual astronomy route input</li>
+          <li>Earth + Astro travel visualization</li>
+          <li>Designed for your new v31 map build</li>
+          <li>Cache-busted GitHub Pages launch</li>
+        </ul>
+        <div class="actions">
+          <a class="btn space" href="/earth-cockpit-v31.html?v=1">Launch Astronomy Travel Map</a>
+          <a class="btn secondary" href="/world-imagery/?v=574">Open World Imagery</a>
+        </div>
+        <div class="small">
+          Direct: <code>/earth-cockpit-v31.html?v=1</code>
         </div>
       </div>
 
