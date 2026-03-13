@@ -1,0 +1,2138 @@
+<!-- living_artwork_v5_audio_reinvention_full.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+
+
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Living Artwork v5.2 (True Repaint + Audio Reinvention + Brush Library + Record)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    .wrap { display:grid; grid-template-columns: 1fr 390px; gap:14px; padding:14px; }
+    canvas { width:100%; height:auto; border-radius:12px; background:#000; box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+    .panel {
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      border-radius:12px;
+      padding:12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      overflow:auto;
+      max-height: calc(100vh - 28px);
+    }
+    .row { display:flex; gap:10px; align-items:center; margin:10px 0; }
+    .row label { flex: 1; opacity:.92; }
+    .row input[type="range"] { width: 200px; }
+    .row input[type="number"], .row select {
+      width: 150px; background:#0f131a; color:#e9eef5;
+      border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:6px;
+    }
+    .btn {
+      background: linear-gradient(135deg, rgba(64,240,190,.18), rgba(151,90,255,.18));
+      border:1px solid rgba(255,255,255,.14);
+      color:#e9eef5;
+      padding:10px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease;
+      white-space:nowrap;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn.red { background: linear-gradient(135deg, rgba(255,60,80,.25), rgba(255,190,0,.18)); }
+    .btn.gray { background: rgba(255,255,255,.06); }
+    .small { font-size:12px; opacity:.78; }
+    .status { margin-top:10px; font-size:12px; opacity:.90; white-space:pre-wrap; }
+    .pill { padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); font-size:12px; }
+    .hr { height:1px; background:rgba(255,255,255,.10); margin:12px 0; }
+    .meter { width:100%; height:10px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; border:1px solid rgba(255,255,255,.12); }
+    .meter > div { height:100%; width:0%; background:linear-gradient(90deg, rgba(80,255,210,.85), rgba(255,170,255,.85)); }
+    a.dl { color:#9fe5ff; text-decoration:none; }
+    .recBadge {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.14); background:rgba(255,60,80,.10);
+      font-size:12px;
+    }
+    .dot { width:10px; height:10px; border-radius:999px; background:rgba(255,60,80,.9); box-shadow:0 0 12px rgba(255,60,80,.6); }
+    .two { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .hint { opacity:.72; font-size:12px; margin-top:6px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <canvas id="c" width="1024" height="1024"></canvas>
+    <div class="small" style="padding:10px 2px; opacity:.88">
+      <b>True repaint:</b> the source image is used only as inspiration. The output is painted from scratch.
+      <b>Audio drives reinvention</b> (composition warp, palette mutation, brush family selection, stroke rate, and shape injection).
+      Use <b>Calibrate Silence</b> so even quiet ambient noise affects the painting.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <label><b>Living Artwork v5.2</b> <span class="pill" id="modePill">idle</span></label>
+      <span class="pill" id="micPill">mic: off</span>
+    </div>
+
+    <div class="row">
+      <input id="file" type="file" accept="image/*"/>
+      <button class="btn gray" id="resetBtn">Reset Canvas</button>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="start">Start</button>
+      <button class="btn gray" id="stop">Stop</button>
+      <button class="btn gray" id="stepBtn">Step</button>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="micBtn">Enable Mic</button>
+      <button class="btn gray" id="calBtn">Calibrate Silence (2s)</button>
+      <button class="btn gray" id="testBtn">Test Audio</button>
+    </div>
+
+    <div class="row">
+      <label class="small">Mic level</label>
+      <div class="meter"><div id="meterFill"></div></div>
+      <span class="small" id="micNum">0.000</span>
+    </div>
+
+    <div class="hr"></div>
+
+    <!-- Audio controls (like your screenshot) -->
+    <div class="row">
+      <label>Noise Floor (gate)</label>
+      <input id="gate" type="range" min="0" max="0.12" step="0.0005" value="0.010"/>
+      <span class="small" id="gateV">0.0100</span>
+    </div>
+
+    <div class="row">
+      <label>Ambient React</label>
+      <input id="ambient" type="range" min="0" max="1" step="0.01" value="0.55"/>
+      <span class="small" id="ambientV">0.55</span>
+    </div>
+
+    <div class="row">
+      <label>Mic Sensitivity (gain)</label>
+      <input id="gain" type="range" min="0" max="40" step="0.1" value="18"/>
+      <span class="small" id="gainV">18.0</span>
+    </div>
+
+    <div class="row">
+      <label>Audio → Reinvention</label>
+      <input id="a2r" type="range" min="0" max="14" step="0.01" value="8.0"/>
+      <span class="small" id="a2rV">8.00</span>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row">
+      <label>Medium</label>
+      <select id="medium">
+        <option value="gouache" selected>Gouache</option>
+        <option value="oil">Oil</option>
+        <option value="watercolor">Watercolor</option>
+        <option value="ink">Ink</option>
+        <option value="pastel">Pastel</option>
+        <option value="charcoal">Charcoal</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Underpaint / Cover</label>
+      <input id="cover" type="range" min="0" max="1" step="0.001" value="0.36"/>
+      <span class="small" id="coverV">0.360</span>
+    </div>
+
+    <div class="row">
+      <label>Stroke Opacity</label>
+      <input id="opacity" type="range" min="0.01" max="1" step="0.001" value="0.34"/>
+      <span class="small" id="opacityV">0.340</span>
+    </div>
+
+    <div class="row">
+      <label>Inspiration (resemblance)</label>
+      <input id="resemblance" type="range" min="0" max="1" step="0.001" value="0.70"/>
+      <span class="small" id="resemblanceV">0.700</span>
+    </div>
+
+    <div class="row">
+      <label>Abstraction</label>
+      <input id="abstraction" type="range" min="0" max="1" step="0.001" value="0.22"/>
+      <span class="small" id="abstractionV">0.220</span>
+    </div>
+
+    <div class="row">
+      <label>Stroke Rate (strokes/sec)</label>
+      <input id="rate" type="range" min="10" max="5000" step="1" value="1680"/>
+      <span class="small" id="rateV">1680</span>
+    </div>
+
+    <div class="row">
+      <label>Brush Size</label>
+      <input id="bsize" type="range" min="1" max="90" step="0.1" value="16.3"/>
+      <span class="small" id="bsizeV">16.3</span>
+    </div>
+
+    <div class="row">
+      <label>Brush Variety</label>
+      <input id="variety" type="range" min="0" max="1" step="0.001" value="0.72"/>
+      <span class="small" id="varietyV">0.720</span>
+    </div>
+
+    <div class="row">
+      <label>Composition Drift</label>
+      <input id="drift" type="range" min="0" max="1" step="0.001" value="0.14"/>
+      <span class="small" id="driftV">0.140</span>
+    </div>
+
+    <div class="row">
+      <label>Palette Mutation</label>
+      <input id="pmut" type="range" min="0" max="1" step="0.001" value="0.14"/>
+      <span class="small" id="pmutV">0.140</span>
+    </div>
+
+    <div class="row">
+      <label>Shape Injection</label>
+      <input id="shape" type="range" min="0" max="1" step="0.001" value="0.12"/>
+      <span class="small" id="shapeV">0.120</span>
+    </div>
+
+    <div class="row">
+      <label>Canvas Texture</label>
+      <input id="texture" type="range" min="0" max="1" step="0.001" value="0.245"/>
+      <span class="small" id="textureV">0.245</span>
+    </div>
+
+    <div class="row">
+      <label>Bloom / Glow</label>
+      <input id="bloom" type="range" min="0" max="1" step="0.001" value="0.303"/>
+      <span class="small" id="bloomV">0.303</span>
+    </div>
+
+    <div class="hr"></div>
+
+    <!-- Color discipline controls -->
+    <div class="row">
+      <label>Color Discipline</label>
+      <input id="discipline" type="range" min="0" max="1" step="0.001" value="0.58"/>
+      <span class="small" id="disciplineV">0.580</span>
+    </div>
+
+    <div class="row">
+      <label>Hue Bias</label>
+      <input id="huebias" type="range" min="-180" max="180" step="1" value="0"/>
+      <span class="small" id="huebiasV">0</span>
+    </div>
+
+    <div class="row">
+      <label>Saturation Clamp</label>
+      <input id="satclamp" type="range" min="0" max="1" step="0.001" value="0.78"/>
+      <span class="small" id="satclampV">0.780</span>
+    </div>
+
+    <div class="row">
+      <label>Temperature</label>
+      <input id="temp" type="range" min="-1" max="1" step="0.001" value="0.08"/>
+      <span class="small" id="tempV">0.080</span>
+    </div>
+
+    <div class="row">
+      <label>Palette Size (quantize)</label>
+      <input id="psize" type="range" min="2" max="24" step="1" value="9"/>
+      <span class="small" id="psizeV">9</span>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row">
+      <label>FPS</label>
+      <input id="fps" type="number" min="8" max="60" step="1" value="24"/>
+    </div>
+
+    <div class="row" style="justify-content:space-between;">
+      <button class="btn red" id="recBtn">● Record (toggle)</button>
+      <span id="recInfo" class="recBadge" style="display:none;"><span class="dot"></span><span id="recTime">REC 00:00</span></span>
+    </div>
+
+    <div class="two">
+      <button class="btn gray" id="snapBtn">Snapshot PNG</button>
+      <button class="btn gray" id="exportBtn">Export Painting PNG</button>
+    </div>
+
+    <div class="row small"><div id="dlWrap"></div></div>
+
+    <div class="hr"></div>
+
+    <div class="two">
+      <button class="btn gray" id="saveStateBtn">Save Settings</button>
+      <button class="btn gray" id="loadStateBtn">Load Settings</button>
+    </div>
+
+    <div class="two">
+      <button class="btn gray" id="savePaintBtn">Save Painting (small)</button>
+      <button class="btn gray" id="loadPaintBtn">Load Painting</button>
+    </div>
+
+    <div class="row">
+      <button class="btn gray" id="clearStateBtn">Clear Saved</button>
+    </div>
+
+    <div class="status" id="status">Load an image → Enable Mic → Calibrate Silence → Start.</div>
+    <div class="hint">
+      <b>More audio impact:</b> raise <b>Gain</b> + <b>Audio→Reinvention</b>, lower <b>Resemblance</b>, raise <b>Shape Injection</b> and <b>Palette Mutation</b> (but keep <b>Color Discipline</b> moderate).
+      <br/>
+      <b>Less rainbow smear:</b> raise <b>Color Discipline</b>, lower <b>Palette Mutation</b>, reduce <b>Abstraction</b>, and clamp saturation.
+      <br/>
+      <span class="mono">Note:</span> Sliders will NOT “float to 1.00” anymore—style evolution is internal and bounded around your slider settings.
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id)=>document.getElementById(id);
+  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+  const lerp  = (a,b,t)=>a+(b-a)*t;
+  const rnd   = (a=1,b=0)=>b + Math.random()*(a-b);
+  const rndi  = (a,b)=>Math.floor(rnd(a+1,b));
+  const TAU = Math.PI*2;
+
+  // ---------- UI ----------
+  const canvas = $("c");
+  const ctx = canvas.getContext("2d", { alpha:false, willReadFrequently:false });
+  const W = canvas.width, H = canvas.height;
+
+  const file = $("file");
+  const startBtn = $("start");
+  const stopBtn = $("stop");
+  const stepBtn = $("stepBtn");
+  const resetBtn = $("resetBtn");
+
+  const micBtn = $("micBtn");
+  const calBtn = $("calBtn");
+  const testBtn = $("testBtn");
+
+  const status = $("status");
+  const modePill = $("modePill");
+  const micPill = $("micPill");
+
+  const meterFill = $("meterFill");
+  const micNum = $("micNum");
+
+  const gateEl = $("gate");
+  const ambientEl = $("ambient");
+  const gainEl = $("gain");
+  const a2rEl = $("a2r");
+
+  const mediumEl = $("medium");
+  const coverEl = $("cover");
+  const opacityEl = $("opacity");
+  const resemblanceEl = $("resemblance");
+  const abstractionEl = $("abstraction");
+  const rateEl = $("rate");
+  const bsizeEl = $("bsize");
+  const varietyEl = $("variety");
+  const driftEl = $("drift");
+  const pmutEl = $("pmut");
+  const shapeEl = $("shape");
+  const textureEl = $("texture");
+  const bloomEl = $("bloom");
+
+  const disciplineEl = $("discipline");
+  const huebiasEl = $("huebias");
+  const satclampEl = $("satclamp");
+  const tempEl = $("temp");
+  const psizeEl = $("psize");
+
+  const fpsEl = $("fps");
+
+  const recBtn = $("recBtn");
+  const recInfo = $("recInfo");
+  const recTime = $("recTime");
+  const snapBtn = $("snapBtn");
+  const exportBtn = $("exportBtn");
+  const dlWrap = $("dlWrap");
+
+  const saveStateBtn = $("saveStateBtn");
+  const loadStateBtn = $("loadStateBtn");
+  const clearStateBtn= $("clearStateBtn");
+  const savePaintBtn = $("savePaintBtn");
+  const loadPaintBtn = $("loadPaintBtn");
+
+  function bindValue(el, out, fmt=(v)=>v.toFixed(3)){
+    const u=()=>out.textContent = fmt(Number(el.value));
+    el.addEventListener("input", u);
+    u();
+  }
+  bindValue(gateEl, $("gateV"), v=>v.toFixed(4));
+  bindValue(ambientEl, $("ambientV"), v=>v.toFixed(2));
+  bindValue(gainEl, $("gainV"), v=>v.toFixed(1));
+  bindValue(a2rEl, $("a2rV"), v=>v.toFixed(2));
+
+  bindValue(coverEl, $("coverV"), v=>v.toFixed(3));
+  bindValue(opacityEl, $("opacityV"), v=>v.toFixed(3));
+  bindValue(resemblanceEl, $("resemblanceV"), v=>v.toFixed(3));
+  bindValue(abstractionEl, $("abstractionV"), v=>v.toFixed(3));
+  bindValue(rateEl, $("rateV"), v=>String(Math.round(v)));
+  bindValue(bsizeEl, $("bsizeV"), v=>v.toFixed(1));
+  bindValue(varietyEl, $("varietyV"), v=>v.toFixed(3));
+  bindValue(driftEl, $("driftV"), v=>v.toFixed(3));
+  bindValue(pmutEl, $("pmutV"), v=>v.toFixed(3));
+  bindValue(shapeEl, $("shapeV"), v=>v.toFixed(3));
+  bindValue(textureEl, $("textureV"), v=>v.toFixed(3));
+  bindValue(bloomEl, $("bloomV"), v=>v.toFixed(3));
+
+  bindValue(disciplineEl, $("disciplineV"), v=>v.toFixed(3));
+  bindValue(huebiasEl, $("huebiasV"), v=>String(Math.round(v)));
+  bindValue(satclampEl, $("satclampV"), v=>v.toFixed(3));
+  bindValue(tempEl, $("tempV"), v=>v.toFixed(3));
+  bindValue(psizeEl, $("psizeV"), v=>String(Math.round(v)));
+
+  // ---------- canvases ----------
+  // inspiration: holds loaded image (never drawn directly)
+  const insp = document.createElement("canvas"); insp.width=W; insp.height=H;
+  const ictx = insp.getContext("2d", { alpha:false, willReadFrequently:true });
+
+  // paint: the evolving “new painting”
+  const paint = document.createElement("canvas"); paint.width=W; paint.height=H;
+  const pctx = paint.getContext("2d", { alpha:false, willReadFrequently:false });
+
+  // post: for bloom compositing
+  const post = document.createElement("canvas"); post.width=W; post.height=H;
+  const postCtx = post.getContext("2d", { alpha:false, willReadFrequently:false });
+
+  // texture tile
+  const tex = document.createElement("canvas"); tex.width=256; tex.height=256;
+  const tctx = tex.getContext("2d", { alpha:true, willReadFrequently:true });
+
+  // edge map (downsample)
+  const EDGE_N = 192;
+  const edge = new Float32Array(EDGE_N*EDGE_N);
+  const edgeCDF = new Float32Array(EDGE_N*EDGE_N);
+
+  // palette extracted from inspiration
+  let basePalette = [
+    {r:90,g:95,b:110},
+    {r:40,g:45,b:60},
+    {r:140,g:120,b:160},
+    {r:90,g:140,b:150},
+    {r:200,g:190,b:220}
+  ];
+
+  let running=false;
+  let tick=0;
+
+  // ----- internal style evolution (bounded; never edits slider values) -----
+  // This is the “program evolves styles as it goes” part: it mutates an internal style genome,
+  // but stays close to your slider settings and NEVER drifts sliders to 1.00.
+  const genome = {
+    wobble: 0.0,
+    phase: 0.0,
+    driftBias: 0.0,
+    paletteBias: 0.0,
+    shapeBias: 0.0,
+    abstractionBias: 0.0,
+    strokeBias: 0.0,
+  };
+
+  function evolveGenome(audio, dt){
+    // audio-driven mutation energy
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+    const energy = clamp(0.10 + 0.65*reinv + 0.45*audio.transient + 0.25*audio.hi, 0, 1.6);
+
+    // slow time base
+    genome.phase += dt * (0.25 + 0.55*energy);
+
+    // bounded random walk (tight)
+    const k = dt * 0.12 * energy;
+    const step = (s)=> clamp(s + rnd(+k,-k), -0.35, +0.35);
+
+    genome.driftBias = step(genome.driftBias);
+    genome.paletteBias = step(genome.paletteBias);
+    genome.shapeBias = step(genome.shapeBias);
+    genome.abstractionBias = step(genome.abstractionBias);
+    genome.strokeBias = step(genome.strokeBias);
+
+    // wobble oscillation (bounded)
+    genome.wobble = 0.5 + 0.5*Math.sin(genome.phase*0.9);
+  }
+
+  // ---------- mic ----------
+  let micEnabled=false;
+  let audioCtx=null, analyser=null, micStream=null;
+  let micTest=false;
+  let noiseFloor=0.010; // calibration writes this
+  let micLevel=0;
+  let lastTransient=0;
+
+  async function enableMic(){
+    try{
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+        video:false
+      });
+
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume();
+
+      const src = audioCtx.createMediaStreamSource(micStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.78;
+      src.connect(analyser);
+
+      micEnabled=true;
+      micPill.textContent="mic: on";
+      status.textContent="Mic enabled. Press Calibrate Silence (2s) so even quiet ambient sound reacts.";
+    }catch(e){
+      micEnabled=false;
+      micPill.textContent="mic: blocked";
+      status.textContent="Mic enable failed.\nSafari: Safari > Settings for This Website > Microphone: Allow\n\n"+e;
+    }
+  }
+
+  micBtn.onclick = async ()=>{
+    if(!micEnabled) await enableMic();
+    else status.textContent="Mic is already enabled.";
+  };
+
+  testBtn.onclick = ()=>{
+    micTest = !micTest;
+    testBtn.textContent = micTest ? "Test Audio (ON)" : "Test Audio";
+    status.textContent = micTest ? "Audio test ON: fake mic movement drives reinvention." : "Audio test OFF.";
+  };
+
+  function updateMeter(level){
+    const pct = clamp(level/0.22, 0, 1) * 100;
+    meterFill.style.width = pct.toFixed(1) + "%";
+    micNum.textContent = level.toFixed(3);
+  }
+
+  function readAudioFeatures(){
+    // returns: {level, gated, lo, mid, hi, centroid, transient}
+    if(micTest){
+      const t = tick / 24;
+      const level = 0.01 + 0.10*(0.5 + 0.5*Math.sin(t*2.1)) + 0.05*(0.5 + 0.5*Math.sin(t*6.2));
+      return { level, gated: level, lo:0.35, mid:0.45, hi:0.70, centroid:0.60, transient: (Math.sin(t*3.3)>0.92)?1:0 };
+    }
+    if(!micEnabled || !analyser) return { level:0, gated:0, lo:0, mid:0, hi:0, centroid:0, transient:0 };
+
+    const timeBuf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(timeBuf);
+
+    let sum=0, peak=0;
+    for(let i=0;i<timeBuf.length;i++){
+      const v=(timeBuf[i]-128)/128;
+      const vv=v*v;
+      sum += vv;
+      peak = Math.max(peak, Math.abs(v));
+    }
+    let rms = Math.sqrt(sum/timeBuf.length);
+
+    // user gain (high ceiling so it can react to near-silence after calibration)
+    rms *= Number(gainEl.value);
+
+    // smooth
+    micLevel = lerp(micLevel, clamp(rms, 0, 0.30), 0.18);
+    const rawLevel = micLevel;
+
+    // gate + ambient react
+    const gate = Math.max(Number(gateEl.value), noiseFloor);
+    const ambient = Number(ambientEl.value);
+    let gated = rawLevel - gate;
+    gated = Math.max(0, gated);
+
+    // if ambient react is high, let tiny amounts through even below gate
+    const soft = rawLevel * (0.14*ambient);
+    gated = gated + soft;
+
+    // spectrum (lo/mid/hi)
+    const freq = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(freq);
+
+    const n = freq.length;
+    const bLo = Math.floor(n*0.12);
+    const bMid = Math.floor(n*0.42);
+    let lo=0, mid=0, hi=0, total=0, weighted=0;
+
+    for(let i=0;i<n;i++){
+      const x = freq[i]/255;
+      total += x;
+      weighted += x * (i/(n-1));
+      if(i < bLo) lo += x;
+      else if(i < bMid) mid += x;
+      else hi += x;
+    }
+    lo /= Math.max(1,bLo);
+    mid/= Math.max(1,bMid-bLo);
+    hi /= Math.max(1,n-bMid);
+    const centroid = total>0 ? (weighted/total) : 0;
+
+    // transient detection (claps / hits)
+    const transient = Math.max(0, (peak*Number(gainEl.value) - 0.10)) * 4.5;
+    lastTransient = lerp(lastTransient, clamp(transient,0,1), 0.25);
+
+    return { level: rawLevel, gated, lo:clamp(lo,0,1), mid:clamp(mid,0,1), hi:clamp(hi,0,1), centroid:clamp(centroid,0,1), transient:lastTransient };
+  }
+
+  async function calibrateSilence(){
+    if(!micEnabled || !analyser){
+      status.textContent="Enable Mic first, then Calibrate Silence.";
+      return;
+    }
+    status.textContent="Calibrating silence for ~2 seconds… stay quiet.";
+    const start = performance.now();
+    let samples=[];
+    while(performance.now() - start < 2000){
+      const f = readAudioFeatures();
+      samples.push(f.level);
+      await new Promise(r=>setTimeout(r, 28));
+    }
+    samples.sort((a,b)=>a-b);
+    const p75 = samples[Math.floor(samples.length*0.75)] || 0.006;
+    noiseFloor = clamp(p75 * 1.10, 0.0005, 0.08);
+
+    gateEl.value = String(noiseFloor.toFixed(4));
+    $("gateV").textContent = Number(gateEl.value).toFixed(4);
+
+    status.textContent = `Calibrated noise floor gate to ~${noiseFloor.toFixed(4)}.\nQuiet ambient sound should now influence the painting.`;
+  }
+  calBtn.onclick = calibrateSilence;
+
+  // ---------- image load ----------
+  function drawCoverToInspiration(img){
+    const iw=img.naturalWidth, ih=img.naturalHeight;
+    const s=Math.max(W/iw, H/ih);
+    const dw=iw*s, dh=ih*s;
+    const dx=(W-dw)/2, dy=(H-dh)/2;
+    ictx.clearRect(0,0,W,H);
+    ictx.drawImage(img, dx, dy, dw, dh);
+
+    computeEdgeMap();
+    basePalette = extractPalette(10);
+    resetPainting(true);
+    render();
+  }
+
+  function loadImageFile(f){
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      drawCoverToInspiration(img);
+      tick=0;
+      status.textContent="Loaded inspiration. Calibrate Silence, then Start.";
+      modePill.textContent="ready";
+    };
+    img.onerror = ()=>{
+      status.textContent="Image failed to load. Use JPG/PNG.";
+      modePill.textContent="error";
+    };
+    img.src = url;
+  }
+
+  file.addEventListener("change",(e)=>{
+    const f=e.target.files && e.target.files[0];
+    if(f) loadImageFile(f);
+  });
+
+  // ---------- texture tile ----------
+  function regenTexture(){
+    const img = tctx.createImageData(tex.width, tex.height);
+    const d = img.data;
+    for(let i=0;i<d.length;i+=4){
+      const n = (Math.random()*255)|0;
+      d[i]=n; d[i+1]=n; d[i+2]=n; d[i+3]=(Math.random()*90)|0;
+    }
+    tctx.putImageData(img,0,0);
+  }
+  regenTexture();
+
+  // ---------- edge map (for “paint decisions”) ----------
+  function computeEdgeMap(){
+    const tmp = document.createElement("canvas");
+    tmp.width = EDGE_N; tmp.height = EDGE_N;
+    const x = tmp.getContext("2d", {alpha:false, willReadFrequently:true});
+    x.drawImage(insp, 0,0, EDGE_N, EDGE_N);
+    const im = x.getImageData(0,0, EDGE_N, EDGE_N);
+    const d = im.data;
+
+    const lum = (r,g,b)=>0.2126*r + 0.7152*g + 0.0722*b;
+
+    for(let y=1;y<EDGE_N-1;y++){
+      for(let x0=1;x0<EDGE_N-1;x0++){
+        const i = (y*EDGE_N + x0)*4;
+        const iL=i-4, iR=i+4, iU=i-EDGE_N*4, iD=i+EDGE_N*4;
+        const gx = lum(d[iR],d[iR+1],d[iR+2]) - lum(d[iL],d[iL+1],d[iL+2]);
+        const gy = lum(d[iD],d[iD+1],d[iD+2]) - lum(d[iU],d[iU+1],d[iU+2]);
+        const g = Math.sqrt(gx*gx + gy*gy);
+        edge[y*EDGE_N + x0] = clamp(g/255, 0, 1);
+      }
+    }
+
+    let sum=0;
+    for(let i=0;i<edge.length;i++){
+      const w = 0.12 + Math.pow(edge[i], 1.25);
+      sum += w;
+      edgeCDF[i]=sum;
+    }
+    for(let i=0;i<edgeCDF.length;i++) edgeCDF[i] /= sum || 1;
+  }
+
+  function pickEdgeBiasedPoint(centerBias=0.15){
+    const r = Math.random();
+    let lo=0, hi=edgeCDF.length-1;
+    while(lo<hi){
+      const mid = (lo+hi)>>1;
+      if(edgeCDF[mid] < r) lo = mid+1; else hi = mid;
+    }
+    const idx = lo;
+    const ex = (idx % EDGE_N) / (EDGE_N-1);
+    const ey = Math.floor(idx/EDGE_N) / (EDGE_N-1);
+
+    // blend toward center (for certain compositions)
+    const cx=0.5, cy=0.5;
+    const t = centerBias;
+    const x = lerp(ex, cx + (ex-cx)*0.7, t);
+    const y = lerp(ey, cy + (ey-cy)*0.7, t);
+    return { x: clamp(x,0,1), y: clamp(y,0,1) };
+  }
+
+  // ---------- palette extraction (fast + robust) ----------
+  function extractPalette(k=10){
+    // sample random pixels -> quantize buckets -> take top buckets -> return palette
+    const im = ictx.getImageData(0,0,W,H).data;
+    const samples = 4500;
+    const bucket = new Map();
+    const q = 24; // quant step; small => more buckets
+    for(let i=0;i<samples;i++){
+      const x = (Math.random()*W)|0;
+      const y = (Math.random()*H)|0;
+      const p = (y*W + x)*4;
+      const r = im[p], g = im[p+1], b = im[p+2];
+      const rq = (r/q)|0, gq=(g/q)|0, bq=(b/q)|0;
+      const key = (rq<<16) | (gq<<8) | (bq);
+      const cur = bucket.get(key) || {c:0, r:0, g:0, b:0};
+      cur.c++;
+      cur.r += r; cur.g += g; cur.b += b;
+      bucket.set(key, cur);
+    }
+    const arr = Array.from(bucket.values()).sort((a,b)=>b.c-a.c).slice(0, Math.max(5,k));
+    const pal = arr.map(o=>({r:Math.round(o.r/o.c), g:Math.round(o.g/o.c), b:Math.round(o.b/o.c)}));
+    // ensure some dark anchor + light anchor
+    pal.push({r:18,g:20,b:26});
+    pal.push({r:220,g:220,b:230});
+    return pal.slice(0,k);
+  }
+
+  // ---------- painting reset (underpaint) ----------
+  function avgInspirationColor(){
+    const im = ictx.getImageData(0,0,W,H).data;
+    let r=0,g=0,b=0, step=18;
+    let n=0;
+    for(let y=0;y<H;y+=step){
+      for(let x=0;x<W;x+=step){
+        const i=(y*W+x)*4;
+        r += im[i]; g += im[i+1]; b += im[i+2]; n++;
+      }
+    }
+    r/=n; g/=n; b/=n;
+    return {r,g,b};
+  }
+
+  function resetPainting(fromImage=false){
+    const a = avgInspirationColor();
+    const g = pctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0, `rgb(${Math.round(a.r*0.40)},${Math.round(a.g*0.40)},${Math.round(a.b*0.40)})`);
+    g.addColorStop(1, `rgb(${Math.round(a.r*0.16)},${Math.round(a.g*0.16)},${Math.round(a.b*0.16)})`);
+    pctx.fillStyle = g;
+    pctx.fillRect(0,0,W,H);
+
+    if(fromImage){
+      // subtle “stain” underpaint (NOT the image itself; blurred + multiplied)
+      pctx.save();
+      pctx.globalAlpha = 0.10;
+      pctx.globalCompositeOperation = "multiply";
+      pctx.filter = "blur(18px) saturate(0.80) contrast(1.05)";
+      pctx.drawImage(insp, 0,0);
+      pctx.restore();
+    }
+  }
+
+  resetBtn.onclick = ()=>{
+    resetPainting(true);
+    status.textContent="Canvas reset.";
+    render();
+  };
+
+  // ---------- color helpers ----------
+  function rgbToHsl(r,g,b){
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    let h=0, s=0, l=(max+min)/2;
+    const d = max-min;
+    if(d!==0){
+      s = d/(1-Math.abs(2*l-1));
+      switch(max){
+        case r: h=((g-b)/d)%6; break;
+        case g: h=(b-r)/d + 2; break;
+        case b: h=(r-g)/d + 4; break;
+      }
+      h*=60; if(h<0) h+=360;
+    }
+    return {h,s,l};
+  }
+
+  function hslToRgb(h,s,l){
+    h = ((h%360)+360)%360;
+    const c = (1-Math.abs(2*l-1))*s;
+    const x = c*(1-Math.abs((h/60)%2 - 1));
+    const m = l - c/2;
+    let r=0,g=0,b=0;
+    if(h<60){ r=c; g=x; b=0; }
+    else if(h<120){ r=x; g=c; b=0; }
+    else if(h<180){ r=0; g=c; b=x; }
+    else if(h<240){ r=0; g=x; b=c; }
+    else if(h<300){ r=x; g=0; b=c; }
+    else { r=c; g=0; b=x; }
+    return {
+      r: Math.round((r+m)*255),
+      g: Math.round((g+m)*255),
+      b: Math.round((b+m)*255)
+    };
+  }
+
+  function applyTemperature(rgb, temp){
+    const t = temp;
+    return {
+      r: clamp(rgb.r + 40*t, 0, 255),
+      g: clamp(rgb.g + 10*t, 0, 255),
+      b: clamp(rgb.b - 45*t, 0, 255),
+    };
+  }
+
+  function quantizeHue(h, bins){
+    const step = 360 / Math.max(2,bins);
+    return Math.round(h/step)*step;
+  }
+
+  function blendRGB(a,b,t){
+    return {
+      r: Math.round(lerp(a.r,b.r,t)),
+      g: Math.round(lerp(a.g,b.g,t)),
+      b: Math.round(lerp(a.b,b.b,t)),
+    };
+  }
+
+  function pickPaletteColor(audio){
+    // audio centroid/hi biases pick within palette
+    const n = basePalette.length;
+    const t = clamp(0.35*audio.centroid + 0.35*audio.hi + 0.15*genome.wobble, 0, 1);
+    const idx = clamp(Math.floor(t*(n-1) + rnd(2,-2)), 0, n-1);
+    const c = basePalette[idx];
+    return {r:c.r,g:c.g,b:c.b};
+  }
+
+  function disciplinedColor(seedRgb, audio, evolution){
+    const pmut = Number(pmutEl.value);
+    const discipline = Number(disciplineEl.value);
+    const hueBias = Number(huebiasEl.value);
+    const satClamp = Number(satclampEl.value);
+    const temp = Number(tempEl.value);
+    const psize = Math.round(Number(psizeEl.value));
+
+    let hsl = rgbToHsl(seedRgb.r, seedRgb.g, seedRgb.b);
+
+    const a2r = Number(a2rEl.value);
+    const a = clamp(audio.gated * a2r, 0, 1.8);
+    const wild = pmut * (1 - discipline) * (0.55 + 0.45*evolution);
+
+    // audio pushes hue shifts + saturation changes (bounded by discipline)
+    const hueShift =
+      (rnd(55,-55) * wild) +
+      (audio.centroid*110-55)*wild +
+      (audio.hi-audio.lo)*70*wild +
+      hueBias*(0.25+0.75*wild);
+
+    hsl.h += hueShift * (0.55 + 0.70*a);
+
+    // saturation clamp (avoid “smear all colors”)
+    hsl.s = clamp(hsl.s * (1 - 0.30*discipline) + 0.10*wild, 0, 1);
+    hsl.s = Math.min(hsl.s, satClamp);
+
+    // lightness shaping
+    hsl.l = clamp(hsl.l*(1.02 - 0.10*discipline) + (audio.mid-0.5)*0.10*wild, 0, 1);
+
+    // quantize hues more when discipline is high
+    const qProb = 0.15 + 0.85*discipline;
+    if(Math.random() < qProb){
+      hsl.h = quantizeHue(hsl.h, psize);
+    }
+
+    let out = hslToRgb(hsl.h, hsl.s, hsl.l);
+    out = applyTemperature(out, temp*(0.65+0.55*wild));
+    return out;
+  }
+
+  function sampleInspiration(u,v){
+    const x = clamp(Math.floor(u*(W-1)), 0, W-1);
+    const y = clamp(Math.floor(v*(H-1)), 0, H-1);
+    const d = ictx.getImageData(x,y,1,1).data;
+    return { r:d[0], g:d[1], b:d[2] };
+  }
+
+  // ---------- composition warp (audio-heavy) ----------
+  function warpedUV(u,v, audio, evolution){
+    const baseDrift = Number(driftEl.value);
+    const baseAbs = Number(abstractionEl.value);
+
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+    const drift = clamp(baseDrift + 0.28*reinv + 0.18*genome.driftBias, 0, 1);
+
+    const t = tick/24;
+    const amp = (0.01 + 0.20*drift) * (0.75 + 0.25*evolution);
+
+    const cx=0.5, cy=0.5;
+    let x=u-cx, y=v-cy;
+    const r = Math.sqrt(x*x+y*y);
+    const ang = Math.atan2(y,x);
+
+    // swirl amount reduces if abstraction is high (otherwise it can become mush)
+    const swirlBase = amp*(0.65 + 0.85*audio.centroid) * (0.20 + 0.80*r);
+    const swirl = swirlBase * (1.0 - 0.55*baseAbs) * (0.75 + 0.25*Math.sin(t*0.4));
+
+    const ang2 = ang + swirl*Math.sin(t*0.45 + r*4.2 + audio.hi*1.3);
+
+    x = r*Math.cos(ang2);
+    y = r*Math.sin(ang2);
+
+    // drift offset + transient “kick”
+    const ox = amp*Math.sin(t*0.35 + audio.lo*3.5 + genome.wobble);
+    const oy = amp*Math.cos(t*0.31 + audio.hi*3.0 + genome.wobble*0.7);
+    const kick = 0.020 * audio.transient * (0.4 + 0.6*evolution);
+
+    x += ox + kick*(u-0.5);
+    y += oy - kick*(v-0.5);
+
+    return { u: clamp(cx+x,0,1), v: clamp(cy+y,0,1) };
+  }
+
+  // ---------- medium styles ----------
+  function setMediumStyle(ctx, medium, opacity){
+    ctx.globalAlpha = opacity;
+    ctx.filter = "none";
+    switch(medium){
+      case "watercolor":
+        ctx.globalCompositeOperation = "multiply";
+        ctx.filter = "blur(0.7px)";
+        break;
+      case "oil":
+        ctx.globalCompositeOperation = "source-over";
+        break;
+      case "ink":
+        ctx.globalCompositeOperation = "multiply";
+        break;
+      case "pastel":
+        ctx.globalCompositeOperation = "lighter";
+        ctx.filter = "blur(0.25px)";
+        break;
+      case "charcoal":
+        ctx.globalCompositeOperation = "multiply";
+        ctx.filter = "blur(0.45px) contrast(1.10)";
+        break;
+      default: // gouache
+        ctx.globalCompositeOperation = "source-over";
+        break;
+    }
+  }
+
+  // ---------- BRUSH LIBRARY (36+ families + a few new invented ones) ----------
+  // Each brush signature: (ctx, x, y, s, col, info)
+  // where info includes {ang, audio, evolution}
+  function b_flatWash(ctx, x,y,s, col){
+    const g = ctx.createRadialGradient(x,y, s*0.2, x,y, s*1.6);
+    g.addColorStop(0, `rgba(${col.r},${col.g},${col.b},0.60)`);
+    g.addColorStop(1, `rgba(${col.r},${col.g},${col.b},0.00)`);
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(x,y,s*1.6,0,TAU); ctx.fill();
+  }
+
+  function b_gradWash(ctx, x,y,s,col, ang){
+    const x2=x+Math.cos(ang)*s*2, y2=y+Math.sin(ang)*s*2;
+    const g=ctx.createLinearGradient(x,y,x2,y2);
+    g.addColorStop(0, `rgba(${col.r},${col.g},${col.b},0.60)`);
+    g.addColorStop(1, `rgba(${col.r},${col.g},${col.b},0.00)`);
+    ctx.fillStyle=g;
+    ctx.fillRect(x-s*2,y-s*2,s*4,s*4);
+  }
+
+  function b_variegatedWash(ctx,x,y,s,col){
+    for(let i=0;i<3;i++){
+      const c2 = {
+        r: clamp(col.r + rnd(50,-50), 0,255),
+        g: clamp(col.g + rnd(50,-50), 0,255),
+        b: clamp(col.b + rnd(50,-50), 0,255),
+      };
+      b_flatWash(ctx, x+rnd(s,-s)*0.35, y+rnd(s,-s)*0.35, s*(0.85+rnd(0.55,0)), c2);
+    }
+  }
+
+  function b_glaze(ctx,x,y,s,col){
+    ctx.save();
+    ctx.globalAlpha *= 0.55;
+    b_flatWash(ctx,x,y,s,col);
+    ctx.restore();
+  }
+
+  function b_scumble(ctx,x,y,s,col){
+    const n = Math.max(10, Math.floor(s*0.85));
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.16)`;
+    for(let i=0;i<n;i++){
+      const r = s*(0.16+rnd(0.85,0));
+      ctx.beginPath();
+      ctx.arc(x+rnd(s,-s), y+rnd(s,-s), r, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  function b_drybrush(ctx,x,y,s,col, ang){
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.33)`;
+    for(let i=0;i<4;i++){
+      ctx.lineWidth = Math.max(1, s*0.10*rnd(1.2,0.6));
+      ctx.beginPath();
+      ctx.moveTo(x+rnd(s,-s)*0.25, y+rnd(s,-s)*0.25);
+      ctx.lineTo(x+Math.cos(ang)*s*(1.3+rnd(0.9,0)), y+Math.sin(ang)*s*(1.3+rnd(0.9,0)));
+      ctx.stroke();
+    }
+  }
+
+  function b_wetOnWet(ctx,x,y,s,col){
+    ctx.save();
+    ctx.filter = "blur(1.9px)";
+    b_flatWash(ctx,x,y,s*1.15,col);
+    ctx.restore();
+  }
+
+  function b_wetOnDry(ctx,x,y,s,col){
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.48)`;
+    ctx.beginPath(); ctx.arc(x,y,s*0.85,0,TAU); ctx.fill();
+  }
+
+  function b_stipple(ctx,x,y,s,col){
+    const n = Math.floor(40 + s*2.2);
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.48)`;
+    for(let i=0;i<n;i++){
+      const rr = rnd(2.0,0.6);
+      ctx.beginPath();
+      ctx.arc(x+rnd(s,-s), y+rnd(s,-s), rr, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  function b_dab(ctx,x,y,s,col){
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.36)`;
+    const n = Math.floor(10 + s*0.45);
+    for(let i=0;i<n;i++){
+      const w = s*(0.25+rnd(0.55,0));
+      const h = s*(0.20+rnd(0.60,0));
+      ctx.save();
+      ctx.translate(x+rnd(s,-s)*0.75, y+rnd(s,-s)*0.75);
+      ctx.rotate(rnd(TAU,0));
+      ctx.beginPath();
+      ctx.ellipse(0,0,w,h,0,0,TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function b_sponging(ctx,x,y,s,col){
+    // porous texture using noise “puffs”
+    const n = Math.max(12, Math.floor(s*1.0));
+    for(let i=0;i<n;i++){
+      const a = 0.08 + 0.14*Math.random();
+      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${a})`;
+      const r = s*(0.25+rnd(0.90,0));
+      ctx.beginPath();
+      ctx.arc(x+rnd(s,-s)*0.9, y+rnd(s,-s)*0.9, r, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  function b_sgraffito(ctx,x,y,s,col, ang){
+    // lay paint then scratch through (destination-out lines)
+    ctx.save();
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.42)`;
+    ctx.beginPath(); ctx.arc(x,y,s*1.0,0,TAU); ctx.fill();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.strokeStyle = `rgba(0,0,0,0.55)`;
+    ctx.lineWidth = Math.max(1.0, s*0.10);
+    for(let i=0;i<3;i++){
+      ctx.beginPath();
+      ctx.moveTo(x-rnd(s,s*0.3), y-rnd(s,s*0.3));
+      ctx.lineTo(x+Math.cos(ang+rnd(0.6,-0.6))*s*(1.2+rnd(0.7,0)), y+Math.sin(ang+rnd(0.6,-0.6))*s*(1.2+rnd(0.7,0)));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function b_splatter(ctx,x,y,s,col){
+    const n = Math.floor(30 + s*1.4);
+    for(let i=0;i<n;i++){
+      const a = 0.18 + 0.22*Math.random();
+      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${a})`;
+      const rr = rnd(2.6,0.7);
+      ctx.beginPath();
+      ctx.arc(x+rnd(s*1.4,-s*1.4), y+rnd(s*1.4,-s*1.4), rr, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  function b_drip(ctx,x,y,s,col){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.30)`;
+    ctx.lineCap = "round";
+    const len = s*(2.0+rnd(4.0,0));
+    const w = Math.max(1.0, s*0.12);
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x + rnd(s*0.35,-s*0.35), y + len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_saltBloom(ctx,x,y,s,col){
+    // watercolor-like cauliflower blooms
+    ctx.save();
+    ctx.globalAlpha *= 0.75;
+    ctx.filter = "blur(1.2px)";
+    for(let i=0;i<5;i++){
+      const rr = s*(0.55+rnd(0.85,0));
+      const a = 0.10 + 0.12*Math.random();
+      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${a})`;
+      ctx.beginPath();
+      ctx.arc(x+rnd(s,-s)*0.6, y+rnd(s,-s)*0.6, rr, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = `rgba(255,255,255,0.06)`;
+    ctx.beginPath();
+    ctx.arc(x,y,s*0.55,0,TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function b_contourLine(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.38)`;
+    ctx.lineWidth = Math.max(1.0, s*0.09);
+    ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(x - Math.cos(ang)*s*0.7, y - Math.sin(ang)*s*0.7);
+    ctx.lineTo(x + Math.cos(ang)*s*1.3, y + Math.sin(ang)*s*1.3);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_feather(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.24)`;
+    ctx.lineCap="round";
+    const n = 6;
+    for(let i=0;i<n;i++){
+      const a = ang + rnd(0.8,-0.8);
+      ctx.lineWidth = Math.max(0.8, s*0.05*rnd(1.2,0.6));
+      ctx.beginPath();
+      ctx.moveTo(x+rnd(s,-s)*0.2, y+rnd(s,-s)*0.2);
+      ctx.lineTo(x+Math.cos(a)*s*(1.2+rnd(0.8,0)), y+Math.sin(a)*s*(1.2+rnd(0.8,0)));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function b_hatching(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.22)`;
+    ctx.lineCap="round";
+    const n = Math.floor(6 + s*0.20);
+    for(let i=0;i<n;i++){
+      const o = (i - n/2) * (s*0.15);
+      ctx.lineWidth = Math.max(0.7, s*0.03);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang+Math.PI/2)*o, y + Math.sin(ang+Math.PI/2)*o);
+      ctx.lineTo(x + Math.cos(ang)*s*1.2 + Math.cos(ang+Math.PI/2)*o,
+                 y + Math.sin(ang)*s*1.2 + Math.sin(ang+Math.PI/2)*o);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function b_crossHatch(ctx,x,y,s,col, ang){
+    b_hatching(ctx,x,y,s,col, ang);
+    b_hatching(ctx,x,y,s,col, ang + Math.PI/2 + rnd(0.25,-0.25));
+  }
+
+  function b_calligraphic(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.34)`;
+    ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    const len = s*(1.8+rnd(1.2,0));
+    const steps = 12;
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const nx = x + Math.cos(ang + Math.sin(t*3)*0.25)*len*t;
+      const ny = y + Math.sin(ang + Math.sin(t*3)*0.25)*len*t;
+      ctx.lineWidth = Math.max(1.0, s*(0.22*(1-t) + 0.06));
+      ctx.lineTo(nx,ny);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_rigger(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.28)`;
+    ctx.lineWidth = Math.max(0.8, s*0.05);
+    ctx.lineCap="round";
+    const len = s*(3.2+rnd(3.0,0));
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x+Math.cos(ang)*len, y+Math.sin(ang)*len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_impasto(ctx,x,y,s,col, ang){
+    // thick paint: layered highlight + shadow ridge
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.42)`;
+    ctx.beginPath();
+    ctx.ellipse(x,y,s*0.95,s*0.55,ang,0,TAU);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = `rgba(255,255,255,0.06)`;
+    ctx.beginPath();
+    ctx.ellipse(x+Math.cos(ang)*s*0.15, y+Math.sin(ang)*s*0.15, s*0.70, s*0.40, ang, 0, TAU);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = `rgba(0,0,0,0.06)`;
+    ctx.beginPath();
+    ctx.ellipse(x-Math.cos(ang)*s*0.18, y-Math.sin(ang)*s*0.18, s*0.75, s*0.45, ang, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function b_paletteKnife(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.34)`;
+    ctx.translate(x,y);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(-s*1.2, -s*0.25);
+    ctx.lineTo(s*1.3, -s*0.05);
+    ctx.lineTo(s*1.1,  s*0.30);
+    ctx.lineTo(-s*1.1, s*0.10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function b_trowel(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.26)`;
+    ctx.translate(x,y);
+    ctx.rotate(ang);
+    ctx.fillRect(-s*1.8,-s*0.45,s*3.6,s*0.9);
+    ctx.restore();
+  }
+
+  function b_dragging(ctx,x,y,s,col, ang){
+    // pull thick paint, leaving ridges
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.26)`;
+    ctx.lineCap="round";
+    const len = s*(2.2+rnd(2.8,0));
+    const n = 3;
+    for(let i=0;i<n;i++){
+      const o = (i-(n-1)/2)*s*0.18;
+      ctx.lineWidth = Math.max(1.0, s*0.12);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang+Math.PI/2)*o, y + Math.sin(ang+Math.PI/2)*o);
+      ctx.lineTo(x + Math.cos(ang)*len + Math.cos(ang+Math.PI/2)*o,
+                 y + Math.sin(ang)*len + Math.sin(ang+Math.PI/2)*o);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function b_smearing(ctx,x,y,s,col){
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.20)`;
+    ctx.filter = "blur(2.2px)";
+    ctx.beginPath();
+    ctx.ellipse(x,y,s*1.3,s*0.9,rnd(TAU,0),0,TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function b_swipe(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.30)`;
+    ctx.lineCap="round";
+    ctx.lineWidth = Math.max(1.0, s*0.20);
+    const len = s*(2.0+rnd(2.0,0));
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x+Math.cos(ang)*len, y+Math.sin(ang)*len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_flick(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.26)`;
+    ctx.lineCap="round";
+    const len = s*(2.2+rnd(3.2,0));
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineWidth = Math.max(0.8, s*0.16);
+    ctx.lineTo(x+Math.cos(ang)*len*0.7, y+Math.sin(ang)*len*0.7);
+    ctx.lineWidth = Math.max(0.6, s*0.05);
+    ctx.lineTo(x+Math.cos(ang+rnd(0.35,-0.35))*len, y+Math.sin(ang+rnd(0.35,-0.35))*len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_spiral(ctx,x,y,s,col){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.22)`;
+    ctx.lineCap="round";
+    ctx.lineWidth = Math.max(0.8, s*0.06);
+    ctx.beginPath();
+    const turns = 2.6;
+    const steps = 36;
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const a = t*turns*TAU;
+      const rr = t*s*(1.0+rnd(0.2,-0.2));
+      const px = x + Math.cos(a)*rr;
+      const py = y + Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_zigzag(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.22)`;
+    ctx.lineCap="round";
+    ctx.lineWidth = Math.max(0.8, s*0.07);
+    ctx.beginPath();
+    const steps = 10;
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const side = (i%2===0?1:-1);
+      const px = x + Math.cos(ang)*s*2.0*t + Math.cos(ang+Math.PI/2)*side*s*0.35;
+      const py = y + Math.sin(ang)*s*2.0*t + Math.sin(ang+Math.PI/2)*side*s*0.35;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_scurves(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.24)`;
+    ctx.lineCap="round";
+    ctx.lineWidth = Math.max(0.8, s*0.08);
+    ctx.beginPath();
+    const len = s*(2.5+rnd(2.0,0));
+    const steps = 18;
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const wob = Math.sin(t*TAU)*s*0.35;
+      const px = x + Math.cos(ang)*len*t + Math.cos(ang+Math.PI/2)*wob;
+      const py = y + Math.sin(ang)*len*t + Math.sin(ang+Math.PI/2)*wob;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_scribble(ctx,x,y,s,col){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.18)`;
+    ctx.lineCap="round";
+    ctx.lineWidth = Math.max(0.7, s*0.05);
+    ctx.beginPath();
+    let px=x, py=y;
+    ctx.moveTo(px,py);
+    const n = 28;
+    for(let i=0;i<n;i++){
+      px += rnd(s,-s)*0.35;
+      py += rnd(s,-s)*0.35;
+      ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_brokenColor(ctx,x,y,s,col, ang){
+    // impressionist choppy patches
+    ctx.save();
+    const n = Math.max(8, Math.floor(s*0.35));
+    for(let i=0;i<n;i++){
+      const c2 = {
+        r: clamp(col.r + rnd(30,-30),0,255),
+        g: clamp(col.g + rnd(30,-30),0,255),
+        b: clamp(col.b + rnd(30,-30),0,255),
+      };
+      ctx.fillStyle = `rgba(${c2.r},${c2.g},${c2.b},0.22)`;
+      ctx.translate(x,y);
+      ctx.rotate(ang + rnd(0.6,-0.6));
+      ctx.fillRect(rnd(s,-s)*0.6, rnd(s,-s)*0.6, s*(0.35+rnd(0.45,0)), s*(0.18+rnd(0.35,0)));
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+    ctx.restore();
+  }
+
+  function b_blockIn(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.22)`;
+    ctx.translate(x,y);
+    ctx.rotate(ang);
+    ctx.fillRect(-s*1.1,-s*0.8,s*2.2,s*1.6);
+    ctx.restore();
+  }
+
+  function b_edgeChisel(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.28)`;
+    ctx.lineWidth = Math.max(1.0, s*0.18);
+    ctx.lineCap="butt";
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.lineTo(x+Math.cos(ang)*s*1.8, y+Math.sin(ang)*s*1.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function b_fanBrush(ctx,x,y,s,col, ang){
+    ctx.save();
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.18)`;
+    ctx.lineCap="round";
+    const n = 8;
+    for(let i=0;i<n;i++){
+      const a = ang + (i-(n-1)/2)*0.18;
+      ctx.lineWidth = Math.max(0.7, s*0.05);
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x+Math.cos(a)*s*(1.3+rnd(0.9,0)), y+Math.sin(a)*s*(1.3+rnd(0.9,0)));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---- invented “new” techniques (useful and visually distinct) ----
+  function b_prismaticRake(ctx,x,y,s,col, info){
+    // like a rake brush that splits into chromatic strands (still disciplined by your palette)
+    ctx.save();
+    const a = info.ang;
+    const strands = 7;
+    for(let i=0;i<strands;i++){
+      const t=i/(strands-1) - 0.5;
+      const c2 = disciplinedColor(
+        {r: clamp(col.r + t*35,0,255), g: clamp(col.g + t*10,0,255), b: clamp(col.b - t*40,0,255)},
+        info.audio, info.evolution
+      );
+      ctx.strokeStyle = `rgba(${c2.r},${c2.g},${c2.b},0.16)`;
+      ctx.lineWidth = Math.max(0.6, s*0.05);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a+Math.PI/2)*t*s*0.45, y + Math.sin(a+Math.PI/2)*t*s*0.45);
+      ctx.lineTo(x + Math.cos(a)*s*2.2 + Math.cos(a+Math.PI/2)*t*s*0.45,
+                 y + Math.sin(a)*s*2.2 + Math.sin(a+Math.PI/2)*t*s*0.45);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function b_nebulaBloom(ctx,x,y,s,col, info){
+    // cosmic soft bloom clusters (responds to hi band)
+    ctx.save();
+    const k = 0.6 + 1.2*info.audio.hi;
+    ctx.globalAlpha *= 0.75;
+    ctx.filter = `blur(${(1.2+2.2*k).toFixed(2)}px)`;
+    for(let i=0;i<4;i++){
+      const c2 = {
+        r: clamp(col.r + rnd(60,-60),0,255),
+        g: clamp(col.g + rnd(50,-50),0,255),
+        b: clamp(col.b + rnd(70,-70),0,255),
+      };
+      ctx.fillStyle = `rgba(${c2.r},${c2.g},${c2.b},${0.10+0.10*k})`;
+      ctx.beginPath();
+      ctx.arc(x+rnd(s,-s)*0.7, y+rnd(s,-s)*0.7, s*(0.9+rnd(1.0,0)), 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function b_circuitEtch(ctx,x,y,s,col, info){
+    // like etched circuit traces (great for “audio transients”)
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.18)`;
+    ctx.lineWidth = Math.max(0.8, s*0.06);
+    ctx.lineCap="round";
+    const steps = 10;
+    const a = info.ang;
+    let px=x, py=y;
+    ctx.beginPath();
+    ctx.moveTo(px,py);
+    for(let i=0;i<steps;i++){
+      const turn = (Math.random()<0.5?1:-1);
+      const aa = a + turn*(Math.PI/2)*rnd(1.05,0.75);
+      px += Math.cos(aa)*s*(0.55+rnd(0.8,0));
+      py += Math.sin(aa)*s*(0.55+rnd(0.8,0));
+      ctx.lineTo(px,py);
+      if(Math.random()<0.25){
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px,py);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const BRUSHES = [
+    {name:"Flat wash", fn:(ctx,x,y,s,c,i)=>b_flatWash(ctx,x,y,s,c)},
+    {name:"Graduated wash", fn:(ctx,x,y,s,c,i)=>b_gradWash(ctx,x,y,s,c,i.ang)},
+    {name:"Variegated wash", fn:(ctx,x,y,s,c,i)=>b_variegatedWash(ctx,x,y,s,c)},
+    {name:"Glaze", fn:(ctx,x,y,s,c,i)=>b_glaze(ctx,x,y,s,c)},
+    {name:"Scumble", fn:(ctx,x,y,s,c,i)=>b_scumble(ctx,x,y,s,c)},
+    {name:"Drybrush", fn:(ctx,x,y,s,c,i)=>b_drybrush(ctx,x,y,s,c,i.ang)},
+    {name:"Wet-on-wet", fn:(ctx,x,y,s,c,i)=>b_wetOnWet(ctx,x,y,s,c)},
+    {name:"Wet-on-dry", fn:(ctx,x,y,s,c,i)=>b_wetOnDry(ctx,x,y,s,c)},
+    {name:"Stipple", fn:(ctx,x,y,s,c,i)=>b_stipple(ctx,x,y,s,c)},
+    {name:"Dab/Pounce", fn:(ctx,x,y,s,c,i)=>b_dab(ctx,x,y,s,c)},
+    {name:"Sponging", fn:(ctx,x,y,s,c,i)=>b_sponging(ctx,x,y,s,c)},
+    {name:"Sgraffito", fn:(ctx,x,y,s,c,i)=>b_sgraffito(ctx,x,y,s,c,i.ang)},
+    {name:"Splatter", fn:(ctx,x,y,s,c,i)=>b_splatter(ctx,x,y,s,c)},
+    {name:"Drip/Run", fn:(ctx,x,y,s,c,i)=>b_drip(ctx,x,y,s,c)},
+    {name:"Salt/Bloom", fn:(ctx,x,y,s,c,i)=>b_saltBloom(ctx,x,y,s,c)},
+
+    {name:"Contour line", fn:(ctx,x,y,s,c,i)=>b_contourLine(ctx,x,y,s,c,i.ang)},
+    {name:"Feathering", fn:(ctx,x,y,s,c,i)=>b_feather(ctx,x,y,s,c,i.ang)},
+    {name:"Hatching", fn:(ctx,x,y,s,c,i)=>b_hatching(ctx,x,y,s,c,i.ang)},
+    {name:"Cross-hatching", fn:(ctx,x,y,s,c,i)=>b_crossHatch(ctx,x,y,s,c,i.ang)},
+    {name:"Calligraphic", fn:(ctx,x,y,s,c,i)=>b_calligraphic(ctx,x,y,s,c,i.ang)},
+    {name:"Rigger/Liner", fn:(ctx,x,y,s,c,i)=>b_rigger(ctx,x,y,s,c,i.ang)},
+
+    {name:"Impasto", fn:(ctx,x,y,s,c,i)=>b_impasto(ctx,x,y,s,c,i.ang)},
+    {name:"Palette-knife", fn:(ctx,x,y,s,c,i)=>b_paletteKnife(ctx,x,y,s,c,i.ang)},
+    {name:"Troweling", fn:(ctx,x,y,s,c,i)=>b_trowel(ctx,x,y,s,c,i.ang)},
+    {name:"Dragging", fn:(ctx,x,y,s,c,i)=>b_dragging(ctx,x,y,s,c,i.ang)},
+    {name:"Smearing", fn:(ctx,x,y,s,c,i)=>b_smearing(ctx,x,y,s,c)},
+
+    {name:"Swipe", fn:(ctx,x,y,s,c,i)=>b_swipe(ctx,x,y,s,c,i.ang)},
+    {name:"Flick", fn:(ctx,x,y,s,c,i)=>b_flick(ctx,x,y,s,c,i.ang)},
+    {name:"Spiral", fn:(ctx,x,y,s,c,i)=>b_spiral(ctx,x,y,s,c)},
+    {name:"Zigzag", fn:(ctx,x,y,s,c,i)=>b_zigzag(ctx,x,y,s,c,i.ang)},
+    {name:"S-curves", fn:(ctx,x,y,s,c,i)=>b_scurves(ctx,x,y,s,c,i.ang)},
+    {name:"Scribble", fn:(ctx,x,y,s,c,i)=>b_scribble(ctx,x,y,s,c)},
+
+    {name:"Broken color", fn:(ctx,x,y,s,c,i)=>b_brokenColor(ctx,x,y,s,c,i.ang)},
+    {name:"Block-in", fn:(ctx,x,y,s,c,i)=>b_blockIn(ctx,x,y,s,c,i.ang)},
+    {name:"Edge-chisel", fn:(ctx,x,y,s,c,i)=>b_edgeChisel(ctx,x,y,s,c,i.ang)},
+    {name:"Fan-brush", fn:(ctx,x,y,s,c,i)=>b_fanBrush(ctx,x,y,s,c,i.ang)},
+
+    // invented
+    {name:"Prismatic rake", fn:(ctx,x,y,s,c,i)=>b_prismaticRake(ctx,x,y,s,c,i)},
+    {name:"Nebula bloom", fn:(ctx,x,y,s,c,i)=>b_nebulaBloom(ctx,x,y,s,c,i)},
+    {name:"Circuit etch", fn:(ctx,x,y,s,c,i)=>b_circuitEtch(ctx,x,y,s,c,i)},
+  ];
+
+  function chooseBrush(audio){
+    // Use variety + audio bands to bias selection
+    const variety = Number(varietyEl.value);
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+
+    // More reinvention => more exotic brushes
+    const exoticBias = clamp(0.10 + 0.55*reinv + 0.30*audio.hi + 0.20*genome.paletteBias, 0, 1);
+
+    // More variety => less “safe” brush repeats
+    const v = clamp(variety + 0.25*exoticBias, 0, 1);
+
+    // Weighted ranges: low idx = classic, mid = mark-making, high = special/exotic
+    const n = BRUSHES.length;
+    let t = Math.random();
+
+    // audio transient leans to etchy / splatter / knife
+    if(audio.transient > 0.35) t = Math.min(0.999, t + 0.25*audio.transient);
+
+    // variety shifts toward higher indices
+    const idx = Math.floor(Math.pow(t, 1.2 - 0.9*v) * n);
+    return BRUSHES[clamp(idx,0,n-1)];
+  }
+
+  // ---------- shape injection (repaint “different painting” lever) ----------
+  function injectShape(ctx, x,y, s, col, ang, audio){
+    // probability increases with shape slider + audio reinvention
+    const base = Number(shapeEl.value);
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+    const p = clamp(base*0.25 + 0.22*reinv + 0.18*audio.transient + 0.08*genome.shapeBias, 0, 0.55);
+    if(Math.random() > p) return;
+
+    ctx.save();
+    ctx.globalAlpha *= 0.50;
+    ctx.globalCompositeOperation = (Math.random()<0.5) ? "screen" : "source-over";
+    ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},0.18)`;
+    ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},0.18)`;
+    ctx.lineWidth = Math.max(1.0, s*0.06);
+
+    const kind = rndi(0,5);
+    ctx.translate(x,y);
+    ctx.rotate(ang);
+
+    if(kind===0){
+      // triangle shard
+      ctx.beginPath();
+      ctx.moveTo(-s*1.2, -s*0.6);
+      ctx.lineTo( s*1.4, -s*0.2);
+      ctx.lineTo(-s*0.2,  s*1.3);
+      ctx.closePath();
+      ctx.fill();
+    }else if(kind===1){
+      // ring / arc
+      ctx.beginPath();
+      ctx.arc(0,0,s*(1.0+rnd(0.8,0)), rnd(TAU,0), rnd(TAU,0));
+      ctx.stroke();
+    }else if(kind===2){
+      // bars
+      ctx.fillRect(-s*1.8,-s*0.15,s*3.6,s*0.30);
+      ctx.fillRect(-s*1.2,-s*0.55,s*2.4,s*0.22);
+    }else if(kind===3){
+      // grid cell
+      ctx.strokeRect(-s*1.1,-s*1.1,s*2.2,s*2.2);
+      ctx.beginPath();
+      ctx.moveTo(-s*1.1,0); ctx.lineTo(s*1.1,0);
+      ctx.moveTo(0,-s*1.1); ctx.lineTo(0,s*1.1);
+      ctx.stroke();
+    }else if(kind===4){
+      // blob
+      ctx.beginPath();
+      ctx.ellipse(0,0,s*(1.2+rnd(1.0,0)), s*(0.7+rnd(0.9,0)), rnd(TAU,0), 0, TAU);
+      ctx.fill();
+    }else{
+      // lightning
+      ctx.beginPath();
+      ctx.moveTo(-s*0.9,-s*0.8);
+      ctx.lineTo( s*0.1,-s*0.2);
+      ctx.lineTo(-s*0.2, s*0.1);
+      ctx.lineTo( s*0.9, s*0.8);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---------- underpaint / cover pass ----------
+  function coverPass(audio, dt){
+    const cover = Number(coverEl.value);
+    if(cover <= 0) return;
+
+    // subtle tonal unification; audio can briefly increase cover
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+    const a = clamp(cover * (0.20 + 0.45*reinv) * dt, 0, 0.08);
+    if(a <= 0) return;
+
+    const base = avgInspirationColor();
+    const tint = disciplinedColor(base, audio, 0.5);
+
+    pctx.save();
+    pctx.globalCompositeOperation = "source-over";
+    pctx.globalAlpha = a;
+    pctx.fillStyle = `rgb(${tint.r|0},${tint.g|0},${tint.b|0})`;
+    pctx.fillRect(0,0,W,H);
+    pctx.restore();
+  }
+
+  // ---------- main paint stroke ----------
+  function paintOneStroke(audio, evolution){
+    const medium = mediumEl.value;
+
+    const baseOpacity = Number(opacityEl.value);
+    const baseRes = Number(resemblanceEl.value);
+    const baseAbs = Number(abstractionEl.value);
+
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+
+    // Effective parameters (internal) — do not change UI sliders
+    const effRes = clamp(baseRes - 0.22*reinv + 0.08*genome.paletteBias, 0, 1);
+    const effAbs = clamp(baseAbs + 0.22*reinv + 0.10*genome.abstractionBias, 0, 1);
+    const effPmut = clamp(Number(pmutEl.value) + 0.25*reinv + 0.10*genome.paletteBias, 0, 1);
+
+    // Where to paint: edge-biased + drift
+    const centerBias = clamp(0.20 + 0.55*effAbs - 0.15*Number(driftEl.value), 0.05, 0.80);
+    const p = pickEdgeBiasedPoint(centerBias);
+
+    // warp UV (composition)
+    const uv = warpedUV(p.x, p.y, audio, evolution);
+
+    // base position
+    let x = uv.u * W;
+    let y = uv.v * H;
+
+    // small “composition drift” jitter
+    const jitter = (0.25 + 0.85*reinv) * (0.35 + 0.65*Number(driftEl.value));
+    x += rnd(18,-18)*jitter*(0.25+0.75*audio.lo);
+    y += rnd(18,-18)*jitter*(0.25+0.75*audio.hi);
+
+    x = clamp(x, 0, W);
+    y = clamp(y, 0, H);
+
+    // brush size responds to audio + abstraction (but bounded)
+    const baseSize = Number(bsizeEl.value);
+    const size = clamp(
+      baseSize * (0.80 + 0.75*audio.lo + 0.45*audio.transient) * (1.10 - 0.45*effAbs) * (0.90 + 0.25*genome.wobble),
+      1, 110
+    );
+
+    // direction responds to audio centroid
+    const ang = (tick/24)*0.12 + (audio.centroid*TAU) + rnd(0.8,-0.8);
+
+    // choose color: inspiration vs palette vs disciplined mutation
+    const cInsp = sampleInspiration(uv.u, uv.v);
+    const cPal = pickPaletteColor(audio);
+
+    // Mutate seed based on palette mutation (internal)
+    const seed = (Math.random() < (0.35 + 0.55*effPmut)) ? cPal : cInsp;
+    const cMut = disciplinedColor(seed, audio, evolution);
+
+    // final color blends back toward inspiration based on resemblance (effRes)
+    const cFinal = blendRGB(cMut, cInsp, effRes);
+
+    // opacity responds strongly to audio (this is part of “more impact”)
+    const op = clamp(
+      baseOpacity * (0.75 + 1.25*reinv + 0.55*audio.transient) * (0.85 + 0.35*audio.mid) * (0.90 + 0.20*genome.strokeBias),
+      0.02, 1.0
+    );
+
+    pctx.save();
+    setMediumStyle(pctx, medium, op);
+
+    const brush = chooseBrush(audio);
+    const info = { ang, audio, evolution };
+
+    // draw stroke
+    brush.fn(pctx, x, y, size, cFinal, info);
+
+    // shape injection (big lever to “become another painting”)
+    injectShape(pctx, x, y, size*(0.85+0.55*reinv), cFinal, ang, audio);
+
+    pctx.restore();
+  }
+
+  // ---------- render (paint -> screen with texture + bloom) ----------
+  function render(){
+    // base
+    ctx.save();
+    ctx.globalCompositeOperation="source-over";
+    ctx.drawImage(paint,0,0);
+
+    // canvas texture
+    const texAmt = Number(textureEl.value);
+    if(texAmt > 0){
+      ctx.save();
+      ctx.globalAlpha = 0.10 + 0.22*texAmt;
+      ctx.globalCompositeOperation = "overlay";
+      for(let y=0;y<H;y+=tex.height){
+        for(let x=0;x<W;x+=tex.width){
+          ctx.drawImage(tex,x,y);
+        }
+      }
+      ctx.restore();
+    }
+
+    // bloom
+    const bloom = Number(bloomEl.value);
+    if(bloom > 0){
+      postCtx.save();
+      postCtx.clearRect(0,0,W,H);
+      postCtx.filter = `blur(${(2.0+10.0*bloom).toFixed(2)}px)`;
+      postCtx.globalAlpha = 0.45*bloom;
+      postCtx.drawImage(paint,0,0);
+      postCtx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation="screen";
+      ctx.globalAlpha = 0.65*bloom;
+      ctx.drawImage(post,0,0);
+      ctx.restore();
+    }
+
+    // subtle frame border
+    ctx.save();
+    ctx.globalCompositeOperation="source-over";
+    ctx.lineWidth=6;
+    ctx.strokeStyle="rgba(10,12,18,0.92)";
+    roundRect(28,28,W-56,H-56,26); ctx.stroke();
+
+    ctx.lineWidth=2;
+    ctx.strokeStyle=`rgba(120,255,230,${0.10+0.10*Math.sin((tick/24)*1.2)})`;
+    roundRect(31,31,W-62,H-62,24); ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+
+    function roundRect(x,y,w,h,rr){
+      ctx.beginPath();
+      ctx.moveTo(x+rr,y);
+      ctx.arcTo(x+w,y,x+w,y+h,rr);
+      ctx.arcTo(x+w,y+h,x,y+h,rr);
+      ctx.arcTo(x,y+h,x,y,rr);
+      ctx.arcTo(x,y,x+w,y,rr);
+      ctx.closePath();
+    }
+  }
+
+  // ---------- boot canvas ----------
+  function bootBlank(){
+    const g = pctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0,"#0a0b11"); g.addColorStop(1,"#101a22");
+    pctx.fillStyle=g; pctx.fillRect(0,0,W,H);
+  }
+  bootBlank();
+  render();
+
+  // ---------- animation loop (stable; no “declining evolution”) ----------
+  let lastT = performance.now();
+  let acc = 0;
+  let strokeBudget = 0;
+  let timer=null;
+
+  function frame(){
+    if(!running) return;
+
+    const now = performance.now();
+    const dt = clamp((now - lastT)/1000, 0, 0.08);
+    lastT = now;
+
+    const fps = clamp(Number(fpsEl.value)||24, 8, 60);
+    const audio = readAudioFeatures();
+    updateMeter(audio.level);
+
+    evolveGenome(audio, dt);
+
+    // Cover pass keeps it cohesive (not fading out)
+    coverPass(audio, dt);
+
+    // Strokes per second — audio amplifies strongly
+    const baseRate = Number(rateEl.value);
+    const reinv = clamp(audio.gated * Number(a2rEl.value), 0, 2.0);
+    const rate = clamp(
+      baseRate * (1.0 + 0.85*reinv + 0.55*audio.transient + 0.30*audio.hi) * (0.90 + 0.25*genome.strokeBias),
+      10, 9000
+    );
+
+    // evolution value used for color/brush progression
+    const evolution = clamp(0.35 + 0.35*genome.wobble + 0.25*reinv, 0, 1);
+
+    strokeBudget += rate * dt;
+
+    // cap work per frame for performance
+    const maxStrokesThisFrame = Math.floor(2500 * (60/fps));
+    let did = 0;
+
+    while(strokeBudget >= 1 && did < maxStrokesThisFrame){
+      paintOneStroke(audio, evolution);
+      strokeBudget -= 1;
+      did++;
+    }
+
+    // render at target fps pacing
+    acc += dt;
+    if(acc >= 1/fps){
+      render();
+      acc = 0;
+      tick++;
+      // refresh texture occasionally
+      if(tick % 240 === 0) regenTexture();
+    }
+
+    timer = requestAnimationFrame(frame);
+  }
+
+  startBtn.onclick = async ()=>{
+    if(audioCtx){
+      try { await audioCtx.resume(); } catch {}
+    }
+    running=true;
+    modePill.textContent="running";
+    status.textContent="Running. For stronger response: Calibrate Silence, then raise Gain and Audio→Reinvention.";
+    if(timer) cancelAnimationFrame(timer);
+    lastT = performance.now();
+    timer = requestAnimationFrame(frame);
+  };
+
+  stopBtn.onclick = ()=>{
+    running=false;
+    modePill.textContent="paused";
+    status.textContent="Paused.";
+    if(timer) cancelAnimationFrame(timer);
+  };
+
+  stepBtn.onclick = ()=>{
+    // single step: paint a burst of strokes
+    const audio = readAudioFeatures();
+    updateMeter(audio.level);
+    evolveGenome(audio, 0.05);
+    for(let i=0;i<500;i++){
+      paintOneStroke(audio, clamp(0.5+0.4*genome.wobble,0,1));
+    }
+    render();
+    tick++;
+    modePill.textContent="step";
+    status.textContent="Step: painted a burst. Press Start for continuous evolution.";
+  };
+
+  // ---------- snapshot / export ----------
+  snapBtn.onclick = ()=>{
+    const a=document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `living_art_v5_snapshot_${Date.now()}.png`;
+    a.className="dl";
+    a.textContent="Download snapshot PNG (with frame/texture/bloom)";
+    dlWrap.innerHTML="";
+    dlWrap.appendChild(a);
+    status.textContent="Snapshot link ready.";
+  };
+
+  exportBtn.onclick = ()=>{
+    const a=document.createElement("a");
+    a.href = paint.toDataURL("image/png");
+    a.download = `living_art_v5_painting_${Date.now()}.png`;
+    a.className="dl";
+    a.textContent="Download exported painting PNG (raw paint)";
+    dlWrap.innerHTML="";
+    dlWrap.appendChild(a);
+    status.textContent="Export link ready.";
+  };
+
+  // ---------- settings persistence ----------
+  const LS_SETTINGS = "living_art_v5_settings";
+  const LS_PAINT = "living_art_v5_paint_small";
+
+  function getSettings(){
+    return {
+      gate: gateEl.value, ambient: ambientEl.value, gain: gainEl.value, a2r: a2rEl.value,
+      medium: mediumEl.value,
+      cover: coverEl.value, opacity: opacityEl.value,
+      resemblance: resemblanceEl.value, abstraction: abstractionEl.value,
+      rate: rateEl.value, bsize: bsizeEl.value, variety: varietyEl.value,
+      drift: driftEl.value, pmut: pmutEl.value, shape: shapeEl.value,
+      texture: textureEl.value, bloom: bloomEl.value,
+      discipline: disciplineEl.value, huebias: huebiasEl.value, satclamp: satclampEl.value,
+      temp: tempEl.value, psize: psizeEl.value,
+      fps: fpsEl.value
+    };
+  }
+
+  function applySettings(s){
+    if(!s) return;
+    const set = (el, v)=>{ if(v!=null){ el.value = v; el.dispatchEvent(new Event("input")); } };
+
+    set(gateEl, s.gate); set(ambientEl, s.ambient); set(gainEl, s.gain); set(a2rEl, s.a2r);
+    if(s.medium) mediumEl.value = s.medium;
+
+    set(coverEl, s.cover); set(opacityEl, s.opacity);
+    set(resemblanceEl, s.resemblance); set(abstractionEl, s.abstraction);
+    set(rateEl, s.rate); set(bsizeEl, s.bsize); set(varietyEl, s.variety);
+    set(driftEl, s.drift); set(pmutEl, s.pmut); set(shapeEl, s.shape);
+    set(textureEl, s.texture); set(bloomEl, s.bloom);
+
+    set(disciplineEl, s.discipline); set(huebiasEl, s.huebias); set(satclampEl, s.satclamp);
+    set(tempEl, s.temp); set(psizeEl, s.psize);
+
+    if(s.fps!=null) fpsEl.value = s.fps;
+  }
+
+  saveStateBtn.onclick = ()=>{
+    localStorage.setItem(LS_SETTINGS, JSON.stringify(getSettings()));
+    status.textContent="Saved settings.";
+  };
+  loadStateBtn.onclick = ()=>{
+    const s = localStorage.getItem(LS_SETTINGS);
+    if(!s){ status.textContent="No saved settings found."; return; }
+    applySettings(JSON.parse(s));
+    status.textContent="Loaded settings.";
+  };
+
+  // ---------- save/load painting (small) ----------
+  savePaintBtn.onclick = ()=>{
+    try{
+      const small = document.createElement("canvas");
+      small.width = 512; small.height = 512;
+      const sctx = small.getContext("2d", {alpha:false});
+      sctx.drawImage(paint, 0,0, 512,512);
+      localStorage.setItem(LS_PAINT, small.toDataURL("image/jpeg", 0.88));
+      status.textContent="Saved painting (small) to localStorage.";
+    }catch(e){
+      status.textContent="Save painting failed (quota). Use Export Painting PNG instead.\n"+e;
+    }
+  };
+
+  loadPaintBtn.onclick = ()=>{
+    const data = localStorage.getItem(LS_PAINT);
+    if(!data){ status.textContent="No saved painting found."; return; }
+    const img = new Image();
+    img.onload = ()=>{
+      pctx.save();
+      pctx.setTransform(1,0,0,1,0,0);
+      pctx.drawImage(img, 0,0, W,H);
+      pctx.restore();
+      render();
+      status.textContent="Loaded saved painting.";
+    };
+    img.src = data;
+  };
+
+  clearStateBtn.onclick = ()=>{
+    localStorage.removeItem(LS_SETTINGS);
+    localStorage.removeItem(LS_PAINT);
+    status.textContent="Cleared saved settings + painting.";
+  };
+
+  // ---------- recording (canvas + mic audio track) ----------
+  let recorder=null, recording=false, chunks=[], recStartMs=0, recTimer=null, lastBlobUrl=null;
+
+  function pickMime(){
+    const candidates = [
+      'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm;codecs=vp8",
+      "video/webm"
+    ];
+    for(const c of candidates){
+      try { if(window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c; } catch {}
+    }
+    return "";
+  }
+
+  function formatMMSS(ms){
+    const s = Math.floor(ms/1000);
+    const m = Math.floor(s/60);
+    const ss = String(s%60).padStart(2,"0");
+    return `${String(m).padStart(2,"0")}:${ss}`;
+  }
+
+  async function startRec(){
+    dlWrap.innerHTML="";
+    chunks=[];
+    if(lastBlobUrl){ try{ URL.revokeObjectURL(lastBlobUrl); }catch{} lastBlobUrl=null; }
+
+    if(!window.MediaRecorder){
+      status.textContent="MediaRecorder not supported in this browser.";
+      return;
+    }
+
+    const fps = clamp(Number(fpsEl.value)||24, 8, 60);
+    const canvasStream = canvas.captureStream(fps);
+    const tracks = [...canvasStream.getVideoTracks()];
+
+    if(micEnabled && micStream){
+      const audioTracks = micStream.getAudioTracks();
+      if(audioTracks && audioTracks.length){
+        tracks.push(audioTracks[0]);
+      } else {
+        status.textContent="Recording video only: no mic audio track found.";
+      }
+    } else {
+      status.textContent="Recording video only: mic is OFF. Enable Mic first for audio in recording.";
+    }
+
+    const mixedStream = new MediaStream(tracks);
+    const mime = pickMime();
+
+    try{
+      recorder = new MediaRecorder(mixedStream, mime ? { mimeType: mime } : undefined);
+    }catch(e){
+      status.textContent="Failed to start recorder.\n"+e;
+      return;
+    }
+
+    recorder.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+
+    recorder.onstop = ()=>{
+      const outType = recorder.mimeType || (mime || "video/webm");
+      const blob = new Blob(chunks, { type: outType });
+      lastBlobUrl = URL.createObjectURL(blob);
+
+      const ext = outType.includes("mp4") ? "mp4" : "webm";
+      const a=document.createElement("a");
+      a.href=lastBlobUrl;
+      a.download=`living_art_v5_${Date.now()}.${ext}`;
+      a.className="dl";
+      a.textContent=`Download recording w/ audio (if enabled) — ${(blob.size/1024/1024).toFixed(2)} MB`;
+
+      dlWrap.innerHTML="";
+      dlWrap.appendChild(a);
+
+      status.textContent =
+        `Recording stopped.\n`+
+        `Format: ${outType}\n`+
+        `If playback is weird, open in VLC or convert:\n`+
+        `ffmpeg -i yourfile.${ext} -c:v libx264 -crf 18 -preset medium -c:a aac -b:a 192k output.mp4`;
+    };
+
+    recorder.start(1000);
+
+    recording=true;
+    recBtn.textContent="■ Stop Recording";
+    recInfo.style.display="inline-flex";
+    recStartMs = Date.now();
+    recTime.textContent = "REC 00:00";
+    recTimer = setInterval(()=>{
+      recTime.textContent = "REC " + formatMMSS(Date.now()-recStartMs);
+    }, 250);
+
+    status.textContent="Recording… press Stop Recording to finish. (Includes mic audio if enabled.)";
+  }
+
+  function stopRec(){
+    if(!recorder || !recording) return;
+
+    try { recorder.requestData(); } catch {}
+
+    recording=false;
+    recBtn.textContent="● Record (toggle)";
+    recInfo.style.display="none";
+    if(recTimer){ clearInterval(recTimer); recTimer=null; }
+
+    setTimeout(()=>{
+      try { recorder.stop(); } catch(e){ status.textContent="Stop failed: "+e; }
+    }, 150);
+  }
+
+  recBtn.onclick = async ()=>{ if(!recording) await startRec(); else stopRec(); };
+
+})();
+</script>
+</body>
+</html>
+
