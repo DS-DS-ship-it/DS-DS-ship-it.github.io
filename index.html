@@ -29,6 +29,7 @@
       --blue:#6ca8ff;
       --gold:#ffcc66;
       --bad:#ff8c8c;
+      --remix:#ff8a3d;
     }
 
     *{ box-sizing:border-box; }
@@ -268,6 +269,13 @@
         linear-gradient(135deg, rgba(155,140,255,.14), rgba(90,170,255,.10));
     }
 
+    .card.remix{
+      border-color:rgba(255,138,61,.45);
+      background:
+        linear-gradient(180deg, rgba(40,22,12,.96), rgba(15,18,24,.84)),
+        linear-gradient(135deg, rgba(255,138,61,.14), rgba(255,79,216,.08));
+    }
+
     .tag{
       display:inline-flex;
       align-items:center;
@@ -351,6 +359,11 @@
     a.btn.space{
       background:linear-gradient(135deg, rgba(155,140,255,.26), rgba(90,170,255,.18));
       border-color:rgba(155,140,255,.36);
+    }
+
+    a.btn.remix{
+      background:linear-gradient(135deg, rgba(255,138,61,.24), rgba(255,79,216,.18));
+      border-color:rgba(255,138,61,.36);
     }
 
     .status-row{
@@ -480,29 +493,29 @@
       <div class="eyebrow">DS-DS-ship-it</div>
       <h1>Living Apps</h1>
       <p>
-        Interactive visual, camera, audio, Earth, astronomy, and navigation tools built for mobile and desktop.
+        Interactive visual, camera, audio, Earth, astronomy, navigation, and remix tools built for mobile and desktop.
         Launch any app below without affecting the others.
       </p>
       <div class="hero-note">
-        This version keeps the working app links, adds a direct fallback for Living Artwork, and keeps your newer Astro Calculator launcher.
+        This version keeps the working app links, adds your Movie Remixer, keeps the Living Artwork fallback, and preserves the Astro Calculator launcher.
       </div>
 
       <div class="hero-strip">
         <div class="hero-tile neon-cyan">
           <strong>Creative Visuals</strong>
-          <span>Image, audio, video, and motion apps in one neon-styled launch portal.</span>
+          <span>Image, audio, video, motion, and remix apps in one neon-styled launch portal.</span>
         </div>
         <div class="hero-tile neon-pink">
           <strong>Earth + Sky</strong>
-          <span>Map, navigation, and astronomy tools with current Earth Cockpit launch targets.</span>
+          <span>Map, navigation, astronomy, and route tools with current Earth Cockpit launch targets.</span>
         </div>
         <div class="hero-tile neon-gold">
           <strong>Drive + Traffic</strong>
-          <span>Route-focused maps, live monitoring, and travel tools for your current builds.</span>
+          <span>Route-focused maps, live monitoring, travel overlays, and current working launchers.</span>
         </div>
         <div class="hero-tile neon-blue">
-          <strong>Astro Calculator</strong>
-          <span>ICRS conversion, precision coordinate entry, and route planning for your newer astronomy build.</span>
+          <strong>Astro + Remix</strong>
+          <span>ICRS conversion, astronomy route planning, and browser-based video/audio remix workflows.</span>
         </div>
       </div>
     </section>
@@ -549,10 +562,36 @@
           <li>Recording workflow</li>
           <li>Browser-based experience</li>
         </ul>
+
         <div class="actions">
           <a class="btn" href="/video-artwork-living/">Open Video App</a>
         </div>
+
         <div class="small">Direct: <code>/video-artwork-living/</code></div>
+      </div>
+
+      <div class="card remix">
+        <div class="tag">Remix • New</div>
+        <h2>Movie Remixer</h2>
+        <p>Browser-based video and audio remixer for creative edits, mashups, and dynamic playback experiments.</p>
+
+        <div class="status-row">
+          <span class="pill warn">Publish file into site repo</span>
+        </div>
+
+        <ul class="features">
+          <li>Video + audio remix workflow</li>
+          <li>Standalone HTML launcher</li>
+          <li>Designed for your <code>movie-remixer11.html</code> build</li>
+        </ul>
+
+        <div class="actions">
+          <a class="btn remix" href="/movie-remixer/movie-remixer11.html?v=1">Launch Movie Remixer</a>
+        </div>
+
+        <div class="small">
+          Direct: <code>/movie-remixer/movie-remixer11.html?v=1</code>
+        </div>
       </div>
 
       <div class="card art">
@@ -569,9 +608,11 @@
           <li>Audio-responsive rendering</li>
           <li>Recording support</li>
         </ul>
+
         <div class="actions">
           <a class="btn" href="/audio-artwork-living/">Open Audio Visualizer</a>
         </div>
+
         <div class="small">Direct: <code>/audio-artwork-living/</code></div>
       </div>
 
@@ -694,16 +735,17 @@
     </div>
 
     <section class="notice">
-      <h3>Living Artwork fix</h3>
+      <h3>How to publish the new Movie Remixer</h3>
       <p>
-        The Image Painter card now includes both the normal published launcher and a direct
-        <code>index.html</code> fallback. That gives you two ways to open the same app path after push.
+        The new portal card assumes your remixer will live inside this site repo at
+        <code>/movie-remixer/movie-remixer11.html</code>.
       </p>
       <ol>
-        <li>Test locally with <code>http://127.0.0.1:8080/living-artwork/</code>.</li>
-        <li>Also test <code>http://127.0.0.1:8080/living-artwork/index.html</code>.</li>
-        <li>After push, test both live versions with a cache-buster if needed.</li>
-        <li>If one path ever fails, the other button on the card gives you a backup launcher.</li>
+        <li>Copy the file from <code>~/movie-remixer/movie-remixer11.html</code> into <code>~/ds-ds-ship-it.github.io/movie-remixer/movie-remixer11.html</code>.</li>
+        <li>Test locally with <code>python3 -m http.server 8080</code>.</li>
+        <li>Open <code>http://127.0.0.1:8080/?v=20</code> and click every launcher.</li>
+        <li>Also test <code>http://127.0.0.1:8080/movie-remixer/movie-remixer11.html</code> directly.</li>
+        <li>Then commit and push both <code>index.html</code> and the new remixer file/folder.</li>
       </ol>
     </section>
 
