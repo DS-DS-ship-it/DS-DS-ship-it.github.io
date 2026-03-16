@@ -30,6 +30,7 @@
       --gold:#ffcc66;
       --bad:#ff8c8c;
       --remix:#ff8a3d;
+      --remix2:#ff6ad5;
     }
 
     *{ box-sizing:border-box; }
@@ -276,6 +277,13 @@
         linear-gradient(135deg, rgba(255,138,61,.14), rgba(255,79,216,.08));
     }
 
+    .card.remix-short{
+      border-color:rgba(255,106,213,.42);
+      background:
+        linear-gradient(180deg, rgba(40,16,32,.96), rgba(15,18,24,.84)),
+        linear-gradient(135deg, rgba(255,106,213,.12), rgba(90,170,255,.10));
+    }
+
     .tag{
       display:inline-flex;
       align-items:center;
@@ -364,6 +372,11 @@
     a.btn.remix{
       background:linear-gradient(135deg, rgba(255,138,61,.24), rgba(255,79,216,.18));
       border-color:rgba(255,138,61,.36);
+    }
+
+    a.btn.remix-short{
+      background:linear-gradient(135deg, rgba(255,106,213,.24), rgba(90,170,255,.18));
+      border-color:rgba(255,106,213,.34);
     }
 
     .status-row{
@@ -497,7 +510,7 @@
         Launch any app below without affecting the others.
       </p>
       <div class="hero-note">
-        This version keeps the working app links, adds your Movie Remixer, keeps the Living Artwork fallback, and preserves the Astro Calculator launcher.
+        This version keeps all your existing launchers, adds Movie Remixer, and renames the earlier remixer as Short Video Remixer.
       </div>
 
       <div class="hero-strip">
@@ -515,7 +528,7 @@
         </div>
         <div class="hero-tile neon-blue">
           <strong>Astro + Remix</strong>
-          <span>ICRS conversion, astronomy route planning, and browser-based video/audio remix workflows.</span>
+          <span>ICRS conversion, astronomy route planning, short-form remixing, and full movie remix workflows.</span>
         </div>
       </div>
     </section>
@@ -570,10 +583,34 @@
         <div class="small">Direct: <code>/video-artwork-living/</code></div>
       </div>
 
+      <div class="card remix-short">
+        <div class="tag">Remix • Short Form</div>
+        <h2>Short Video Remixer</h2>
+        <p>Fast browser-based remixer for shorter clips, quick edits, and compact audiovisual mashups.</p>
+
+        <div class="status-row">
+          <span class="pill warn">Publish file into site repo</span>
+        </div>
+
+        <ul class="features">
+          <li>Short-form video remix workflow</li>
+          <li>Standalone HTML launcher</li>
+          <li>Uses your <code>movie-remixer11.html</code> build</li>
+        </ul>
+
+        <div class="actions">
+          <a class="btn remix-short" href="/movie-remixer/movie-remixer11.html?v=2">Launch Short Video Remixer</a>
+        </div>
+
+        <div class="small">
+          Direct: <code>/movie-remixer/movie-remixer11.html?v=2</code>
+        </div>
+      </div>
+
       <div class="card remix">
-        <div class="tag">Remix • New</div>
+        <div class="tag">Remix • Full</div>
         <h2>Movie Remixer</h2>
-        <p>Browser-based video and audio remixer for creative edits, mashups, and dynamic playback experiments.</p>
+        <p>Browser-based video and audio remixer for larger edits, mashups, cinematic experiments, and fuller remix sessions.</p>
 
         <div class="status-row">
           <span class="pill warn">Publish file into site repo</span>
@@ -582,15 +619,15 @@
         <ul class="features">
           <li>Video + audio remix workflow</li>
           <li>Standalone HTML launcher</li>
-          <li>Designed for your <code>movie-remixer11.html</code> build</li>
+          <li>Uses your <code>movie-remixer13.html</code> build</li>
         </ul>
 
         <div class="actions">
-          <a class="btn remix" href="/movie-remixer/movie-remixer11.html?v=1">Launch Movie Remixer</a>
+          <a class="btn remix" href="/movie-remixer/movie-remixer13.html?v=1">Launch Movie Remixer</a>
         </div>
 
         <div class="small">
-          Direct: <code>/movie-remixer/movie-remixer11.html?v=1</code>
+          Direct: <code>/movie-remixer/movie-remixer13.html?v=1</code>
         </div>
       </div>
 
@@ -735,17 +772,18 @@
     </div>
 
     <section class="notice">
-      <h3>How to publish the new Movie Remixer</h3>
+      <h3>How to publish the two remixer apps</h3>
       <p>
-        The new portal card assumes your remixer will live inside this site repo at
-        <code>/movie-remixer/movie-remixer11.html</code>.
+        This portal now expects both remixers to live inside the site repo under
+        <code>/movie-remixer/</code>.
       </p>
       <ol>
-        <li>Copy the file from <code>~/movie-remixer/movie-remixer11.html</code> into <code>~/ds-ds-ship-it.github.io/movie-remixer/movie-remixer11.html</code>.</li>
+        <li>Copy <code>~/movie-remixer/movie-remixer11.html</code> to <code>~/ds-ds-ship-it.github.io/movie-remixer/movie-remixer11.html</code>.</li>
+        <li>Copy <code>~/movie-remixer/movie-remixer13.html</code> to <code>~/ds-ds-ship-it.github.io/movie-remixer/movie-remixer13.html</code>.</li>
         <li>Test locally with <code>python3 -m http.server 8080</code>.</li>
-        <li>Open <code>http://127.0.0.1:8080/?v=20</code> and click every launcher.</li>
-        <li>Also test <code>http://127.0.0.1:8080/movie-remixer/movie-remixer11.html</code> directly.</li>
-        <li>Then commit and push both <code>index.html</code> and the new remixer file/folder.</li>
+        <li>Open <code>http://127.0.0.1:8080/?v=21</code> and click every launcher.</li>
+        <li>Also test <code>/movie-remixer/movie-remixer11.html</code> and <code>/movie-remixer/movie-remixer13.html</code> directly.</li>
+        <li>Then commit and push <code>index.html</code> plus both remixer files.</li>
       </ol>
     </section>
 

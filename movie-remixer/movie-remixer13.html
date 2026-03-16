@@ -1,0 +1,2153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MVX Browser Movie Remixer — Long-Form Stable Build</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#08111f;
+      --panel:#111a31;
+      --panel2:#172544;
+      --line:#355088;
+      --text:#edf4ff;
+      --muted:#a9bcdf;
+      --accent:#8db4ff;
+      --accent2:#5f92ff;
+      --good:#77e7a7;
+      --warn:#ffd56f;
+      --bad:#ff8d8d;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 10% 10%, rgba(70,110,255,.20), transparent 55%),
+        radial-gradient(800px 460px at 90% 0%, rgba(0,220,255,.10), transparent 50%),
+        linear-gradient(180deg, #060d19, #0a1020 50%, #08111a);
+      min-height:100vh;
+    }
+    .wrap{max-width:1360px;margin:0 auto;padding:22px}
+    h1{margin:0 0 6px;font-size:30px;letter-spacing:.2px}
+    .sub{color:var(--muted);margin-bottom:18px;max-width:1080px;line-height:1.4}
+    .grid{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}
+    .card{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 16px 40px rgba(0,0,0,.24);
+      overflow:hidden;
+    }
+    .hd{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .bd{padding:16px}
+    .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .full{grid-column:1 / -1}
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      margin-bottom:6px;
+    }
+    input[type="text"], input[type="number"], select, textarea{
+      width:100%;
+      background:#0d1730;
+      color:var(--text);
+      border:1px solid #355088;
+      border-radius:12px;
+      padding:10px 12px;
+      outline:none;
+    }
+    textarea{min-height:82px;resize:vertical}
+    input[type="file"]{
+      width:100%;
+      background:#0d1730;
+      color:var(--text);
+      border:1px solid #355088;
+      border-radius:12px;
+      padding:8px 10px;
+    }
+    .checks{display:grid;gap:8px;margin-top:4px}
+    .checks label{margin:0;font-size:14px;color:var(--text);font-weight:600}
+    .checks input[type="checkbox"]{transform:translateY(1px);margin-right:8px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    button{
+      border:none;
+      border-radius:12px;
+      padding:11px 14px;
+      font-weight:800;
+      cursor:pointer;
+      color:#091221;
+      background:linear-gradient(180deg,#a4c4ff,#7ca8ff);
+    }
+    button.secondary{
+      color:var(--text);
+      background:linear-gradient(180deg,#2b3958,#23314d);
+      border:1px solid #3a4d74;
+    }
+    button.warn{
+      background:linear-gradient(180deg,#ffd98a,#ffbf56);
+      color:#2d1a00;
+    }
+    button.good{
+      background:linear-gradient(180deg,#9df0b9,#70dd9a);
+      color:#062313;
+    }
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .statbar{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:12px}
+    .stat{
+      background:#0d1730;
+      border:1px solid #315088;
+      border-radius:12px;
+      padding:10px;
+      min-height:65px;
+    }
+    .stat .k{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700}
+    .stat .v{font-size:16px;font-weight:800;word-break:break-word}
+    video, canvas{
+      width:100%;
+      max-height:440px;
+      border-radius:14px;
+      background:#000;
+      border:1px solid #355088;
+      display:block;
+    }
+    .pill{
+      display:inline-block;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid #3b578d;
+      background:#0c1831;
+      color:#d7e6ff;
+      font-size:12px;
+      margin-top:8px;
+      margin-right:8px;
+      font-weight:700;
+    }
+    .progressWrap{
+      margin-top:12px;
+      background:#0a1325;
+      border:1px solid #304e89;
+      border-radius:12px;
+      padding:10px;
+    }
+    .progressHead{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+    .progressOuter{
+      width:100%;
+      height:16px;
+      border-radius:999px;
+      overflow:hidden;
+      background:#091120;
+      border:1px solid #2b467b;
+      position:relative;
+    }
+    .progressFill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, var(--accent2), #7cc9ff);
+      transition:width .15s linear;
+    }
+    .progressText{
+      margin-top:8px;
+      font-size:12px;
+      color:#d7e6ff;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+    .log{
+      margin-top:12px;
+      background:#091120;
+      border:1px solid #2f4a80;
+      border-radius:14px;
+      padding:12px;
+      min-height:280px;
+      max-height:460px;
+      overflow:auto;
+      white-space:pre-wrap;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:12px;
+      line-height:1.45;
+      color:#dce8ff;
+    }
+    .foot{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:10px;
+      line-height:1.45;
+    }
+    code{
+      background:#0b1630;
+      border:1px solid #29467d;
+      border-radius:8px;
+      padding:1px 6px;
+      font-size:12px;
+    }
+    .downloadLink{
+      display:inline-block;
+      margin-top:12px;
+      padding:10px 14px;
+      border-radius:12px;
+      background:linear-gradient(180deg,#8fe8b2,#68d894);
+      color:#072313;
+      text-decoration:none;
+      font-weight:800;
+    }
+    .tiny{font-size:11px;color:var(--muted)}
+    .hidden{display:none !important}
+    @media (max-width: 1100px){
+      .grid{grid-template-columns:1fr}
+      .statbar{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>MVX Browser Movie Remixer — Long-Form Stable Build</h1>
+    <div class="sub">
+      Upgraded browser-native movie remixer with Popular Auto Mode audio crackle fixes, repeat-render cleanup, source-length matching,
+      long-form planning for movies, safer chunk flushing, and reduced memory pressure for long renders. This stays browser-only and
+      still uses best-effort public trend text instead of private APIs or API keys.
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="hd">Project Settings</div>
+        <div class="bd">
+          <div class="formgrid">
+            <div class="full">
+              <label for="inputFile">Input video</label>
+              <input id="inputFile" type="file" accept="video/*" />
+            </div>
+
+            <div>
+              <label for="targetMinutes">Minutes of output (minimum)</label>
+              <input id="targetMinutes" type="number" min="1" max="600" step="1" value="3" />
+            </div>
+
+            <div>
+              <label for="fps">FPS</label>
+              <input id="fps" type="number" min="12" max="60" step="1" value="24" />
+            </div>
+
+            <div>
+              <label for="renderWidth">Render width</label>
+              <select id="renderWidth">
+                <option value="854">854</option>
+                <option value="1280" selected>1280</option>
+                <option value="1920">1920</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="transitionSec">Transition seconds</label>
+              <input id="transitionSec" type="number" min="0.15" max="1.4" step="0.05" value="0.45" />
+            </div>
+
+            <div>
+              <label for="maxSlices">Max slices</label>
+              <input id="maxSlices" type="number" min="4" max="2000" step="1" value="140" />
+            </div>
+
+            <div>
+              <label for="creativeMode">Creative mode</label>
+              <select id="creativeMode">
+                <option value="manual" selected>Manual Genre/Style</option>
+                <option value="popularAuto">Popular Auto Mode</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="trendSourcePreset">Trend source preset</label>
+              <select id="trendSourcePreset">
+                <option value="duckduckgo" selected>DuckDuckGo search page</option>
+                <option value="wikipedia">Wikipedia popular music</option>
+                <option value="custom">Custom URL below</option>
+              </select>
+            </div>
+
+            <div class="full">
+              <label for="trendUrl">Trend/Search URL</label>
+              <input id="trendUrl" type="text" value="" placeholder="Optional custom public URL to fetch through proxy" />
+            </div>
+
+            <div class="full">
+              <label for="genres">Genres</label>
+              <input id="genres" type="text" value="PoeticFiction,Comedy,Romance" />
+            </div>
+
+            <div class="full">
+              <label for="styles">Styles</label>
+              <textarea id="styles">Cinematic,NeoNoir,Dreamy,VHS,HyperPop,Ink,Film,CGI,Compositing,MattePainting,Optical,PracticalFX,Glitch</textarea>
+            </div>
+
+            <div>
+              <label for="sliceSet">Slice set (sec)</label>
+              <input id="sliceSet" type="text" value="3,4,5,8,10,12,16,20" />
+            </div>
+
+            <div>
+              <label for="sliceWeights">Weights</label>
+              <input id="sliceWeights" type="text" value="0.10,0.13,0.15,0.16,0.15,0.13,0.10,0.08" />
+            </div>
+
+            <div>
+              <label for="fxStrength">FX strength</label>
+              <select id="fxStrength">
+                <option value="0.22">Light</option>
+                <option value="0.40" selected>Balanced</option>
+                <option value="0.62">Strong</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="outputName">Output filename</label>
+              <input id="outputName" type="text" value="mvx_remix.webm" />
+            </div>
+
+            <div class="full checks">
+              <label><input id="matchSourceLength" type="checkbox" checked /> Always make output at least as long as the source video</label>
+              <label><input id="antiLoop" type="checkbox" checked /> Strong anti-loop source selection</label>
+              <label><input id="masterAudio" type="checkbox" checked /> Crackle-safe mastering / headroom normalization</label>
+              <label><input id="lightAudio" type="checkbox" checked /> Lighter audio shaping</label>
+              <label><input id="browserSafe" type="checkbox" checked /> Prefer browser-safe recording settings</label>
+              <label><input id="adaptiveHit" type="checkbox" checked /> Adaptive hit-style planning</label>
+              <label><input id="longFormSafe" type="checkbox" checked /> Long-form movie mode for very long videos</label>
+              <label><input id="debugMode" type="checkbox" checked /> Verbose debugging logs</label>
+            </div>
+
+            <div class="full row" style="margin-top:6px;">
+              <button id="analyzeTrendBtn" type="button" class="good">Analyze Popular Trends</button>
+              <button id="initBtn" type="button">1) Initialize Engine</button>
+              <button id="renderBtn" type="button" disabled>2) Render Movie</button>
+              <button id="stopBtn" type="button" class="warn" disabled>Stop</button>
+              <button id="clearLogBtn" type="button" class="secondary">Clear Log</button>
+            </div>
+          </div>
+
+          <div class="foot">
+            This build fixes the “works once then needs refresh” problem by fully cleaning up the previous recorder, tracks, audio graph,
+            and pooled videos before the next run.
+            <br><code>python3 -m http.server 8000</code>
+            <br>Open locally, choose a video, optionally analyze trends, initialize, then render.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="hd">Preview & Diagnostics</div>
+        <div class="bd">
+          <div class="statbar">
+            <div class="stat"><div class="k">Input duration</div><div class="v" id="statInput">—</div></div>
+            <div class="stat"><div class="k">Planned slices</div><div class="v" id="statSlices">—</div></div>
+            <div class="stat"><div class="k">Output target</div><div class="v" id="statTarget">—</div></div>
+            <div class="stat"><div class="k">Pulse</div><div class="v" id="statPulse">—</div></div>
+            <div class="stat"><div class="k">Popularity</div><div class="v" id="statPopularity">—</div></div>
+            <div class="stat"><div class="k">Save mode</div><div class="v" id="statSaveMode">RAM</div></div>
+            <div class="stat"><div class="k">Engine</div><div class="v" id="statEngine">idle</div></div>
+            <div class="stat"><div class="k">Phase</div><div class="v" id="statPhase">waiting</div></div>
+          </div>
+
+          <canvas id="previewCanvas" width="1280" height="720"></canvas>
+          <video id="resultVideo" class="hidden" controls playsinline></video>
+          <video id="sourceVideo" class="hidden" muted playsinline preload="auto" crossorigin="anonymous"></video>
+
+          <div style="margin-top:10px;">
+            <span class="pill">Repeat-render safe</span>
+            <span class="pill">Long-form movie mode</span>
+            <span class="pill">Popular auto stabilized</span>
+            <span class="pill">Lower-crackle audio path</span>
+          </div>
+
+          <div class="progressWrap">
+            <div class="progressHead">
+              <div id="progressLabel">Render</div>
+              <div id="progressPct">0%</div>
+            </div>
+            <div class="progressOuter">
+              <div id="progressFill" class="progressFill"></div>
+            </div>
+            <div id="progressText" class="progressText">Waiting.</div>
+          </div>
+
+          <div id="log" class="log"></div>
+          <div id="downloadWrap"></div>
+          <div class="tiny" style="margin-top:10px;">
+            Popular Auto Mode now uses lower gain, less overlap, headroom normalization, and no live monitor-to-speaker routing during export.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const el = {
+      inputFile: $("inputFile"),
+      targetMinutes: $("targetMinutes"),
+      fps: $("fps"),
+      renderWidth: $("renderWidth"),
+      transitionSec: $("transitionSec"),
+      maxSlices: $("maxSlices"),
+      creativeMode: $("creativeMode"),
+      trendSourcePreset: $("trendSourcePreset"),
+      trendUrl: $("trendUrl"),
+      genres: $("genres"),
+      styles: $("styles"),
+      sliceSet: $("sliceSet"),
+      sliceWeights: $("sliceWeights"),
+      fxStrength: $("fxStrength"),
+      outputName: $("outputName"),
+      matchSourceLength: $("matchSourceLength"),
+      antiLoop: $("antiLoop"),
+      masterAudio: $("masterAudio"),
+      lightAudio: $("lightAudio"),
+      browserSafe: $("browserSafe"),
+      adaptiveHit: $("adaptiveHit"),
+      longFormSafe: $("longFormSafe"),
+      debugMode: $("debugMode"),
+      analyzeTrendBtn: $("analyzeTrendBtn"),
+      initBtn: $("initBtn"),
+      renderBtn: $("renderBtn"),
+      stopBtn: $("stopBtn"),
+      clearLogBtn: $("clearLogBtn"),
+      sourceVideo: $("sourceVideo"),
+      resultVideo: $("resultVideo"),
+      previewCanvas: $("previewCanvas"),
+      log: $("log"),
+      statInput: $("statInput"),
+      statSlices: $("statSlices"),
+      statTarget: $("statTarget"),
+      statPulse: $("statPulse"),
+      statPopularity: $("statPopularity"),
+      statSaveMode: $("statSaveMode"),
+      statEngine: $("statEngine"),
+      statPhase: $("statPhase"),
+      progressLabel: $("progressLabel"),
+      progressPct: $("progressPct"),
+      progressFill: $("progressFill"),
+      progressText: $("progressText"),
+      downloadWrap: $("downloadWrap"),
+    };
+
+    const ctx2d = el.previewCanvas.getContext("2d", { alpha: false });
+    const prevFrameCanvas = document.createElement("canvas");
+    const prevFrameCtx = prevFrameCanvas.getContext("2d", { alpha: false });
+
+    let engineReady = false;
+    let stopRequested = false;
+    let currentFile = null;
+    let currentFileURL = null;
+    let decodedAudioBuffer = null;
+    let lastOutputURL = null;
+    let renderSessionId = 0;
+    let activeRun = null;
+
+    let audioAnalysis = {
+      pulseSec: 0.5,
+      transients: [],
+      energyWindows: [],
+      sectionMap: [],
+      popularityBias: 0.5
+    };
+
+    let trendAnalysis = {
+      fetched: false,
+      sourceUrl: "",
+      rawText: "",
+      keywords: [],
+      genres: [],
+      styles: [],
+      bpmHint: 118,
+      energyHint: 0.68,
+      popularityBias: 0.72
+    };
+
+    function debugEnabled() {
+      return !!el.debugMode.checked;
+    }
+
+    function log(msg, kind = "info") {
+      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      el.log.textContent += line + "\n";
+      el.log.scrollTop = el.log.scrollHeight;
+      if (kind === "error") console.error(line);
+      else if (kind === "warn") console.warn(line);
+      else console.log(line);
+    }
+
+    function clearLog() {
+      el.log.textContent = "";
+    }
+
+    function setProgress(value, label, text) {
+      const pct = Math.max(0, Math.min(100, Number(value) || 0));
+      el.progressFill.style.width = `${pct}%`;
+      el.progressPct.textContent = `${Math.round(pct)}%`;
+      if (label) el.progressLabel.textContent = label;
+      if (text) el.progressText.textContent = text;
+    }
+
+    function markEngineState(text) {
+      el.statEngine.textContent = text;
+    }
+
+    function markPhase(text) {
+      el.statPhase.textContent = text;
+    }
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
+    function easeInOut(t) {
+      return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function withTimeout(promise, ms, label) {
+      let timer = null;
+      try {
+        return await Promise.race([
+          promise,
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+          })
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
+    function parseList(s) {
+      return String(s || "")
+        .split(/[,\|\;\n]+/)
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+
+    function parseFloatList(s) {
+      return parseList(s).map(Number).filter(n => Number.isFinite(n) && n > 0);
+    }
+
+    function normalizeWeights(weights, n) {
+      if (!weights.length || weights.length !== n) return Array.from({ length: n }, () => 1 / n);
+      const sum = weights.reduce((a,b) => a+b, 0);
+      if (sum <= 0) return Array.from({ length: n }, () => 1 / n);
+      return weights.map(w => w / sum);
+    }
+
+    function weightedPick(choices, weights) {
+      let r = Math.random();
+      let acc = 0;
+      for (let i = 0; i < choices.length; i++) {
+        acc += weights[i];
+        if (r <= acc) return choices[i];
+      }
+      return choices[choices.length - 1];
+    }
+
+    function randChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function randFloat(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function unique(arr) {
+      return [...new Set(arr.filter(Boolean))];
+    }
+
+    function getRenderSize(width) {
+      if (width >= 1900) return { w: 1920, h: 1080 };
+      if (width >= 1200) return { w: 1280, h: 720 };
+      return { w: 854, h: 480 };
+    }
+
+    function sanitizeFilename(name) {
+      const base = String(name || "mvx_remix.webm").trim() || "mvx_remix.webm";
+      return base.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
+    }
+
+    function getDefaultTrendUrl() {
+      const preset = el.trendSourcePreset.value;
+      if (preset === "custom" && el.trendUrl.value.trim()) {
+        return el.trendUrl.value.trim();
+      }
+      if (preset === "wikipedia") {
+        return "https://en.wikipedia.org/wiki/Popular_music";
+      }
+      return "https://duckduckgo.com/html/?q=" + encodeURIComponent("what popular music sounds like");
+    }
+
+    async function fetchPublicTextViaProxy(targetUrl) {
+      const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl);
+      const res = await withTimeout(fetch(proxyUrl, {
+        method: "GET",
+        cache: "no-store"
+      }), 12000, "trend fetch");
+      if (!res.ok) throw new Error(`trend fetch failed (${res.status})`);
+      return await res.text();
+    }
+
+    function derivePopularityHintsFromText(text) {
+      const normalized = String(text || "")
+        .toLowerCase()
+        .replace(/<script[\s\S]*?<\/script>/g, " ")
+        .replace(/<style[\s\S]*?<\/style>/g, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/[^a-z0-9\s\-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const keywordMap = {
+        pop: ["pop", "hook", "chorus", "radio", "catchy", "mainstream"],
+        dance: ["dance", "club", "festival", "edm", "drop", "anthem"],
+        hiphop: ["hip hop", "hiphop", "trap", "808", "rap", "drill"],
+        rnb: ["rnb", "r&b", "soul", "melodic", "groove"],
+        rock: ["rock", "indie", "guitar", "alt rock", "anthemic"],
+        electronic: ["electronic", "synth", "electro", "future bass"],
+        cinematic: ["cinematic", "atmospheric", "epic", "emotional", "dramatic"],
+        upbeat: ["upbeat", "energetic", "bright", "feel good"],
+        mellow: ["mellow", "soft", "warm", "dreamy", "chill"]
+      };
+
+      const counts = {};
+      for (const [k, words] of Object.entries(keywordMap)) {
+        counts[k] = 0;
+        for (const w of words) {
+          const re = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
+          counts[k] += (normalized.match(re) || []).length;
+        }
+      }
+
+      const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+      const top = sorted.filter(x => x[1] > 0).slice(0, 5).map(x => x[0]);
+
+      const genres = [];
+      const styles = [];
+
+      if (top.includes("pop")) genres.push("Pop");
+      if (top.includes("dance")) genres.push("Dance");
+      if (top.includes("hiphop")) genres.push("HipHop");
+      if (top.includes("rnb")) genres.push("R&B");
+      if (top.includes("rock")) genres.push("IndiePop");
+      if (top.includes("electronic")) genres.push("Electronic");
+      if (!genres.length) genres.push("Pop", "Dance");
+
+      if (top.includes("cinematic")) styles.push("Cinematic");
+      if (top.includes("electronic")) styles.push("HyperPop");
+      if (top.includes("dance")) styles.push("Glossy");
+      if (top.includes("upbeat")) styles.push("Bright");
+      if (top.includes("mellow")) styles.push("Dreamy");
+      styles.push("Film", "Compositing");
+
+      let bpmHint = 118;
+      let energyHint = 0.68;
+
+      if (top.includes("dance") || top.includes("electronic")) bpmHint = 124;
+      if (top.includes("hiphop")) bpmHint = 98;
+      if (top.includes("upbeat")) energyHint += 0.10;
+      if (top.includes("mellow")) energyHint -= 0.08;
+      if (top.includes("cinematic")) energyHint -= 0.04;
+
+      const keywords = unique(top);
+      const popularityBias = clamp(0.58 + (keywords.length * 0.06), 0.55, 0.90);
+
+      return {
+        keywords,
+        genres: unique(genres),
+        styles: unique(styles),
+        bpmHint,
+        energyHint: clamp(energyHint, 0.45, 0.92),
+        popularityBias
+      };
+    }
+
+    async function analyzeTrendSource() {
+      markPhase("trend analysis");
+      setProgress(2, "Trend", "Fetching public trend text...");
+      const sourceUrl = getDefaultTrendUrl();
+      try {
+        const raw = await fetchPublicTextViaProxy(sourceUrl);
+        const derived = derivePopularityHintsFromText(raw);
+        trendAnalysis = {
+          fetched: true,
+          sourceUrl,
+          rawText: raw.slice(0, 200000),
+          ...derived
+        };
+
+        if (el.creativeMode.value === "popularAuto") {
+          el.genres.value = trendAnalysis.genres.join(",");
+          el.styles.value = trendAnalysis.styles.join(",");
+        }
+
+        el.statPopularity.textContent = `${Math.round(trendAnalysis.popularityBias * 100)}%`;
+        log(`Trend source fetched: ${sourceUrl}`);
+        log(`Trend keywords: ${trendAnalysis.keywords.join(", ") || "none"}`);
+        log(`Derived genres: ${trendAnalysis.genres.join(", ")}`);
+        log(`Derived styles: ${trendAnalysis.styles.join(", ")}`);
+        log(`Popularity BPM hint: ${trendAnalysis.bpmHint}`);
+        log(`Popularity energy hint: ${trendAnalysis.energyHint.toFixed(2)}`);
+        setProgress(100, "Trend", "Trend analysis complete.");
+      } catch (err) {
+        trendAnalysis = {
+          fetched: false,
+          sourceUrl,
+          rawText: "",
+          keywords: [],
+          genres: ["Pop", "Dance"],
+          styles: ["Cinematic", "Film", "Glossy"],
+          bpmHint: 118,
+          energyHint: 0.68,
+          popularityBias: 0.68
+        };
+        if (el.creativeMode.value === "popularAuto") {
+          el.genres.value = trendAnalysis.genres.join(",");
+          el.styles.value = trendAnalysis.styles.join(",");
+        }
+        el.statPopularity.textContent = `${Math.round(trendAnalysis.popularityBias * 100)}%`;
+        log(`Trend fetch failed, using fallback popularity profile: ${String(err?.message || err)}`, "warn");
+        setProgress(100, "Trend", "Fallback trend profile loaded.");
+      }
+    }
+
+    function getGenreProfile(genresText, stylesText) {
+      const g = (genresText || "").toLowerCase();
+      const s = (stylesText || "").toLowerCase();
+      const inPopularMode = el.creativeMode.value === "popularAuto";
+
+      let base = {
+        filterType: "lowpass",
+        filterFreq: 10400,
+        softGain: 0.92,
+        delayWet: 0.000,
+        width: 0.02,
+        lowBoost: 0.7,
+        midCut: -0.7,
+        highLift: 0.10
+      };
+
+      if (g.includes("pop")) {
+        base = { ...base, filterType: "lowpass", filterFreq: 9800, lowBoost: 0.75, midCut: -0.7, highLift: 0.12 };
+      }
+      if (g.includes("dance") || g.includes("electronic")) {
+        base = { ...base, filterType: "lowpass", filterFreq: 10800, lowBoost: 0.95, midCut: -0.9, highLift: 0.18 };
+      }
+      if (g.includes("hiphop")) {
+        base = { ...base, filterType: "lowpass", filterFreq: 9000, lowBoost: 1.05, midCut: -1.0, highLift: 0.06 };
+      }
+      if (g.includes("r&b") || g.includes("rnb")) {
+        base = { ...base, filterType: "lowpass", filterFreq: 9200, lowBoost: 0.92, midCut: -0.8, highLift: 0.08 };
+      }
+      if (s.includes("dreamy")) {
+        base = { ...base, delayWet: 0.004, width: 0.04 };
+      }
+      if (s.includes("cinematic")) {
+        base = { ...base, delayWet: 0.003, width: 0.03 };
+      }
+      if (s.includes("glossy") || inPopularMode) {
+        base = {
+          ...base,
+          softGain: 0.90,
+          highLift: Math.max(base.highLift, 0.12),
+          lowBoost: Math.max(base.lowBoost, 0.75)
+        };
+      }
+
+      return base;
+    }
+
+    function makeSoftClipCurve(amount = 0.03) {
+      const n = 44100;
+      const curve = new Float32Array(n);
+      const k = 2 + amount * 5;
+      for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        curve[i] = Math.tanh(k * x) / Math.tanh(k);
+      }
+      return curve;
+    }
+
+    function createMonoMixFromBuffer(buffer) {
+      const length = buffer.length;
+      const channels = buffer.numberOfChannels;
+      const mono = new Float32Array(length);
+      for (let c = 0; c < channels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < length; i++) mono[i] += data[i] / channels;
+      }
+      return mono;
+    }
+
+    function analyzeAudioStructure(buffer) {
+      const mono = createMonoMixFromBuffer(buffer);
+      const sr = buffer.sampleRate;
+      const winSec = 0.08;
+      const win = Math.max(256, Math.floor(sr * winSec));
+      const energyWindows = [];
+
+      for (let i = 0; i < mono.length; i += win) {
+        let sum = 0;
+        let peak = 0;
+        const end = Math.min(mono.length, i + win);
+        for (let j = i; j < end; j++) {
+          const a = Math.abs(mono[j]);
+          sum += a * a;
+          if (a > peak) peak = a;
+        }
+        const rms = Math.sqrt(sum / Math.max(1, end - i));
+        energyWindows.push({
+          time: i / sr,
+          rms,
+          peak,
+          score: rms * 0.82 + peak * 0.18
+        });
+      }
+
+      const avgScore = energyWindows.reduce((a,b) => a + b.score, 0) / Math.max(1, energyWindows.length);
+      const transients = [];
+      for (let i = 1; i < energyWindows.length; i++) {
+        const delta = energyWindows[i].score - energyWindows[i - 1].score;
+        if (energyWindows[i].score > avgScore * 1.04 && delta > avgScore * 0.05) {
+          transients.push(energyWindows[i].time);
+        }
+      }
+
+      let pulseSec = 0.5;
+      if (transients.length > 8) {
+        const diffs = [];
+        for (let i = 1; i < transients.length; i++) {
+          const d = transients[i] - transients[i - 1];
+          if (d > 0.18 && d < 1.1) diffs.push(d);
+        }
+        if (diffs.length) {
+          diffs.sort((a,b) => a-b);
+          pulseSec = diffs[Math.floor(diffs.length * 0.5)] || 0.5;
+        }
+      }
+
+      const sectionMap = [];
+      const sectionSec = 8;
+      for (let t = 0; t < buffer.duration; t += sectionSec) {
+        const a = energyWindows.filter(w => w.time >= t && w.time < t + sectionSec);
+        const mean = a.length ? a.reduce((s,w) => s + w.score, 0) / a.length : avgScore;
+        sectionMap.push({ start: t, end: Math.min(buffer.duration, t + sectionSec), energy: mean });
+      }
+
+      const maxE = Math.max(...sectionMap.map(s => s.energy), 0.01);
+      const minE = Math.min(...sectionMap.map(s => s.energy), 0);
+      const energySpread = maxE - minE;
+      const popularityBias = clamp((pulseSec < 0.7 ? 0.64 : 0.48) + energySpread * 1.2, 0.24, 1.0);
+
+      return { pulseSec, transients, energyWindows, sectionMap, popularityBias };
+    }
+
+    function nearestTransient(transients, target, maxDur) {
+      if (!transients || !transients.length) return clamp(target, 0, maxDur);
+      let best = transients[0];
+      let bestDist = Math.abs(best - target);
+      for (let i = 1; i < transients.length; i++) {
+        const d = Math.abs(transients[i] - target);
+        if (d < bestDist) {
+          bestDist = d;
+          best = transients[i];
+        }
+      }
+      return clamp(best, 0, maxDur);
+    }
+
+    function energyAtTime(sectionMap, t) {
+      for (const s of sectionMap) {
+        if (t >= s.start && t < s.end) return s.energy;
+      }
+      return sectionMap.length ? sectionMap[sectionMap.length - 1].energy : 0.5;
+    }
+
+    function expandSliceChoicesForDuration(baseChoices, effectiveDuration) {
+      const sortedBase = unique(baseChoices).sort((a,b) => a-b);
+      if (effectiveDuration >= 3 * 60 * 60) return [12,16,20,24,30,36,48,60];
+      if (effectiveDuration >= 90 * 60) return [10,12,16,20,24,30,36];
+      if (effectiveDuration >= 40 * 60) return [8,10,12,16,20,24,30];
+      return sortedBase.length ? sortedBase : [3,4,5,8,10,12,16,20];
+    }
+
+    function buildAdaptivePlan(totalSec, sourceDuration, choices, weights, antiLoop, maxSlices, adaptiveHit) {
+      const usedBins = new Map();
+      const recentStarts = [];
+      const bins = antiLoop ? 80 : 32;
+      const binLimit = antiLoop ? 2 : 4;
+      const plan = [];
+      let built = 0;
+
+      const sectionEnergies = audioAnalysis.sectionMap.map(s => s.energy);
+      const avgEnergy = sectionEnergies.length
+        ? sectionEnergies.reduce((a,b) => a+b, 0) / sectionEnergies.length
+        : 0.5;
+
+      const popularMode = el.creativeMode.value === "popularAuto";
+      const popularityBias = popularMode
+        ? clamp((audioAnalysis.popularityBias + trendAnalysis.popularityBias) * 0.5, 0.4, 0.92)
+        : audioAnalysis.popularityBias;
+
+      while (built < totalSec - 0.2 && plan.length < maxSlices) {
+        let dur = weightedPick(choices, weights);
+
+        if (adaptiveHit) {
+          const basePulse = audioAnalysis.pulseSec || 0.5;
+          const bpmPulse = popularMode
+            ? clamp(60 / Math.max(80, trendAnalysis.bpmHint), 0.35, 0.8)
+            : basePulse;
+          const phrase = bpmPulse * randChoice(popularMode ? [8, 8, 12, 16] : [8, 12, 16, 20]);
+          const snappedDur = clamp(Math.round(phrase), Math.min(...choices), Math.max(...choices));
+          if (Math.random() < (popularMode ? 0.72 : 0.55)) dur = snappedDur;
+        }
+
+        if (built + dur > totalSec) dur = Math.max(Math.min(...choices), totalSec - built);
+
+        const maxStart = Math.max(0, sourceDuration - dur - 0.2);
+        let best = null;
+
+        for (let tries = 0; tries < 90; tries++) {
+          let candidate = maxStart > 0 ? randFloat(0, maxStart) : 0;
+          if (adaptiveHit) candidate = nearestTransient(audioAnalysis.transients, candidate, maxStart);
+
+          const bin = Math.min(bins - 1, Math.floor((candidate / Math.max(sourceDuration, 1)) * bins));
+          const count = usedBins.get(bin) || 0;
+          const tooClose = antiLoop && recentStarts.some(s => Math.abs(s - candidate) < Math.max(6, dur * 0.75));
+          if (count >= binLimit || tooClose) continue;
+
+          const energy = energyAtTime(audioAnalysis.sectionMap, candidate);
+          const coverageBias = 1 - (count / binLimit);
+          const phraseBias = adaptiveHit
+            ? (1 - Math.min(1, Math.abs((candidate % Math.max(0.2, audioAnalysis.pulseSec)) / Math.max(0.2, audioAnalysis.pulseSec) - 0.5)))
+            : 0.5;
+
+          const durationBias = popularMode
+            ? (dur >= 4 && dur <= 12 ? 0.95 : 0.60)
+            : (dur >= 5 && dur <= 16 ? 0.88 : 0.55);
+
+          const popularityScore =
+            coverageBias * 0.32 +
+            clamp(energy / Math.max(0.001, avgEnergy * 1.35), 0, 1.2) * 0.26 +
+            phraseBias * 0.18 +
+            durationBias * 0.14 +
+            popularityBias * 0.10;
+
+          if (!best || popularityScore > best.score) {
+            best = { start: candidate, score: popularityScore, bin, energy };
+          }
+        }
+
+        if (!best) {
+          const fallback = maxStart > 0 ? randFloat(0, maxStart) : 0;
+          best = { start: fallback, score: 0.1, bin: 0, energy: avgEnergy };
+        }
+
+        usedBins.set(best.bin, (usedBins.get(best.bin) || 0) + 1);
+        recentStarts.push(best.start);
+        if (recentStarts.length > 36) recentStarts.shift();
+
+        const transitionPool = best.energy > avgEnergy * 1.06
+          ? ["slide-left","slide-right","zoom","blurfade","fade"]
+          : ["fade","wipe","blurfade","slide-left","slide-right","fade"];
+
+        plan.push({
+          start: Number(best.start.toFixed(3)),
+          dur: Number(dur.toFixed(3)),
+          transition: randChoice(transitionPool),
+          fxSeed: Math.random(),
+          audioRate: randFloat(popularMode ? 0.999 : 0.997, popularMode ? 1.001 : 1.003),
+          audioGain: randFloat(0.90, 0.97),
+          hue: randFloat(-8, 8),
+          sat: randFloat(1.01, popularMode ? 1.12 : 1.16),
+          contrast: randFloat(1.01, popularMode ? 1.10 : 1.14),
+          bright: randFloat(0.99, 1.02),
+          zoom: randFloat(1.0, popularMode ? 1.05 : 1.08),
+          blur: randFloat(0.0, 0.45),
+          flip: Math.random() < 0.02,
+          vignette: randFloat(0.0, 0.12),
+          scanlines: randFloat(0.00, 0.03),
+          tint: Math.random() < 0.35
+            ? `rgba(80,160,255,${randFloat(0.003,0.010).toFixed(3)})`
+            : `rgba(255,120,80,${randFloat(0.002,0.008).toFixed(3)})`
+        });
+
+        built += dur;
+      }
+
+      return plan;
+    }
+
+    function buildLongFormPlan(totalSec, sourceDuration, maxSlices) {
+      const popularMode = el.creativeMode.value === "popularAuto";
+      const plan = [];
+      const longChoices = expandSliceChoicesForDuration([8,10,12,16,20,24], totalSec);
+      let built = 0;
+      let cursor = 0;
+      const overlap = 0.35;
+
+      while (built < totalSec - 0.1 && plan.length < maxSlices) {
+        let dur = randChoice(longChoices);
+        if (built + dur > totalSec) dur = Math.max(4, totalSec - built);
+        if (cursor + dur > sourceDuration - 0.05) cursor = Math.max(0, sourceDuration - dur - 0.05);
+
+        const energy = energyAtTime(audioAnalysis.sectionMap, cursor);
+        plan.push({
+          start: Number(cursor.toFixed(3)),
+          dur: Number(dur.toFixed(3)),
+          transition: randChoice(["fade","fade","wipe","blurfade","slide-left"]),
+          fxSeed: Math.random(),
+          audioRate: randFloat(0.999, 1.001),
+          audioGain: randFloat(0.91, 0.97),
+          hue: randFloat(-6, 6),
+          sat: randFloat(1.01, popularMode ? 1.08 : 1.12),
+          contrast: randFloat(1.01, popularMode ? 1.08 : 1.12),
+          bright: randFloat(0.995, 1.015),
+          zoom: randFloat(1.0, 1.04),
+          blur: randFloat(0.0, 0.25),
+          flip: false,
+          vignette: randFloat(0.0, 0.10),
+          scanlines: randFloat(0.00, 0.02),
+          tint: energy > 0.6
+            ? `rgba(255,180,80,${randFloat(0.001,0.006).toFixed(3)})`
+            : `rgba(80,160,255,${randFloat(0.001,0.006).toFixed(3)})`
+        });
+
+        built += dur;
+        cursor += Math.max(1, dur - overlap);
+        if (cursor >= sourceDuration - 2) cursor = 0;
+      }
+
+      return plan;
+    }
+
+    async function ensureSourceLoaded(file) {
+      currentFile = file;
+      if (currentFileURL) {
+        URL.revokeObjectURL(currentFileURL);
+        currentFileURL = null;
+      }
+      currentFileURL = URL.createObjectURL(file);
+      el.sourceVideo.src = currentFileURL;
+      el.sourceVideo.load();
+
+      await new Promise((resolve, reject) => {
+        el.sourceVideo.onloadedmetadata = () => resolve();
+        el.sourceVideo.onerror = () => reject(new Error("Could not load selected source video."));
+      });
+
+      el.statInput.textContent = Number.isFinite(el.sourceVideo.duration) ? `${el.sourceVideo.duration.toFixed(1)}s` : "unknown";
+    }
+
+    async function decodeSourceAudio(file) {
+      markPhase("decode audio");
+      log("Decoding source audio...");
+      const arrayBuffer = await file.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      try {
+        decodedAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+        audioAnalysis = analyzeAudioStructure(decodedAudioBuffer);
+        el.statPulse.textContent = `${audioAnalysis.pulseSec.toFixed(2)}s`;
+        el.statPopularity.textContent = `${Math.round((el.creativeMode.value === "popularAuto" ? trendAnalysis.popularityBias : audioAnalysis.popularityBias) * 100)}%`;
+        log(`Decoded source audio: ${decodedAudioBuffer.duration.toFixed(2)}s, ${decodedAudioBuffer.numberOfChannels} ch @ ${decodedAudioBuffer.sampleRate}Hz`);
+        log(`Adaptive pulse estimate: ${audioAnalysis.pulseSec.toFixed(3)}s`);
+        log(`Transient anchors: ${audioAnalysis.transients.length}`);
+      } catch (err) {
+        decodedAudioBuffer = null;
+        audioAnalysis = {
+          pulseSec: 0.5,
+          transients: [],
+          energyWindows: [],
+          sectionMap: [],
+          popularityBias: 0.5
+        };
+        el.statPulse.textContent = "—";
+        log(`Audio decode failed, synthetic fallback will be used: ${String(err?.message || err)}`, "warn");
+      } finally {
+        await audioCtx.close();
+      }
+    }
+
+    function captureCurrentFrame(renderW, renderH) {
+      prevFrameCanvas.width = renderW;
+      prevFrameCanvas.height = renderH;
+      prevFrameCtx.clearRect(0, 0, renderW, renderH);
+      prevFrameCtx.drawImage(el.previewCanvas, 0, 0, renderW, renderH);
+    }
+
+    function drawScanlines(w, h, alpha) {
+      if (alpha <= 0.001) return;
+      ctx2d.save();
+      ctx2d.globalAlpha = alpha;
+      ctx2d.fillStyle = "rgba(0,0,0,0.42)";
+      for (let y = 0; y < h; y += 4) ctx2d.fillRect(0, y, w, 1);
+      ctx2d.restore();
+    }
+
+    function drawVignette(w, h, strength) {
+      if (strength <= 0.001) return;
+      const grad = ctx2d.createRadialGradient(
+        w * 0.5, h * 0.5, Math.min(w, h) * 0.20,
+        w * 0.5, h * 0.5, Math.max(w, h) * 0.65
+      );
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, `rgba(0,0,0,${strength.toFixed(3)})`);
+      ctx2d.save();
+      ctx2d.fillStyle = grad;
+      ctx2d.fillRect(0, 0, w, h);
+      ctx2d.restore();
+    }
+
+    function drawVideoStyled(srcVideo, clip, localProgress, effectAmount, renderW, renderH, alpha = 1) {
+      const seed = clip.fxSeed || 0.5;
+      const pulse = 0.5 + 0.5 * Math.sin(localProgress * 6 + seed * 11);
+      const shake = effectAmount * (0.05 + 0.09 * pulse);
+
+      const blurPx = (clip.blur * effectAmount * (0.10 + 0.22 * pulse)).toFixed(2);
+      const hue = (clip.hue * effectAmount).toFixed(2);
+      const sat = (1 + (clip.sat - 1) * effectAmount).toFixed(2);
+      const contrast = (1 + (clip.contrast - 1) * effectAmount).toFixed(2);
+      const bright = (1 + (clip.bright - 1) * effectAmount).toFixed(2);
+
+      const zoomBase = 1 + (clip.zoom - 1) * (0.10 + 0.32 * pulse) * effectAmount;
+      const jitterX = (Math.sin(localProgress * 10 + seed * 30) * 0.7 + Math.cos(localProgress * 7 + seed * 15) * 0.5) * shake;
+      const jitterY = (Math.cos(localProgress * 8 + seed * 21) * 0.5) * shake;
+
+      let drawX = renderW * 0.5 + jitterX;
+      let drawY = renderH * 0.5 + jitterY;
+      let drawW = renderW * zoomBase;
+      let drawH = renderH * zoomBase;
+
+      ctx2d.save();
+      ctx2d.globalAlpha = alpha;
+      ctx2d.filter = `blur(${blurPx}px) saturate(${sat}) contrast(${contrast}) brightness(${bright}) hue-rotate(${hue}deg)`;
+
+      if (clip.flip) {
+        ctx2d.translate(renderW, 0);
+        ctx2d.scale(-1, 1);
+        drawX = renderW - drawX;
+      }
+
+      ctx2d.drawImage(srcVideo, drawX - drawW / 2, drawY - drawH / 2, drawW, drawH);
+      ctx2d.restore();
+
+      ctx2d.save();
+      ctx2d.globalAlpha = alpha * 0.08 * effectAmount;
+      ctx2d.fillStyle = clip.tint;
+      ctx2d.fillRect(0, 0, renderW, renderH);
+      ctx2d.restore();
+
+      drawScanlines(renderW, renderH, clip.scanlines * (0.14 + 0.18 * effectAmount));
+      drawVignette(renderW, renderH, clip.vignette * (0.22 + 0.26 * effectAmount));
+    }
+
+    function drawTransitionBlend(currentVideo, nextVideo, currentClip, nextClip, localProgress, transT, mode, renderW, renderH, fxStrength) {
+      const tt = easeInOut(clamp(transT, 0, 1));
+
+      if (mode === "fade") {
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt);
+        drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, tt);
+        return;
+      }
+
+      if (mode === "wipe") {
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1);
+        ctx2d.save();
+        ctx2d.beginPath();
+        ctx2d.rect(0, 0, renderW * tt, renderH);
+        ctx2d.clip();
+        drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, 1);
+        ctx2d.restore();
+        return;
+      }
+
+      if (mode === "slide-left") {
+        ctx2d.save();
+        ctx2d.translate(-renderW * 0.12 * tt, 0);
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt * 0.18);
+        ctx2d.restore();
+
+        ctx2d.save();
+        ctx2d.translate(renderW * (1 - tt) * 0.12, 0);
+        drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, tt);
+        ctx2d.restore();
+        return;
+      }
+
+      if (mode === "slide-right") {
+        ctx2d.save();
+        ctx2d.translate(renderW * 0.12 * tt, 0);
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt * 0.18);
+        ctx2d.restore();
+
+        ctx2d.save();
+        ctx2d.translate(-renderW * (1 - tt) * 0.12, 0);
+        drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, tt);
+        ctx2d.restore();
+        return;
+      }
+
+      if (mode === "zoom") {
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt);
+        ctx2d.save();
+        const z = 1.05 - tt * 0.05;
+        const w = renderW * z;
+        const h = renderH * z;
+        ctx2d.globalAlpha = tt;
+        ctx2d.drawImage(nextVideo, (renderW - w)/2, (renderH - h)/2, w, h);
+        ctx2d.restore();
+        return;
+      }
+
+      if (mode === "blurfade") {
+        ctx2d.save();
+        ctx2d.filter = `blur(${(1 - tt) * 1.4}px)`;
+        drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt);
+        ctx2d.restore();
+        ctx2d.save();
+        ctx2d.filter = `blur(${tt < 0.5 ? (1 - tt) * 0.8 : 0}px)`;
+        drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, tt);
+        ctx2d.restore();
+        return;
+      }
+
+      drawVideoStyled(currentVideo, currentClip, localProgress, fxStrength, renderW, renderH, 1 - tt);
+      drawVideoStyled(nextVideo, nextClip, 0, fxStrength, renderW, renderH, tt);
+    }
+
+    function makePooledVideo() {
+      const v = document.createElement("video");
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = "auto";
+      v.crossOrigin = "anonymous";
+      v.src = currentFileURL;
+      return v;
+    }
+
+    async function waitForVideoMetadata(video, timeoutMs = 12000) {
+      if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) return;
+      await withTimeout(new Promise((resolve, reject) => {
+        const onLoaded = () => { cleanup(); resolve(); };
+        const onError = () => { cleanup(); reject(new Error("Video metadata load failed.")); };
+        const cleanup = () => {
+          video.removeEventListener("loadedmetadata", onLoaded);
+          video.removeEventListener("error", onError);
+        };
+        video.addEventListener("loadedmetadata", onLoaded, { once: true });
+        video.addEventListener("error", onError, { once: true });
+        video.load();
+      }), timeoutMs, "video metadata");
+    }
+
+    async function safeSeekVideo(video, timeSec, timeoutMs = 8000) {
+      const target = clamp(timeSec, 0, Math.max(0, (video.duration || 0) - 0.05));
+      if (Math.abs((video.currentTime || 0) - target) < 0.03) return;
+      await withTimeout(new Promise((resolve, reject) => {
+        const onSeeked = () => { cleanup(); resolve(); };
+        const onError = () => { cleanup(); reject(new Error("Video seek failed.")); };
+        const cleanup = () => {
+          video.removeEventListener("seeked", onSeeked);
+          video.removeEventListener("error", onError);
+        };
+        video.addEventListener("seeked", onSeeked, { once: true });
+        video.addEventListener("error", onError, { once: true });
+        video.currentTime = target;
+      }), timeoutMs, "video seek");
+    }
+
+    async function safePlayVideo(video, timeoutMs = 5000) {
+      await withTimeout(video.play(), timeoutMs, "video play");
+    }
+
+    async function prepareVideoPool() {
+      const a = makePooledVideo();
+      const b = makePooledVideo();
+      await waitForVideoMetadata(a, 12000);
+      await waitForVideoMetadata(b, 12000);
+      return [a, b];
+    }
+
+    function destroyVideoPool(pool) {
+      for (const v of pool || []) {
+        try { v.pause(); } catch {}
+        try { v.removeAttribute("src"); } catch {}
+        try { v.load(); } catch {}
+      }
+    }
+
+    async function rebuildVideoInPool(video) {
+      try { video.pause(); } catch {}
+      try { video.removeAttribute("src"); } catch {}
+      try { video.load(); } catch {}
+      video.src = currentFileURL;
+      await waitForVideoMetadata(video, 12000);
+      return video;
+    }
+
+    function measurePeak(buffer) {
+      let peak = 0;
+      for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < data.length; i++) {
+          const a = Math.abs(data[i]);
+          if (a > peak) peak = a;
+        }
+      }
+      return peak;
+    }
+
+    function normalizeAudioBufferInPlace(buffer, targetPeak = 0.84) {
+      const peak = measurePeak(buffer);
+      if (!peak || peak <= 0) return { peakBefore: peak || 0, gainApplied: 1 };
+      const gain = clamp(targetPeak / peak, 0.15, 1.25);
+      if (Math.abs(gain - 1) < 0.0001) return { peakBefore: peak, gainApplied: 1 };
+      for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < data.length; i++) data[i] *= gain;
+      }
+      return { peakBefore: peak, gainApplied: gain };
+    }
+
+    async function initializeEngine() {
+      if (!currentFile && el.inputFile.files?.length) currentFile = el.inputFile.files[0];
+      if (!el.inputFile.files?.length && !currentFile) {
+        log("Choose an input video first.", "warn");
+        return;
+      }
+
+      try {
+        markEngineState("loading");
+        markPhase("prepare");
+
+        if (el.creativeMode.value === "popularAuto") {
+          await analyzeTrendSource();
+        }
+
+        setProgress(5, "Initialize", "Loading source metadata...");
+        await ensureSourceLoaded(currentFile || el.inputFile.files[0]);
+
+        setProgress(28, "Initialize", "Decoding source audio...");
+        await decodeSourceAudio(currentFile || el.inputFile.files[0]);
+
+        setProgress(60, "Initialize", "Preparing canvas size...");
+        const size = getRenderSize(Number(el.renderWidth.value || 1280));
+        el.previewCanvas.width = size.w;
+        el.previewCanvas.height = size.h;
+        prevFrameCanvas.width = size.w;
+        prevFrameCanvas.height = size.h;
+        ctx2d.fillStyle = "#000";
+        ctx2d.fillRect(0, 0, size.w, size.h);
+
+        setProgress(100, "Initialize", "Engine ready.");
+        markEngineState("done");
+        markPhase("done");
+        engineReady = true;
+        el.renderBtn.disabled = false;
+        log("Engine initialized successfully.");
+      } catch (err) {
+        engineReady = false;
+        el.renderBtn.disabled = true;
+        markEngineState("error");
+        markPhase("error");
+        setProgress(0, "Initialize", "Initialize failed.");
+        log(`Initialize failed: ${String(err?.stack || err?.message || err)}`, "error");
+      }
+    }
+
+    async function createRenderedAudioBuffer(plan, targetSec, transitionSec, genresText, stylesText, lightAudio, masterAudio) {
+      const profile = getGenreProfile(genresText, stylesText);
+      const sampleRate = 48000;
+      const channels = decodedAudioBuffer ? Math.min(2, decodedAudioBuffer.numberOfChannels) : 2;
+      const offline = new OfflineAudioContext(channels, Math.ceil(targetSec * sampleRate), sampleRate);
+      const popularMode = el.creativeMode.value === "popularAuto";
+
+      if (!decodedAudioBuffer) {
+        for (let i = 0; i < plan.length; i++) {
+          const seg = plan[i];
+          const osc = offline.createOscillator();
+          const gain = offline.createGain();
+          const startAt = seg._timelineStart;
+          const fade = Math.min(0.14, seg.dur * 0.12);
+          osc.type = "triangle";
+          osc.frequency.value = 160;
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.linearRampToValueAtTime(0.010, startAt + fade);
+          gain.gain.setValueAtTime(0.010, startAt + Math.max(fade, seg.dur - fade));
+          gain.gain.linearRampToValueAtTime(0.0001, startAt + seg.dur);
+          osc.connect(gain);
+          gain.connect(offline.destination);
+          osc.start(startAt);
+          osc.stop(startAt + seg.dur);
+        }
+        const rendered = await offline.startRendering();
+        normalizeAudioBufferInPlace(rendered, 0.82);
+        return rendered;
+      }
+
+      const sourceDur = decodedAudioBuffer.duration;
+
+      for (let i = 0; i < plan.length; i++) {
+        const seg = plan[i];
+        const segStart = seg._timelineStart;
+        const segEnd = segStart + seg.dur;
+        const fade = Math.min(Math.max(0.05, seg.dur * 0.08), popularMode ? 0.10 : 0.14);
+
+        const snapStart = nearestTransient(audioAnalysis.transients, seg.start, sourceDur);
+        const offset = clamp(snapStart, 0, Math.max(0, sourceDur - seg.dur - 0.03));
+
+        const srcMain = offline.createBufferSource();
+        srcMain.buffer = decodedAudioBuffer;
+        srcMain.playbackRate.value = seg.audioRate;
+
+        const hp = offline.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 26;
+
+        const tone = offline.createBiquadFilter();
+        tone.type = profile.filterType;
+        tone.frequency.value = profile.filterFreq;
+        tone.Q.value = 0.22;
+
+        const comp = offline.createDynamicsCompressor();
+        comp.threshold.value = popularMode ? -25 : -24;
+        comp.knee.value = 24;
+        comp.ratio.value = lightAudio ? 1.15 : 1.22;
+        comp.attack.value = 0.018;
+        comp.release.value = 0.22;
+
+        const gain = offline.createGain();
+        const amp = seg.audioGain * profile.softGain;
+
+        gain.gain.setValueAtTime(0.0001, segStart);
+        gain.gain.linearRampToValueAtTime(amp, segStart + fade);
+        gain.gain.setValueAtTime(amp, Math.max(segStart + fade, segEnd - fade));
+        gain.gain.linearRampToValueAtTime(0.0001, segEnd);
+
+        srcMain.connect(hp);
+        hp.connect(tone);
+        tone.connect(comp);
+        comp.connect(gain);
+        gain.connect(offline.destination);
+
+        srcMain.start(segStart, offset, seg.dur);
+        srcMain.stop(segEnd + 0.02);
+
+        if (!popularMode && !lightAudio && Math.random() < 0.02 && seg.dur >= 8) {
+          const echo = offline.createDelay(0.16);
+          const echoGain = offline.createGain();
+          const echoSrc = offline.createBufferSource();
+          echoSrc.buffer = decodedAudioBuffer;
+          echoSrc.playbackRate.value = seg.audioRate;
+          echo.delayTime.value = randFloat(0.025, 0.045);
+          echoGain.gain.value = Math.min(0.004, profile.delayWet);
+
+          echoSrc.connect(echo);
+          echo.connect(echoGain);
+          echoGain.connect(offline.destination);
+          echoSrc.start(segStart + 0.03, offset, Math.min(seg.dur * 0.35, seg.dur - 0.05));
+          echoSrc.stop(segStart + Math.min(seg.dur * 0.35, seg.dur - 0.05) + 0.05);
+        }
+      }
+
+      const rendered = await offline.startRendering();
+      const norm = normalizeAudioBufferInPlace(rendered, popularMode ? 0.80 : 0.84);
+      log(`Audio peak before normalize: ${norm.peakBefore.toFixed(4)}, gain applied: ${norm.gainApplied.toFixed(4)}`);
+      return rendered;
+    }
+
+    function buildAudioPlaybackGraph(audioCtx, renderedAudio, mediaDest, genresText, stylesText, masterAudio, lightAudio) {
+      const profile = getGenreProfile(genresText, stylesText);
+      const popularMode = el.creativeMode.value === "popularAuto";
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = renderedAudio;
+
+      const inputGain = audioCtx.createGain();
+      inputGain.gain.value = popularMode ? 0.90 : 0.96;
+
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 24;
+
+      const lowShelf = audioCtx.createBiquadFilter();
+      lowShelf.type = "lowshelf";
+      lowShelf.frequency.value = 105;
+      lowShelf.gain.value = lightAudio ? Math.max(0.35, profile.lowBoost - 0.5) : Math.max(0.45, profile.lowBoost - 0.2);
+
+      const mudCut = audioCtx.createBiquadFilter();
+      mudCut.type = "peaking";
+      mudCut.frequency.value = 260;
+      mudCut.Q.value = 1.0;
+      mudCut.gain.value = clamp(profile.midCut, -1.4, -0.4);
+
+      const body = audioCtx.createBiquadFilter();
+      body.type = "peaking";
+      body.frequency.value = 1400;
+      body.Q.value = 0.75;
+      body.gain.value = 0.12;
+
+      const highs = audioCtx.createBiquadFilter();
+      highs.type = "highshelf";
+      highs.frequency.value = 7200;
+      highs.gain.value = profile.highLift;
+
+      let tail = highs;
+
+      if (masterAudio) {
+        const comp = audioCtx.createDynamicsCompressor();
+        comp.threshold.value = -25;
+        comp.knee.value = 24;
+        comp.ratio.value = lightAudio ? 1.15 : 1.22;
+        comp.attack.value = 0.018;
+        comp.release.value = 0.24;
+        tail.connect(comp);
+        tail = comp;
+
+        const shaper = audioCtx.createWaveShaper();
+        shaper.curve = makeSoftClipCurve(lightAudio ? 0.02 : 0.03);
+        shaper.oversample = "2x";
+        tail.connect(shaper);
+        tail = shaper;
+      }
+
+      const master = audioCtx.createGain();
+      master.gain.value = popularMode ? 0.80 : 0.86;
+
+      source.connect(inputGain);
+      inputGain.connect(hp);
+      hp.connect(lowShelf);
+      lowShelf.connect(mudCut);
+      mudCut.connect(body);
+      body.connect(highs);
+      tail.connect(master);
+
+      master.connect(mediaDest);
+
+      const ended = new Promise(resolve => { source.onended = resolve; });
+      return { source, ended };
+    }
+
+    function chooseMimeType(browserSafe, effectiveDuration) {
+      const longRun = effectiveDuration >= 40 * 60;
+      const candidates = longRun || browserSafe
+        ? [
+            "video/webm;codecs=vp8,opus",
+            "video/webm;codecs=vp9,opus",
+            "video/webm"
+          ]
+        : [
+            "video/webm;codecs=vp9,opus",
+            "video/webm;codecs=vp8,opus",
+            "video/webm"
+          ];
+
+      for (const c of candidates) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+      }
+      return "";
+    }
+
+    async function unlockLiveAudioNow() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      log("Created live AudioContext.");
+
+      try {
+        await withTimeout(audioCtx.resume(), 3000, "AudioContext resume");
+        log(`AudioContext state after resume: ${audioCtx.state}`);
+      } catch (err) {
+        log(`AudioContext resume stalled or failed: ${String(err?.message || err)}`, "warn");
+      }
+
+      if (audioCtx.state !== "running") {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.00001;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.02);
+          await delay(50);
+          await withTimeout(audioCtx.resume(), 2000, "AudioContext second resume");
+          log(`AudioContext state after unlock pulse: ${audioCtx.state}`);
+        } catch (err) {
+          log(`Audio unlock pulse failed: ${String(err?.message || err)}`, "warn");
+        }
+      }
+
+      return audioCtx;
+    }
+
+    function createBackupClip(plan, sourceDuration, currentIndex) {
+      const base = plan[currentIndex] || { dur: 6 };
+      const dur = base.dur || 6;
+      const start = randFloat(0, Math.max(0, sourceDuration - dur - 0.2));
+      return {
+        ...base,
+        start,
+        transition: randChoice(["fade","wipe","slide-left","slide-right","blurfade"]),
+        fxSeed: Math.random()
+      };
+    }
+
+    async function prepareClipOnVideo(video, clip) {
+      await waitForVideoMetadata(video, 9000);
+      await safeSeekVideo(video, clip.start, 6000);
+      try { await safePlayVideo(video, 3000); } catch {}
+      try { video.pause(); } catch {}
+    }
+
+    async function frameWait(video, fps) {
+      if (typeof video.requestVideoFrameCallback === "function") {
+        await new Promise(resolve => video.requestVideoFrameCallback(() => resolve()));
+      } else {
+        await delay(Math.max(1, Math.round(1000 / Math.max(12, fps))));
+      }
+    }
+
+    async function cleanupActiveRun(runState) {
+      if (!runState) return;
+
+      try {
+        if (runState.flushTimer) clearInterval(runState.flushTimer);
+      } catch {}
+
+      try {
+        if (runState.recorder && runState.recorder.state !== "inactive") {
+          try { runState.recorder.stop(); } catch {}
+        }
+      } catch {}
+
+      try {
+        if (runState.audioGraph?.source) {
+          try { runState.audioGraph.source.stop(0); } catch {}
+        }
+      } catch {}
+
+      try {
+        if (runState.audioCtx && runState.audioCtx.state !== "closed") {
+          await runState.audioCtx.close().catch(() => {});
+        }
+      } catch {}
+
+      try {
+        if (runState.streams) {
+          for (const s of runState.streams) {
+            try {
+              for (const tr of s.getTracks()) tr.stop();
+            } catch {}
+          }
+        }
+      } catch {}
+
+      try {
+        destroyVideoPool(runState.pool);
+      } catch {}
+
+      activeRun = null;
+    }
+
+    async function renderMovie() {
+      if (!engineReady) {
+        log("Initialize the engine first.", "warn");
+        return;
+      }
+      if (!currentFile || !el.inputFile.files?.length) {
+        log("Choose an input video first.", "warn");
+        return;
+      }
+
+      if (activeRun) {
+        log("Cleaning previous run state before starting a new render...");
+        await cleanupActiveRun(activeRun);
+      }
+
+      renderSessionId += 1;
+      const sessionId = renderSessionId;
+      stopRequested = false;
+      el.renderBtn.disabled = true;
+      el.stopBtn.disabled = false;
+      el.downloadWrap.innerHTML = "";
+      markEngineState("working");
+      markPhase("planning");
+      setProgress(0, "Render", "Preparing render...");
+      el.resultVideo.classList.add("hidden");
+      el.previewCanvas.classList.remove("hidden");
+
+      let audioCtx = null;
+      let pool = null;
+      let recorder = null;
+      let canvasStream = null;
+      let combinedStream = null;
+      let mediaDest = null;
+      let audioGraph = null;
+      const chunks = [];
+
+      try {
+        const sourceDuration = Number(el.sourceVideo.duration || 0);
+        if (!sourceDuration || sourceDuration < 1) {
+          throw new Error("Source duration is invalid.");
+        }
+
+        if (el.creativeMode.value === "popularAuto" && !trendAnalysis.fetched) {
+          await analyzeTrendSource();
+        }
+
+        const targetMinutes = Math.max(1, Number(el.targetMinutes.value || 3));
+        const requestedTargetSec = targetMinutes * 60;
+        const effectiveRequestedDuration = el.matchSourceLength.checked
+          ? Math.max(sourceDuration, requestedTargetSec)
+          : requestedTargetSec;
+
+        const fps = Math.max(12, Number(el.fps.value || 24));
+        const transitionSec = clamp(Number(el.transitionSec.value || 0.45), 0.15, 1.4);
+        const maxSlicesInput = Math.max(4, Number(el.maxSlices.value || 140));
+        const fxStrength = Number(el.fxStrength.value || 0.40);
+        const antiLoop = !!el.antiLoop.checked;
+        const masterAudio = !!el.masterAudio.checked;
+        const lightAudio = !!el.lightAudio.checked || el.creativeMode.value === "popularAuto";
+        const browserSafe = !!el.browserSafe.checked;
+        const adaptiveHit = !!el.adaptiveHit.checked;
+        const longFormSafe = !!el.longFormSafe.checked;
+        const outputName = sanitizeFilename(el.outputName.value || "mvx_remix.webm");
+        const genresText = el.genres.value || "";
+        const stylesText = el.styles.value || "";
+
+        const rawChoices = parseFloatList(el.sliceSet.value);
+        const choices = expandSliceChoicesForDuration(rawChoices.length ? rawChoices : [3,4,5,8,10,12], effectiveRequestedDuration);
+        const rawWeights = parseFloatList(el.sliceWeights.value);
+        const normalizedWeights = normalizeWeights(rawWeights, rawChoices.length || choices.length);
+        const weights = choices.length === (rawChoices.length || choices.length)
+          ? normalizedWeights
+          : normalizeWeights(Array.from({ length: choices.length }, (_, i) => 1 + (choices.length - i) * 0.02), choices.length);
+
+        const renderSize = getRenderSize(Number(el.renderWidth.value || 1280));
+        el.previewCanvas.width = renderSize.w;
+        el.previewCanvas.height = renderSize.h;
+        prevFrameCanvas.width = renderSize.w;
+        prevFrameCanvas.height = renderSize.h;
+
+        let autoSliceCap = maxSlicesInput;
+        if (effectiveRequestedDuration >= 3 * 60 * 60) autoSliceCap = Math.min(maxSlicesInput, 420);
+        else if (effectiveRequestedDuration >= 90 * 60) autoSliceCap = Math.min(maxSlicesInput, 300);
+        else if (effectiveRequestedDuration >= 40 * 60) autoSliceCap = Math.min(maxSlicesInput, 220);
+
+        let plan;
+        const shouldUseLongForm = longFormSafe && (sourceDuration >= 50 * 60 || effectiveRequestedDuration >= 50 * 60);
+        if (shouldUseLongForm) {
+          plan = buildLongFormPlan(effectiveRequestedDuration, sourceDuration, autoSliceCap);
+          log("Using long-form sequential planner for stability.");
+        } else {
+          plan = buildAdaptivePlan(
+            effectiveRequestedDuration,
+            sourceDuration,
+            choices,
+            weights,
+            antiLoop,
+            autoSliceCap,
+            adaptiveHit
+          );
+          log("Using adaptive coverage planner.");
+        }
+
+        if (!plan.length) throw new Error("No slices were planned.");
+
+        let timelinePos = 0;
+        for (let i = 0; i < plan.length; i++) {
+          plan[i]._timelineStart = timelinePos;
+          timelinePos += plan[i].dur;
+        }
+
+        const trueOutputDuration = timelinePos;
+        el.statInput.textContent = `${sourceDuration.toFixed(1)}s`;
+        el.statSlices.textContent = String(plan.length);
+        el.statTarget.textContent = `${trueOutputDuration.toFixed(0)}s`;
+        el.statPopularity.textContent = `${Math.round((el.creativeMode.value === "popularAuto" ? trendAnalysis.popularityBias : audioAnalysis.popularityBias) * 100)}%`;
+
+        log(`Selected file: ${currentFile.name}`);
+        log(`Browser duration: ${sourceDuration.toFixed(2)}s`);
+        log(`Requested minimum output: ${requestedTargetSec.toFixed(1)}s`);
+        log(`Effective output duration: ${trueOutputDuration.toFixed(1)}s`);
+        log(`Planned slices: ${plan.length}`);
+        log(`Transition seconds: ${transitionSec.toFixed(2)}`);
+        log(`FX strength: ${fxStrength}`);
+        log(`Creative mode: ${el.creativeMode.value}`);
+        log(`Long-form safe mode: ${shouldUseLongForm ? "ON" : "OFF"}`);
+
+        if (el.matchSourceLength.checked && requestedTargetSec < sourceDuration) {
+          log("Source-length match forced output up to source duration.");
+        }
+
+        if (el.creativeMode.value === "popularAuto") {
+          log(`Trend source used: ${trendAnalysis.sourceUrl || "fallback profile"}`);
+          log(`Trend derived genres: ${trendAnalysis.genres.join(", ")}`);
+          log(`Trend derived styles: ${trendAnalysis.styles.join(", ")}`);
+          log("Popular Auto Mode crackle fix active: lower gain + lighter shaping + no monitor routing + headroom normalize.");
+        }
+
+        if (debugEnabled()) {
+          plan.slice(0, 40).forEach((p, i) => {
+            log(`Slice ${i + 1}/${plan.length}: ss=${p.start.toFixed(3)} dur=${p.dur.toFixed(2)} transition=${p.transition}`);
+          });
+          if (plan.length > 40) log(`...${plan.length - 40} more slices omitted from log for brevity.`);
+        }
+
+        markPhase("unlock audio");
+        setProgress(3, "Render", "Unlocking live audio...");
+        audioCtx = await unlockLiveAudioNow();
+
+        markPhase("build audio");
+        setProgress(7, "Render", "Creating remixed audio track...");
+        const renderedAudio = await createRenderedAudioBuffer(plan, trueOutputDuration, transitionSec, genresText, stylesText, lightAudio, masterAudio);
+        log(`Audio remix ready: ${renderedAudio.duration.toFixed(2)}s`);
+
+        markPhase("prepare video pool");
+        setProgress(10, "Render", "Preparing video pool...");
+        pool = await prepareVideoPool();
+        let currentVideo = pool[0];
+        let nextVideo = pool[1];
+
+        await prepareClipOnVideo(currentVideo, plan[0]);
+        if (plan[1]) {
+          try {
+            await prepareClipOnVideo(nextVideo, plan[1]);
+          } catch (err) {
+            log(`Initial next clip prepare failed, using backup: ${String(err?.message || err)}`, "warn");
+            plan[1] = createBackupClip(plan, sourceDuration, 1);
+            await prepareClipOnVideo(nextVideo, plan[1]);
+          }
+        }
+
+        markPhase("record");
+        setProgress(12, "Render", "Preparing recorder...");
+
+        canvasStream = el.previewCanvas.captureStream(fps);
+        log(`Canvas stream video tracks: ${canvasStream.getVideoTracks().length}`);
+
+        if (audioCtx.state !== "running") {
+          try {
+            await withTimeout(audioCtx.resume(), 1500, "late AudioContext resume");
+            log(`AudioContext state before graph: ${audioCtx.state}`);
+          } catch (err) {
+            log(`Late AudioContext resume failed: ${String(err?.message || err)}`, "warn");
+          }
+        }
+
+        mediaDest = audioCtx.createMediaStreamDestination();
+        audioGraph = buildAudioPlaybackGraph(audioCtx, renderedAudio, mediaDest, genresText, stylesText, masterAudio, lightAudio);
+        await delay(20);
+
+        const audioTracks = mediaDest.stream.getAudioTracks();
+        if (audioTracks.length > 0 && audioCtx.state === "running") {
+          combinedStream = new MediaStream([
+            ...canvasStream.getVideoTracks(),
+            ...audioTracks
+          ]);
+          log(`Combined stream created. Video tracks=${combinedStream.getVideoTracks().length}, Audio tracks=${combinedStream.getAudioTracks().length}`);
+        } else {
+          combinedStream = canvasStream;
+          log("No usable live audio track available. Falling back to video-only recording.", "warn");
+        }
+
+        const mimeType = chooseMimeType(browserSafe, trueOutputDuration);
+        log(`Chosen mimeType: ${mimeType || "(browser default)"}`);
+
+        try {
+          recorder = new MediaRecorder(
+            combinedStream,
+            mimeType ? {
+              mimeType,
+              videoBitsPerSecond: trueOutputDuration >= 40 * 60
+                ? (browserSafe ? 2600000 : 3600000)
+                : (browserSafe ? 4200000 : 6500000),
+              audioBitsPerSecond: 128000
+            } : undefined
+          );
+          log("MediaRecorder constructed successfully.");
+        } catch (err) {
+          log(`MediaRecorder construction failed on combined stream: ${String(err?.message || err)}`, "warn");
+          recorder = new MediaRecorder(
+            canvasStream,
+            mimeType ? {
+              mimeType,
+              videoBitsPerSecond: trueOutputDuration >= 40 * 60
+                ? (browserSafe ? 2600000 : 3600000)
+                : (browserSafe ? 4200000 : 6500000)
+            } : undefined
+          );
+          combinedStream = canvasStream;
+          log("MediaRecorder fallback constructed with video-only canvas stream.");
+        }
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+
+        let recorderStoppedResolve;
+        const recorderStopped = new Promise(resolve => { recorderStoppedResolve = resolve; });
+        recorder.onstop = () => recorderStoppedResolve();
+
+        activeRun = {
+          recorder,
+          audioCtx,
+          audioGraph,
+          pool,
+          streams: unique([combinedStream, canvasStream, mediaDest?.stream].filter(Boolean)),
+          flushTimer: null
+        };
+
+        recorder.start(2000);
+        log(`Recorder started with mimeType=${recorder.mimeType || "(default)"}`);
+
+        activeRun.flushTimer = setInterval(() => {
+          try {
+            if (recorder && recorder.state === "recording") recorder.requestData();
+          } catch {}
+        }, 15000);
+
+        audioGraph.source.start();
+        const audioPlaybackPromise = audioGraph.ended;
+
+        ctx2d.fillStyle = "#000";
+        ctx2d.fillRect(0, 0, renderSize.w, renderSize.h);
+        captureCurrentFrame(renderSize.w, renderSize.h);
+
+        const renderStartClock = performance.now();
+
+        for (let i = 0; i < plan.length; i++) {
+          if (stopRequested || sessionId !== renderSessionId) break;
+
+          markPhase(`slice ${i + 1}/${plan.length}`);
+          const clip = plan[i];
+          const nextClip = plan[i + 1] || null;
+
+          if (i > 0) {
+            try {
+              await prepareClipOnVideo(currentVideo, clip);
+            } catch (err) {
+              log(`Slice ${i + 1} prepare failed, rebuilding pool video: ${String(err?.message || err)}`, "warn");
+              currentVideo = await rebuildVideoInPool(currentVideo);
+              try {
+                await prepareClipOnVideo(currentVideo, clip);
+              } catch (err2) {
+                log(`Slice ${i + 1} backup substitution engaged: ${String(err2?.message || err2)}`, "warn");
+                plan[i] = createBackupClip(plan, sourceDuration, i);
+                await prepareClipOnVideo(currentVideo, plan[i]);
+              }
+            }
+          }
+
+          if (nextClip) {
+            prepareClipOnVideo(nextVideo, nextClip).catch(async (err) => {
+              log(`Slice ${i + 2} prefetch failed, rebuilding next video: ${String(err?.message || err)}`, "warn");
+              try {
+                nextVideo = await rebuildVideoInPool(nextVideo);
+                await prepareClipOnVideo(nextVideo, nextClip);
+              } catch (err2) {
+                log(`Slice ${i + 2} backup substitution engaged: ${String(err2?.message || err2)}`, "warn");
+                plan[i + 1] = createBackupClip(plan, sourceDuration, i + 1);
+                try { await prepareClipOnVideo(nextVideo, plan[i + 1]); } catch {}
+              }
+            });
+          }
+
+          try { await safePlayVideo(currentVideo, 3000); } catch {}
+          if (nextClip) {
+            try { await safePlayVideo(nextVideo, 2500); } catch {}
+          }
+
+          const segStartClock = performance.now();
+          const segDurMs = clip.dur * 1000;
+          const transMs = nextClip ? Math.min(transitionSec * 1000, clip.dur * 280) : 0;
+          let lastCheckpointBucket = -1;
+
+          while (true) {
+            if (stopRequested || sessionId !== renderSessionId) break;
+
+            const now = performance.now();
+            const elapsedMs = now - segStartClock;
+            const localT = elapsedMs / 1000;
+            const localProgress = clamp(localT / Math.max(0.001, clip.dur), 0, 1);
+
+            ctx2d.fillStyle = "#000";
+            ctx2d.fillRect(0, 0, renderSize.w, renderSize.h);
+
+            const inTransition = nextClip && elapsedMs >= (segDurMs - transMs);
+            if (inTransition && nextClip) {
+              const transT = (elapsedMs - (segDurMs - transMs)) / Math.max(1, transMs);
+              drawTransitionBlend(
+                currentVideo,
+                nextVideo,
+                clip,
+                nextClip,
+                localProgress,
+                transT,
+                nextClip.transition,
+                renderSize.w,
+                renderSize.h,
+                fxStrength
+              );
+            } else {
+              drawVideoStyled(currentVideo, clip, localProgress, fxStrength, renderSize.w, renderSize.h, 1);
+            }
+
+            const totalElapsed = (now - renderStartClock) / 1000;
+            const overallPct = (totalElapsed / Math.max(0.001, trueOutputDuration)) * 100;
+            setProgress(overallPct, "Render", `Rendering slice ${i + 1}/${plan.length}...`);
+
+            const bucket = Math.floor(totalElapsed / 10);
+            if (debugEnabled() && bucket !== lastCheckpointBucket) {
+              lastCheckpointBucket = bucket;
+              log(`Frame checkpoint: slice=${i + 1}/${plan.length} t=${totalElapsed.toFixed(1)}s`);
+            }
+
+            if (elapsedMs >= segDurMs) break;
+            await frameWait(currentVideo, fps);
+          }
+
+          try { currentVideo.pause(); } catch {}
+          if (nextClip) {
+            try { nextVideo.pause(); } catch {}
+          }
+
+          captureCurrentFrame(renderSize.w, renderSize.h);
+
+          if (nextClip) {
+            const tmp = currentVideo;
+            currentVideo = nextVideo;
+            nextVideo = tmp;
+          }
+        }
+
+        markPhase("finalize");
+        setProgress(99, "Render", "Finalizing recording...");
+
+        try {
+          if (recorder && recorder.state === "recording") recorder.requestData();
+        } catch {}
+
+        try { recorder.stop(); } catch {}
+        await recorderStopped;
+        await audioPlaybackPromise.catch(() => {});
+
+        const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+        log(`Render complete. Output bytes: ${blob.size}`);
+
+        if (lastOutputURL) URL.revokeObjectURL(lastOutputURL);
+        lastOutputURL = URL.createObjectURL(blob);
+
+        el.resultVideo.src = lastOutputURL;
+        el.resultVideo.classList.remove("hidden");
+        el.previewCanvas.classList.add("hidden");
+        el.resultVideo.load();
+
+        el.downloadWrap.innerHTML = "";
+        const a = document.createElement("a");
+        a.className = "downloadLink";
+        a.href = lastOutputURL;
+        a.download = outputName.toLowerCase().endsWith(".webm") ? outputName : `${outputName}.webm`;
+        a.textContent = "Download rendered movie";
+        el.downloadWrap.appendChild(a);
+
+        markEngineState("done");
+        markPhase("done");
+        setProgress(100, "Render", stopRequested ? "Render stopped." : "Render complete.");
+      } catch (err) {
+        markEngineState("error");
+        markPhase("error");
+        log(`Render failed: ${String(err?.stack || err?.message || err)}`, "error");
+        setProgress(0, "Render", "Render failed.");
+      } finally {
+        await cleanupActiveRun(activeRun);
+        el.renderBtn.disabled = false;
+        el.stopBtn.disabled = true;
+      }
+    }
+
+    window.addEventListener("error", (e) => {
+      log(`[window:error] ${e?.error?.stack || e?.message || "Unknown window error"}`, "error");
+    });
+
+    window.addEventListener("unhandledrejection", (e) => {
+      log(`[promise:error] ${e?.reason?.stack || e?.reason || "Unhandled promise rejection"}`, "error");
+    });
+
+    el.inputFile.addEventListener("change", async () => {
+      if (!el.inputFile.files?.length) return;
+      try {
+        currentFile = el.inputFile.files[0];
+        await ensureSourceLoaded(currentFile);
+        log(`Selected file: ${currentFile.name}`);
+        log(`Detected browser metadata duration: ${Number(el.sourceVideo.duration || 0).toFixed(2)}s`);
+        engineReady = false;
+        el.renderBtn.disabled = true;
+        markEngineState("idle");
+        markPhase("waiting");
+        setProgress(0, "Initialize", "Choose Initialize Engine.");
+      } catch (err) {
+        log(`File select failed: ${String(err?.message || err)}`, "error");
+      }
+    });
+
+    el.creativeMode.addEventListener("change", async () => {
+      if (el.creativeMode.value === "popularAuto") {
+        await analyzeTrendSource();
+      }
+    });
+
+    el.analyzeTrendBtn.addEventListener("click", async () => {
+      await analyzeTrendSource();
+    });
+
+    el.initBtn.addEventListener("click", async () => {
+      await initializeEngine();
+    });
+
+    el.renderBtn.addEventListener("click", async () => {
+      await renderMovie();
+    });
+
+    el.stopBtn.addEventListener("click", () => {
+      stopRequested = true;
+      renderSessionId += 1;
+      log("Stop requested. Render will halt at the next safe point.", "warn");
+    });
+
+    el.clearLogBtn.addEventListener("click", clearLog);
+
+    setProgress(0, "Render", "Waiting.");
+    log("UI ready.");
+    log("Popular Auto Mode audio crackle fix enabled.");
+    log("Repeat-render cleanup enabled.");
+    log("Output duration can match or exceed source length.");
+    log("Long-form movie planner enabled.");
+    log("Live monitor routing removed during export to reduce static/crackling.");
+    log("Rendered audio headroom normalization enabled.");
+    log("Recorder periodic flush enabled for long movies.");
+  </script>
+</body>
+</html>
