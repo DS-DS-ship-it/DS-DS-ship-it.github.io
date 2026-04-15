@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="en" id="top">
+<head>
+  <meta charset="utf-8" />
+  <title>Fortiq Network — Built on AXIOM Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Fortiq Network — fortress-grade intelligence powered by AXIOM Core." />
+  <meta name="theme-color" content="#0a0d14" />
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#06080d;
+      --bg2:#0d1018;
+      --panel:rgba(16,20,31,.72);
+      --panel2:rgba(24,29,42,.88);
+      --line:rgba(255,215,99,.16);
+      --line2:rgba(255,255,255,.06);
+      --text:#f7f3e8;
+      --muted:#c8c0ad;
+      --gold:#ffd763;
+      --gold2:#ffb42c;
+      --gold3:#fff0b8;
+      --blue:#79b7ff;
+      --good:#93f0be;
+      --shadow:0 24px 70px rgba(0,0,0,.45);
+      --radius:24px;
+      --maxw:1260px;
+      --header-h:84px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:
+        radial-gradient(circle at 50% 16%, rgba(255,193,68,.18), transparent 24%),
+        radial-gradient(circle at 84% 10%, rgba(121,183,255,.12), transparent 18%),
+        linear-gradient(180deg, #06080d 0%, #0b0f17 48%, #07090f 100%);
+      color:var(--text);
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      overflow-x:hidden;
+      scroll-behavior:auto;
+    }
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 25% 75%, rgba(255,215,99,.05), transparent 24%),
+        radial-gradient(circle at 75% 65%, rgba(121,183,255,.05), transparent 22%);
+      z-index:0;
+    }
+
+    a{color:inherit;text-decoration:none}
+
+    .grid-bg{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.42;
+      background-image:
+        linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+      background-size:44px 44px;
+      mask-image:radial-gradient(circle at center, black 54%, transparent 96%);
+      animation:gridShift 24s linear infinite;
+      z-index:0;
+    }
+
+    @keyframes gridShift{
+      from{transform:translateY(0)}
+      to{transform:translateY(44px)}
+    }
+
+    .aurora{
+      position:fixed;
+      inset:-18%;
+      pointer-events:none;
+      filter:blur(54px);
+      opacity:.28;
+      background:
+        radial-gradient(circle at 20% 24%, rgba(255,185,70,.58), transparent 20%),
+        radial-gradient(circle at 74% 18%, rgba(255,224,130,.34), transparent 18%),
+        radial-gradient(circle at 58% 56%, rgba(98,165,255,.18), transparent 22%);
+      animation:auroraMove 13s ease-in-out infinite alternate;
+      z-index:0;
+    }
+
+    @keyframes auroraMove{
+      from{transform:translate3d(-1.5%, -1%, 0) scale(1)}
+      to{transform:translate3d(1.5%, 1%, 0) scale(1.08)}
+    }
+
+    .wrap{
+      width:min(calc(100% - 28px), var(--maxw));
+      margin:0 auto;
+      position:relative;
+      z-index:1;
+    }
+
+    .anchor-target,
+    section{
+      scroll-margin-top:calc(var(--header-h) + 18px);
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:50;
+      border-bottom:1px solid rgba(255,255,255,.05);
+      backdrop-filter:blur(16px);
+      background:linear-gradient(180deg, rgba(5,7,11,.86), rgba(5,7,11,.38));
+    }
+
+    .nav{
+      min-height:var(--header-h);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:14px 0;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .brand-badge{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      color:#140f00;
+      font-weight:900;
+      background:
+        radial-gradient(circle at 30% 25%, #fff4c5, transparent 28%),
+        linear-gradient(135deg, var(--gold3), var(--gold2) 56%, #7d4d00);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 10px 24px rgba(255,180,44,.22);
+    }
+
+    .nav-links{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .nav-links a{
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.02);
+      color:var(--muted);
+      transition:.22s ease;
+      font-size:.95rem;
+    }
+
+    .nav-links a:hover{
+      color:var(--text);
+      border-color:rgba(255,215,99,.26);
+      transform:translateY(-1px);
+    }
+
+    main{
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:34px;
+      align-items:center;
+      padding:56px 0 22px;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:9px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,215,99,.20);
+      background:rgba(255,208,84,.08);
+      color:#f6df98;
+      font-size:.92rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    h1{
+      margin:18px 0 14px;
+      font-size:clamp(2.6rem, 6vw, 5.4rem);
+      line-height:.96;
+      letter-spacing:-.045em;
+      max-width:12ch;
+    }
+
+    .grad{
+      background:linear-gradient(180deg, #fff9df 0%, #ffd763 50%, #ffac24 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:0 0 24px rgba(255,214,99,.18);
+    }
+
+    .lede{
+      font-size:1.08rem;
+      line-height:1.75;
+      color:var(--muted);
+      max-width:68ch;
+    }
+
+    .hero-actions{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:24px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      min-height:50px;
+      padding:0 18px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.08);
+      font-weight:800;
+      transition:.24s ease;
+      box-shadow:var(--shadow);
+      cursor:pointer;
+    }
+
+    .btn:hover{
+      transform:translateY(-2px) scale(1.01);
+      border-color:rgba(255,215,99,.30);
+    }
+
+    .btn.primary{
+      color:#150f00;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.55), transparent 22%),
+        linear-gradient(135deg, var(--gold3), var(--gold) 46%, var(--gold2) 78%, #8a5600);
+      border-color:rgba(255,226,152,.38);
+    }
+
+    .btn.secondary{
+      background:rgba(255,255,255,.035);
+      color:var(--text);
+    }
+
+    .ticker-row,
+    .proof-row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .chip{
+      padding:11px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.07);
+      color:var(--muted);
+      font-size:.96rem;
+    }
+
+    .chip strong{color:var(--text)}
+    .chip.good{
+      border-color:rgba(147,240,190,.18);
+      background:rgba(147,240,190,.06);
+    }
+
+    .coin-stage{
+      position:relative;
+      min-height:620px;
+      display:grid;
+      place-items:center;
+      isolation:isolate;
+    }
+
+    .coin-halo{
+      position:absolute;
+      width:min(72vw, 640px);
+      aspect-ratio:1;
+      border-radius:50%;
+      background:
+        radial-gradient(circle, rgba(255,215,99,.28) 0%, rgba(255,179,45,.08) 40%, transparent 68%);
+      filter:blur(10px);
+      animation:pulseGlow 4.2s ease-in-out infinite;
+    }
+
+    @keyframes pulseGlow{
+      0%,100%{transform:scale(.95);opacity:.68}
+      50%{transform:scale(1.08);opacity:1}
+    }
+
+    .orbit,
+    .orbit.orbit2{
+      position:absolute;
+      aspect-ratio:1;
+      border-radius:50%;
+      border:1px solid rgba(255,215,99,.16);
+      box-shadow:0 0 0 1px rgba(255,255,255,.02) inset, 0 0 30px rgba(255,180,45,.08);
+    }
+
+    .orbit{
+      width:min(68vw, 560px);
+      animation:spin 18s linear infinite;
+    }
+
+    .orbit2{
+      width:min(58vw, 480px);
+      animation:spinReverse 14s linear infinite;
+      opacity:.56;
+    }
+
+    .orbit::before,.orbit::after,
+    .orbit2::before,.orbit2::after{
+      content:"";
+      position:absolute;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background:radial-gradient(circle at 35% 35%, #fff7cf, var(--gold2));
+      box-shadow:0 0 18px rgba(255,212,92,.5);
+    }
+
+    .orbit::before{top:10%;left:14%}
+    .orbit::after{bottom:14%;right:12%}
+    .orbit2::before{top:48%;left:-7px}
+    .orbit2::after{top:18%;right:8%}
+
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+
+    @keyframes spinReverse{
+      from{transform:rotate(360deg)}
+      to{transform:rotate(0deg)}
+    }
+
+    .coin-float{
+      position:relative;
+      width:min(74vw, 560px);
+      aspect-ratio:1;
+      display:grid;
+      place-items:center;
+      animation:coinFloat 6.8s ease-in-out infinite;
+      filter:
+        drop-shadow(0 24px 50px rgba(0,0,0,.52))
+        drop-shadow(0 0 40px rgba(255,185,46,.24));
+    }
+
+    @keyframes coinFloat{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-16px)}
+    }
+
+    .coin-card{
+      position:relative;
+      width:100%;
+      height:100%;
+      display:grid;
+      place-items:center;
+      transform-style:preserve-3d;
+      transition:transform .18s ease;
+    }
+
+    .coin-card::before{
+      content:"";
+      position:absolute;
+      inset:-8%;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,233,169,.14), transparent 48%),
+        conic-gradient(from 0deg,
+          rgba(255,215,99,0),
+          rgba(255,215,99,.26),
+          rgba(255,215,99,0),
+          rgba(255,215,99,.24),
+          rgba(255,215,99,0));
+      filter:blur(12px);
+      animation:spin 16s linear infinite reverse;
+      z-index:-1;
+    }
+
+    .coin{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      border-radius:50%;
+      user-select:none;
+      -webkit-user-drag:none;
+      animation:coinBreath 4.8s ease-in-out infinite;
+    }
+
+    @keyframes coinBreath{
+      0%,100%{transform:scale(.986)}
+      50%{transform:scale(1.02)}
+    }
+
+    .scan{
+      position:absolute;
+      inset:10% 6%;
+      border-radius:50%;
+      overflow:hidden;
+      mix-blend-mode:screen;
+      opacity:.55;
+      pointer-events:none;
+    }
+
+    .scan::before{
+      content:"";
+      position:absolute;
+      inset:-20% 0;
+      background:linear-gradient(180deg, transparent, rgba(255,255,255,.26), transparent);
+      transform:translateY(-100%);
+      animation:scanner 3.8s ease-in-out infinite;
+    }
+
+    @keyframes scanner{
+      0%{transform:translateY(-100%)}
+      52%,100%{transform:translateY(100%)}
+    }
+
+    .particles{
+      position:absolute;
+      inset:0;
+      overflow:hidden;
+      pointer-events:none;
+    }
+
+    .spark{
+      position:absolute;
+      width:4px;
+      height:4px;
+      border-radius:50%;
+      background:radial-gradient(circle, #fff6c9, var(--gold2));
+      box-shadow:0 0 12px rgba(255,212,92,.65);
+      opacity:.8;
+      animation:drift linear infinite;
+    }
+
+    @keyframes drift{
+      from{transform:translate3d(0,0,0) scale(.6);opacity:0}
+      10%{opacity:.95}
+      85%{opacity:.6}
+      to{transform:translate3d(var(--dx), var(--dy), 0) scale(1.2);opacity:0}
+    }
+
+    section{padding:18px 0 28px}
+
+    .info-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:16px;
+      margin:26px 0 48px;
+    }
+
+    .stat{
+      padding:18px;
+      border-radius:20px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.06);
+      box-shadow:var(--shadow);
+    }
+
+    .stat .k{
+      color:var(--muted);
+      font-size:.86rem;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+
+    .stat .v{
+      font-size:1.3rem;
+      margin-top:10px;
+      font-weight:900;
+    }
+
+    .section-head{margin-bottom:18px}
+
+    .section-head h2{
+      margin:0 0 10px;
+      font-size:clamp(1.7rem, 3vw, 2.8rem);
+      letter-spacing:-.03em;
+    }
+
+    .section-head p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.74;
+      max-width:75ch;
+    }
+
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:18px;
+    }
+
+    .card{
+      position:relative;
+      overflow:hidden;
+      padding:22px;
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+      border:1px solid rgba(255,255,255,.07);
+      box-shadow:var(--shadow);
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:auto -40px -50px auto;
+      width:140px;
+      height:140px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(255,215,99,.18), transparent 70%);
+      filter:blur(8px);
+    }
+
+    .card h3{
+      margin:0 0 10px;
+      font-size:1.16rem;
+    }
+
+    .card p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.72;
+    }
+
+    .split{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:18px;
+      align-items:stretch;
+    }
+
+    .stack,
+    .callout,
+    .compare,
+    .footer-cta{
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.07);
+      box-shadow:var(--shadow);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    }
+
+    .stack{padding:24px}
+
+    .stack-list{
+      display:grid;
+      gap:14px;
+      margin-top:14px;
+    }
+
+    .stack-item{
+      display:grid;
+      grid-template-columns:120px 1fr;
+      gap:14px;
+      align-items:start;
+      padding:14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    .stack-item .label{
+      color:#f8de90;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      font-size:.8rem;
+      padding-top:3px;
+    }
+
+    .stack-item .desc{
+      color:var(--muted);
+      line-height:1.72;
+    }
+
+    .callout{
+      padding:22px;
+      background:
+        radial-gradient(circle at 80% 0%, rgba(255,215,99,.14), transparent 32%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    }
+
+    .compare{
+      padding:22px;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(121,183,255,.12), transparent 24%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    }
+
+    .compare-list{
+      display:grid;
+      gap:14px;
+      margin-top:14px;
+    }
+
+    .compare-item{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      padding:14px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.03);
+    }
+
+    .compare-item strong{
+      display:block;
+      margin-bottom:6px;
+      color:#ffe59a;
+    }
+
+    .compare-item span{
+      color:var(--muted);
+      line-height:1.66;
+      display:block;
+    }
+
+    .footer-cta{
+      margin:32px 0 54px;
+      padding:28px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      flex-wrap:wrap;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(255,215,99,.18), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    }
+
+    footer{
+      padding:0 0 48px;
+      color:var(--muted);
+    }
+
+    .tiny{
+      font-size:.92rem;
+      color:var(--muted);
+      line-height:1.72;
+    }
+
+    .fine-print{
+      margin-top:12px;
+      font-size:.84rem;
+      color:#aa9f89;
+      line-height:1.65;
+    }
+
+    .mono{
+      font-variant-numeric:tabular-nums;
+      font-feature-settings:"tnum" 1;
+    }
+
+    @media (max-width:980px){
+      .hero,
+      .split{
+        grid-template-columns:1fr;
+      }
+
+      .coin-stage{
+        min-height:460px;
+        order:-1;
+      }
+
+      .cards{
+        grid-template-columns:1fr;
+      }
+
+      .info-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+
+      .compare-item{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width:640px){
+      :root{--header-h:104px}
+
+      .nav{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .hero{padding-top:28px}
+      h1{max-width:10ch}
+      .coin-stage{min-height:360px}
+      .info-grid{grid-template-columns:1fr}
+      .stack-item{grid-template-columns:1fr}
+      .btn{width:100%}
+      .footer-cta{padding:22px}
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="aurora"></div>
+
+  <header>
+    <div class="wrap nav">
+      <div class="brand">
+        <div class="brand-badge">F</div>
+        <div>Fortiq Network</div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#about">About</a>
+        <a href="#advantages">Advantages</a>
+        <a href="#metrics">Metrics</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#branding">Branding</a>
+        <a href="#launch">Launch</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Built on AXIOM Core</div>
+
+        <h1>
+          <span class="grad">Fortress-grade intelligence</span>
+          for a new network era.
+        </h1>
+
+        <p class="lede">
+          <strong>Fortiq Network</strong> is the public-facing ecosystem name.
+          <strong>Fortiq</strong> is the coin.
+          <strong>FRTQ</strong> is the ticker.
+          <strong>AXIOM Core</strong> is the underlying Rust-focused engine and public blockchain scaffold behind the project.
+          The site positions Fortiq as a serious, infrastructure-minded network brand while keeping benchmark claims honest and measurable.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn primary" href="#advantages">Why Fortiq stands out</a>
+          <a class="btn secondary" href="#brand-stack">See the stack</a>
+        </div>
+
+        <div class="ticker-row">
+          <div class="chip"><strong>Network:</strong> Fortiq Network</div>
+          <div class="chip"><strong>Coin:</strong> Fortiq</div>
+          <div class="chip"><strong>Ticker:</strong> FRTQ</div>
+          <div class="chip"><strong>Engine:</strong> AXIOM Core</div>
+        </div>
+
+        <div class="proof-row">
+          <div class="chip good"><strong>Public repo:</strong> live</div>
+          <div class="chip good"><strong>Rust layer:</strong> node-rust</div>
+          <div class="chip good"><strong>Testnet path:</strong> included</div>
+        </div>
+
+        <div class="fine-print">
+          This page uses stronger, safer claim language: built to improve on common crypto weaknesses, engineered for cleaner execution paths, and designed for disciplined growth.
+          Absolute “best” or “faster than everything” claims should wait for published benchmark data.
+        </div>
+      </div>
+
+      <div class="coin-stage" aria-label="Animated Fortiq coin">
+        <div class="coin-halo"></div>
+        <div class="orbit"></div>
+        <div class="orbit orbit2"></div>
+
+        <div class="coin-float">
+          <div class="coin-card" id="coinCard">
+            <img class="coin" src="fortiq-coin.png" alt="Fortiq coin artwork" />
+            <div class="scan"></div>
+          </div>
+        </div>
+
+        <div class="particles" id="particles"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="info-grid">
+        <div class="stat">
+          <div class="k">Public Network</div>
+          <div class="v">Fortiq Network</div>
+        </div>
+        <div class="stat">
+          <div class="k">Coin Name</div>
+          <div class="v">Fortiq</div>
+        </div>
+        <div class="stat">
+          <div class="k">Ticker</div>
+          <div class="v">FRTQ</div>
+        </div>
+        <div class="stat">
+          <div class="k">Protocol Core</div>
+          <div class="v">AXIOM Core</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="section-head">
+        <h2>What the brand says at a glance</h2>
+        <p>
+          The name <strong>Fortiq</strong> blends the feel of a fortress with intelligence:
+          strength, protection, rigor, and computation. That gives you a marketable coin identity,
+          while <strong>AXIOM Core</strong> remains the technical name for the engine underneath.
+          The result is a cleaner product story: strong public branding on top of a serious protocol foundation.
+        </p>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <h3>Fortress</h3>
+          <p>
+            The visual language communicates defense, resilience, and hardened infrastructure rather than short-lived hype.
+            It suggests a network built to hold up under pressure.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Intelligence</h3>
+          <p>
+            Circuit motifs, precision geometry, and the shield emblem push the project toward a high-trust,
+            computational identity instead of a generic meme-token look.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Clear role separation</h3>
+          <p>
+            Users can understand the difference between the public network brand, the native coin, and the protocol engine in one pass.
+            That clarity makes the ecosystem easier to explain, document, and scale.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="advantages">
+      <div class="section-head">
+        <h2>Why Fortiq is built differently</h2>
+        <p>
+          Fortiq is not presented as just another token with branding layered on top.
+          It is positioned around AXIOM Core, with emphasis on clearer architecture, infrastructure-minded design,
+          public source visibility, and a roadmap that centers correctness and maturity over hype.
+        </p>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <h3>Public technical foundation</h3>
+          <p>
+            The AXIOM repository is public, so visitors can inspect the scaffold, structure, and documentation instead of relying only on marketing copy.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Rust-forward direction</h3>
+          <p>
+            The project includes a dedicated <strong>node-rust</strong> validator layer, giving Fortiq a more performance-minded and systems-oriented technical direction.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Spec-led development</h3>
+          <p>
+            AXIOM describes the protocol spec as the source of truth, which is a stronger engineering posture than improvising network behavior as the project grows.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Testnet path included</h3>
+          <p>
+            A reproducible testnet layout is already part of the public scaffold, which matters because serious claims should come from observable network testing.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Documentation built in</h3>
+          <p>
+            The repo includes architecture, threat model, audit planning, and release-process materials, giving the project a more structured path toward maturity.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Growth with discipline</h3>
+          <p>
+            Fortiq can be marketed as a next-generation network brand while still acknowledging that performance leadership should be proved through published benchmarks.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="metrics">
+      <div class="section-head">
+        <h2>Measured progress and benchmark direction</h2>
+        <p>
+          This is where Fortiq can be stronger than many crypto sites: show what exists now, show what is not yet claimed, and show exactly what benchmark categories will be published next.
+        </p>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <h3>What exists now</h3>
+          <p>
+            Public AXIOM repository, protocol spec, Python reference implementation, Rust validator scaffold, docs, and testnet layout.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>What is not claimed yet</h3>
+          <p>
+            No completed external security audit, no production certification, and no public guarantee of liveness or safety under adversarial conditions.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>What comes next</h3>
+          <p>
+            Deterministic Rust state transitions, authenticated peer sessions, persistent storage, snapshotting, crash recovery, fuzzing, load tests, property tests, and public testnet benchmarks.
+          </p>
+        </article>
+      </div>
+
+      <div class="compare" style="margin-top:22px;">
+        <h2 style="margin:0 0 10px;">Benchmark categories to publish next</h2>
+        <p class="tiny" style="margin:0;">
+          These are the kinds of numbers that should eventually support “faster” or “better” claims.
+        </p>
+
+        <div class="compare-list">
+          <div class="compare-item">
+            <div>
+              <strong>Performance</strong>
+              <span>Transactions per second, block production time, finality time, validator message throughput.</span>
+            </div>
+            <div>
+              <strong>Recovery</strong>
+              <span>Crash restart time, WAL replay time, snapshot restore time, node sync time.</span>
+            </div>
+          </div>
+
+          <div class="compare-item">
+            <div>
+              <strong>Correctness</strong>
+              <span>Consensus agreement checks, deterministic replay checks, property tests, fuzzing results.</span>
+            </div>
+            <div>
+              <strong>Security</strong>
+              <span>Parser abuse handling, peer authentication results, signature verification throughput, pre-audit findings closed.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fine-print">
+          Best current message: Fortiq is engineered for stronger correctness, clearer structure, and cleaner execution paths, with benchmark results to be published as public testnet measurements mature.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="compare">
+        <h2 style="margin:0 0 10px;">Where Fortiq aims to improve on common crypto weaknesses</h2>
+        <p class="tiny" style="margin:0;">
+          This is the sharper pitch: not unsupported “best coin” language, but a disciplined public roadmap with technical visibility.
+        </p>
+
+        <div class="compare-list">
+          <div class="compare-item">
+            <div>
+              <strong>Common weakness</strong>
+              <span>Brand-heavy projects with unclear separation between protocol, network, and token.</span>
+            </div>
+            <div>
+              <strong>Fortiq approach</strong>
+              <span>AXIOM Core powers Fortiq Network, and Fortiq is the coin. The stack is clearer and easier to scale.</span>
+            </div>
+          </div>
+
+          <div class="compare-item">
+            <div>
+              <strong>Common weakness</strong>
+              <span>Security messaging that is vague, broad, or mostly promotional.</span>
+            </div>
+            <div>
+              <strong>Fortiq approach</strong>
+              <span>Point to the public repo, documented layers, audit planning, and future measurable results instead of vague absolutes.</span>
+            </div>
+          </div>
+
+          <div class="compare-item">
+            <div>
+              <strong>Common weakness</strong>
+              <span>Recovery, persistence, and failure handling treated as afterthoughts.</span>
+            </div>
+            <div>
+              <strong>Fortiq approach</strong>
+              <span>Public next milestones explicitly include persistent storage, snapshotting, and crash recovery.</span>
+            </div>
+          </div>
+
+          <div class="compare-item">
+            <div>
+              <strong>Common weakness</strong>
+              <span>Hype-first messaging that outruns technical credibility.</span>
+            </div>
+            <div>
+              <strong>Fortiq approach</strong>
+              <span>Market Fortiq as a disciplined infrastructure project with a strong visual identity and a benchmark-first roadmap.</span>
+            </div>
+          </div>
+
+          <div class="compare-item">
+            <div>
+              <strong>Common weakness</strong>
+              <span>Performance claims made without any visible engineering reasoning.</span>
+            </div>
+            <div>
+              <strong>Fortiq approach</strong>
+              <span>Use public milestones and future benchmark categories so any stronger speed claim can be tied to evidence.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="section-head">
+        <h2>Recommended architecture naming</h2>
+        <p>
+          Keeping the technical engine and the public asset clearly separated makes the project easier to explain on a landing page,
+          in documentation, in a wallet interface, and in future exchange-facing materials.
+        </p>
+      </div>
+
+      <div class="split">
+        <div class="stack anchor-target" id="brand-stack">
+          <h3 style="margin:0 0 4px;">Brand stack</h3>
+
+          <div class="stack-list">
+            <div class="stack-item">
+              <div class="label">Core</div>
+              <div class="desc">
+                <strong>AXIOM Core</strong> — the protocol engine and project scaffold, including spec, reference model, Rust validator direction, docs, and testnet path.
+              </div>
+            </div>
+
+            <div class="stack-item">
+              <div class="label">Network</div>
+              <div class="desc">
+                <strong>Fortiq Network</strong> — the public-facing blockchain ecosystem and overall chain identity.
+              </div>
+            </div>
+
+            <div class="stack-item">
+              <div class="label">Coin</div>
+              <div class="desc">
+                <strong>Fortiq</strong> — the native asset users hold, transfer, stake, or reference across the ecosystem.
+              </div>
+            </div>
+
+            <div class="stack-item">
+              <div class="label">Ticker</div>
+              <div class="desc">
+                <strong>FRTQ</strong> — the distinctive ticker choice for wallets, listings, and exchange-facing copy.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="callout anchor-target" id="branding">
+          <h3 style="margin:0 0 10px;">Why not use AXIOM as the coin name?</h3>
+
+          <p class="tiny">
+            From a branding standpoint, keeping <strong>AXIOM</strong> as the engine name is stronger than using it as the coin name.
+            It creates a cleaner hierarchy:
+            <strong>AXIOM Core powers Fortiq Network, and Fortiq is the coin.</strong>
+          </p>
+
+          <p class="tiny">
+            It also avoids collapsing your technical architecture and your public token brand into one label.
+            That matters when you want the site, docs, explorer, wallet UI, and investor-facing copy to feel structured and professional.
+          </p>
+
+          <p class="tiny">
+            A simple default naming system is:
+            <strong>Fortiq Network / Fortiq / FRTQ / AXIOM Core</strong>.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <section id="launch">
+      <div class="footer-cta">
+        <div>
+          <h2 style="margin:0 0 8px;">Launch page and public repo</h2>
+          <div class="tiny">
+            Explore the public AXIOM repository, architecture scaffold, and ongoing hardening path behind Fortiq Network.
+          </div>
+          <div class="fine-print">
+            Public repo link: https://github.com/DS-DS-ship-it/axiom
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn primary" href="#top">Fortiq • Built on AXIOM Core</a>
+          <a class="btn secondary" href="https://github.com/DS-DS-ship-it/axiom" target="_blank" rel="noopener noreferrer">
+            View AXIOM on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="tiny">
+        Visual direction: premium, secure, intelligent, and clearly separated from the protocol core brand.
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const particles = document.getElementById('particles');
+    const sparkCount = 28;
+
+    for (let i = 0; i < sparkCount; i++) {
+      const s = document.createElement('span');
+      s.className = 'spark';
+
+      const left = 18 + Math.random() * 64;
+      const top = 14 + Math.random() * 68;
+      const dx = (-90 + Math.random() * 180).toFixed(0) + 'px';
+      const dy = (-90 + Math.random() * 180).toFixed(0) + 'px';
+      const dur = (4 + Math.random() * 6).toFixed(2) + 's';
+      const delay = (-Math.random() * 8).toFixed(2) + 's';
+      const scale = (0.8 + Math.random() * 1.7).toFixed(2);
+
+      s.style.left = left + '%';
+      s.style.top = top + '%';
+      s.style.setProperty('--dx', dx);
+      s.style.setProperty('--dy', dy);
+      s.style.animationDuration = dur;
+      s.style.animationDelay = delay;
+      s.style.transform = `scale(${scale})`;
+
+      particles.appendChild(s);
+    }
+
+    function scrollToHash(hash) {
+      if (!hash || hash === '#') return;
+      const target = document.querySelector(hash);
+      if (!target) return;
+
+      const header = document.querySelector('header');
+      const headerOffset = header ? header.offsetHeight + 14 : 96;
+      const y = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: y,
+        behavior: 'smooth'
+      });
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        const hash = link.getAttribute('href');
+        if (!hash || hash === '#') return;
+        e.preventDefault();
+        scrollToHash(hash);
+      });
+    });
+
+    const coinCard = document.getElementById('coinCard');
+
+    document.addEventListener('mousemove', e => {
+      if (window.innerWidth < 980 || !coinCard) return;
+
+      const x = (e.clientX / window.innerWidth - 0.5) * 10;
+      const y = (e.clientY / window.innerHeight - 0.5) * -8;
+
+      coinCard.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+    });
+
+    document.addEventListener('mouseleave', () => {
+      if (coinCard) coinCard.style.transform = '';
+    });
+  </script>
+</body>
+</html>
