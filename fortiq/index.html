@@ -122,7 +122,38 @@
       0%,100%{opacity:.55;transform:scale(1)}
       50%{opacity:1;transform:scale(1.08)}
     }
-    .stats{
+    
+    .badge-row{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin:18px 0 8px 0;
+    }
+    @media (max-width: 900px){.badge-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.badge-row{grid-template-columns:1fr}}
+    .badge-stat{
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.07);
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      box-shadow:var(--shadow);
+    }
+    .badge-stat .k{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    .badge-stat .v{
+      font-size:18px;
+      font-weight:800;
+      line-height:1.2;
+      word-break:break-word;
+    }
+    .online{color:var(--good)}
+    .offline{color:var(--bad)}
+.stats{
       display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0
     }
     @media (max-width: 900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -236,7 +267,25 @@
           </div>
         </div>
       </div>
-    </section>
+    
+    <div class="badge-row" id="devnet-badges">
+      <div class="badge-stat">
+        <div class="k">Devnet</div>
+        <div class="v" id="badgeOnline">Checking…</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Current Height</div>
+        <div class="v" id="badgeHeight">—</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Peers</div>
+        <div class="v" id="badgePeers">—</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Latest Block</div>
+        <div class="v mono" id="badgeTip">—</div>
+      </div>
+    </div>
 
     <section class="stats" id="metrics">
       <div class="stat">
@@ -439,6 +488,12 @@
       return res.json();
     }
 
+    function shortHash(v) {
+      const s = String(v || "");
+      if (s.length <= 22) return s;
+      return s.slice(0, 10) + "…" + s.slice(-8);
+    }
+
     async function refreshLiveMetrics() {
       const base = $("apiBase").value.trim().replace(/\/+$/,"");
       try {
@@ -451,6 +506,12 @@
         $("metricHeight").textContent = safe(status.height);
         $("metricPeers").textContent = safe(status.connected_peer_count);
         $("metricTxCount").textContent = latest && latest.block ? safe(latest.block.tx_count) : "0";
+
+        $("badgeOnline").textContent = "Online";
+        $("badgeOnline").className = "v online";
+        $("badgeHeight").textContent = safe(status.height);
+        $("badgePeers").textContent = safe(status.connected_peer_count);
+        $("badgeTip").textContent = shortHash(status.tip_hash);
 
         $("liveSnapshot").innerHTML = `
           <div class="list">
@@ -465,6 +526,11 @@
           </div>
         `;
       } catch (err) {
+        $("badgeOnline").textContent = "Offline";
+        $("badgeOnline").className = "v offline";
+        $("badgeHeight").textContent = "—";
+        $("badgePeers").textContent = "—";
+        $("badgeTip").textContent = "—";
         $("liveSnapshot").innerHTML = `<div class="empty bad">Live fetch failed: ${esc(err.message || err)}</div>`;
       }
     }
