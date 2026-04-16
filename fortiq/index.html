@@ -295,10 +295,10 @@
             you one-click access to the Fortiq / AXIOM explorer and demo faucet workflow.
           </p>
           <div class="hero-actions">
-            <a class="btn primary" id="openExplorerBtn" href="http://127.0.0.1:8010/fortiq-explorer.html" target="_blank" rel="noreferrer">Open Explorer</a>
+            <a class="btn primary" id="openExplorerBtn" href="https://competitions-device-noble-jeremy.trycloudflare.com/fortiq-explorer.html" target="_blank" rel="noreferrer">Open Explorer</a>
             <a class="btn" id="openLocalHeroBtn" href="http://127.0.0.1:8012/fortiq/" target="_blank" rel="noreferrer">Open Local Demo</a>
             <a class="btn" id="openRepoBtn" href="https://github.com/DS-DS-ship-it/axiom" target="_blank" rel="noreferrer">View GitHub Repo</a>
-            <a class="btn gold" id="openStatusBtn" href="http://127.0.0.1:8401/status" target="_blank" rel="noreferrer">Open Live Status JSON</a>
+            <a class="btn gold" id="openStatusBtn" href="https://listing-besides-rotary-sunday.trycloudflare.com/status" target="_blank" rel="noreferrer">Open Live Status JSON</a>
           </div>
         </div>
 
@@ -360,12 +360,12 @@
             <div class="row">
               <strong>Local Explorer URL</strong>
               <div class="tiny">Change this if you are serving the explorer HTML on a different port.</div>
-              <input id="explorerUrl" class="field" value="http://127.0.0.1:8010/fortiq-explorer.html">
+              <input id="explorerUrl" class="field" value="https://competitions-device-noble-jeremy.trycloudflare.com/fortiq-explorer.html">
             </div>
             <div class="row">
               <strong>AXIOM API Base</strong>
               <div class="tiny">This should point at the live node API, usually node1 on port 8401.</div>
-              <input id="apiBase" class="field" value="http://127.0.0.1:8401">
+              <input id="apiBase" class="field" value="https://listing-besides-rotary-sunday.trycloudflare.com">
             </div>
             <div class="row">
               <strong>GitHub Repo</strong>
@@ -404,7 +404,7 @@
             </div>
             <div class="row">
               <strong>Faucet Service URL</strong>
-              <input id="faucetUrl" class="field" value="http://127.0.0.1:8500/faucet" />
+              <input id="faucetUrl" class="field" value="https://show-jul-club-cigarettes.trycloudflare.com/faucet" />
             </div>
           </div>
           <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
@@ -496,10 +496,10 @@
     const $ = (id) => document.getElementById(id);
 
     const defaults = {
-      explorerUrl: "http://127.0.0.1:8010/fortiq-explorer.html",
-      apiBase: "http://127.0.0.1:8401",
+      explorerUrl: "https://competitions-device-noble-jeremy.trycloudflare.com/fortiq-explorer.html",
+      apiBase: "https://listing-besides-rotary-sunday.trycloudflare.com",
       repoUrl: "https://github.com/DS-DS-ship-it/axiom",
-      faucetUrl: "http://127.0.0.1:8500/faucet"
+      faucetUrl: "https://show-jul-club-cigarettes.trycloudflare.com/faucet"
     };
 
     function safe(val){ return String(val ?? ""); }
@@ -541,6 +541,25 @@
       } else {
         notice.style.display = "none";
       }
+    }
+
+
+
+    function forceHostedDefaults() {
+      const host = window.location.hostname || "";
+      const isTryCF = host.endsWith(".trycloudflare.com");
+
+      if (!isTryCF) return;
+
+      const hostedExplorer = "https://competitions-device-noble-jeremy.trycloudflare.com/fortiq-explorer.html";
+      const hostedApi = "https://listing-besides-rotary-sunday.trycloudflare.com";
+      const hostedFaucet = "https://show-jul-club-cigarettes.trycloudflare.com/faucet";
+      const hostedRepo = "https://github.com/DS-DS-ship-it/axiom";
+
+      if ($("explorerUrl")) $("explorerUrl").value = hostedExplorer;
+      if ($("apiBase")) $("apiBase").value = hostedApi;
+      if ($("faucetUrl")) $("faucetUrl").value = hostedFaucet;
+      if ($("repoUrl")) $("repoUrl").value = hostedRepo;
     }
 
 
