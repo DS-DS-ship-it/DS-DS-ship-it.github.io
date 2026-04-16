@@ -122,7 +122,38 @@
       0%,100%{opacity:.55;transform:scale(1)}
       50%{opacity:1;transform:scale(1.08)}
     }
-    .stats{
+    
+    .badge-row{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin:18px 0 8px 0;
+    }
+    @media (max-width: 900px){.badge-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.badge-row{grid-template-columns:1fr}}
+    .badge-stat{
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.07);
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      box-shadow:var(--shadow);
+    }
+    .badge-stat .k{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    .badge-stat .v{
+      font-size:18px;
+      font-weight:800;
+      line-height:1.2;
+      word-break:break-word;
+    }
+    .online{color:var(--good)}
+    .offline{color:var(--bad)}
+.stats{
       display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0
     }
     @media (max-width: 900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -236,7 +267,25 @@
           </div>
         </div>
       </div>
-    </section>
+    
+    <div class="badge-row" id="devnet-badges">
+      <div class="badge-stat">
+        <div class="k">Devnet</div>
+        <div class="v" id="badgeOnline">Checking…</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Current Height</div>
+        <div class="v" id="badgeHeight">—</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Peers</div>
+        <div class="v" id="badgePeers">—</div>
+      </div>
+      <div class="badge-stat">
+        <div class="k">Latest Block</div>
+        <div class="v mono" id="badgeTip">—</div>
+      </div>
+    </div>
 
     <section class="stats" id="metrics">
       <div class="stat">
@@ -343,7 +392,55 @@
       </div>
     </section>
 
-    <div class="footer">
+    
+<section class="section" id="how-it-works">
+  <h2>How it works</h2>
+  <div class="grid">
+    <div class="card span-4">
+      <strong>1. Signed transactions</strong>
+      <p class="muted">
+        Fortiq transactions are created and signed by a client, then submitted to a live AXIOM-powered node.
+        The node validates the transaction, checks nonce and balance rules, and places valid transactions into the mempool.
+      </p>
+    </div>
+    <div class="card span-4">
+      <strong>2. Propose, vote, commit</strong>
+      <p class="muted">
+        On the live devnet, validators connect as authenticated peers, propose blocks, exchange votes, and commit new blocks
+        when the required voting threshold is reached. That gives the network a shared canonical tip.
+      </p>
+    </div>
+    <div class="card span-4">
+      <strong>3. State and explorer updates</strong>
+      <p class="muted">
+        When a block commits, AXIOM applies deterministic state changes, updates balances and nonces, persists the result,
+        and exposes live network data through explorer-style endpoints for status, peers, blocks, and accounts.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="why-fortiq">
+  <h2>Why Fortiq</h2>
+  <div class="grid">
+    <div class="card span-6">
+      <strong>Clear public branding</strong>
+      <p class="muted">
+        Fortiq gives the network a strong public-facing identity while AXIOM remains the technical core. That separation helps
+        distinguish the market brand from the protocol implementation underneath it.
+      </p>
+    </div>
+    <div class="card span-6">
+      <strong>Fortress + intelligence</strong>
+      <p class="muted">
+        The Fortiq name is meant to communicate security, structure, and smart execution. It fits the project’s visual language
+        and makes the network easier to present, market, and remember than a purely technical protocol label alone.
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
       This page is for live demo and development workflow. The faucet helper should only be used on your local devnet or controlled test environment.
     </div>
   </div>
@@ -391,6 +488,12 @@
       return res.json();
     }
 
+    function shortHash(v) {
+      const s = String(v || "");
+      if (s.length <= 22) return s;
+      return s.slice(0, 10) + "…" + s.slice(-8);
+    }
+
     async function refreshLiveMetrics() {
       const base = $("apiBase").value.trim().replace(/\/+$/,"");
       try {
@@ -403,6 +506,12 @@
         $("metricHeight").textContent = safe(status.height);
         $("metricPeers").textContent = safe(status.connected_peer_count);
         $("metricTxCount").textContent = latest && latest.block ? safe(latest.block.tx_count) : "0";
+
+        $("badgeOnline").textContent = "Online";
+        $("badgeOnline").className = "v online";
+        $("badgeHeight").textContent = safe(status.height);
+        $("badgePeers").textContent = safe(status.connected_peer_count);
+        $("badgeTip").textContent = shortHash(status.tip_hash);
 
         $("liveSnapshot").innerHTML = `
           <div class="list">
@@ -417,6 +526,11 @@
           </div>
         `;
       } catch (err) {
+        $("badgeOnline").textContent = "Offline";
+        $("badgeOnline").className = "v offline";
+        $("badgeHeight").textContent = "—";
+        $("badgePeers").textContent = "—";
+        $("badgeTip").textContent = "—";
         $("liveSnapshot").innerHTML = `<div class="empty bad">Live fetch failed: ${esc(err.message || err)}</div>`;
       }
     }

@@ -153,6 +153,18 @@
     }
     .online{color:var(--good)}
     .offline{color:var(--bad)}
+
+    .topline{
+      margin:12px 0 16px 0;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      box-shadow:var(--shadow);
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
 .stats{
       display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0
     }
@@ -238,6 +250,9 @@
         <a href="#repo">Repo</a>
       </div>
     </nav>
+    <div class="topline" id="topDevnetLine">
+      Current Devnet Status: checking…
+    </div>
 
     <section class="hero" id="about">
       <div class="hero-grid">
@@ -363,6 +378,7 @@
           </div>
           <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn gold" id="faucetBtn">Request Devnet Funds</button>
+            <button class="btn" id="genAddressBtn">Generate Fresh Address</button>
             <button class="btn" id="trackRecipientBtn">Track This Address</button>
           </div>
         </div>
@@ -507,6 +523,10 @@
         $("metricPeers").textContent = safe(status.connected_peer_count);
         $("metricTxCount").textContent = latest && latest.block ? safe(latest.block.tx_count) : "0";
 
+        const tip = String(status.tip_hash || "");
+        const tipShort = tip.length > 22 ? tip.slice(0, 10) + "…" + tip.slice(-8) : tip;
+        $("topDevnetLine").innerHTML = `Current Devnet Status: <span class="online">Online</span> • Height ${esc(status.height)} • Peers ${esc(status.connected_peer_count)} • Latest ${esc(tipShort)}`;
+
         $("badgeOnline").textContent = "Online";
         $("badgeOnline").className = "v online";
         $("badgeHeight").textContent = safe(status.height);
@@ -532,6 +552,39 @@
         $("badgePeers").textContent = "—";
         $("badgeTip").textContent = "—";
         $("liveSnapshot").innerHTML = `<div class="empty bad">Live fetch failed: ${esc(err.message || err)}</div>`;
+      }
+    }
+
+
+    async function generateFreshAddress() {
+      const base = $("faucetUrl").value.trim().replace(/\/faucet$/,"");
+      const url = base + "/gen-address";
+
+      $("faucetOutput").innerHTML = `<div class="empty">Generating fresh address…</div>`;
+
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || `Failed to generate address`);
+        }
+
+        if (data.address) {
+          $("faucetAddress").value = data.address;
+        }
+
+        $("faucetOutput").innerHTML = `
+          <div class="list">
+            <div class="row"><strong>Fresh Address Generated</strong><div class="good">Ready for faucet funding.</div></div>
+            <div class="row"><strong>Address</strong><div class="mono">${esc(data.address || "")}</div></div>
+            <div class="row"><strong>Public Key</strong><div class="mono">${esc(data.public_key || "")}</div></div>
+            <div class="row"><strong>Private Key</strong><div class="mono">${esc(data.private_key_hex || "")}</div></div>
+            <div class="row"><strong>Note</strong><div class="muted">Save the private key if you want to spend from this address later.</div></div>
+          </div>
+        `;
+      } catch (err) {
+        $("faucetOutput").innerHTML = `<div class="empty bad">Address generation failed: ${esc(err.message || err)}</div>`;
       }
     }
 
@@ -599,6 +652,7 @@
     });
 
     $("faucetBtn").addEventListener("click", requestFaucet);
+    $("genAddressBtn").addEventListener("click", generateFreshAddress);
 
     loadConfig();
     refreshLiveMetrics();
