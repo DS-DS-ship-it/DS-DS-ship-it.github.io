@@ -154,7 +154,27 @@
     .online{color:var(--good)}
     .offline{color:var(--bad)}
 
-    .topline{
+    
+    .notice{
+      margin:14px 0 16px 0;
+      padding:14px 16px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      box-shadow:var(--shadow);
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+      display:none;
+    }
+    .notice strong{color:var(--text)}
+    .notice-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+.topline{
       margin:12px 0 16px 0;
       padding:10px 14px;
       border-radius:14px;
@@ -254,6 +274,16 @@
       Current Devnet Status: checking…
     </div>
 
+    <div class="notice" id="publicNotice">
+      <strong>Live devnet controls require the local demo environment or a hosted Fortiq demo endpoint.</strong>
+      GitHub Pages can host this site, but it cannot run the AXIOM nodes, faucet helper, or other backend services by itself.
+      Use the local demo on your machine, or point this page at a hosted Fortiq demo backend.
+      <div class="notice-actions">
+        <a class="btn primary" id="openLocalDemoBtn" href="http://127.0.0.1:8012/fortiq/" target="_blank" rel="noreferrer">Open Local Demo</a>
+        <a class="btn" id="openGitHubRepoBtn" href="https://github.com/DS-DS-ship-it/axiom" target="_blank" rel="noreferrer">Open GitHub Repo</a>
+      </div>
+    </div>
+
     <section class="hero" id="about">
       <div class="hero-grid">
         <div>
@@ -266,6 +296,7 @@
           </p>
           <div class="hero-actions">
             <a class="btn primary" id="openExplorerBtn" href="http://127.0.0.1:8010/fortiq-explorer.html" target="_blank" rel="noreferrer">Open Explorer</a>
+            <a class="btn" id="openLocalHeroBtn" href="http://127.0.0.1:8012/fortiq/" target="_blank" rel="noreferrer">Open Local Demo</a>
             <a class="btn" id="openRepoBtn" href="https://github.com/DS-DS-ship-it/axiom" target="_blank" rel="noreferrer">View GitHub Repo</a>
             <a class="btn gold" id="openStatusBtn" href="http://127.0.0.1:8401/status" target="_blank" rel="noreferrer">Open Live Status JSON</a>
           </div>
@@ -495,7 +526,39 @@
       localStorage.setItem("fortiq.apiBase", $("apiBase").value.trim());
       localStorage.setItem("fortiq.repoUrl", $("repoUrl").value.trim());
       localStorage.setItem("fortiq.faucetUrl", $("faucetUrl").value.trim());
-      loadConfig();
+  
+    function isGitHubPagesHost() {
+      const h = window.location.hostname || "";
+      return h === "ds-ds-ship-it.github.io" || h.endsWith(".github.io");
+    }
+
+    function applyPublicPageMode() {
+      const notice = $("publicNotice");
+      if (!notice) return;
+
+      if (isGitHubPagesHost()) {
+        notice.style.display = "block";
+      } else {
+        notice.style.display = "none";
+      }
+    }
+
+
+    function applySharedDemoParams() {
+      const qs = new URLSearchParams(window.location.search);
+
+      const explorer = qs.get("explorer");
+      const api = qs.get("api");
+      const faucet = qs.get("faucet");
+      const repo = qs.get("repo");
+
+      if (explorer) $("explorerUrl").value = explorer;
+      if (api) $("apiBase").value = api;
+      if (faucet) $("faucetUrl").value = faucet;
+      if (repo) $("repoUrl").value = repo;
+    }
+
+    loadConfig();
     }
 
     async function fetchJson(url) {
@@ -643,9 +706,26 @@
 
     $("refreshLiveBtn").addEventListener("click", refreshLiveMetrics);
 
-    $("trackRecipientBtn").addEventListener("click", () => {
-      const addr = $("faucetAddress").value.trim();
-      if (!addr) return;
+
+    function openTrackedExplorer() {
+      const explorer = $("explorerUrl").value.trim();
+      const apiBase = $("apiBase").value.trim();
+      const address = $("faucetAddress").value.trim();
+
+      if (!explorer) {
+        alert("Explorer URL is empty.");
+        return;
+      }
+
+      const url = new URL(explorer, window.location.href);
+      if (apiBase) url.searchParams.set("api", apiBase);
+      if (address) url.searchParams.set("address", address);
+
+      window.open(url.toString(), "_blank", "noopener,noreferrer");
+    }
+
+    $("trackRecipientBtn").addEventListener("click", openTrackedExplorer);
+if (!addr) return;
       const explorer = $("explorerUrl").value.trim();
       const join = explorer.includes("?") ? "&" : "?";
       window.open(`${explorer}${join}address=${encodeURIComponent(addr)}`, "_blank", "noopener,noreferrer");
