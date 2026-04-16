@@ -251,6 +251,28 @@
     .tiny{font-size:12px;color:var(--muted)}
     .footer{margin:22px 0 10px;color:var(--muted);font-size:13px;line-height:1.6}
   </style>
+
+<style id="fortiq-demo-overflow-fix">
+  #faucetOutput,
+  [id*="faucetOutput" i],
+  .faucet-output,
+  .mono,
+  pre {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  #faucetOutput,
+  [id*="faucetOutput" i],
+  .faucet-output {
+    max-height: 340px !important;
+    overflow: auto !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+</style>
+
 </head>
 <body>
   <div class="wrap">
@@ -844,6 +866,318 @@ if (!addr) return;
     setTimeout(forceRefreshLiveMetricsNow, 250);
     setTimeout(forceRefreshLiveMetricsNow, 1200);
     setInterval(forceRefreshLiveMetricsNow, 5000);
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function patchVisibleDevnetBadge(statusObj){
+    const text = statusObj ? "Online" : "Offline";
+
+    const all = Array.from(document.querySelectorAll("div,span,p,strong"));
+    for (let i = 0; i < all.length; i++) {
+      const el = all[i];
+      const t = (el.textContent || "").trim();
+      if (t === "Checking..." || t === "Online" || t === "Offline") {
+        el.textContent = text;
+      }
+    }
+  }
+
+  const oldFn = window.forceRefreshLiveMetricsNow;
+  if (typeof oldFn === "function") {
+    window.forceRefreshLiveMetricsNow = async function(){
+      await oldFn();
+      try {
+        const apiBase = (document.getElementById("apiBase")?.value || "").trim().replace(/\/+$/,"");
+        if (!apiBase) return;
+        const status = await fetch(apiBase + "/status", {cache:"no-store"}).then(r => r.json());
+        patchVisibleDevnetBadge(status);
+      } catch (e) {
+        patchVisibleDevnetBadge(null);
+      }
+    };
+  }
+
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      const apiBase = (document.getElementById("apiBase")?.value || "").trim();
+      if (apiBase) patchVisibleDevnetBadge({ok:true});
+    }, 1200);
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+
+  function findGenButton() {
+    return byId("genAddressBtn")
+      || Array.from(document.querySelectorAll("button"))
+           .find(b => /generate fresh address/i.test((b.textContent || "").trim()));
+  }
+
+  function findAddressInput() {
+    return byId("faucetAddress")
+      || document.querySelector('input[placeholder*="axm"], input[id*="address" i], input[name*="address" i]');
+  }
+
+  function findFaucetUrlInput() {
+    return byId("faucetUrl")
+      || document.querySelector('input[id*="faucet" i], input[name*="faucet" i]');
+  }
+
+  function findOutputBox() {
+    return byId("faucetOutput")
+      || document.querySelector('[id*="faucetOutput" i], .faucet-output, pre');
+  }
+
+  async function generateFreshAddressNow(ev) {
+    if (ev) ev.preventDefault();
+
+    const faucetInput = findFaucetUrlInput();
+    const out = findOutputBox();
+    const addrInput = findAddressInput();
+
+    if (!faucetInput || !faucetInput.value.trim()) {
+      if (out) out.textContent = "Address generation failed: Faucet Service URL is empty.";
+      return;
+    }
+
+    const base = faucetInput.value.trim().replace(/\/faucet\/?$/, "");
+    const url = base + "/gen-address";
+
+    try {
+      const data = await fetch(url, { cache: "no-store" }).then(r => r.json());
+      console.log("gen-address response:", data);
+
+      if (!data.ok) throw new Error(data.error || "generation failed");
+
+      if (addrInput && data.address) addrInput.value = data.address;
+
+      if (out) {
+        out.textContent = JSON.stringify(data, null, 2);
+      }
+    } catch (err) {
+      console.error(err);
+      if (out) out.textContent = "Address generation failed: " + (err.message || String(err));
+    }
+  }
+
+  function wireGenerateFreshAddressButton() {
+    const btn = findGenButton();
+    if (!btn) return;
+    btn.onclick = generateFreshAddressNow;
+  }
+
+  window.addEventListener("load", () => {
+    wireGenerateFreshAddressButton();
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+
+  function findBtn(labelRe, fallbackId){
+    return byId(fallbackId) ||
+      Array.from(document.querySelectorAll("button")).find(
+        b => labelRe.test((b.textContent || "").trim())
+      );
+  }
+
+  function getAddrInput(){
+    return byId("faucetAddress") ||
+      document.querySelector('input[placeholder*="axm"], input[id*="address" i], input[name*="address" i]');
+  }
+
+  function getAmountInput(){
+    return byId("faucetAmount") ||
+      document.querySelector('select[id*="amount" i], input[id*="amount" i], select[name*="amount" i], input[name*="amount" i]');
+  }
+
+  function getFaucetInput(){
+    return byId("faucetUrl") ||
+      document.querySelector('input[id*="faucet" i], input[name*="faucet" i]');
+  }
+
+  function getExplorerInput(){
+    return byId("explorerUrl") ||
+      document.querySelector('input[id*="explorer" i], input[name*="explorer" i]');
+  }
+
+  function getApiInput(){
+    return byId("apiBase") ||
+      document.querySelector('input[id*="api" i], input[name*="api" i]');
+  }
+
+  function getOutput(){
+    return byId("faucetOutput") ||
+      document.querySelector('[id*="faucetOutput" i], .faucet-output, pre');
+  }
+
+  async function requestDevnetFunds(ev){
+    if (ev) ev.preventDefault();
+
+    const addr = (getAddrInput()?.value || "").trim();
+    const amountRaw = (getAmountInput()?.value || "1000").trim();
+    const faucet = (getFaucetInput()?.value || "").trim();
+    const out = getOutput();
+
+    if (!addr) {
+      if (out) out.textContent = "Faucet request failed: recipient address is empty.";
+      return;
+    }
+    if (!faucet) {
+      if (out) out.textContent = "Faucet request failed: faucet URL is empty.";
+      return;
+    }
+
+    const amount = parseInt(amountRaw, 10) || 1000;
+    const url = faucet.replace(/\/+$/, "");
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address: addr, amount }),
+        cache: "no-store"
+      });
+      const data = await res.json();
+      console.log("faucet response:", data);
+      if (out) out.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      console.error(err);
+      if (out) out.textContent = "Faucet request failed: " + (err.message || String(err));
+    }
+  }
+
+  function trackThisAddress(ev){
+    if (ev) ev.preventDefault();
+
+    const explorer = (getExplorerInput()?.value || "").trim();
+    const api = (getApiInput()?.value || "").trim();
+    const addr = (getAddrInput()?.value || "").trim();
+
+    if (!explorer) return;
+    const u = new URL(explorer, window.location.href);
+    if (api) u.searchParams.set("api", api);
+    if (addr) u.searchParams.set("address", addr);
+
+    window.open(u.toString(), "_blank", "noopener,noreferrer");
+  }
+
+  function wireDemoActionButtons(){
+    const faucetBtn = findBtn(/request devnet funds/i, "faucetRequestBtn");
+    const trackBtn = findBtn(/track this address/i, "trackRecipientBtn");
+
+    if (faucetBtn) faucetBtn.onclick = requestDevnetFunds;
+    if (trackBtn) trackBtn.onclick = trackThisAddress;
+  }
+
+  window.addEventListener("load", () => {
+    wireDemoActionButtons();
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function shortHash(v){
+    v = String(v || "");
+    if (v.length <= 22) return v;
+    return v.slice(0, 10) + "…" + v.slice(-8);
+  }
+
+  function textOnly(el){
+    return (el && el.textContent ? el.textContent : "").trim();
+  }
+
+  function setMetricCardByLabel(label, value){
+    const wanted = String(label || "").trim().toUpperCase();
+    const nodes = Array.from(document.querySelectorAll("div,span,strong,p,small"));
+    const labelEl = nodes.find(el => textOnly(el).toUpperCase() === wanted);
+    if (!labelEl) return false;
+
+    const seen = new Set();
+    const candidates = [];
+
+    if (labelEl.nextElementSibling) candidates.push(labelEl.nextElementSibling);
+
+    if (labelEl.parentElement) {
+      for (const child of Array.from(labelEl.parentElement.children)) {
+        if (child !== labelEl) candidates.push(child);
+      }
+    }
+
+    const card = labelEl.closest("div");
+    if (card) {
+      for (const child of Array.from(card.querySelectorAll("div,span,strong,p,small"))) {
+        if (child !== labelEl) candidates.push(child);
+      }
+    }
+
+    for (const el of candidates) {
+      if (!el || seen.has(el)) continue;
+      seen.add(el);
+      const t = textOnly(el).toUpperCase();
+      if (!t || t === wanted || t === "—" || t === "-" || t === "CHECKING..." || t === "OFFLINE" || t === "ONLINE") {
+        el.textContent = value;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function refreshTopCardsFromApi(){
+    const apiInput = document.getElementById("apiBase");
+    const apiBase = (apiInput && apiInput.value ? apiInput.value.trim().replace(/\/+$/,"") : "");
+    if (!apiBase) return;
+
+    try {
+      const [status, latest] = await Promise.all([
+        fetch(apiBase + "/status", { cache: "no-store" }).then(r => r.json()),
+        fetch(apiBase + "/block/latest", { cache: "no-store" }).then(r => r.json()).catch(() => ({found:false, block:null}))
+      ]);
+
+      const latestBlock = latest && latest.block ? latest.block : null;
+      const latestHash = latestBlock ? (latestBlock.block_hash || status.tip_hash || "") : (status.tip_hash || "");
+
+      setMetricCardByLabel("DEVNET", "Online");
+      setMetricCardByLabel("CURRENT HEIGHT", String(status.height ?? "—"));
+      setMetricCardByLabel("PEERS", String(status.connected_peer_count ?? "—"));
+      setMetricCardByLabel("LATEST BLOCK", shortHash(latestHash));
+
+      setMetricCardByLabel("NODE", status.node_name || "—");
+      setMetricCardByLabel("HEIGHT", String(status.height ?? "—"));
+      setMetricCardByLabel("CONNECTED PEERS", String(status.connected_peer_count ?? "—"));
+      if (latestBlock) {
+        setMetricCardByLabel("LATEST TX COUNT", String(latestBlock.tx_count ?? 0));
+      }
+    } catch (err) {
+      setMetricCardByLabel("DEVNET", "Offline");
+    }
+  }
+
+  const oldForce = window.forceRefreshLiveMetricsNow;
+  if (typeof oldForce === "function") {
+    window.forceRefreshLiveMetricsNow = async function(){
+      await oldForce();
+      await refreshTopCardsFromApi();
+    };
+  }
+
+  window.addEventListener("load", () => {
+    setTimeout(refreshTopCardsFromApi, 400);
+    setTimeout(refreshTopCardsFromApi, 1500);
+    setInterval(refreshTopCardsFromApi, 5000);
   });
 })();
 </script>
