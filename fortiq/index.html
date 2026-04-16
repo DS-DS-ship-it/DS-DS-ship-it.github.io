@@ -756,5 +756,97 @@ if (!addr) return;
     loadConfig();
     refreshLiveMetrics();
   </script>
+
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function shortHash(v){
+    v = String(v || "");
+    if (v.length <= 22) return v;
+    return v.slice(0, 10) + "…" + v.slice(-8);
+  }
+  function setText(id, value){
+    const el = byId(id);
+    if (el) el.textContent = value;
+  }
+
+  async function fetchJson(url){
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status + " for " + url);
+    return await res.json();
+  }
+
+  async function forceRefreshLiveMetricsNow(){
+    const apiInput = byId("apiBase");
+    const snapshot = byId("liveSnapshot");
+    const topLine = byId("topDevnetLine");
+
+    const apiBase = (apiInput && apiInput.value ? apiInput.value.trim().replace(/\/+$/,"") : "");
+
+    if (!apiBase) {
+      if (topLine) topLine.textContent = "Current Devnet Status: API base missing";
+      if (snapshot) snapshot.innerHTML = '<div class="empty bad">AXIOM API Base is empty.</div>';
+      return;
+    }
+
+    try {
+      const [status, latest] = await Promise.all([
+        fetchJson(apiBase + "/status"),
+        fetchJson(apiBase + "/block/latest").catch(() => ({ found:false, block:null }))
+      ]);
+
+      const latestBlock = latest && latest.block ? latest.block : null;
+      const latestHash = latestBlock ? (latestBlock.block_hash || status.tip_hash || "") : (status.tip_hash || "");
+
+      setText("metricNode", status.node_name || "—");
+      setText("metricHeight", String(status.height ?? "—"));
+      setText("metricPeers", String(status.connected_peer_count ?? "—"));
+      setText("metricTxCount", latestBlock ? String(latestBlock.tx_count ?? 0) : "0");
+
+      const devnetBox = byId("metricDevnet");
+      if (devnetBox) devnetBox.textContent = "Online";
+
+      const topText = "Current Devnet Status: Online • Height " +
+        String(status.height ?? "—") +
+        " • Peers " +
+        String(status.connected_peer_count ?? "—") +
+        " • Latest " +
+        shortHash(latestHash);
+
+      if (topLine) topLine.textContent = topText;
+
+      if (snapshot) {
+        snapshot.innerHTML =
+          '<div class="list">' +
+            '<div class="row"><strong>Tip Hash</strong><div class="mono">' + (status.tip_hash || "—") + '</div></div>' +
+            '<div class="row"><strong>Checkpoint</strong><div>' + String(status.last_checkpoint_height ?? "—") + '</div></div>' +
+            '<div class="row"><strong>Mempool</strong><div>' + String(status.mempool_size ?? "—") + '</div></div>' +
+            '<div class="row"><strong>Latest Block</strong><div>' +
+              (latestBlock
+                ? ("Height " + String(latestBlock.height ?? "—") + " • Gas " + String(latestBlock.gas_used ?? "—") + " • Txs " + String(latestBlock.tx_count ?? "—"))
+                : "Not found") +
+            '</div></div>' +
+          '</div>';
+      }
+
+      console.log("Fortiq live metrics refreshed", { apiBase, status, latest });
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      if (topLine) topLine.textContent = "Current Devnet Status: Offline • " + msg;
+      if (snapshot) snapshot.innerHTML = '<div class="empty bad">Live fetch failed: ' + msg + '</div>';
+      console.error("Fortiq live metrics failed", msg);
+    }
+  }
+
+  window.forceRefreshLiveMetricsNow = forceRefreshLiveMetricsNow;
+
+  window.addEventListener("load", () => {
+    setTimeout(forceRefreshLiveMetricsNow, 250);
+    setTimeout(forceRefreshLiveMetricsNow, 1200);
+    setInterval(forceRefreshLiveMetricsNow, 5000);
+  });
+})();
+</script>
+
 </body>
 </html>
