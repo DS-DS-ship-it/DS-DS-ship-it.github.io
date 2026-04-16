@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Weather Travel Map — Mobile + Laptop NOAA/NWS Build</title>
+  <link rel="preconnect" href="https://api.weather.gov" />
+  <link rel="preconnect" href="https://mapservices.weather.noaa.gov" />
+  <link rel="preconnect" href="https://tile.openstreetmap.org" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#091321;
+      --panel:#101b2f;
+      --panel2:#172743;
+      --line:#304a76;
+      --text:#eef5ff;
+      --muted:#a8bbdc;
+      --accent:#7fb4ff;
+      --accent2:#4e90ff;
+      --good:#83ebb0;
+      --warn:#ffd56d;
+      --bad:#ff9a9a;
+      --danger:#ff6f7f;
+      --safe-top:max(12px, env(safe-area-inset-top));
+      --safe-bottom:max(12px, env(safe-area-inset-bottom));
+      --shadow:0 12px 28px rgba(0,0,0,.28);
+      --radius:18px;
+      --chip:#0d1627;
+      --mapH:58vh;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    a{color:#9ac4ff}
+    button,input,select,textarea{font:inherit}
+    .app{min-height:100%;display:grid;grid-template-rows:auto 1fr auto}
+    .topbar{
+      position:sticky;top:0;z-index:1000;
+      padding:calc(12px + var(--safe-top)) 14px 12px;
+      background:linear-gradient(180deg,rgba(10,18,32,.97),rgba(10,18,32,.88));
+      border-bottom:1px solid rgba(95,132,194,.25);
+      backdrop-filter:blur(12px);
+    }
+    .titleRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .title{font-size:clamp(1.05rem,2.6vw,1.4rem);font-weight:800;letter-spacing:.2px}
+    .subtitle{font-size:.9rem;color:var(--muted);margin-top:4px}
+    .topActions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      border:1px solid rgba(122,170,255,.25);
+      background:linear-gradient(180deg,#193057,#142846);
+      color:var(--text);
+      border-radius:12px;
+      padding:.7rem .9rem;
+      cursor:pointer;
+      min-height:44px;
+      box-shadow:var(--shadow);
+    }
+    .btn:hover{filter:brightness(1.05)}
+    .btn.secondary{background:linear-gradient(180deg,#162238,#111a2c)}
+    .btn.ghost{background:rgba(11,18,30,.65);box-shadow:none}
+    .btn.warn{background:linear-gradient(180deg,#4d3820,#3a2917);border-color:rgba(255,213,109,.28)}
+    .btn.good{background:linear-gradient(180deg,#173a29,#122d20);border-color:rgba(131,235,176,.28)}
+    .main{
+      display:grid;
+      grid-template-columns:minmax(310px, 420px) 1fr;
+      gap:14px;
+      padding:14px;
+    }
+    .panel{
+      background:linear-gradient(180deg,rgba(19,31,53,.94),rgba(12,21,36,.94));
+      border:1px solid rgba(122,170,255,.16);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-width:0;
+    }
+    .sidebar{display:grid;grid-template-rows:auto auto auto 1fr;gap:14px}
+    .panelInner{padding:14px}
+    .sectionTitle{font-weight:800;font-size:1rem;margin:0 0 10px}
+    .fieldGrid{display:grid;grid-template-columns:1fr 110px 110px;gap:8px}
+    .searchInput,.miniInput,.range,.select{
+      width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(120,150,200,.2);
+      background:#0d1627;color:var(--text);padding:.8rem .9rem;
+    }
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .stack{display:grid;gap:8px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{
+      padding:.4rem .65rem;border-radius:999px;background:var(--chip);border:1px solid rgba(120,150,200,.15);
+      color:var(--muted);font-size:.84rem
+    }
+    .chip strong{color:var(--text)}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .stat{
+      padding:12px;border-radius:14px;background:rgba(11,18,30,.7);border:1px solid rgba(120,150,200,.12)
+    }
+    .stat .k{font-size:.78rem;color:var(--muted);margin-bottom:5px}
+    .stat .v{font-size:1rem;font-weight:700;line-height:1.3}
+    .mapWrap{display:grid;grid-template-rows:auto 1fr auto;min-height:74vh}
+    .mapHeader{padding:12px 14px;border-bottom:1px solid rgba(120,150,200,.12);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+    .mapControls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .toggle{display:flex;align-items:center;gap:8px;background:#0d1627;border:1px solid rgba(120,150,200,.15);padding:.55rem .8rem;border-radius:999px}
+    #map{width:100%;height:var(--mapH);min-height:420px;background:#0b1322}
+    .foot{padding:12px 14px calc(14px + var(--safe-bottom));border-top:1px solid rgba(120,150,200,.12);color:var(--muted);font-size:.9rem}
+    .forecastList,.alertList,.hourlyList,.logList{display:grid;gap:10px;max-height:320px;overflow:auto;padding-right:4px}
+    .card{
+      padding:12px;border-radius:14px;background:rgba(11,18,30,.72);border:1px solid rgba(120,150,200,.12)
+    }
+    .forecastName{font-weight:800;margin-bottom:4px}
+    .muted{color:var(--muted)}
+    .goodText{color:var(--good)}
+    .warnText{color:var(--warn)}
+    .badText{color:var(--bad)}
+    .dangerText{color:var(--danger)}
+    .tiny{font-size:.85rem}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .hr{height:1px;background:rgba(120,150,200,.12);margin:12px 0}
+    details summary{cursor:pointer;font-weight:700}
+    .pillRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .pill{padding:.35rem .55rem;border-radius:999px;background:#111c30;border:1px solid rgba(120,150,200,.12);font-size:.8rem;color:var(--muted)}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.84rem}
+    .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+    .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0f1a2d;color:var(--text)}
+    .leaflet-control-layers{background:#0f1a2d;color:var(--text);border:1px solid rgba(120,150,200,.18)}
+    .leaflet-control-layers-expanded{padding:10px}
+    .sourceBlock{white-space:pre-wrap;word-break:break-word;font-size:.8rem;background:#0c1525;border-radius:12px;padding:10px;border:1px solid rgba(120,150,200,.12)}
+    @media (max-width: 1100px){
+      .main{grid-template-columns:1fr}
+      .mapWrap{min-height:0}
+      #map{height:60vh;min-height:360px}
+    }
+    @media (max-width: 740px){
+      .fieldGrid{grid-template-columns:1fr 1fr}
+      .fieldGrid .searchInput{grid-column:1 / -1}
+      .stats{grid-template-columns:1fr}
+      .topActions,.mapControls,.row{width:100%}
+      .topActions .btn,.row .btn{flex:1 1 140px}
+      :root{--mapH:56vh}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="titleRow">
+      <div>
+        <div class="title">Weather Travel Map</div>
+        <div class="subtitle">Mobile and laptop friendly NOAA/NWS single-file map app with forecast, alerts, radar overlay, and storm drift estimate.</div>
+      </div>
+      <div class="topActions">
+        <button class="btn" id="btnLocate">Use My Location</button>
+        <button class="btn secondary" id="btnRefresh">Refresh Weather</button>
+        <button class="btn ghost" id="btnDownloadHtml">Download HTML</button>
+        <button class="btn ghost" id="btnDownloadTxt">Download HTML as TXT</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="sidebar">
+      <div class="panel">
+        <div class="panelInner stack">
+          <h2 class="sectionTitle">Location & Weather Controls</h2>
+          <div class="fieldGrid">
+            <input id="locationInput" class="searchInput" placeholder="City, ZIP, address, or lat,lon (example: 28.5383,-81.3792)" />
+            <button class="btn" id="btnSearch">Find</button>
+            <button class="btn secondary" id="btnResetView">Reset View</button>
+          </div>
+          <div class="row">
+            <label class="toggle"><input type="checkbox" id="chkAutoRefresh" checked /> Auto refresh every 5 min</label>
+            <label class="toggle"><input type="checkbox" id="chkRadar" checked /> Radar overlay</label>
+            <label class="toggle"><input type="checkbox" id="chkAlerts" checked /> Alert polygons</label>
+          </div>
+          <div class="row">
+            <label class="toggle">Radar opacity <input id="radarOpacity" class="range" type="range" min="0" max="100" value="62" style="width:140px;min-height:auto;padding:0;border:none;background:transparent" /></label>
+          </div>
+          <div class="chips" id="statusChips">
+            <span class="chip"><strong>Status</strong> <span id="statusText">Idle</span></span>
+            <span class="chip"><strong>Mode</strong> Official NOAA/NWS</span>
+            <span class="chip"><strong>Screen</strong> <span id="screenMode">Detecting…</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner stack">
+          <h2 class="sectionTitle">Weather Snapshot</h2>
+          <div class="stats">
+            <div class="stat"><div class="k">Location</div><div class="v" id="statLocation">—</div></div>
+            <div class="stat"><div class="k">Current Conditions</div><div class="v" id="statCurrent">—</div></div>
+            <div class="stat"><div class="k">Temperature</div><div class="v" id="statTemp">—</div></div>
+            <div class="stat"><div class="k">Wind</div><div class="v" id="statWind">—</div></div>
+            <div class="stat"><div class="k">Travel Estimate</div><div class="v" id="statTravel">—</div></div>
+            <div class="stat"><div class="k">Active Alerts</div><div class="v" id="statAlerts">—</div></div>
+          </div>
+          <div class="card">
+            <div class="forecastName">What the weather is doing</div>
+            <div id="narrative" class="muted">Waiting for location…</div>
+            <div class="pillRow" id="motionPills"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner stack">
+          <h2 class="sectionTitle">Forecast & Alerts</h2>
+          <details open>
+            <summary>Next forecast periods</summary>
+            <div class="forecastList" id="forecastList"></div>
+          </details>
+          <details open>
+            <summary>Next hourly periods</summary>
+            <div class="hourlyList" id="hourlyList"></div>
+          </details>
+          <details open>
+            <summary>Alerts at this point</summary>
+            <div class="alertList" id="alertList"></div>
+          </details>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner stack">
+          <h2 class="sectionTitle">Diagnostics</h2>
+          <div class="card tiny" id="diagnosticCard">
+            Waiting for first fetch…
+          </div>
+          <details>
+            <summary>Activity log</summary>
+            <div class="logList" id="logList"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel mapWrap">
+      <div class="mapHeader">
+        <div>
+          <div class="sectionTitle" style="margin:0">Live Map</div>
+          <div class="muted tiny">Map layers, radar overlay, weather alerts, station and motion estimate.</div>
+        </div>
+        <div class="mapControls">
+          <button class="btn secondary" id="btnOfficialForecast">Open Weather.gov</button>
+          <button class="btn secondary" id="btnOfficialRadar">Open Official Radar</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="foot stack">
+        <div class="legend">
+          <span><span class="dot" style="background:#79b7ff"></span> location</span>
+          <span><span class="dot" style="background:#ff7f8e"></span> active alerts</span>
+          <span><span class="dot" style="background:#9ce7b3"></span> motion estimate</span>
+        </div>
+        <div class="tiny muted" id="sourceSummary">Sources: api.weather.gov, NOAA/NWS radar services, OpenStreetMap, Esri World Imagery.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const els = {
+    btnLocate: document.getElementById('btnLocate'),
+    btnRefresh: document.getElementById('btnRefresh'),
+    btnSearch: document.getElementById('btnSearch'),
+    btnResetView: document.getElementById('btnResetView'),
+    btnOfficialForecast: document.getElementById('btnOfficialForecast'),
+    btnOfficialRadar: document.getElementById('btnOfficialRadar'),
+    btnDownloadHtml: document.getElementById('btnDownloadHtml'),
+    btnDownloadTxt: document.getElementById('btnDownloadTxt'),
+    locationInput: document.getElementById('locationInput'),
+    chkAutoRefresh: document.getElementById('chkAutoRefresh'),
+    chkRadar: document.getElementById('chkRadar'),
+    chkAlerts: document.getElementById('chkAlerts'),
+    radarOpacity: document.getElementById('radarOpacity'),
+    statusText: document.getElementById('statusText'),
+    screenMode: document.getElementById('screenMode'),
+    statLocation: document.getElementById('statLocation'),
+    statCurrent: document.getElementById('statCurrent'),
+    statTemp: document.getElementById('statTemp'),
+    statWind: document.getElementById('statWind'),
+    statTravel: document.getElementById('statTravel'),
+    statAlerts: document.getElementById('statAlerts'),
+    narrative: document.getElementById('narrative'),
+    motionPills: document.getElementById('motionPills'),
+    forecastList: document.getElementById('forecastList'),
+    hourlyList: document.getElementById('hourlyList'),
+    alertList: document.getElementById('alertList'),
+    diagnosticCard: document.getElementById('diagnosticCard'),
+    logList: document.getElementById('logList'),
+    sourceSummary: document.getElementById('sourceSummary')
+  };
+
+  const state = {
+    map: null,
+    baseLayers: {},
+    currentBase: null,
+    locationMarker: null,
+    stationMarker: null,
+    radarOverlay: null,
+    alertLayer: null,
+    motionLayer: null,
+    currentLat: 39.8283,
+    currentLon: -98.5795,
+    currentLabel: 'United States',
+    autoTimer: null,
+    currentWeatherUrl: 'https://www.weather.gov/',
+    currentRadarUrl: 'https://radar.weather.gov/',
+    lastObsTime: null,
+    lastData: null,
+    radarRefreshTimer: null,
+  };
+
+  const DEFAULT_VIEW = { lat: 39.8283, lon: -98.5795, zoom: 4 };
+  const NWS_API = 'https://api.weather.gov';
+  const RADAR_EXPORT = 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer/exportImage';
+
+  function log(message, kind='info') {
+    const time = new Date().toLocaleTimeString();
+    const card = document.createElement('div');
+    card.className = 'card tiny';
+    card.innerHTML = `<div class="mono muted">[${time}]</div><div class="${kind==='error'?'badText':kind==='warn'?'warnText':''}">${escapeHtml(message)}</div>`;
+    els.logList.prepend(card);
+    while (els.logList.children.length > 24) els.logList.removeChild(els.logList.lastChild);
+  }
+
+  function setStatus(text) {
+    els.statusText.textContent = text;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function isMobileLike() {
+    return window.matchMedia('(max-width: 740px)').matches;
+  }
+
+  function detectScreenMode() {
+    els.screenMode.textContent = isMobileLike() ? 'Mobile' : 'Laptop/Desktop';
+  }
+
+  async function fetchJSON(url, options = {}, retries = 2) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeout ?? 12000);
+    const headers = Object.assign({
+      'Accept': 'application/geo+json, application/ld+json, application/json;q=0.9, */*;q=0.1'
+    }, options.headers || {});
+
+    try {
+      const res = await fetch(url, { ...options, headers, signal: controller.signal, cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      return await res.json();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 900));
+        return fetchJSON(url, options, retries - 1);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function initMap() {
+    const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([DEFAULT_VIEW.lat, DEFAULT_VIEW.lon], DEFAULT_VIEW.zoom);
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    });
+    const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    });
+    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    });
+
+    osm.addTo(map);
+    state.currentBase = osm;
+    state.baseLayers = { 'Streets': osm, 'Satellite': esri, 'Dark': cartoDark };
+
+    state.alertLayer = L.geoJSON(null, {
+      style: feature => {
+        const sev = feature?.properties?.severity || '';
+        const color = sev === 'Extreme' ? '#ff4f67' : sev === 'Severe' ? '#ff8d4e' : sev === 'Moderate' ? '#ffd56d' : '#7fb4ff';
+        return { color, weight: 2, fillColor: color, fillOpacity: 0.18 };
+      },
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties || {};
+        const html = `
+          <div style="max-width:260px">
+            <div style="font-weight:800">${escapeHtml(p.event || 'Alert')}</div>
+            <div class="muted tiny">Severity: ${escapeHtml(p.severity || 'Unknown')}</div>
+            <div class="muted tiny">Urgency: ${escapeHtml(p.urgency || 'Unknown')}</div>
+            <div style="margin-top:6px">${escapeHtml((p.headline || p.description || '').slice(0, 350))}</div>
+          </div>`;
+        layer.bindPopup(html);
+      }
+    }).addTo(map);
+
+    state.motionLayer = L.layerGroup().addTo(map);
+
+    L.control.layers(state.baseLayers, {
+      'Alert polygons': state.alertLayer,
+      'Motion estimate': state.motionLayer,
+    }, { collapsed: false }).addTo(map);
+
+    map.on('moveend zoomend', () => {
+      if (els.chkRadar.checked) scheduleRadarRefresh(180);
+    });
+
+    state.map = map;
+    detectScreenMode();
+    window.addEventListener('resize', detectScreenMode);
+    log('Map initialized.');
+  }
+
+  function scheduleRadarRefresh(delay = 0) {
+    clearTimeout(state.radarRefreshTimer);
+    state.radarRefreshTimer = setTimeout(refreshRadarOverlay, delay);
+  }
+
+  function radarImageUrl() {
+    const map = state.map;
+    if (!map) return '';
+    const bounds = map.getBounds();
+    const size = map.getSize();
+    const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(',');
+    const params = new URLSearchParams({
+      bbox,
+      bboxSR: '4326',
+      imageSR: '4326',
+      size: `${Math.max(256, Math.round(size.x))},${Math.max(256, Math.round(size.y))}`,
+      format: 'png32',
+      transparent: 'true',
+      interpolation: 'RSP_NearestNeighbor',
+      f: 'image',
+      _ts: String(Date.now())
+    });
+    return `${RADAR_EXPORT}?${params.toString()}`;
+  }
+
+  function refreshRadarOverlay() {
+    if (!state.map) return;
+    if (!els.chkRadar.checked) {
+      if (state.radarOverlay) state.map.removeLayer(state.radarOverlay);
+      state.radarOverlay = null;
+      return;
+    }
+    const bounds = state.map.getBounds();
+    const url = radarImageUrl();
+    const opacity = Number(els.radarOpacity.value) / 100;
+    if (state.radarOverlay) state.map.removeLayer(state.radarOverlay);
+    state.radarOverlay = L.imageOverlay(url, bounds, { opacity, interactive: false, crossOrigin: true });
+    state.radarOverlay.addTo(state.map);
+    log('Radar overlay refreshed.');
+  }
+
+  function setLocationMarker(lat, lon, label) {
+    const ll = [lat, lon];
+    if (!state.locationMarker) {
+      state.locationMarker = L.circleMarker(ll, {
+        radius: 9,
+        color: '#79b7ff',
+        weight: 2,
+        fillColor: '#79b7ff',
+        fillOpacity: 0.45
+      }).addTo(state.map);
+    } else {
+      state.locationMarker.setLatLng(ll);
+    }
+    state.locationMarker.bindPopup(`<div><strong>${escapeHtml(label || 'Selected location')}</strong><br>${lat.toFixed(4)}, ${lon.toFixed(4)}</div>`);
+  }
+
+  function setStationMarker(lat, lon, name) {
+    if (lat == null || lon == null) return;
+    const ll = [lat, lon];
+    if (!state.stationMarker) {
+      state.stationMarker = L.circleMarker(ll, {
+        radius: 6,
+        color: '#ffd56d',
+        weight: 2,
+        fillColor: '#ffd56d',
+        fillOpacity: 0.45
+      }).addTo(state.map);
+    } else {
+      state.stationMarker.setLatLng(ll);
+    }
+    state.stationMarker.bindPopup(`<div><strong>${escapeHtml(name || 'Observation station')}</strong></div>`);
+  }
+
+  function clearMotionLayer() {
+    state.motionLayer.clearLayers();
+  }
+
+  function toMilesFromMeters(m) {
+    if (m == null || Number.isNaN(m)) return null;
+    return m / 1609.344;
+  }
+
+  function toMphFromMetersPerSecond(ms) {
+    if (ms == null || Number.isNaN(ms)) return null;
+    return ms * 2.2369362921;
+  }
+
+  function cToF(c) {
+    if (c == null || Number.isNaN(c)) return null;
+    return (c * 9/5) + 32;
+  }
+
+  function bearingToCompass(deg) {
+    if (deg == null || Number.isNaN(deg)) return 'Variable';
+    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    return dirs[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+  }
+
+  function parseWindText(text) {
+    if (!text) return null;
+    const match = String(text).match(/(\d+)\s*(?:to\s*(\d+)\s*)?(mph|kt|kts|knots)/i);
+    if (!match) return null;
+    const low = Number(match[1]);
+    const high = match[2] ? Number(match[2]) : low;
+    let avg = (low + high) / 2;
+    const unit = match[3].toLowerCase();
+    if (unit.startsWith('kt') || unit.startsWith('kn')) avg *= 1.15078;
+    return avg;
+  }
+
+  function parseDirectionText(dirText) {
+    const map = { N:0, NNE:22.5, NE:45, ENE:67.5, E:90, ESE:112.5, SE:135, SSE:157.5, S:180, SSW:202.5, SW:225, WSW:247.5, W:270, WNW:292.5, NW:315, NNW:337.5 };
+    return map[String(dirText || '').trim().toUpperCase()] ?? null;
+  }
+
+  function destinationPoint(lat, lon, bearingDeg, distanceMiles) {
+    const R = 3958.7613;
+    const brng = bearingDeg * Math.PI / 180;
+    const d = distanceMiles / R;
+    const lat1 = lat * Math.PI / 180;
+    const lon1 = lon * Math.PI / 180;
+    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+    const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+    return { lat: lat2 * 180 / Math.PI, lon: ((lon2 * 180 / Math.PI + 540) % 360) - 180 };
+  }
+
+  function renderMotionArrow(lat, lon, toBearing, distanceMiles, label) {
+    clearMotionLayer();
+    if (toBearing == null || distanceMiles == null || distanceMiles <= 0.25) return;
+    const end = destinationPoint(lat, lon, toBearing, distanceMiles);
+    const mainLine = L.polyline([[lat, lon], [end.lat, end.lon]], { color:'#9ce7b3', weight:4, opacity:.95 }).addTo(state.motionLayer);
+    const left = destinationPoint(end.lat, end.lon, toBearing + 155, Math.max(1, distanceMiles * 0.08));
+    const right = destinationPoint(end.lat, end.lon, toBearing - 155, Math.max(1, distanceMiles * 0.08));
+    L.polyline([[left.lat, left.lon], [end.lat, end.lon], [right.lat, right.lon]], { color:'#9ce7b3', weight:4, opacity:.95 }).addTo(state.motionLayer);
+    mainLine.bindPopup(`<strong>${escapeHtml(label)}</strong>`);
+  }
+
+  function humanTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  function renderForecast(periods) {
+    els.forecastList.innerHTML = '';
+    (periods || []).slice(0, 6).forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="forecastName">${escapeHtml(p.name || 'Period')}</div>
+        <div class="tiny muted">${escapeHtml(humanTime(p.startTime))} → ${escapeHtml(humanTime(p.endTime))}</div>
+        <div style="margin-top:6px"><strong>${escapeHtml(String(p.temperature ?? '—'))}°${escapeHtml(p.temperatureUnit || '')}</strong> · ${escapeHtml(p.windDirection || 'Variable')} ${escapeHtml(p.windSpeed || '')}</div>
+        <div class="tiny" style="margin-top:6px">${escapeHtml(p.shortForecast || '')}</div>
+        <div class="tiny muted" style="margin-top:6px">${escapeHtml(p.detailedForecast || '')}</div>`;
+      els.forecastList.appendChild(card);
+    });
+    if (!els.forecastList.children.length) els.forecastList.innerHTML = '<div class="card muted">No forecast periods available.</div>';
+  }
+
+  function renderHourly(periods) {
+    els.hourlyList.innerHTML = '';
+    (periods || []).slice(0, 8).forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card tiny';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <strong>${escapeHtml(humanTime(p.startTime))}</strong>
+          <span>${escapeHtml(String(p.temperature ?? '—'))}°${escapeHtml(p.temperatureUnit || '')}</span>
+        </div>
+        <div class="muted" style="margin-top:6px">${escapeHtml(p.shortForecast || '')}</div>
+        <div class="muted" style="margin-top:4px">Wind: ${escapeHtml(p.windDirection || 'Variable')} ${escapeHtml(p.windSpeed || '')}</div>`;
+      els.hourlyList.appendChild(card);
+    });
+    if (!els.hourlyList.children.length) els.hourlyList.innerHTML = '<div class="card muted">No hourly periods available.</div>';
+  }
+
+  function renderAlerts(alertData) {
+    els.alertList.innerHTML = '';
+    state.alertLayer.clearLayers();
+    const features = (alertData && Array.isArray(alertData.features)) ? alertData.features : [];
+    els.statAlerts.textContent = String(features.length);
+
+    if (els.chkAlerts.checked && features.length) {
+      state.alertLayer.addData(alertData);
+    }
+
+    if (!features.length) {
+      els.alertList.innerHTML = '<div class="card goodText">No active alerts at this point.</div>';
+      return;
+    }
+
+    features.forEach(f => {
+      const p = f.properties || {};
+      const card = document.createElement('div');
+      card.className = 'card';
+      const sevClass = p.severity === 'Extreme' ? 'dangerText' : p.severity === 'Severe' ? 'badText' : p.severity === 'Moderate' ? 'warnText' : 'goodText';
+      card.innerHTML = `
+        <div class="forecastName ${sevClass}">${escapeHtml(p.event || 'Alert')}</div>
+        <div class="tiny muted">${escapeHtml(p.severity || 'Unknown')} · ${escapeHtml(p.urgency || 'Unknown')} · expires ${escapeHtml(humanTime(p.expires))}</div>
+        <div class="tiny" style="margin-top:6px">${escapeHtml(p.headline || p.description || '')}</div>`;
+      els.alertList.appendChild(card);
+    });
+  }
+
+  function setNarrative(text, pills=[]) {
+    els.narrative.textContent = text;
+    els.motionPills.innerHTML = '';
+    pills.forEach(t => {
+      const span = document.createElement('span');
+      span.className = 'pill';
+      span.textContent = t;
+      els.motionPills.appendChild(span);
+    });
+  }
+
+  function updateDiagnostic(data) {
+    els.diagnosticCard.innerHTML = `
+      <div><strong>Coordinates:</strong> ${state.currentLat.toFixed(4)}, ${state.currentLon.toFixed(4)}</div>
+      <div><strong>Observation time:</strong> ${escapeHtml(data.lastObsTime || '—')}</div>
+      <div><strong>Forecast URL:</strong> <span class="mono">${escapeHtml(data.forecastUrl || '—')}</span></div>
+      <div><strong>Hourly URL:</strong> <span class="mono">${escapeHtml(data.hourlyUrl || '—')}</span></div>
+      <div><strong>Weather.gov page:</strong> <span class="mono">${escapeHtml(state.currentWeatherUrl)}</span></div>
+      <div><strong>Radar source:</strong> <span class="mono">NOAA/NWS MRMS reflectivity overlay</span></div>
+      <div class="hr"></div>
+      <div class="tiny muted">This app refreshes the NWS point endpoint each run so the correct grid and forecast URLs are re-discovered before requesting forecast, stations, and alerts.</div>`;
+  }
+
+  function inferTravel(obs, hourlyFirst, lat, lon) {
+    let fromDir = obs?.properties?.windDirection?.value;
+    let mph = toMphFromMetersPerSecond(obs?.properties?.windSpeed?.value);
+
+    if ((fromDir == null || mph == null || mph < 1) && hourlyFirst) {
+      fromDir = parseDirectionText(hourlyFirst.windDirection);
+      mph = parseWindText(hourlyFirst.windSpeed);
+    }
+
+    if (fromDir == null || mph == null || mph < 1) {
+      clearMotionLayer();
+      els.statTravel.textContent = 'Low confidence';
+      return {
+        text: 'Winds are light or variable, so short-term travel of showers or storms is low-confidence from this point alone.',
+        pills: ['Motion estimate: low confidence']
+      };
+    }
+
+    const toBearing = (fromDir + 180) % 360;
+    const speedRounded = Math.round(mph);
+    const dirText = bearingToCompass(toBearing);
+    const dist3h = Math.max(1, mph * 3);
+    renderMotionArrow(lat, lon, toBearing, dist3h, `Estimated drift toward ${dirText} over ~3 hours`);
+    els.statTravel.textContent = `${dirText} ~${speedRounded} mph`;
+
+    return {
+      text: `Airflow near this location suggests nearby showers or storms would most likely drift toward ${dirText} at about ${speedRounded} mph if the current wind field stays representative.`,
+      pills: [
+        `Toward ${dirText}`,
+        `Speed ~${speedRounded} mph`,
+        'Estimate uses surface observation + forecast wind fallback',
+        'Use official radar for exact cell motion'
+      ]
+    };
+  }
+
+  async function lookupPlace(query) {
+    const trimmed = String(query || '').trim();
+    if (!trimmed) throw new Error('Enter a place or lat,lon.');
+
+    const latLonMatch = trimmed.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (latLonMatch) {
+      return {
+        lat: Number(latLonMatch[1]),
+        lon: Number(latLonMatch[2]),
+        label: `${Number(latLonMatch[1]).toFixed(4)}, ${Number(latLonMatch[2]).toFixed(4)}`
+      };
+    }
+
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(trimmed)}`;
+    const data = await fetchJSON(url, { headers: { 'Accept-Language': 'en' }, timeout: 10000 }, 1);
+    if (!Array.isArray(data) || !data[0]) throw new Error('Location search returned no result.');
+    return {
+      lat: Number(data[0].lat),
+      lon: Number(data[0].lon),
+      label: data[0].display_name || trimmed
+    };
+  }
+
+  async function reverseLabel(lat, lon) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+      const data = await fetchJSON(url, { headers: { 'Accept-Language': 'en' }, timeout: 8000 }, 1);
+      return data?.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    } catch {
+      return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    }
+  }
+
+  async function loadWeather(lat, lon, label) {
+    state.currentLat = lat;
+    state.currentLon = lon;
+    state.currentLabel = label || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    setStatus('Loading official weather…');
+    els.statLocation.textContent = state.currentLabel;
+    setLocationMarker(lat, lon, state.currentLabel);
+
+    try {
+      const pointsUrl = `${NWS_API}/points/${lat.toFixed(4)},${lon.toFixed(4)}`;
+      const point = await fetchJSON(pointsUrl);
+      const props = point.properties || {};
+      const relative = props.relativeLocation?.properties || {};
+      const stationListUrl = props.observationStations;
+      const forecastUrl = props.forecast;
+      const hourlyUrl = props.forecastHourly;
+      const gridUrl = props.forecastGridData;
+      state.currentWeatherUrl = props.forecastOffice ? props.forecastOffice : 'https://www.weather.gov/';
+      state.currentRadarUrl = `https://radar.weather.gov/`;
+
+      const [forecast, hourly, alerts, stations] = await Promise.all([
+        fetchJSON(forecastUrl),
+        fetchJSON(hourlyUrl),
+        fetchJSON(`${NWS_API}/alerts/active?point=${encodeURIComponent(lat + ',' + lon)}`),
+        fetchJSON(stationListUrl)
+      ]);
+
+      let latestObs = null;
+      let stationName = null;
+      let stationCoords = null;
+      if (Array.isArray(stations?.features) && stations.features[0]?.id) {
+        const station = stations.features[0];
+        stationName = station.properties?.name || station.properties?.stationIdentifier || 'Observation station';
+        if (Array.isArray(station.geometry?.coordinates)) {
+          stationCoords = { lon: station.geometry.coordinates[0], lat: station.geometry.coordinates[1] };
+        }
+        latestObs = await fetchJSON(`${station.id}/observations/latest`);
+      }
+
+      const cityState = [relative.city, relative.state].filter(Boolean).join(', ');
+      if (cityState) {
+        state.currentLabel = cityState;
+        els.statLocation.textContent = cityState;
+      }
+
+      if (stationCoords) setStationMarker(stationCoords.lat, stationCoords.lon, stationName);
+
+      const currentText = latestObs?.properties?.textDescription || forecast?.properties?.periods?.[0]?.shortForecast || 'Unavailable';
+      const currentTempF = cToF(latestObs?.properties?.temperature?.value);
+      const dewF = cToF(latestObs?.properties?.dewpoint?.value);
+      const humidity = latestObs?.properties?.relativeHumidity?.value;
+      const fromDir = latestObs?.properties?.windDirection?.value;
+      const windMph = toMphFromMetersPerSecond(latestObs?.properties?.windSpeed?.value);
+      const gustMph = toMphFromMetersPerSecond(latestObs?.properties?.windGust?.value);
+      const obsTime = latestObs?.properties?.timestamp ? humanTime(latestObs.properties.timestamp) : 'Unavailable';
+      state.lastObsTime = obsTime;
+      const firstHourly = hourly?.properties?.periods?.[0];
+
+      els.statCurrent.textContent = currentText;
+      els.statTemp.textContent = currentTempF != null ? `${Math.round(currentTempF)}°F` : (forecast?.properties?.periods?.[0]?.temperature != null ? `${forecast.properties.periods[0].temperature}°${forecast.properties.periods[0].temperatureUnit}` : '—');
+      els.statWind.textContent = windMph != null ? `${bearingToCompass(fromDir)} ${Math.round(windMph)} mph${gustMph ? ` gust ${Math.round(gustMph)}` : ''}` : `${firstHourly?.windDirection || 'Variable'} ${firstHourly?.windSpeed || ''}`.trim() || '—';
+
+      const motion = inferTravel(latestObs, firstHourly, lat, lon);
+      setNarrative(
+        `${currentText}. ${motion.text} Observation time: ${obsTime}.` +
+        (humidity != null ? ` Relative humidity is about ${Math.round(humidity)}%.` : '') +
+        (dewF != null ? ` Dew point is near ${Math.round(dewF)}°F.` : ''),
+        motion.pills
+      );
+
+      renderForecast(forecast?.properties?.periods || []);
+      renderHourly(hourly?.properties?.periods || []);
+      renderAlerts(alerts);
+      refreshRadarOverlay();
+
+      const diag = {
+        lastObsTime: obsTime,
+        forecastUrl,
+        hourlyUrl,
+        gridUrl
+      };
+      updateDiagnostic(diag);
+
+      state.lastData = { point, forecast, hourly, alerts, latestObs };
+      const weatherGovLink = props.forecastOffice || 'https://www.weather.gov/';
+      state.currentWeatherUrl = weatherGovLink;
+      els.sourceSummary.textContent = `Sources: api.weather.gov point, forecast, hourly, stations, alerts; NOAA/NWS MRMS radar overlay; OpenStreetMap; Esri. Last observation: ${obsTime}.`;
+
+      if (state.map.getZoom() < 7) {
+        state.map.setView([lat, lon], 8, { animate: true });
+      } else {
+        state.map.panTo([lat, lon], { animate: true });
+      }
+
+      setStatus('Ready');
+      log(`Weather loaded for ${state.currentLabel}.`);
+    } catch (err) {
+      setStatus('Weather load failed');
+      els.narrative.textContent = 'The live weather request failed. Check connectivity, browser permissions, or try Refresh Weather.';
+      els.diagnosticCard.innerHTML = `<div class="badText"><strong>Error:</strong> ${escapeHtml(err.message || String(err))}</div><div class="tiny muted" style="margin-top:8px">If the NWS API is temporarily unavailable, refresh and retry. The app always restarts from the point endpoint so it can rediscover the current official forecast URLs.</div>`;
+      log(`Weather load failed: ${err.message || err}`, 'error');
+      throw err;
+    }
+  }
+
+  function setupAutoRefresh() {
+    clearInterval(state.autoTimer);
+    if (!els.chkAutoRefresh.checked) return;
+    state.autoTimer = setInterval(() => {
+      loadWeather(state.currentLat, state.currentLon, state.currentLabel).catch(() => {});
+    }, 5 * 60 * 1000);
+  }
+
+  function downloadSource(filename, mime) {
+    const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([html], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+
+  async function doSearch() {
+    const q = els.locationInput.value.trim();
+    if (!q) return;
+    setStatus('Finding location…');
+    try {
+      const hit = await lookupPlace(q);
+      await loadWeather(hit.lat, hit.lon, hit.label);
+    } catch (err) {
+      setStatus('Search failed');
+      log(`Search failed: ${err.message || err}`, 'error');
+      els.narrative.textContent = 'Location lookup failed. Try a city, ZIP, address, or lat,lon.';
+    }
+  }
+
+  async function locateMe() {
+    if (!navigator.geolocation) {
+      log('Geolocation is not supported in this browser.', 'warn');
+      return;
+    }
+    setStatus('Getting device location…');
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const label = await reverseLabel(lat, lon);
+      els.locationInput.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      loadWeather(lat, lon, label).catch(() => {});
+    }, err => {
+      setStatus('Location denied');
+      log(`Geolocation error: ${err.message || err}`, 'error');
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  }
+
+  function openOfficialForecast() {
+    window.open(state.currentWeatherUrl || 'https://www.weather.gov/', '_blank', 'noopener');
+  }
+
+  function openOfficialRadar() {
+    window.open(state.currentRadarUrl || 'https://radar.weather.gov/', '_blank', 'noopener');
+  }
+
+  function bindUI() {
+    els.btnLocate.addEventListener('click', locateMe);
+    els.btnRefresh.addEventListener('click', () => loadWeather(state.currentLat, state.currentLon, state.currentLabel).catch(() => {}));
+    els.btnSearch.addEventListener('click', doSearch);
+    els.locationInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+    els.btnResetView.addEventListener('click', () => state.map.setView([DEFAULT_VIEW.lat, DEFAULT_VIEW.lon], DEFAULT_VIEW.zoom));
+    els.btnOfficialForecast.addEventListener('click', openOfficialForecast);
+    els.btnOfficialRadar.addEventListener('click', openOfficialRadar);
+    els.btnDownloadHtml.addEventListener('click', () => downloadSource('weather_travel_map_app.html', 'text/html'));
+    els.btnDownloadTxt.addEventListener('click', () => downloadSource('weather_travel_map_app.txt', 'text/plain'));
+    els.chkAutoRefresh.addEventListener('change', setupAutoRefresh);
+    els.chkRadar.addEventListener('change', refreshRadarOverlay);
+    els.chkAlerts.addEventListener('change', () => {
+      if (els.chkAlerts.checked) {
+        if (state.lastData?.alerts) renderAlerts(state.lastData.alerts);
+      } else {
+        state.alertLayer.clearLayers();
+      }
+    });
+    els.radarOpacity.addEventListener('input', refreshRadarOverlay);
+  }
+
+  async function boot() {
+    initMap();
+    bindUI();
+    setupAutoRefresh();
+    detectScreenMode();
+    els.locationInput.value = 'Orlando, FL';
+    try {
+      const start = await lookupPlace('Orlando, FL');
+      await loadWeather(start.lat, start.lon, start.label);
+    } catch (err) {
+      log(`Startup location load failed: ${err.message || err}`, 'warn');
+      setStatus('Ready without startup weather');
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
+

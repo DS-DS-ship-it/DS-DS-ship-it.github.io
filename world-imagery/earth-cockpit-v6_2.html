@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Earth Cockpit v6.2 — Safari Stable</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.118.2/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.118.2/Build/Cesium/Cesium.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height: 100%; margin: 0; background:#070a10; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden; }
+    #app { position:fixed; inset:0; display:block; }
+    #cesiumContainer { position:absolute; inset:0; }
+
+    .panel{
+      position:absolute; left:12px; top:12px; width:340px; max-height: calc(100vh - 24px);
+      overflow:auto; border-radius:12px; padding:12px;
+      background: rgba(12,16,24,.72); border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      user-select:none;
+      z-index: 5;
+    }
+    .row { display:flex; gap:8px; align-items:center; margin:8px 0; }
+    .row.wrap { flex-wrap: wrap; }
+    .title { font-weight:700; letter-spacing:.2px; margin-bottom:6px; }
+    .sub { opacity:.85; font-size:12px; line-height:1.25; margin-bottom:8px; }
+    label { font-size:12px; opacity:.9; }
+    input[type="text"], input[type="date"], select {
+      width:100%; padding:8px 10px; border-radius:10px;
+      background: rgba(255,255,255,.06); color:#eaf0ff;
+      border:1px solid rgba(255,255,255,.10); outline:none;
+    }
+    button{
+      padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08); color:#eaf0ff; cursor:pointer;
+    }
+    button:hover{ background: rgba(255,255,255,.12); }
+    button:active{ transform: translateY(1px); }
+    .pill { font-size:12px; padding:6px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+    .tiny { font-size:11px; opacity:.85; }
+    .hr { height:1px; background: rgba(255,255,255,.10); margin:10px 0; }
+    .kpi { display:flex; justify-content:space-between; gap:10px; font-size:12px; opacity:.9; }
+    .log {
+      font: 12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 10px;
+      padding: 8px;
+      white-space: pre-wrap;
+      overflow:auto;
+      max-height: 240px;
+    }
+    .rightDock {
+      position:absolute; right:12px; top:12px; display:flex; flex-direction:column; gap:10px;
+      max-width: 360px;
+      z-index: 10;
+    }
+    .toast {
+      background: rgba(18,22,30,.78);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+      font-size: 12px;
+      opacity: .95;
+      backdrop-filter: blur(10px);
+    }
+    .good { color:#8bffa8; }
+    .warn { color:#ffd47a; }
+    .bad  { color:#ff7f7f; }
+
+    .slider { width:100%; }
+    .toggle { display:flex; align-items:center; gap:8px; }
+    .toggle input { transform: scale(1.12); }
+
+    .minBtn { position:absolute; left:12px; top:12px; z-index:6; display:none; }
+
+    .cesium-viewer-toolbar, .cesium-viewer-bottom { display:none !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="cesiumContainer"></div>
+
+  <button id="showPanel" class="minBtn">Show Panel</button>
+
+  <div class="panel" id="panel">
+    <div class="title">Earth Cockpit v6.2 (Safari Stable)</div>
+    <div class="sub">
+      Patch: removes Service Worker + hardens render error handlers so Safari can’t crash on load.
+      <div class="tiny" style="margin-top:6px; opacity:.8;">
+        If you still see a crash, the log below will show the exact line.
+      </div>
+    </div>
+
+    <div class="row wrap">
+      <button id="btnMinimize">Minimize</button>
+      <button id="btnHome">Home</button>
+      <button id="btn2D" class="pill">2D</button>
+      <button id="btn3D" class="pill">3D</button>
+      <button id="btnColumbus" class="pill">2.5D</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <label>Search / Jump (tokenless Nominatim)</label>
+    <div class="row">
+      <input id="q" type="text" placeholder="Try: Orlando, Tokyo, Yellowstone, 28.54,-81.38" />
+      <button id="btnGo">Go</button>
+    </div>
+    <div class="kpi"><span>Center</span><span id="centerTxt">—</span></div>
+    <div class="kpi"><span>Camera</span><span id="camTxt">—</span></div>
+
+    <div class="hr"></div>
+
+    <label>Base imagery</label>
+    <select id="baseImagery">
+      <option value="esri">Esri World Imagery (satellite)</option>
+      <option value="osm">OpenStreetMap (raster)</option>
+      <option value="esriTopo">Esri World Topo</option>
+    </select>
+
+    <div class="row toggle">
+      <input id="labelsToggle" type="checkbox" checked />
+      <label for="labelsToggle">City / place labels overlay (CARTO)</label>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row wrap" style="justify-content:space-between;">
+      <div style="flex:1;">
+        <label>Historical imagery (NASA GIBS WMTS)</label>
+        <select id="histLayer">
+          <option value="none">Off</option>
+          <option value="modis_truecolor">MODIS Terra True Color</option>
+          <option value="viirs_truecolor">VIIRS True Color (SNPP)</option>
+        </select>
+      </div>
+      <div style="width:140px;">
+        <label>Date (UTC)</label>
+        <input id="histDate" type="date" />
+      </div>
+    </div>
+
+    <div class="row wrap">
+      <button id="histPrev">◀ Day</button>
+      <button id="histNext">Day ▶</button>
+      <button id="histToday">Today</button>
+      <button id="histFix" class="pill">Fix Hist</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <label>Radar overlay</label>
+    <div class="row wrap">
+      <select id="radarProvider">
+        <option value="auto">Auto (prefer Local Recorder if running)</option>
+        <option value="local">Local Recorder (localhost:8765)</option>
+        <option value="rainviewer">RainViewer (limited history)</option>
+      </select>
+      <button id="radarRefresh">Refresh</button>
+      <button id="radarToggle" class="pill">Radar: OFF</button>
+    </div>
+
+    <div class="row">
+      <input id="radarOpacity" class="slider" type="range" min="0" max="100" value="70" />
+    </div>
+
+    <div class="row wrap">
+      <button id="radarBack">◀ -15m</button>
+      <button id="radarPlay">Play</button>
+      <button id="radarFwd">+15m ▶</button>
+      <button id="radarStop">Stop</button>
+    </div>
+
+    <div class="kpi"><span>Frame</span><span id="radarFrameTxt">—</span></div>
+
+    <div class="hr"></div>
+
+    <div class="row wrap">
+      <div style="flex:1;">
+        <label>3D Buildings (OSM via Overpass)</label>
+        <div class="row toggle" style="margin:6px 0 0;">
+          <input id="osm3dToggle" type="checkbox" />
+          <label for="osm3dToggle">Enable OSM 3D buildings</label>
+        </div>
+      </div>
+      <div style="width:140px;">
+        <label>Radius (km)</label>
+        <input id="osm3dRadius" type="text" value="1.2" />
+      </div>
+    </div>
+
+    <div class="row wrap">
+      <button id="osm3dFetch">Fetch near camera</button>
+      <button id="osm3dClear">Clear</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <label>Troubleshooting</label>
+    <div class="row wrap">
+      <button id="btnResetCamera">Reset camera controls</button>
+      <button id="btnRebuildLayers">Rebuild layers</button>
+      <button id="btnSafeMode" class="pill">Safe Mode: ON</button>
+      <button id="btnReload">Reload</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="rightDock" id="dock"></div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  const dock = $("dock");
+
+  function log(msg, cls="") {
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logEl.textContent = (line + "\n" + logEl.textContent).slice(0, 18000);
+    if (cls) toast(msg, cls);
+  }
+  function toast(msg, cls="") {
+    const el = document.createElement("div");
+    el.className = "toast " + cls;
+    el.textContent = msg;
+    dock.prepend(el);
+    setTimeout(() => el.remove(), 6000);
+  }
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+  // GLOBAL ERROR TRAP (so Safari shows us the exact line without killing render silently)
+  window.addEventListener("error", (ev) => {
+    try {
+      log(`JS ERROR: ${ev.message} @ ${ev.filename}:${ev.lineno}:${ev.colno}`, "bad");
+    } catch {}
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    try {
+      log(`PROMISE REJECTION: ${String(ev.reason)}`, "bad");
+    } catch {}
+  });
+
+  // ---- Cesium init (tokenless)
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  // SAFARI-STABLE OPTIONS: do NOT pass exotic contextOptions; keep it simple.
+  const viewer = new Cesium.Viewer("cesiumContainer", {
+    animation: false,
+    timeline: false,
+    baseLayerPicker: false,
+    geocoder: false,
+    homeButton: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    fullscreenButton: false,
+    infoBox: false,
+    selectionIndicator: true,
+    shouldAnimate: true,
+    imageryProvider: false,
+    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+  });
+
+  // SAFEMODE default ON for Safari: lower GPU load immediately
+  let safeMode = true;
+  function applySafeMode(on) {
+    safeMode = !!on;
+    $("btnSafeMode").textContent = safeMode ? "Safe Mode: ON" : "Safe Mode: OFF";
+
+    // Reduce load on retina screens
+    viewer.resolutionScale = safeMode ? 0.65 : 0.85;
+
+    // Disable post-processing on Safari
+    viewer.scene.fxaa = false;
+    if (viewer.scene.postProcessStages && viewer.scene.postProcessStages.fxaa) {
+      viewer.scene.postProcessStages.fxaa.enabled = false;
+    }
+    viewer.scene.globe.maximumScreenSpaceError = safeMode ? 6 : 2;
+
+    log(`Safe Mode = ${safeMode} (resolutionScale=${viewer.resolutionScale})`, safeMode ? "warn" : "good");
+  }
+  $("btnSafeMode").addEventListener("click", () => applySafeMode(!safeMode));
+  applySafeMode(true);
+
+  // HARDENED: Never assume event args exist on Safari
+  try {
+    viewer.scene.canvas.addEventListener("webglcontextlost", (e) => {
+      try { if (e && e.preventDefault) e.preventDefault(); } catch {}
+      toast("WebGL context lost. Reload this page.", "bad");
+      log("WebGL context lost.", "bad");
+    }, false);
+  } catch (err) {
+    log("webglcontextlost hook failed: " + String(err), "warn");
+  }
+
+  // HARDENED: Cesium renderError event argument shape differs sometimes
+  try {
+    viewer.scene.renderError.addEventListener((a, b) => {
+      const err = (b && b.message) ? b : (a && a.message) ? a : b || a;
+      const msg = (err && err.message) ? err.message : String(err);
+      toast("Cesium render error. See log.", "bad");
+      log("Cesium renderError: " + msg, "bad");
+    });
+  } catch (err) {
+    log("renderError hook failed: " + String(err), "warn");
+  }
+
+  // ---- Providers
+  function esriWorldImagery() {
+    return new Cesium.ArcGisMapServerImageryProvider({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+    });
+  }
+  function esriTopo() {
+    return new Cesium.ArcGisMapServerImageryProvider({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"
+    });
+  }
+  function osmRaster() {
+    return new Cesium.UrlTemplateImageryProvider({
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      credit: "© OpenStreetMap contributors"
+    });
+  }
+  function cartoLabels() {
+    return new Cesium.UrlTemplateImageryProvider({
+      url: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+      subdomains: ["a","b","c","d"],
+      credit: "© CARTO"
+    });
+  }
+  function gibsWmts(layerName, timeISO) {
+    return new Cesium.WebMapTileServiceImageryProvider({
+      url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+      layer: layerName,
+      style: "default",
+      format: "image/jpeg",
+      tileMatrixSetID: "GoogleMapsCompatible_Level9",
+      maximumLevel: 9,
+      credit: "NASA GIBS",
+      dimensions: timeISO ? { TIME: timeISO } : undefined
+    });
+  }
+
+  let baseLayer=null, labelsLayer=null, histLayer=null, radarLayer=null;
+
+  function clearLayer(l) {
+    if (!l) return null;
+    try { viewer.imageryLayers.remove(l, true); } catch {}
+    return null;
+  }
+
+  // ---- Camera controls (Safari trackpad safe)
+  function resetCameraControls() {
+    const c = viewer.scene.screenSpaceCameraController;
+    c.enableZoom = true;
+    c.enableTilt = true;
+    c.enableRotate = true;
+    c.enableTranslate = true;
+    c.enableLook = true;
+
+    c.zoomEventTypes = [
+      Cesium.CameraEventType.WHEEL,
+      Cesium.CameraEventType.PINCH,
+      Cesium.CameraEventType.CTRL_DRAG
+    ];
+    c.tiltEventTypes = [
+      Cesium.CameraEventType.RIGHT_DRAG,
+      Cesium.CameraEventType.PINCH
+    ];
+    c.rotateEventTypes = [ Cesium.CameraEventType.LEFT_DRAG ];
+
+    log("Camera controls reset.", "good");
+  }
+  $("btnResetCamera").addEventListener("click", resetCameraControls);
+  resetCameraControls();
+
+  // ---- Historical
+  function toISODate(d) {
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth()+1).padStart(2,"0");
+    const dd = String(d.getUTCDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  $("histDate").value = toISODate(new Date());
+
+  function clampZoomForHistorical() {
+    if ($("histLayer").value === "none") return;
+    const minHeightMeters = 1800;
+    const cam = viewer.camera;
+    const h = cam.positionCartographic.height;
+    if (h < minHeightMeters) {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromRadians(
+          cam.positionCartographic.longitude,
+          cam.positionCartographic.latitude,
+          minHeightMeters
+        ),
+        duration: 0.35
+      });
+      log("Clamped zoom for historical layer.", "warn");
+    }
+  }
+
+  function applyHistorical() {
+    histLayer = clearLayer(histLayer);
+    const layer = $("histLayer").value;
+    if (layer === "none") return;
+
+    const dateISO = $("histDate").value || toISODate(new Date());
+    let gibsLayerName = null;
+    if (layer === "modis_truecolor") gibsLayerName = "MODIS_Terra_CorrectedReflectance_TrueColor";
+    if (layer === "viirs_truecolor") gibsLayerName = "VIIRS_SNPP_CorrectedReflectance_TrueColor";
+    if (!gibsLayerName) return;
+
+    histLayer = viewer.imageryLayers.addImageryProvider(gibsWmts(gibsLayerName, dateISO));
+    histLayer.alpha = 1.0;
+    clampZoomForHistorical();
+    log(`Historical ON: ${layer} @ ${dateISO}`);
+  }
+
+  // ---- Radar (unchanged core)
+  const radarState = { enabled:false, frames:[], frameIndex:0, playing:false, timer:null, opacity:0.70 };
+
+  function setRadarEnabled(on) {
+    radarState.enabled = on;
+    $("radarToggle").textContent = on ? "Radar: ON" : "Radar: OFF";
+    if (!on) radarLayer = clearLayer(radarLayer);
+    else ensureRadarFrames().then(() => applyRadarFrame(radarState.frameIndex));
+  }
+  $("radarToggle").addEventListener("click", () => setRadarEnabled(!radarState.enabled));
+  $("radarOpacity").addEventListener("input", (e) => {
+    radarState.opacity = clamp(parseInt(e.target.value,10)/100, 0, 1);
+    if (radarLayer) radarLayer.alpha = radarState.opacity;
+  });
+
+  async function checkLocalRecorder() {
+    try {
+      const r = await fetch("http://localhost:8765/manifest", { cache: "no-store" });
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (!j || !Array.isArray(j.times)) return null;
+      return j;
+    } catch { return null; }
+  }
+  async function fetchRainViewerFrames() {
+    const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("RainViewer API failed: " + r.status);
+    const j = await r.json();
+
+    const frames = [];
+    const host = j.host || "https://tilecache.rainviewer.com";
+    const past = (j.radar && j.radar.past) ? j.radar.past : [];
+    const nowcast = (j.radar && j.radar.nowcast) ? j.radar.nowcast : [];
+    const all = [...past, ...nowcast];
+
+    for (const f of all) {
+      const t = f.time;
+      const label = new Date(t*1000).toUTCString();
+      const template = `${host}/v2/radar/${t}/256/{z}/{x}/{y}/2/1_1.png`;
+      frames.push({ t, label, template, source: "rainviewer" });
+    }
+    return frames;
+  }
+  async function ensureRadarFrames() {
+    const pref = $("radarProvider").value;
+    let frames = [];
+
+    if (pref === "local" || pref === "auto") {
+      const local = await checkLocalRecorder();
+      if (local && local.times.length) {
+        frames = local.times.map(t => ({
+          t,
+          label: new Date(t*1000).toUTCString() + " (LOCAL)",
+          template: `http://localhost:8765/tiles/${t}/{z}/{x}/{y}.png`,
+          source: "local"
+        }));
+        log(`Radar frames from LOCAL: ${frames.length}`, "good");
+      } else if (pref === "local") {
+        log("Local radar recorder not detected on localhost:8765.", "warn");
+      }
+    }
+    if (!frames.length) {
+      frames = await fetchRainViewerFrames();
+      log(`Radar frames from RainViewer: ${frames.length}`, "warn");
+    }
+
+    radarState.frames = frames;
+    radarState.frameIndex = clamp(radarState.frameIndex, 0, Math.max(0, frames.length-1));
+    updateRadarFrameText();
+  }
+  function updateRadarFrameText() {
+    if (!radarState.frames.length) { $("radarFrameTxt").textContent = "—"; return; }
+    const f = radarState.frames[radarState.frameIndex];
+    $("radarFrameTxt").textContent = `${radarState.frameIndex+1}/${radarState.frames.length} • ${f.label}`;
+  }
+  async function applyRadarFrame(idx) {
+    if (!radarState.enabled) return;
+    if (!radarState.frames.length) await ensureRadarFrames();
+
+    radarState.frameIndex = clamp(idx, 0, radarState.frames.length-1);
+    updateRadarFrameText();
+    const f = radarState.frames[radarState.frameIndex];
+
+    radarLayer = clearLayer(radarLayer);
+    radarLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+      url: f.template,
+      credit: f.source === "local" ? "Local radar recorder" : "RainViewer"
+    }));
+    radarLayer.alpha = radarState.opacity;
+
+    log(`Radar frame: ${f.label}`);
+  }
+  function stopRadar() {
+    radarState.playing = false;
+    if (radarState.timer) clearInterval(radarState.timer);
+    radarState.timer = null;
+    log("Radar playback stopped.");
+  }
+  function playRadar() {
+    if (!radarState.enabled) setRadarEnabled(true);
+    radarState.playing = true;
+    if (radarState.timer) clearInterval(radarState.timer);
+    radarState.timer = setInterval(() => {
+      if (!radarState.frames.length) return;
+      let next = radarState.frameIndex + 1;
+      if (next >= radarState.frames.length) next = 0;
+      applyRadarFrame(next).catch(e => log("Radar playback error: " + e, "warn"));
+    }, 650);
+    log("Radar playback started.");
+  }
+  $("radarRefresh").addEventListener("click", async () => {
+    await ensureRadarFrames();
+    if (radarState.enabled) await applyRadarFrame(radarState.frameIndex);
+  });
+  $("radarBack").addEventListener("click", () => applyRadarFrame(radarState.frameIndex - 1));
+  $("radarFwd").addEventListener("click", () => applyRadarFrame(radarState.frameIndex + 1));
+  $("radarPlay").addEventListener("click", () => playRadar());
+  $("radarStop").addEventListener("click", () => stopRadar());
+
+  // ---- OSM 3D (kept, but not auto-run)
+  const osm3d = { enabled:false, entities:[], lastFetchKey:"", busy:false };
+  function clearOSM3D() {
+    for (const e of osm3d.entities) viewer.entities.remove(e);
+    osm3d.entities = [];
+    log("OSM 3D buildings cleared.");
+  }
+  function metersFromHeightTag(h) {
+    if (!h) return null;
+    const m = String(h).trim().match(/^(\d+(?:\.\d+)?)/);
+    if (!m) return null;
+    const v = parseFloat(m[1]);
+    return isFinite(v) ? v : null;
+  }
+  async function fetchOSMBuildings() {
+    if (!osm3d.enabled) { log("Enable OSM 3D buildings first.", "warn"); return; }
+    if (osm3d.busy) return;
+
+    osm3d.busy = true;
+    try {
+      const radiusKm = clamp(parseFloat($("osm3dRadius").value || "1.2"), 0.2, 6.0);
+      const c = viewer.camera.positionCartographic;
+      const lat = Cesium.Math.toDegrees(c.latitude);
+      const lon = Cesium.Math.toDegrees(c.longitude);
+
+      const key = `${lat.toFixed(4)},${lon.toFixed(4)}@${radiusKm.toFixed(1)}`;
+      if (key === osm3d.lastFetchKey) { log("OSM 3D: same area — skipping fetch."); return; }
+      osm3d.lastFetchKey = key;
+
+      const q = `
+[out:json][timeout:25];
+( way["building"](around:${Math.round(radiusKm*1000)},${lat},${lon}); );
+out body geom;
+      `.trim();
+
+      log(`OSM 3D: fetching buildings (${radiusKm}km)…`);
+      const r = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: {"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8"},
+        body: "data=" + encodeURIComponent(q)
+      });
+      if (!r.ok) throw new Error("Overpass HTTP " + r.status);
+      const j = await r.json();
+
+      let added = 0;
+      const maxBuildings = 800;
+
+      for (const el of (j.elements || [])) {
+        if (added >= maxBuildings) break;
+        if (el.type !== "way") continue;
+        if (!Array.isArray(el.geometry) || el.geometry.length < 3) continue;
+
+        const coords = [];
+        for (const p of el.geometry) coords.push(p.lon, p.lat);
+
+        const tags = el.tags || {};
+        let height = metersFromHeightTag(tags.height);
+        if (height == null) {
+          const levels = parseFloat(tags["building:levels"]);
+          if (isFinite(levels)) height = levels * 3.0;
+        }
+        if (height == null) height = 8.0;
+        height = clamp(height, 2.5, 650);
+
+        const ent = viewer.entities.add({
+          polygon: {
+            hierarchy: Cesium.Cartesian3.fromDegreesArray(coords),
+            extrudedHeight: height,
+            height: 0,
+            material: Cesium.Color.CYAN.withAlpha(0.25),
+            outline: true,
+            outlineColor: Cesium.Color.BLACK.withAlpha(0.35)
+          }
+        });
+        osm3d.entities.push(ent);
+        added++;
+      }
+
+      log(`OSM 3D: added ${added} buildings.`, "good");
+    } catch (e) {
+      log("OSM 3D fetch failed: " + e, "bad");
+    } finally {
+      osm3d.busy = false;
+    }
+  }
+
+  $("osm3dToggle").addEventListener("change", (e) => {
+    osm3d.enabled = e.target.checked;
+    if (!osm3d.enabled) clearOSM3D();
+    log(`OSM 3D buildings: ${osm3d.enabled ? "ON" : "OFF"}`);
+  });
+  $("osm3dFetch").addEventListener("click", () => fetchOSMBuildings());
+  $("osm3dClear").addEventListener("click", () => clearOSM3D());
+
+  // ---- Build imagery stack
+  function rebuildLayers() {
+    baseLayer = clearLayer(baseLayer);
+    labelsLayer = clearLayer(labelsLayer);
+    histLayer = clearLayer(histLayer);
+    radarLayer = clearLayer(radarLayer);
+
+    const base = $("baseImagery").value;
+    let baseProvider = esriWorldImagery();
+    if (base === "osm") baseProvider = osmRaster();
+    if (base === "esriTopo") baseProvider = esriTopo();
+    baseLayer = viewer.imageryLayers.addImageryProvider(baseProvider);
+
+    if ($("labelsToggle").checked) {
+      labelsLayer = viewer.imageryLayers.addImageryProvider(cartoLabels());
+    }
+
+    applyHistorical();
+    if (radarState.enabled) applyRadarFrame(radarState.frameIndex).catch(()=>{});
+    log("Layers rebuilt.", "good");
+  }
+  $("btnRebuildLayers").addEventListener("click", rebuildLayers);
+  $("baseImagery").addEventListener("change", rebuildLayers);
+  $("labelsToggle").addEventListener("change", rebuildLayers);
+
+  // ---- Historical controls
+  $("histLayer").addEventListener("change", applyHistorical);
+  $("histDate").addEventListener("change", applyHistorical);
+  $("histPrev").addEventListener("click", () => {
+    const d = new Date($("histDate").value + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 1);
+    $("histDate").value = toISODate(d);
+    applyHistorical();
+  });
+  $("histNext").addEventListener("click", () => {
+    const d = new Date($("histDate").value + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + 1);
+    $("histDate").value = toISODate(d);
+    applyHistorical();
+  });
+  $("histToday").addEventListener("click", () => {
+    $("histDate").value = toISODate(new Date());
+    applyHistorical();
+  });
+  $("histFix").addEventListener("click", clampZoomForHistorical);
+
+  // ---- Search / Jump
+  function parseLatLon(s) {
+    const m = s.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+    if (!m) return null;
+    const lat = parseFloat(m[1]), lon = parseFloat(m[2]);
+    if (!isFinite(lat) || !isFinite(lon)) return null;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    return { lat, lon };
+  }
+  async function geocode(q) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+    const r = await fetch(url, { headers: { "Accept":"application/json" } });
+    if (!r.ok) throw new Error("Geocode failed: " + r.status);
+    const j = await r.json();
+    if (!Array.isArray(j) || !j.length) return null;
+    return { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), name: j[0].display_name };
+  }
+  async function goTo(lat, lon, height=25000) {
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, height), duration: 0.9 });
+  }
+  $("btnGo").addEventListener("click", async () => {
+    const txt = $("q").value.trim();
+    if (!txt) return;
+
+    const ll = parseLatLon(txt);
+    if (ll) { log(`Jump to lat/lon: ${ll.lat}, ${ll.lon}`); await goTo(ll.lat, ll.lon, 25000); return; }
+
+    try {
+      log(`Geocoding: "${txt}"…`);
+      const r = await geocode(txt);
+      if (!r) { log("No result.", "warn"); return; }
+      log(`Result: ${r.name}`);
+      await goTo(r.lat, r.lon, 25000);
+    } catch (e) {
+      log("Search failed: " + e, "bad");
+    }
+  });
+
+  // ---- View mode controls
+  $("btn2D").addEventListener("click", () => viewer.scene.morphTo2D(0.6));
+  $("btn3D").addEventListener("click", () => viewer.scene.morphTo3D(0.6));
+  $("btnColumbus").addEventListener("click", () => viewer.scene.morphToColumbusView(0.6));
+  $("btnHome").addEventListener("click", () => viewer.camera.flyHome(0.9));
+
+  // ---- Panel controls
+  $("btnMinimize").addEventListener("click", () => {
+    $("panel").style.display = "none";
+    $("showPanel").style.display = "block";
+  });
+  $("showPanel").addEventListener("click", () => {
+    $("panel").style.display = "block";
+    $("showPanel").style.display = "none";
+  });
+
+  $("btnReload").addEventListener("click", () => location.reload());
+
+  // ---- HUD
+  function updateHUD() {
+    const c = viewer.camera.positionCartographic;
+    const lat = Cesium.Math.toDegrees(c.latitude);
+    const lon = Cesium.Math.toDegrees(c.longitude);
+    const h = c.height;
+    $("centerTxt").textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    $("camTxt").textContent = `${Math.round(h).toLocaleString()} m`;
+  }
+  viewer.clock.onTick.addEventListener(updateHUD);
+  viewer.camera.changed.addEventListener(() => {
+    if ($("histLayer").value !== "none") clampZoomForHistorical();
+  });
+
+  // ---- Start
+  rebuildLayers();
+  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(-90, 25, 25000000), duration: 0.9 });
+  log("Earth Cockpit v6.2 loaded (Safari-stable).", "good");
+})();
+</script>
+</body>
+</html>

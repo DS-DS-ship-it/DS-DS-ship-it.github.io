@@ -1,25 +1,30 @@
 <!--
-Earth Cockpit v5.6.1 — WORKING PATCH (2D + 3D + ASTRO)
+Earth Cockpit v5.7.2 — FINAL MOBILE FIX + PANEL MINIMIZE (2D + 3D + ASTRO) + Radar
 
-Fixes in this build:
-✅ Radar toggle label now correct (OFF means off; ON means on)
-✅ Radar overlay reliably shows (Leaflet panes + z-index + ordering enforcement)
-✅ Radar refresh forces redraw + cache-bust on URL
-✅ “Open sample radar tile” proves tiles exist / are transparent
-✅ Menu Zoom Controls added (works in 2D + 3D/ASTRO)
-✅ 3D/ASTRO zoom stays enabled; recover/rebuild remain
-✅ Labels stay above radar (separate panes in 2D, raised-to-top in 3D)
+This build fixes your iPhone “black screen”:
+✅ Uses iOS-safe dynamic viewport height (dvh + JS fallback) so the map always has height
+✅ Mobile layout: map is fixed full-screen, panel is an overlay card
+✅ Panel minimize works on desktop + mobile (FAB button re-opens)
+✅ Forces Leaflet/Cesium resize on: minimize toggle, mode switch, address bar changes, orientation change
+✅ Radar: auto-refresh option + safer cache-bust + clearer status
 
-Save as: world-imagery/earth-cockpit-v5_6_1.html
-Run with: python3 -m http.server 8080
-Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
+Files:
+1) world-imagery/earth-cockpit-v5_7_2.html   (this file)
+2) world-imagery/earth-cockpit-v5-sw.js     (same SW you already have, ok to keep)
+
+Local test:
+python3 -m http.server 8080
+http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_7_2.html
+
+GitHub Pages:
+https://ds-ds-ship-it.github.io/world-imagery/earth-cockpit-v5_7_2.html
 -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Earth Cockpit v5.6.1 — 2D + 3D + Astro • Radar FIXED</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Earth Cockpit v5.7.2 — 2D + 3D + Astro • Mobile FIX</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -32,34 +37,85 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
 
   <style>
-    :root { color-scheme: dark; }
-    html, body { height:100%; margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
-    #app { height:100%; display:grid; grid-template-columns: 380px 1fr; }
+    :root{
+      color-scheme: dark;
+      --panelW: 380px;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      /* JS will set --vh to an iOS-safe pixel value */
+      --vh: 1vh;
+    }
+
+    html, body{
+      margin:0;
+      background:#0b0c10;
+      color:#e9eef5;
+      font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      height: 100%;
+      overflow:hidden;
+    }
+
+    /* Use dvh where supported, but always have JS fallback via --vh */
+    body{
+      height: 100dvh;
+      height: calc(var(--vh) * 100);
+    }
+
+    body.minimized { --panelW: 0px; }
+
+    /* Desktop layout (grid) */
+    #app{
+      height: 100%;
+      display:grid;
+      grid-template-columns: var(--panelW) 1fr;
+      overflow:hidden;
+    }
+
     #panel{
       padding:12px;
       border-right:1px solid rgba(255,255,255,.08);
       background: rgba(12,14,18,.95);
       overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      position:relative;
+      z-index: 5;
+      transition: transform .22s ease;
     }
-    #viewWrap{ position:relative; min-width:0; }
-    #map, #cesiumContainer{ position:absolute; inset:0; }
+    body.minimized #panel{
+      transform: translateX(-110%);
+      pointer-events:none;
+    }
+
+    #viewWrap{
+      position:relative;
+      min-width:0;
+      background:#000;
+      height: 100%;
+    }
+
+    #map, #cesiumContainer{
+      position:absolute;
+      inset:0;
+      height:100%;
+      width:100%;
+      background:#000;
+    }
     #map{ display:block; }
     #cesiumContainer{ display:none; }
 
-    h1{ font-size:14px; margin:0 0 8px; font-weight:700; letter-spacing:.2px; }
+    h1{ font-size:14px; margin:0 0 8px; font-weight:800; letter-spacing:.2px; }
     .sub{ font-size:12px; opacity:.8; margin:0 0 10px; }
     .box{ border:1px solid rgba(255,255,255,.10); border-radius:12px; padding:10px; margin:10px 0; background: rgba(15,18,24,.65); }
     .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .row > *{ flex:0 0 auto; }
     label{ font-size:12px; opacity:.85; }
-    input, select, button, textarea{
+    input, select, button{
       background:#0f141c; color:#e9eef5;
       border:1px solid rgba(255,255,255,.14);
       border-radius:10px;
       padding:8px 10px;
       outline:none;
     }
-    input[type="text"], textarea, select{ width:100%; }
+    input[type="text"], select{ width:100%; }
     button{ cursor:pointer; }
     button.primary{ background:#1b2a46; border-color: rgba(120,170,255,.45); }
     button.warn{ background:#3a1f1f; border-color: rgba(255,120,120,.45); }
@@ -79,18 +135,17 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     .smallbtn{ padding:6px 8px; border-radius:9px; font-size:12px; }
     .grid3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
     .slider{ width:100%; }
-    .stickyTop{ position:sticky; top:0; z-index:5; padding-bottom:10px; background: rgba(12,14,18,.95); }
-    .kbd{ font-family: ui-monospace, Menlo, monospace; border:1px solid rgba(255,255,255,.18); border-bottom-width:2px; border-radius:6px; padding:1px 6px; }
-    .list{ margin:0; padding-left:16px; }
-    .list li{ margin:4px 0; }
+    .stickyTop{ position:sticky; top:0; z-index:6; padding-bottom:10px; background: rgba(12,14,18,.95); }
 
-    /* Leaflet controls visibility */
+    /* Leaflet controls */
     .leaflet-control-zoom a { background: rgba(15,18,24,.9) !important; color:#e9eef5 !important; border-color: rgba(255,255,255,.15) !important; }
     .leaflet-control-attribution { background: rgba(12,14,18,.75) !important; color:#cbd5e1 !important; }
 
-    /* Small HUD (top-right) */
-    #hud {
-      position:absolute; right:10px; top:10px;
+    /* HUD (top-right) */
+    #hud{
+      position:absolute;
+      right:10px;
+      top: calc(10px + var(--safeTop));
       background: rgba(12,14,18,.55);
       border:1px solid rgba(255,255,255,.10);
       border-radius: 12px;
@@ -98,68 +153,91 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       font-size: 12px;
       pointer-events:none;
       white-space: pre;
+      z-index: 4;
     }
-  
 
-  /* ===== Mobile Minimize Patch ===== */
-  :root{
-    --safeTop: env(safe-area-inset-top, 0px);
-    --safeBottom: env(safe-area-inset-bottom, 0px);
-  }
+    /* Minimize button */
+    #minBtn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:800;
+      border-radius:999px;
+      padding:8px 10px;
+    }
 
-  #panel{
-    max-height: calc(100vh - 24px - var(--safeTop) - var(--safeBottom));
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+    /* Floating “open panel” button */
+    #panelFab{
+      position: fixed;
+      left: 12px;
+      bottom: calc(12px + var(--safeBottom));
+      z-index: 999999;
+      display: none;
+      border-radius: 999px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      color: #e9eef5;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #panelFab.show{
+      display: inline-flex;
+      align-items:center;
+      gap:10px;
+    }
 
-  #panel.minimized{
-    height: auto !important;
-    max-height: none !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-  }
-  #panel.minimized .panel-body,
-  #panel.minimized .panel-sections,
-  #panel.minimized .panel-content,
-  #panel.minimized .inner{
-    display: none !important;
-  }
+    /* -----------------------------
+       MOBILE SAFE MODE
+       Map fixed full-screen; panel overlay.
+       ----------------------------- */
+    @media (max-width: 720px){
+      #app{ display:block; height:100%; }
+      #viewWrap{
+        position:fixed;
+        left:0; right:0;
+        top:0;
+        bottom:0;
+        height: 100%;
+      }
 
-  #panelFab{
-    position: fixed;
-    left: 12px;
-    bottom: calc(12px + var(--safeBottom));
-    z-index: 999999;
-    display: none;
-    border-radius: 999px;
-    padding: 12px 14px;
-    border: 1px solid rgba(255,255,255,.14);
-    background: rgba(15,18,24,.72);
-    backdrop-filter: blur(10px);
-    color: #e9eef5;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 18px 60px rgba(0,0,0,.55);
-    user-select: none;
-  }
-  #panelFab.show{
-    display: inline-flex;
-    align-items:center;
-    gap:10px;
-  }
-
-</style>
+      #panel{
+        position:fixed;
+        left:10px;
+        top: calc(10px + var(--safeTop));
+        bottom: calc(10px + var(--safeBottom));
+        width: min(380px, calc(100vw - 20px));
+        z-index: 99999;
+        border-right:none;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:14px;
+        box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      }
+      body.minimized #panel{
+        transform: translateX(-110%);
+        pointer-events:none;
+      }
+    }
+  </style>
 </head>
 
 <body>
 <div id="app">
   <div id="panel">
     <div class="stickyTop">
-      <h1>Earth Cockpit v5.6.1</h1>
-      <div class="sub">2D + 3D globe + Astronomy • Satellite + Labels • Radar overlay FIXED • HARD diagnostics</div>
+      <div class="row" style="justify-content:space-between; align-items:flex-start;">
+        <div style="min-width:0;">
+          <h1>Earth Cockpit v5.7.2</h1>
+          <div class="sub">2D + 3D globe + Astronomy • Satellite + Labels • Radar • iPhone black-screen FIX</div>
+        </div>
+        <button id="minBtn" class="smallbtn" title="Hide panel">Minimize</button>
+      </div>
 
-      <div class="toggle">
+      <div class="toggle" style="margin-top:8px;">
         <button id="btn2D" class="primary">2D Map</button>
         <button id="btn3D">3D Globe</button>
         <button id="btnASTRO">Astronomy</button>
@@ -184,7 +262,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       <div class="tiny muted" id="searchMsg"></div>
     </div>
 
-    <!-- MENU ZOOM CONTROLS (works in 2D + 3D/ASTRO) -->
     <div class="box">
       <label>Zoom Controls</label>
       <div class="row">
@@ -192,7 +269,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         <button id="menuZoomOut" class="smallbtn">Zoom −</button>
       </div>
       <div class="tiny muted" style="margin-top:6px;">
-        2D: changes Leaflet zoom. 3D/ASTRO: moves camera forward/backward.
+        2D: Leaflet zoom. 3D/ASTRO: camera forward/back.
       </div>
     </div>
 
@@ -218,7 +295,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       </div>
 
       <div class="tiny muted" style="margin-top:8px;">
-        GIBS max zoom is limited; this app auto-clamps to prevent black/garbled tiles.
+        GIBS zoom is limited; app auto-clamps to prevent blank/garbled tiles.
       </div>
     </div>
 
@@ -229,14 +306,13 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         <button id="labelsOff" class="smallbtn">Labels OFF</button>
       </div>
       <div class="tiny muted" style="margin-top:6px;">
-        Labels are a transparent overlay above imagery and above radar.
+        Labels overlay stays above imagery + radar.
       </div>
     </div>
 
     <div class="box">
       <label>Weather — Radar Timelapse (RainViewer)</label>
       <div class="row">
-        <!-- IMPORTANT: starts OFF (no primary class) -->
         <button id="radarToggle" class="smallbtn">Radar OFF</button>
         <button id="radarRefresh" class="smallbtn">Refresh</button>
         <button id="radarOpenSample" class="smallbtn">Open sample tile</button>
@@ -264,8 +340,19 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         <input id="radarOpacity" type="range" min="0" max="100" value="75" class="slider" style="max-width:140px;">
       </div>
 
+      <div class="row" style="margin-top:8px;">
+        <label>Auto-refresh</label>
+        <select id="radarAuto">
+          <option value="off">Off</option>
+          <option value="2">Every 2 min</option>
+          <option value="5" selected>Every 5 min</option>
+          <option value="10">Every 10 min</option>
+        </select>
+        <button id="radarAutoNow" class="smallbtn">Run now</button>
+      </div>
+
       <div class="tiny muted" id="radarStatus" style="margin-top:8px;">
-        Tip: radar tiles can be transparent when there’s no rain. Use “Open sample tile” to confirm.
+        Tip: tiles can be transparent if there’s no rain.
       </div>
     </div>
 
@@ -277,7 +364,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         <button id="btnRebuild3D" class="smallbtn warn">Rebuild 3D Engine</button>
       </div>
       <div class="tiny muted" style="margin-top:6px;">
-        If 3D/ASTRO ever goes black: Recover 3D first. If still broken: Rebuild 3D Engine.
+        If 3D/ASTRO goes black: Recover first. If still broken: Rebuild.
       </div>
     </div>
 
@@ -289,15 +376,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       </div>
       <div class="tiny mono" id="diagOut" style="white-space:pre-wrap; margin-top:8px;"></div>
     </div>
-
-    <div class="box tiny muted">
-      Tips:
-      <ul class="list">
-        <li>2D zoom: <span class="kbd">+</span>/<span class="kbd">-</span> or wheel/trackpad.</li>
-        <li>3D zoom: wheel/trackpad; double-click zooms in.</li>
-        <li>Radar: can be transparent when no precipitation.</li>
-      </ul>
-    </div>
   </div>
 
   <div id="viewWrap">
@@ -307,11 +385,23 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   </div>
 </div>
 
+<button id="panelFab" aria-label="Open panel">≡ Panel</button>
+
 <script>
 (() => {
   // -----------------------------
-  // Service Worker (optional; safe on localhost)
+  // iOS SAFARI VIEWPORT FIX
   // -----------------------------
+  function setVhVar(){
+    // This fixes the iPhone “black screen” caused by dynamic address bar resizing.
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty("--vh", `${vh}px`);
+  }
+  setVhVar();
+  window.addEventListener("resize", setVhVar, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(setVhVar, 120), {passive:true});
+
+  // Optional Service Worker
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./earth-cockpit-v5-sw.js").catch(()=>{});
   }
@@ -323,21 +413,48 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   const hud = $("hud");
 
   function hudSet(s){ hud.textContent = s; }
+  function isMobile(){ return window.matchMedia("(max-width: 720px)").matches; }
+
+  // -----------------------------
+  // Panel minimize
+  // -----------------------------
+  function pokeMapSize(){
+    try { map.invalidateSize(true); } catch {}
+    try { if (viewer) viewer.resize(); } catch {}
+  }
+  function setMinimized(on){
+    document.body.classList.toggle("minimized", !!on);
+    $("panelFab").classList.toggle("show", !!on);
+    $("minBtn").textContent = on ? "Show" : "Minimize";
+    // multiple pokes: iOS needs it
+    pokeMapSize();
+    setTimeout(pokeMapSize, 60);
+    setTimeout(pokeMapSize, 220);
+    setTimeout(pokeMapSize, 600);
+  }
+  $("minBtn").addEventListener("click", () => {
+    const now = document.body.classList.contains("minimized");
+    setMinimized(!now);
+  });
+  $("panelFab").addEventListener("click", () => setMinimized(false));
+
+  // Auto-minimize on mobile so map is visible instantly
+  if (isMobile()) setMinimized(true);
 
   // -----------------------------
   // State
   // -----------------------------
   const state = {
-    mode: "2d", // "2d" | "3d" | "astro"
+    mode: "2d",
     labels: true,
     base: "esri",
     histDateISO: null,
 
-    // Radar
     radarOn: false,
     radarFrames: [],
     radarIndex: 0,
     radarTimer: null,
+    radarAutoTimer: null,
     radarOpacity: 0.75,
     trailMode: "off",
     radarTileErrors: 0,
@@ -345,18 +462,15 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     radarLastTs: null,
     radarCacheBust: 0,
 
-    // 2D tile debug
     tileErrors2D: 0,
     lastTileURL2D: "",
 
-    // Cesium debug
     webglProbeOK: null,
     cesiumInitCount: 0,
     cesiumLastError: "",
     webglContextLost: false,
   };
 
-  // Default historical date = today UTC
   const toISODateUTC = (d) => {
     const y = d.getUTCFullYear();
     const m = String(d.getUTCMonth()+1).padStart(2,"0");
@@ -376,27 +490,22 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     preferCanvas: true
   }).setView([HOME.lat, HOME.lon], HOME.z);
 
-  // Zoom controls (bottom-right)
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
-  // Panes: base < radar < labels
   map.createPane("basePane");   map.getPane("basePane").style.zIndex = 200;
   map.createPane("radarPane");  map.getPane("radarPane").style.zIndex = 450;
   map.createPane("labelsPane"); map.getPane("labelsPane").style.zIndex = 500;
 
-  // Base layers
   const esri2D = L.tileLayer(
     "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { pane:"basePane", maxZoom: 19, crossOrigin: true, attribution: "Esri" }
   );
 
-  // Labels overlay
   const labels2D = L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
     { pane:"labelsPane", subdomains:"abcd", maxZoom: 20, opacity: 1, crossOrigin: true, attribution: "CARTO/OSM" }
   );
 
-  // NASA GIBS
   const GIBS = {
     modis: "MODIS_Terra_CorrectedReflectance_TrueColor",
     viirs: "VIIRS_SNPP_CorrectedReflectance_TrueColor"
@@ -405,14 +514,9 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${dateISO}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
 
   let gibs2D = L.tileLayer(gibsLayerURL(GIBS.modis, state.histDateISO), {
-    pane:"basePane",
-    maxZoom: 9,
-    minZoom: 0,
-    crossOrigin: true,
-    attribution: "NASA GIBS"
+    pane:"basePane", maxZoom: 9, minZoom: 0, crossOrigin: true, attribution: "NASA GIBS"
   });
 
-  // Radar overlay layer + trail layers
   let radar2D = L.tileLayer("", {
     pane:"radarPane",
     opacity: state.radarOpacity,
@@ -449,7 +553,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   }
   hookRadarTileEvents(radar2D);
 
-  // Start with Esri + Labels
   esri2D.addTo(map);
   labels2D.addTo(map);
 
@@ -463,7 +566,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   map.on("moveend zoomend", updateReadouts);
   updateReadouts();
 
-  // Hard ordering enforcement (base -> radar -> labels)
   function ensure2DOrdering() {
     try {
       if (state.radarOn && state.radarFrames.length) {
@@ -488,7 +590,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   let gibs3DLayer = null;
   let radar3DLayer = null;
   let radar3DTrail = [];
-
   let rainviewer = { host:"", path:"/v2/radar" };
 
   function webglProbe() {
@@ -534,7 +635,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       viewer.scene.canvas.addEventListener("webglcontextlost", () => { state.webglContextLost = true; updateDiagQuick(); }, false);
       viewer.scene.canvas.addEventListener("webglcontextrestored", () => { state.webglContextLost = false; updateDiagQuick(); }, false);
 
-      // Ensure zoom enabled
       const ssc = viewer.scene.screenSpaceCameraController;
       ssc.enableZoom = true;
       ssc.enableRotate = true;
@@ -543,7 +643,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       ssc.minimumZoomDistance = 10.0;
       ssc.maximumZoomDistance = 7.0e7;
 
-      // Double-click zoom in
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction((movement) => {
         try {
@@ -560,7 +659,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         } catch {}
       }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
-      // Base: Esri imagery
       cesiumLayers.removeAll(true);
 
       const esriProvider = mkCesiumXYZ(
@@ -569,7 +667,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       );
       cesiumLayers.addImageryProvider(esriProvider);
 
-      // Labels overlay (top)
       const labelsProvider = mkCesiumXYZ(
         "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
         { credit: "CARTO/OSM", maximumLevel: 20, subdomains: ["a","b","c","d"] }
@@ -617,7 +714,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.fog.enabled = true;
     }
-
     viewer.scene.requestRender();
   }
 
@@ -667,10 +763,8 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   function setBase(mode) {
     state.base = mode;
 
-    // 2D
     [esri2D, gibs2D].forEach(l => { try { if (map.hasLayer(l)) map.removeLayer(l); } catch {} });
 
-    // 3D
     if (viewer && gibs3DLayer) {
       try { cesiumLayers.remove(gibs3DLayer, true); } catch {}
       gibs3DLayer = null;
@@ -694,13 +788,13 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         gibs3DLayer.alpha = 1.0;
         try { cesiumLayers.raiseToTop(labels3DLayer); } catch {}
       }
-
       setHistClampForMode("gibs");
     }
 
     setLabels(state.labels);
     ensure2DOrdering();
     updateDiagQuick();
+    pokeMapSize();
   }
 
   function setHistDate(dateISO) {
@@ -739,7 +833,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   function radarTileURL(ts) {
     const host = rainviewer.host || "https://tilecache.rainviewer.com";
     const path = rainviewer.path || "/v2/radar";
-    // Cache bust forces redraw when Safari is “sticky”
     const bust = state.radarCacheBust ? `?cb=${state.radarCacheBust}` : "";
     return `${host}${path}/${ts}/256/{z}/{x}/{y}/2/1_1.png${bust}`;
   }
@@ -750,7 +843,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     }
     radarTrailLayers2D = [];
   }
-
   function clearRadarTrail3D() {
     for (const l of radar3DTrail) {
       try { cesiumLayers.remove(l, true); } catch {}
@@ -794,7 +886,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
         : "No radar frames available right now.";
 
       $("radarStatus").textContent = msg + " • Tiles can be transparent if no rain.";
-      updateRadarLayers(true);
+      if (state.radarOn) updateRadarLayers(true);
       updateDiagQuick();
     } catch (e) {
       $("radarStatus").textContent = "RainViewer fetch failed. Check network/CORS.";
@@ -825,16 +917,13 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     const ts = state.radarFrames[idx];
     state.radarLastTs = ts;
 
-    // Force cache-bust on explicit refresh/force
     if (force) state.radarCacheBust = Date.now();
 
-    // 2D base radar
     radar2D.setUrl(radarTileURL(ts));
     radar2D.setOpacity(state.radarOpacity);
     hookRadarTileEvents(radar2D);
     if (!map.hasLayer(radar2D)) radar2D.addTo(map);
 
-    // 2D trails
     clearRadarTrail2D();
     const trailCount = (state.trailMode === "last10") ? 10 : (state.trailMode === "last5") ? 5 : 0;
     if (trailCount > 0) {
@@ -859,7 +948,6 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
 
     ensure2DOrdering();
 
-    // 3D radar
     initCesiumIfNeeded();
     if (viewer) {
       if (radar3DLayer) { try { cesiumLayers.remove(radar3DLayer, true); } catch {} radar3DLayer = null; }
@@ -918,6 +1006,19 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     window.open(sample, "_blank", "noopener,noreferrer");
   }
 
+  function setRadarAuto(minutesStr){
+    const v = String(minutesStr || "off");
+    if (state.radarAutoTimer) { clearInterval(state.radarAutoTimer); state.radarAutoTimer = null; }
+    if (v === "off") return;
+    const mins = parseInt(v,10);
+    if (!isFinite(mins) || mins <= 0) return;
+    state.radarAutoTimer = setInterval(async () => {
+      state.radarCacheBust = Date.now();
+      await fetchRainViewerFrames();
+      if (state.radarOn) updateRadarLayers(true);
+    }, mins * 60 * 1000);
+  }
+
   // -----------------------------
   // Search / Jump
   // -----------------------------
@@ -954,8 +1055,8 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
 
       if (state.mode === "2d") {
         map.setView([target.lat, target.lon], Math.max(map.getZoom(), 8), { animate:true });
-        updateReadouts();
         ensure2DOrdering();
+        pokeMapSize();
       } else {
         initCesiumIfNeeded();
         if (viewer) {
@@ -976,8 +1077,8 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   function goHome() {
     if (state.mode === "2d") {
       map.setView([HOME.lat, HOME.lon], HOME.z, { animate:true });
-      updateReadouts();
       ensure2DOrdering();
+      pokeMapSize();
     } else {
       initCesiumIfNeeded();
       if (viewer) {
@@ -1005,10 +1106,10 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     $("cesiumContainer").style.display = (m !== "2d") ? "block" : "none";
 
     if (m === "2d") {
-      setTimeout(() => map.invalidateSize(true), 50);
+      setTimeout(() => { map.invalidateSize(true); ensure2DOrdering(); }, 60);
       updateReadouts();
-      ensure2DOrdering();
       updateDiagQuick();
+      pokeMapSize();
       return;
     }
 
@@ -1016,9 +1117,10 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     setTimeout(() => {
       cesiumResizePoke();
       setCesiumPreset(m === "astro" ? "astro" : "3d");
-      updateRadarLayers(true);
+      if (state.radarOn) updateRadarLayers(true);
       updateDiagQuick();
-    }, 60);
+      pokeMapSize();
+    }, 90);
   }
 
   // -----------------------------
@@ -1028,19 +1130,12 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     const el = $("cesiumContainer");
     return el ? `${el.clientWidth}x${el.clientHeight}` : "—";
   }
-
   function getCameraReadout() {
     if (!viewer) return { lat:null, lon:null, h:null };
     try {
       const c = viewer.camera.positionCartographic;
-      return {
-        lat: Cesium.Math.toDegrees(c.latitude),
-        lon: Cesium.Math.toDegrees(c.longitude),
-        h: c.height
-      };
-    } catch {
-      return { lat:null, lon:null, h:null };
-    }
+      return { lat: Cesium.Math.toDegrees(c.latitude), lon: Cesium.Math.toDegrees(c.longitude), h: c.height };
+    } catch { return { lat:null, lon:null, h:null }; }
   }
 
   function updateDiagQuick() {
@@ -1062,25 +1157,23 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     lines.push(`WebGL probe: ${state.webglProbeOK ? "OK" : "FAIL"}`);
     lines.push(`Cesium initialized: ${viewer ? "YES" : "NO"}`);
     lines.push(`Cesium init count: ${state.cesiumInitCount}`);
-    lines.push(`Cesium container size: ${getCesiumContainerSize()} (must be non-zero in 3D/ASTRO)`);
+    lines.push(`Cesium container size: ${getCesiumContainerSize()}`);
     lines.push(`WebGL context lost: ${state.webglContextLost ? "YES" : "NO"}`);
     lines.push(`Cesium last error: ${state.cesiumLastError || "—"}`);
-
     const cam = getCameraReadout();
     lines.push(`Camera lat/lon: ${cam.lat!=null ? cam.lat.toFixed(5) : "—"}, ${cam.lon!=null ? cam.lon.toFixed(5) : "—"}`);
     lines.push(`Camera height: ${cam.h!=null ? Math.round(cam.h) + " m" : "—"}`);
-
     $("diagOut").textContent = lines.join("\n");
   }
 
   async function runDiagnostics() {
     updateDiagQuick();
-    const tests = [];
-    tests.push(["RainViewer API", "https://api.rainviewer.com/public/weather-maps.json"]);
-    tests.push(["CARTO labels tile", "https://a.basemaps.cartocdn.com/light_only_labels/2/1/1.png"]);
-    tests.push(["Esri tile", "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/1"]);
-    tests.push(["NASA GIBS sample", `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS.modis}/default/${state.histDateISO}/GoogleMapsCompatible_Level9/2/1/1.jpg`]);
-
+    const tests = [
+      ["RainViewer API", "https://api.rainviewer.com/public/weather-maps.json"],
+      ["CARTO labels tile", "https://a.basemaps.cartocdn.com/light_only_labels/2/1/1.png"],
+      ["Esri tile", "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/1"],
+      ["NASA GIBS sample", `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS.modis}/default/${state.histDateISO}/GoogleMapsCompatible_Level9/2/1/1.jpg`]
+    ];
     let ok = 0;
     for (const [name, url] of tests) {
       try {
@@ -1096,7 +1189,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   }
 
   // -----------------------------
-  // MENU ZOOM HANDLERS
+  // Zoom handlers
   // -----------------------------
   function zoomStep3D(sign) {
     initCesiumIfNeeded();
@@ -1121,14 +1214,8 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doGo(); });
   $("home").onclick = goHome;
 
-  $("menuZoomIn").onclick = () => {
-    if (state.mode === "2d") map.setZoom(map.getZoom() + 1);
-    else zoomStep3D(+1);
-  };
-  $("menuZoomOut").onclick = () => {
-    if (state.mode === "2d") map.setZoom(map.getZoom() - 1);
-    else zoomStep3D(-1);
-  };
+  $("menuZoomIn").onclick = () => { if (state.mode === "2d") map.setZoom(map.getZoom() + 1); else zoomStep3D(+1); };
+  $("menuZoomOut").onclick = () => { if (state.mode === "2d") map.setZoom(map.getZoom() - 1); else zoomStep3D(-1); };
 
   $("baseMode").onchange = () => setBase($("baseMode").value);
 
@@ -1164,22 +1251,17 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   $("radarToggle").onclick = async () => {
     state.radarOn = !state.radarOn;
     setRadarButtonUI();
-
-    if (state.radarOn && !state.radarFrames.length) {
-      await fetchRainViewerFrames();
-    } else {
-      updateRadarLayers(true);
-    }
-
-    if (state.mode === "2d") ensure2DOrdering();
+    if (state.radarOn && !state.radarFrames.length) await fetchRainViewerFrames();
+    if (state.radarOn) updateRadarLayers(true);
+    else updateRadarLayers(true);
+    ensure2DOrdering();
   };
 
   $("radarRefresh").onclick = async () => {
-    // Force a hard redraw even if frames already exist
     state.radarCacheBust = Date.now();
     await fetchRainViewerFrames();
     if (state.radarOn) updateRadarLayers(true);
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("radarOpenSample").onclick = openSampleRadarTile;
@@ -1187,19 +1269,19 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
   $("radarSlider").oninput = () => {
     state.radarIndex = parseInt($("radarSlider").value, 10) || 0;
     if (state.radarOn) updateRadarLayers();
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("radarOpacity").oninput = () => {
     state.radarOpacity = (parseInt($("radarOpacity").value,10)||0)/100;
     if (state.radarOn) updateRadarLayers();
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("trailMode").onchange = () => {
     state.trailMode = $("trailMode").value;
     if (state.radarOn) updateRadarLayers(true);
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("radarBack").onclick = () => {
@@ -1207,7 +1289,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     state.radarIndex = clamp(state.radarIndex - 1, 0, state.radarFrames.length-1);
     $("radarSlider").value = String(state.radarIndex);
     if (state.radarOn) updateRadarLayers();
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("radarFwd").onclick = () => {
@@ -1215,13 +1297,20 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     state.radarIndex = clamp(state.radarIndex + 1, 0, state.radarFrames.length-1);
     $("radarSlider").value = String(state.radarIndex);
     if (state.radarOn) updateRadarLayers();
-    if (state.mode === "2d") ensure2DOrdering();
+    ensure2DOrdering();
   };
 
   $("radarPlay").onclick = () => {
     if (!state.radarOn) return;
     if (state.radarTimer) radarPlayStop();
     else radarPlayStart();
+  };
+
+  $("radarAuto").onchange = () => setRadarAuto($("radarAuto").value);
+  $("radarAutoNow").onclick = async () => {
+    state.radarCacheBust = Date.now();
+    await fetchRainViewerFrames();
+    if (state.radarOn) updateRadarLayers(true);
   };
 
   $("btn3dReset").onclick = () => {
@@ -1234,80 +1323,46 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
     viewer.scene.requestRender();
   };
 
-  $("btnRecover3D").onclick = () => {
-    cesiumResizePoke();
-    updateDiagQuick();
-  };
-
-  $("btnRebuild3D").onclick = () => {
-    rebuild3D();
-  };
+  $("btnRecover3D").onclick = () => { cesiumResizePoke(); updateDiagQuick(); };
+  $("btnRebuild3D").onclick = () => rebuild3D();
 
   $("diagRun").onclick = runDiagnostics;
-  $("diagCopy").onclick = async () => {
-    try { await navigator.clipboard.writeText($("diagOut").textContent || ""); } catch {}
-  };
+  $("diagCopy").onclick = async () => { try { await navigator.clipboard.writeText($("diagOut").textContent || ""); } catch {} };
 
-  // Keep ordering stable during redraws
+  // Keep ordering stable
   map.on("zoomend moveend", () => { if (state.mode === "2d") ensure2DOrdering(); });
   map.on("layeradd", () => { if (state.mode === "2d") ensure2DOrdering(); });
+
+  // If user starts dragging on mobile, keep panel out of the way
+  const viewWrapEl=document.getElementById("viewWrap");if(viewWrapEl){viewWrapEl.addEventListener("touchstart",(e)=>{if(!isMobile())return;if(!document.body.classList.contains("minimized")){setMinimized(true);}},{passive:true});}
 
   // -----------------------------
   // Initialize
   // -----------------------------
+  function setRadarButtonUI() { const b = $("radarToggle"); b.textContent = state.radarOn ? "Radar ON" : "Radar OFF"; b.classList.toggle("primary", state.radarOn); }
   setRadarButtonUI();
   setLabels(true);
   setBase("esri");
   updateDiagQuick();
 
-  // Prefetch radar timeline so it’s ready (does NOT turn it on)
+  // prefetch radar frames (does not turn on)
   fetchRainViewerFrames().catch(()=>{});
 
+  // start auto-refresh (default 5 min)
+  setRadarAuto($("radarAuto").value);
 
-  // ===== Mobile Minimize Logic =====
-  (function(){
-    const panel = document.getElementById("panel");
-    const fab   = document.getElementById("panelFab");
-    const btnMin = document.getElementById("btnMin");
+  // multi-poke on load for iOS
+  pokeMapSize();
+  setTimeout(pokeMapSize, 120);
+  setTimeout(pokeMapSize, 420);
 
-    function setMinimized(on){
-      if(!panel) return;
-      panel.classList.toggle("minimized", !!on);
-      if(fab) fab.classList.toggle("show", !!on);
-      if(btnMin) btnMin.textContent = on ? "Open" : "Minimize";
-    }
-
-    if(btnMin){
-      btnMin.addEventListener("click", function(){
-        setMinimized(!panel.classList.contains("minimized"));
-      });
-    }
-
-    if(fab){
-      fab.addEventListener("click", function(){
-        setMinimized(false);
-      });
-    }
-
-    if(window.map && window.map.on){
-      window.map.on("movestart", function(){
-        if(window.matchMedia("(max-width: 720px)").matches){
-          setMinimized(true);
-        }
-      });
-    }
-
-    if(window.matchMedia("(max-width: 720px)").matches){
-      setMinimized(true);
-    }
-
-  })();
-
+  // HUD loop
+  function tickHUD(){
+    if (state.mode === "2d") updateReadouts();
+    requestAnimationFrame(tickHUD);
+  }
+  tickHUD();
 })();
 </script>
-
-
-<button id="panelFab" aria-label="Open panel">☰ Panel</button>
-
 </body>
 </html>

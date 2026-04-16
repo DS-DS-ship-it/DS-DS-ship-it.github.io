@@ -1,0 +1,2049 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Earth Cockpit NOVA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#071018;
+      --panel:#0d1722;
+      --line:rgba(255,255,255,.10);
+      --line2:rgba(255,255,255,.16);
+      --text:#eef6ff;
+      --muted:#9db8d7;
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#f87171;
+      --shadow:0 18px 46px rgba(0,0,0,.42);
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --panelW: 420px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:var(--bg);
+      color:var(--text);
+      font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
+
+    #app{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-columns:var(--panelW) 1fr;
+    }
+
+    #controlPanel{
+      overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      background:linear-gradient(180deg, rgba(14,22,34,.985), rgba(8,12,18,.995));
+      border-right:1px solid var(--line);
+      padding:10px;
+      z-index:9000;
+      transition:transform .24s ease, opacity .24s ease;
+    }
+
+    #stage{
+      position:relative;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#000;
+    }
+
+    #map2d,#map3d,#astro{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      background:#000;
+    }
+
+    #map3d,#astro{ display:none; }
+
+    .box{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      margin-bottom:10px;
+      box-shadow:var(--shadow);
+    }
+
+    .title{
+      font-size:15px;
+      font-weight:900;
+      margin:0 0 5px;
+    }
+
+    .sub,.tiny{
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .sub{ margin:0 0 8px; }
+
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .row{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:6px;
+    }
+    .row:last-child{ margin-bottom:0; }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+
+    button,select,input[type="text"],input[type="date"],input[type="range"],textarea{
+      width:100%;
+      background:#0d1520;
+      color:var(--text);
+      border:1px solid var(--line2);
+      border-radius:10px;
+      padding:8px 9px;
+      font:inherit;
+      outline:none;
+    }
+
+    textarea{ min-height:58px; resize:vertical; }
+
+    button{ cursor:pointer; }
+    button.primary{ background:#173758; border-color:#75b2ff; }
+    button.active{ background:#173758; border-color:#75b2ff; }
+
+    label.check{
+      display:flex;
+      gap:7px;
+      align-items:center;
+      margin-bottom:6px;
+      user-select:none;
+    }
+    label.check input{ width:auto; margin:0; }
+
+    .badge{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .badge.ok{
+      color:#d9ffe7;
+      border-color:rgba(74,222,128,.42);
+      background:rgba(74,222,128,.12);
+    }
+    .badge.warn{
+      color:#fff4d6;
+      border-color:rgba(251,191,36,.42);
+      background:rgba(251,191,36,.12);
+    }
+    .badge.bad{
+      color:#ffe1e1;
+      border-color:rgba(248,113,113,.42);
+      background:rgba(248,113,113,.12);
+    }
+
+    .sep{
+      height:1px;
+      background:rgba(255,255,255,.1);
+      margin:8px 0;
+    }
+
+    #hud,#perf{
+      position:absolute;
+      z-index:9999;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line2);
+      background:rgba(8,14,22,.78);
+      backdrop-filter:blur(10px);
+      pointer-events:none;
+      box-shadow:var(--shadow);
+    }
+
+    #hud{
+      top:10px;
+      right:10px;
+      max-width:420px;
+    }
+
+    #perf{
+      left:10px;
+      bottom:10px;
+      min-width:260px;
+    }
+
+    #busy{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      z-index:99999;
+      display:none;
+      padding:12px 15px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:rgba(8,14,22,.94);
+      box-shadow:var(--shadow);
+      font-weight:900;
+      pointer-events:none;
+    }
+
+    .menu-toggle{
+      position:fixed;
+      top:calc(12px + var(--safeTop));
+      left:12px;
+      z-index:12000;
+      font-size:20px;
+      background:rgba(10,12,18,.92);
+      border:1px solid rgba(255,255,255,.16);
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      display:none;
+    }
+
+    #panelBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.40);
+      z-index:11000;
+      display:none;
+    }
+
+    .leaflet-container{ background:#070b10; }
+    .leaflet-control-attribution{
+      background:rgba(8,14,22,.74)!important;
+      color:#dce8f7!important;
+    }
+
+    /* Astro */
+    #astro{
+      overflow:hidden;
+      background:#000;
+    }
+    #astroViewport{
+      position:absolute;
+      inset:0;
+      overflow:hidden;
+      background:#000;
+    }
+    #astroFrameWrap{
+      position:absolute;
+      inset:0;
+      transform-origin:50% 50%;
+      will-change:transform;
+    }
+    #astroFrame{
+      position:absolute;
+      inset:-20%;
+      width:140%;
+      height:140%;
+      left:-20%;
+      top:-20%;
+      border:0;
+      background:#000;
+    }
+    #astroCrosshair{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:30;
+    }
+    #astroCrosshair.hidden{ display:none; }
+    #astroCrosshair .v,
+    #astroCrosshair .h{
+      position:absolute;
+      background:rgba(230,240,255,.82);
+      box-shadow:0 0 8px rgba(255,255,255,.16);
+    }
+    #astroCrosshair .v{
+      width:1px; height:100%; left:50%; top:0; transform:translateX(-.5px);
+    }
+    #astroCrosshair .h{
+      height:1px; width:100%; top:50%; left:0; transform:translateY(-.5px);
+    }
+    #astroCrosshair .ring{
+      position:absolute;
+      width:24px; height:24px;
+      left:50%; top:50%;
+      transform:translate(-50%,-50%);
+      border:1px solid rgba(230,240,255,.9);
+      border-radius:999px;
+    }
+
+    @media (max-width:980px){
+      #app{ display:block; }
+      #controlPanel{
+        position:fixed;
+        left:10px;
+        top:calc(10px + var(--safeTop));
+        bottom:calc(10px + var(--safeBottom));
+        width:min(392px, calc(100vw - 20px));
+        max-width:calc(100vw - 20px);
+        border:1px solid var(--line);
+        border-radius:16px;
+        box-shadow:var(--shadow);
+      }
+      #controlPanel.panel-hidden{
+        transform:translateX(calc(-100% - 16px));
+        opacity:0;
+        pointer-events:none;
+      }
+      .menu-toggle{ display:block; }
+      #panelBackdrop.show{ display:block; }
+      #hud{ max-width:min(78vw, 360px); top:calc(10px + var(--safeTop)); }
+      #perf{ bottom:calc(10px + var(--safeBottom)); }
+    }
+  </style>
+</head>
+<body>
+  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div id="panelBackdrop"></div>
+
+  <div id="app">
+    <aside id="controlPanel">
+      <div class="box">
+        <div class="title">Earth Cockpit NOVA</div>
+        <div class="sub">Travel • geography • astronomy • 2D • 3D • plugin-ready professional overlay shell</div>
+
+        <div class="grid3">
+          <button id="mode2d" class="primary active">2D</button>
+          <button id="mode3d">3D</button>
+          <button id="modeAstro">ASTRO</button>
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <span id="modeBadge" class="badge">Mode: 2D</span>
+          <span id="statusBadge" class="badge warn">Booting</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="grid3">
+          <button id="zoomInBtn">Zoom +</button>
+          <button id="zoomOutBtn">Zoom −</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <button id="refreshBtn">Refresh</button>
+          <button id="healthBtn">Health</button>
+          <button id="copyLogBtn">Copy log</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny">Search earth or sky</div>
+        <div class="row">
+          <input id="searchBox" type="text" placeholder="Orlando, 28.54,-81.38, M31, Vega">
+        </div>
+        <div class="grid2">
+          <button id="searchBtn" class="primary">Go</button>
+          <button id="homeBtn">Home</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny">Base map</div>
+        <div class="row">
+          <select id="baseSelect">
+            <option value="esri">Esri World Imagery</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="gibs_viirs">NASA GIBS VIIRS</option>
+            <option value="gibs_modis">NASA GIBS MODIS</option>
+          </select>
+        </div>
+
+        <div class="tiny">GIBS date</div>
+        <div class="row">
+          <input id="gibsDate" type="date">
+        </div>
+
+        <label class="check"><input id="labelsChk" type="checkbox" checked> Labels</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Weather / atmosphere</b></div>
+        <label class="check"><input id="radarChk" type="checkbox"> Radar precipitation</label>
+        <label class="check"><input id="cloudsChk" type="checkbox"> GIBS clouds</label>
+        <label class="check"><input id="thermalChk" type="checkbox"> GIBS thermal anomalies</label>
+        <label class="check"><input id="nightChk" type="checkbox"> Night lights</label>
+
+        <div class="grid3">
+          <button id="radarAnimateBtn">Animate</button>
+          <button id="radarStepBtn">Step</button>
+          <button id="radarRefreshBtn">Reload</button>
+        </div>
+
+        <div class="tiny" id="weatherReadout" style="margin-top:8px;">Weather readout: off</div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Live public overlays</b></div>
+        <label class="check"><input id="firesChk" type="checkbox"> Fires (EONET)</label>
+        <label class="check"><input id="quakesChk" type="checkbox"> Earthquakes (USGS)</label>
+        <label class="check"><input id="aircraftChk" type="checkbox"> Aircraft (OpenSky)</label>
+        <label class="check"><input id="satellitesChk" type="checkbox"> Satellites</label>
+        <label class="check"><input id="sentinelFootprintsChk" type="checkbox"> Sentinel footprints</label>
+        <label class="check"><input id="sentinelOverlayChk" type="checkbox"> Sentinel XYZ overlay</label>
+
+        <div class="tiny">Overlay opacity</div>
+        <div class="row">
+          <input id="overlayOpacity" type="range" min="0" max="100" value="72">
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Professional plugin layer slots</b></div>
+        <div class="tiny">Paste any GeoJSON / XYZ / WMS endpoint here and turn it on.</div>
+
+        <div class="sep"></div>
+        <div class="tiny">Traffic / incidents endpoint</div>
+        <input id="trafficEndpoint" type="text" placeholder="GeoJSON or XYZ/WMS endpoint">
+        <label class="check"><input id="trafficChk" type="checkbox"> Traffic / incidents / closures</label>
+
+        <div class="tiny">AIS ships endpoint</div>
+        <input id="shipsEndpoint" type="text" placeholder="GeoJSON ships feed">
+        <label class="check"><input id="shipsChk" type="checkbox"> Ships / port activity</label>
+
+        <div class="tiny">Infrastructure endpoint</div>
+        <input id="infraEndpoint" type="text" placeholder="power / telecom / pipelines / cables">
+        <label class="check"><input id="infraChk" type="checkbox"> Infrastructure</label>
+
+        <div class="tiny">Environment endpoint</div>
+        <input id="envEndpoint" type="text" placeholder="pollution / biodiversity / protected areas">
+        <label class="check"><input id="envChk" type="checkbox"> Environment / conservation</label>
+
+        <div class="tiny">Population / economic endpoint</div>
+        <input id="peopleEndpoint" type="text" placeholder="population / night economy / mobility">
+        <label class="check"><input id="peopleChk" type="checkbox"> Population / economics</label>
+
+        <div class="tiny">Historical / research endpoint</div>
+        <input id="historyEndpoint" type="text" placeholder="historical borders / shoreline / urban growth">
+        <label class="check"><input id="historyChk" type="checkbox"> Historical overlay</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Astronomy</b></div>
+
+        <div class="tiny">Survey</div>
+        <div class="row">
+          <select id="astroSurvey">
+            <option value="P/DSS2/color">DSS2 color</option>
+            <option value="P/2MASS/color">2MASS infrared</option>
+            <option value="P/GALEXGR6/AIS/color">GALEX UV</option>
+            <option value="P/allWISE/color">AllWISE</option>
+            <option value="P/RASS">ROSAT X-ray</option>
+            <option value="P/Planck/color">Planck</option>
+          </select>
+        </div>
+
+        <div class="tiny">Object</div>
+        <div class="row">
+          <input id="astroSearchBox" type="text" placeholder="M31, Vega, NGC 1300">
+        </div>
+
+        <div class="grid3">
+          <button id="astroSearchBtn" class="primary">Find</button>
+          <button id="astroResetBtn">Reset sky</button>
+          <button id="astroCrosshairBtn">Hide crosshair</button>
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <div class="tiny" style="width:100%;">Astro zoom</div>
+          <input id="astroZoomSlider" type="range" min="100" max="1200" step="10" value="100">
+        </div>
+        <div id="astroZoomReadout" class="tiny">100%</div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Optional templates / endpoints</b></div>
+
+        <div class="tiny">Sentinel XYZ template</div>
+        <input id="sentinelTileTemplate" type="text" placeholder="https://.../{z}/{x}/{y}.png">
+
+        <div class="tiny">Satellite TLE endpoint</div>
+        <input id="tleEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny">Proxy prefix</div>
+        <input id="proxyPrefixInput" type="text" placeholder="optional proxy prefix">
+
+        <div class="tiny">Manual GIBS clouds id</div>
+        <input id="gibsCloudsId" type="text" placeholder="optional">
+
+        <div class="tiny">Manual GIBS thermal id</div>
+        <input id="gibsThermalId" type="text" placeholder="optional">
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Diagnostics</b></div>
+        <div id="log" class="mono tiny" style="max-height:340px;overflow:auto;"></div>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <div id="map2d"></div>
+      <div id="map3d"></div>
+
+      <div id="astro">
+        <div id="astroViewport">
+          <div id="astroFrameWrap">
+            <iframe id="astroFrame" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+          </div>
+          <div id="astroCrosshair">
+            <div class="v"></div>
+            <div class="h"></div>
+            <div class="ring"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hud" class="mono tiny">Booting…</div>
+      <div id="busy">Loading…</div>
+      <div id="perf" class="mono tiny">fps: —</div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  const CONFIG = {
+    appName: "Earth Cockpit NOVA",
+    home: { lat: 28.538336, lon: -81.379234, zoom2d: 5, height3d: 18000000 },
+
+    proxyPrefix: "",
+    sentinelTileTemplate: "",
+    tleEndpoint: "",
+
+    esri: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    labels: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    nominatim: "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=",
+
+    gibsCapabilities: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml",
+    gibsWms: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
+    gibsModis: "MODIS_Terra_CorrectedReflectance_TrueColor",
+    gibsViirs: "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+    gibsNight: "BlackMarble_2016_3km",
+    rainViewerTimeline: "https://api.rainviewer.com/public/weather-maps.json",
+    usgsQuakesDay: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    eonetWildfires: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&limit=500",
+    openSkyStatesAll: "https://opensky-network.org/api/states/all",
+    earthSearchSearch: "https://earth-search.aws.element84.com/v1/search",
+    defaultTleSource: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle",
+    openMeteo: "https://api.open-meteo.com/v1/forecast"
+  };
+
+  const $ = id => document.getElementById(id);
+  const logEl = $("log");
+  const hudEl = $("hud");
+  const busyEl = $("busy");
+  const perfEl = $("perf");
+  const controlPanel = $("controlPanel");
+  const menuToggle = $("menuToggle");
+  const panelBackdrop = $("panelBackdrop");
+  const astroFrame = $("astroFrame");
+  const astroFrameWrap = $("astroFrameWrap");
+  const astroCrosshair = $("astroCrosshair");
+
+  const state = {
+    mode: "2d",
+    map2d: null,
+    viewer3d: null,
+
+    astro: {
+      target: "0 +0",
+      survey: "P/DSS2/color",
+      crosshair: true,
+      visualZoom: 1
+    },
+
+    baseKey: "esri",
+    base2dLayer: null,
+    labels2dLayer: null,
+    labels3dLayer: null,
+
+    overlays2d: {},
+    overlays3d: {},
+    sources3d: {},
+
+    overlayActive: {
+      radar: false,
+      clouds: false,
+      thermal: false,
+      night: false,
+      fires: false,
+      quakes: false,
+      aircraft: false,
+      satellites: false,
+      sentinelFootprints: false,
+      sentinelOverlay: false,
+      traffic: false,
+      ships: false,
+      infra: false,
+      env: false,
+      people: false,
+      history: false
+    },
+
+    radar: {
+      frames: [],
+      index: 0,
+      timer: null,
+      trailLayers2d: [],
+      trailLayers3d: []
+    },
+
+    gibsCatalog: [],
+    gibsIds: { clouds: null, thermal: null, night: CONFIG.gibsNight },
+
+    fps: 0,
+    fpsFrames: 0,
+    fpsLast: performance.now(),
+    satelliteTimer: null
+  };
+
+  const REFRESHABLE = [
+    "radar","fires","quakes","aircraft","satellites","sentinelFootprints","traffic","ships","infra","env","people","history"
+  ];
+
+  function nowStamp(){
+    const d = new Date();
+    return `[${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}]`;
+  }
+
+  function log(msg){
+    const line = `${nowStamp()} ${msg}`;
+    logEl.textContent += line + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(line);
+  }
+
+  function setStatus(text, kind = ""){
+    const el = $("statusBadge");
+    el.textContent = text;
+    el.className = `badge ${kind}`.trim();
+  }
+
+  function busy(on, text="Loading…"){
+    busyEl.textContent = text;
+    busyEl.style.display = on ? "block" : "none";
+  }
+
+  function fmt(n, d = 4){
+    return Number.isFinite(n) ? n.toFixed(d) : "—";
+  }
+
+  function isoUTC(date){
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(date.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function yesterdayUTC(){
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 1);
+    return isoUTC(d);
+  }
+
+  function currentGibsDate(){
+    return $("gibsDate").value || yesterdayUTC();
+  }
+
+  function overlayAlpha(){
+    return (Number($("overlayOpacity").value) || 72) / 100;
+  }
+
+  function compact(obj){
+    const out = {};
+    Object.entries(obj).forEach(([k,v]) => {
+      if (v !== undefined && v !== null && v !== "") out[k] = v;
+    });
+    return out;
+  }
+
+  function normalizeSubdomains(subdomains){
+    if (Array.isArray(subdomains) && subdomains.length) return subdomains;
+    if (typeof subdomains === "string" && subdomains.length) return subdomains;
+    return undefined;
+  }
+
+  function escapeHtml(str){
+    return String(str || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function isMobile(){
+    return window.matchMedia("(max-width:980px)").matches;
+  }
+
+  function syncMobilePanelUI(){
+    if (!isMobile()) {
+      panelBackdrop.classList.remove("show");
+      controlPanel.classList.remove("panel-hidden");
+      return;
+    }
+    panelBackdrop.classList.toggle("show", !controlPanel.classList.contains("panel-hidden"));
+  }
+
+  function setPanelHidden(hidden){
+    controlPanel.classList.toggle("panel-hidden", !!hidden);
+    syncMobilePanelUI();
+  }
+
+  function updateModeBadge(){
+    $("modeBadge").textContent = `Mode: ${state.mode.toUpperCase()}`;
+  }
+
+  function setHUD(text){
+    hudEl.textContent = text;
+  }
+
+  function updateHUD(){
+    if (state.mode === "2d" && state.map2d) {
+      const c = state.map2d.getCenter();
+      setHUD(`Mode: 2D\nBase: ${state.baseKey}\nz: ${state.map2d.getZoom()}\nlat ${fmt(c.lat)} lon ${fmt(c.lng)}`);
+      return;
+    }
+    if (state.mode === "3d" && state.viewer3d) {
+      const c = state.viewer3d.camera.positionCartographic;
+      setHUD(`Mode: 3D\nBase: ${state.baseKey}\nh: ${Math.round(c.height)} m\nlat ${fmt(Cesium.Math.toDegrees(c.latitude))} lon ${fmt(Cesium.Math.toDegrees(c.longitude))}`);
+      return;
+    }
+    if (state.mode === "astro") {
+      setHUD(`Mode: ASTRO\nSurvey: ${state.astro.survey}\nTarget: ${state.astro.target}\nZoom: ${Math.round(state.astro.visualZoom * 100)}%\nCrosshair: ${state.astro.crosshair ? "ON" : "OFF"}`);
+    }
+  }
+
+  function updatePerf(){
+    const active = Object.values(state.overlayActive).filter(Boolean).length;
+    perfEl.textContent = `fps: ${state.fps || "—"}\nmode: ${state.mode.toUpperCase()}\noverlays: ${active}`;
+  }
+
+  function perfTick(){
+    state.fpsFrames++;
+    const now = performance.now();
+    if (now - state.fpsLast >= 1000) {
+      state.fps = state.fpsFrames;
+      state.fpsFrames = 0;
+      state.fpsLast = now;
+      updatePerf();
+    }
+    requestAnimationFrame(perfTick);
+  }
+
+  function syncConfigFromInputs(){
+    CONFIG.proxyPrefix = $("proxyPrefixInput").value.trim();
+    CONFIG.sentinelTileTemplate = $("sentinelTileTemplate").value.trim();
+    CONFIG.tleEndpoint = $("tleEndpoint").value.trim();
+  }
+
+  function proxify(url){
+    return CONFIG.proxyPrefix ? CONFIG.proxyPrefix + encodeURIComponent(url) : url;
+  }
+
+  async function fetchText(url, tryProxy = true, options = {}){
+    const urls = [];
+    if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url));
+    urls.push(url);
+    let lastErr = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, Object.assign({ cache:"no-store" }, options));
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.text();
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("Fetch failed");
+  }
+
+  async function fetchJson(url, tryProxy = true, options = {}){
+    return JSON.parse(await fetchText(url, tryProxy, options));
+  }
+
+  async function fetchPostJson(url, body, tryProxy = true){
+    const urls = [];
+    if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url));
+    urls.push(url);
+    let lastErr = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          cache: "no-store"
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("POST failed");
+  }
+
+  async function probe(url){
+    try {
+      const r = await fetch(url, { method:"HEAD", cache:"no-store" });
+      return r.ok;
+    } catch { return false; }
+  }
+
+  function parseXml(text){
+    return new DOMParser().parseFromString(text, "text/xml");
+  }
+
+  function childByLocalName(node, name){
+    return Array.from(node.children || []).find(n => n.localName === name) || null;
+  }
+
+  function descendantsByLocalName(root, name){
+    return Array.from(root.getElementsByTagName("*")).filter(n => n.localName === name);
+  }
+
+  function makeTileLayer(url, options = {}){
+    return L.tileLayer(url, compact({
+      crossOrigin: true,
+      updateWhenIdle: false,
+      updateWhenZooming: true,
+      keepBuffer: 8,
+      pane: options.pane,
+      subdomains: normalizeSubdomains(options.subdomains),
+      opacity: options.opacity ?? 1,
+      maxZoom: options.maxZoom ?? 19,
+      maxNativeZoom: options.maxNativeZoom,
+      attribution: options.attribution || ""
+    }));
+  }
+
+  function gibsBaseUrl(id){
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${currentGibsDate()}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+  }
+
+  function init2D(){
+    state.map2d = L.map("map2d", {
+      center: [CONFIG.home.lat, CONFIG.home.lon],
+      zoom: CONFIG.home.zoom2d,
+      worldCopyJump: true,
+      zoomControl: true,
+      zoomAnimation: true,
+      fadeAnimation: false,
+      inertia: true
+    });
+
+    state.map2d.createPane("base");
+    state.map2d.getPane("base").style.zIndex = 200;
+    state.map2d.createPane("overlay");
+    state.map2d.getPane("overlay").style.zIndex = 430;
+    state.map2d.createPane("labels");
+    state.map2d.getPane("labels").style.zIndex = 650;
+
+    state.labels2dLayer = makeTileLayer(CONFIG.labels, {
+      pane: "labels",
+      subdomains: "abcd",
+      maxZoom: 20,
+      attribution: "CARTO"
+    });
+
+    state.map2d.on("move zoom zoomend moveend", updateHUD);
+    state.map2d.on("moveend", () => updateWeatherReadout());
+    state.map2d.on("movestart", () => {
+      if (isMobile()) setPanelHidden(true);
+    });
+
+    log("2D initialized OK");
+  }
+
+  function clear2DBase(){
+    if (state.base2dLayer && state.map2d) {
+      try { state.map2d.removeLayer(state.base2dLayer); } catch {}
+      state.base2dLayer = null;
+    }
+  }
+
+  function setBase2D(key){
+    if (!state.map2d) return;
+    clear2DBase();
+    state.baseKey = key;
+
+    if (key === "esri") {
+      state.base2dLayer = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "osm") {
+      state.base2dLayer = makeTileLayer(CONFIG.osm, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gibs_modis") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsModis), { pane:"base", maxZoom:9, maxNativeZoom:9, attribution:"NASA GIBS" });
+      state.map2d.setMaxZoom(9);
+    } else if (key === "gibs_viirs") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsViirs), { pane:"base", maxZoom:9, maxNativeZoom:9, attribution:"NASA GIBS" });
+      state.map2d.setMaxZoom(9);
+    } else {
+      return setBase2D("esri");
+    }
+
+    state.base2dLayer.addTo(state.map2d);
+    setLabels($("labelsChk").checked);
+    updateHUD();
+    log(`Base 2D: ${key}`);
+  }
+
+  function makeCesiumXYZ(url, maxLevel = 19, subdomains = undefined){
+    return new Cesium.UrlTemplateImageryProvider(compact({
+      url,
+      maximumLevel: maxLevel,
+      subdomains: normalizeSubdomains(subdomains)
+    }));
+  }
+
+  function ensureViewer(){
+    if (state.viewer3d) return;
+
+    state.viewer3d = new Cesium.Viewer("map3d", {
+      animation: false,
+      timeline: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: false,
+      baseLayerPicker: false,
+      navigationHelpButton: false,
+      infoBox: false,
+      selectionIndicator: false,
+      shouldAnimate: true,
+      requestRenderMode: true,
+      maximumRenderTimeChange: Infinity,
+      terrainProvider: new Cesium.EllipsoidTerrainProvider()
+    });
+
+    state.viewer3d.scene.globe.show = true;
+    state.viewer3d.scene.skyAtmosphere.show = true;
+    state.viewer3d.scene.fog.enabled = true;
+
+    const ssc = state.viewer3d.scene.screenSpaceCameraController;
+    ssc.enableZoom = true;
+    ssc.enableRotate = true;
+    ssc.enableTilt = true;
+    ssc.enableTranslate = true;
+    ssc.minimumZoomDistance = 10.0;
+    ssc.maximumZoomDistance = 7.0e7;
+
+    state.viewer3d.camera.moveEnd.addEventListener(updateHUD);
+    log("3D initialized OK");
+  }
+
+  function clear3DImagery(){
+    if (!state.viewer3d) return;
+    const layers = state.viewer3d.imageryLayers;
+    while (layers.length > 0) layers.remove(layers.get(0), true);
+    state.labels3dLayer = null;
+  }
+
+  function setBase3D(key){
+    ensureViewer();
+    clear3DImagery();
+    state.baseKey = key;
+
+    let provider = null;
+    if (key === "esri") provider = makeCesiumXYZ(CONFIG.esri, 19);
+    else if (key === "osm") provider = makeCesiumXYZ(CONFIG.osm, 19, ["a","b","c"]);
+    else if (key === "gibs_modis") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsModis), 9);
+    else if (key === "gibs_viirs") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsViirs), 9);
+    else provider = makeCesiumXYZ(CONFIG.esri, 19);
+
+    state.viewer3d.imageryLayers.addImageryProvider(provider);
+    setLabels($("labelsChk").checked);
+
+    state.viewer3d.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d),
+      duration: 0
+    });
+
+    state.viewer3d.resize();
+    state.viewer3d.scene.requestRender();
+    updateHUD();
+    log(`Base 3D: ${key}`);
+  }
+
+  function setLabels(on){
+    if (on) {
+      if (state.map2d && state.labels2dLayer && !state.map2d.hasLayer(state.labels2dLayer)) {
+        state.labels2dLayer.addTo(state.map2d);
+      }
+      if (state.viewer3d && !state.labels3dLayer) {
+        state.labels3dLayer = state.viewer3d.imageryLayers.addImageryProvider(
+          makeCesiumXYZ(CONFIG.labels, 20, ["a","b","c","d"])
+        );
+        state.labels3dLayer.alpha = 0.88;
+        state.viewer3d.scene.requestRender();
+      }
+    } else {
+      if (state.map2d && state.labels2dLayer && state.map2d.hasLayer(state.labels2dLayer)) {
+        state.map2d.removeLayer(state.labels2dLayer);
+      }
+      if (state.viewer3d && state.labels3dLayer) {
+        try { state.viewer3d.imageryLayers.remove(state.labels3dLayer, true); } catch {}
+        state.labels3dLayer = null;
+      }
+    }
+  }
+
+  function remove2DOverlay(key){
+    const layer = state.overlays2d[key];
+    if (!layer || !state.map2d) return;
+    try { state.map2d.removeLayer(layer); } catch {}
+    delete state.overlays2d[key];
+  }
+
+  function remove3DOverlay(key){
+    if (!state.viewer3d) return;
+    if (state.overlays3d[key]) {
+      try { state.viewer3d.imageryLayers.remove(state.overlays3d[key], true); } catch {}
+      delete state.overlays3d[key];
+    }
+    if (state.sources3d[key]) {
+      try { state.viewer3d.dataSources.remove(state.sources3d[key], true); } catch {}
+      delete state.sources3d[key];
+    }
+  }
+
+  function add3DOverlayImageryOnly(key, provider){
+    remove3DOverlay(key);
+    const lyr = state.viewer3d.imageryLayers.addImageryProvider(provider);
+    lyr.alpha = overlayAlpha();
+    state.overlays3d[key] = lyr;
+    if (state.labels3dLayer) state.viewer3d.imageryLayers.raiseToTop(state.labels3dLayer);
+  }
+
+  function add3DDataSourceOnly(key, ds){
+    remove3DOverlay(key);
+    state.viewer3d.dataSources.add(ds);
+    state.sources3d[key] = ds;
+  }
+
+  async function discoverGIBS(){
+    try {
+      const xmlText = await fetchText(CONFIG.gibsCapabilities, false);
+      const xml = parseXml(xmlText);
+      const layers = descendantsByLocalName(xml, "Layer");
+      const out = [];
+      for (const layer of layers) {
+        const idNode = childByLocalName(layer, "Identifier");
+        if (!idNode) continue;
+        const titleNode = childByLocalName(layer, "Title");
+        out.push({
+          id: idNode.textContent.trim(),
+          title: titleNode ? titleNode.textContent.trim() : idNode.textContent.trim()
+        });
+      }
+      state.gibsCatalog = out;
+      state.gibsIds.clouds = $("gibsCloudsId").value.trim() || pickLayerId(["Cloud", "cloud fraction", "cloud mask"]);
+      state.gibsIds.thermal = $("gibsThermalId").value.trim() || pickLayerId(["Thermal_Anomalies", "thermal anomalies"]);
+      log(`GIBS layers discovered: ${out.length}`);
+    } catch (e) {
+      log(`GIBS discovery failed: ${e.message}`);
+    }
+  }
+
+  function pickLayerId(words){
+    const terms = words.map(x => x.toLowerCase());
+    const found = state.gibsCatalog.find(layer =>
+      terms.some(t => (`${layer.id} ${layer.title}`).toLowerCase().includes(t))
+    );
+    return found ? found.id : null;
+  }
+
+  function leafletGibsWms(layerId){
+    return L.tileLayer.wms(CONFIG.gibsWms, {
+      layers: layerId,
+      format: "image/png",
+      transparent: true,
+      version: "1.1.1",
+      time: currentGibsDate(),
+      pane: "overlay",
+      opacity: overlayAlpha(),
+      attribution: "NASA GIBS"
+    });
+  }
+
+  function cesiumGibsWms(layerId){
+    return new Cesium.WebMapServiceImageryProvider({
+      url: CONFIG.gibsWms,
+      layers: layerId,
+      parameters: {
+        transparent: true,
+        format: "image/png",
+        version: "1.1.1",
+        time: currentGibsDate()
+      }
+    });
+  }
+
+  async function setGibsOverlay(kind, on){
+    const layerId =
+      kind === "clouds" ? state.gibsIds.clouds :
+      kind === "thermal" ? state.gibsIds.thermal :
+      kind === "night" ? state.gibsIds.night : null;
+
+    state.overlayActive[kind] = !!on;
+    remove2DOverlay(kind);
+    remove3DOverlay(kind);
+
+    if (!on) return log(`${kind} OFF`);
+    if (!layerId) return log(`${kind} GIBS layer not found`);
+
+    try {
+      const layer2d = leafletGibsWms(layerId);
+      state.overlays2d[kind] = layer2d;
+      layer2d.addTo(state.map2d);
+      if (state.viewer3d) add3DOverlayImageryOnly(kind, cesiumGibsWms(layerId));
+      log(`${kind} ON (${layerId})`);
+    } catch (e) {
+      log(`${kind} failed: ${e.message}`);
+    }
+  }
+
+  async function preloadRadarTimeline(){
+    try {
+      const j = await fetchJson(CONFIG.rainViewerTimeline, false);
+      const frames = [
+        ...((j.radar && j.radar.past) || []),
+        ...((j.radar && j.radar.nowcast) || [])
+      ].map(x => x.time).filter(Boolean);
+      state.radar.frames = frames;
+      state.radar.index = Math.max(0, frames.length - 1);
+    } catch (e) {
+      log(`Radar preload failed: ${e.message}`);
+    }
+  }
+
+  function clearRadarTrails2D(){
+    for (const l of state.radar.trailLayers2d) {
+      try { state.map2d.removeLayer(l); } catch {}
+    }
+    state.radar.trailLayers2d = [];
+  }
+
+  function clearRadarTrails3D(){
+    if (!state.viewer3d) return;
+    for (const l of state.radar.trailLayers3d) {
+      try { state.viewer3d.imageryLayers.remove(l, true); } catch {}
+    }
+    state.radar.trailLayers3d = [];
+  }
+
+  async function setRadar(on){
+    const key = "radar";
+    state.overlayActive.radar = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    clearRadarTrails2D();
+    clearRadarTrails3D();
+
+    if (!on) return log("Radar OFF");
+
+    try {
+      const j = await fetchJson(CONFIG.rainViewerTimeline, false);
+      const frames = [
+        ...((j.radar && j.radar.past) || []),
+        ...((j.radar && j.radar.nowcast) || [])
+      ].map(x => x.time).filter(Boolean);
+      if (!frames.length) throw new Error("No radar frames");
+      if (state.radar.index >= frames.length) state.radar.index = frames.length - 1;
+      const ts = frames[state.radar.index];
+      const host = j.host || "https://tilecache.rainviewer.com";
+      const url = `${host}/v2/radar/${ts}/256/{z}/{x}/{y}/2/1_1.png`;
+
+      const layer2d = makeTileLayer(url, {
+        pane:"overlay",
+        maxZoom:12,
+        maxNativeZoom:12,
+        opacity:overlayAlpha(),
+        attribution:"RainViewer"
+      });
+      state.overlays2d[key] = layer2d;
+      layer2d.addTo(state.map2d);
+
+      if (state.viewer3d) add3DOverlayImageryOnly(key, makeCesiumXYZ(url, 12));
+      $("weatherReadout").textContent = `Radar frame: ${new Date(ts * 1000).toUTCString()}`;
+      log(`Radar ON ${new Date(ts * 1000).toUTCString()}`);
+    } catch (e) {
+      log(`Radar failed: ${e.message}`);
+    }
+  }
+
+  function toggleRadarAnimation(){
+    if (!state.overlayActive.radar) return;
+    if (state.radar.timer) {
+      clearInterval(state.radar.timer);
+      state.radar.timer = null;
+      $("radarAnimateBtn").textContent = "Animate";
+      return;
+    }
+    $("radarAnimateBtn").textContent = "Stop";
+    state.radar.timer = setInterval(async () => {
+      if (!state.radar.frames.length) return;
+      state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+      await setRadar(true);
+    }, 900);
+  }
+
+  async function stepRadar(){
+    if (!state.radar.frames.length) return;
+    state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+    await setRadar(true);
+  }
+
+  async function setFires(on){
+    const key = "fires";
+    state.overlayActive.fires = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log("Fires OFF");
+
+    try {
+      const j = await fetchJson(CONFIG.eonetWildfires, true);
+      const markers = [];
+      const pts = [];
+
+      for (const ev of (j.events || [])) {
+        for (const g of (ev.geometry || [])) {
+          const c = g.coordinates;
+          if (!Array.isArray(c) || c.length < 2) continue;
+          const lon = Number(c[0]);
+          const lat = Number(c[1]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+          markers.push(
+            L.circleMarker([lat, lon], {
+              radius:4, color:"#ff776b", fillColor:"#ff3b30", fillOpacity:.82, weight:1, pane:"overlay"
+            }).bindPopup(`<b>${escapeHtml(ev.title)}</b><br>${escapeHtml(g.date || "")}`)
+          );
+          pts.push({ lat, lon });
+        }
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("fires");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+          point: { pixelSize: 6, color: Cesium.Color.ORANGERED }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Fires ON (${markers.length})`);
+    } catch (e) {
+      log(`Fires failed: ${e.message}`);
+    }
+  }
+
+  async function setQuakes(on){
+    const key = "quakes";
+    state.overlayActive.quakes = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log("Quakes OFF");
+
+    try {
+      const j = await fetchJson(CONFIG.usgsQuakesDay, false);
+      const markers = [];
+      const pts = [];
+
+      for (const f of (j.features || [])) {
+        const c = f.geometry?.coordinates || [];
+        const lon = Number(c[0]);
+        const lat = Number(c[1]);
+        const mag = Number(f.properties?.mag || 0);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+        const r = Math.max(2, Math.min(12, mag * 2));
+        markers.push(
+          L.circleMarker([lat, lon], {
+            radius:r, color:"#ffd166", fillColor:"#ffb703", fillOpacity:.8, weight:1, pane:"overlay"
+          }).bindPopup(`<b>${escapeHtml(f.properties?.title || "Earthquake")}</b>`)
+        );
+        pts.push({ lat, lon, mag });
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("quakes");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+          point: { pixelSize: Math.max(4, p.mag * 3), color: Cesium.Color.GOLD.withAlpha(.84) }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Quakes ON (${markers.length})`);
+    } catch (e) {
+      log(`Quakes failed: ${e.message}`);
+    }
+  }
+
+  async function setAircraft(on){
+    const key = "aircraft";
+    state.overlayActive.aircraft = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log("Aircraft OFF");
+
+    try {
+      const r = await fetch(CONFIG.openSkyStatesAll, { cache:"no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+
+      const markers = [];
+      const pts = [];
+
+      for (const s of (j.states || []).slice(0, 1500)) {
+        const lon = Number(s[5]);
+        const lat = Number(s[6]);
+        const alt = Number(s[7] || 11000);
+        const callsign = (s[1] || "").trim();
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+        markers.push(
+          L.circleMarker([lat, lon], {
+            radius:2, color:"#67e8f9", fillColor:"#22d3ee", fillOpacity:.76, weight:1, pane:"overlay"
+          }).bindPopup(escapeHtml(callsign || "Aircraft"))
+        );
+        pts.push({ lat, lon, alt });
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("aircraft");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, Math.max(1500, p.alt)),
+          point: { pixelSize:3, color: Cesium.Color.CYAN.withAlpha(.85) }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Aircraft ON (${markers.length})`);
+    } catch (e) {
+      log(`Aircraft failed: ${e.message}`);
+    }
+  }
+
+  async function loadScript(src){
+    return new Promise((resolve, reject) => {
+      if ([...document.scripts].some(s => s.src === src)) return resolve();
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureSatelliteJsLoaded(){
+    if (window.satellite) return window.satellite;
+    await loadScript("https://unpkg.com/satellite.js/dist/satellite.min.js");
+    if (!window.satellite) throw new Error("satellite.js not available");
+    return window.satellite;
+  }
+
+  async function setSatellites(on){
+    const key = "satellites";
+    state.overlayActive.satellites = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (state.satelliteTimer) {
+      clearInterval(state.satelliteTimer);
+      state.satelliteTimer = null;
+    }
+    if (!on) return log("Satellites OFF");
+
+    try {
+      const sat = await ensureSatelliteJsLoaded();
+      const tleUrl = $("tleEndpoint").value.trim() || CONFIG.tleEndpoint || CONFIG.defaultTleSource;
+      const tleText = await fetchText(tleUrl, true);
+      const lines = tleText.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      const recs = [];
+
+      for (let i = 0; i < lines.length - 2; i += 3) {
+        const name = lines[i];
+        const l1 = lines[i + 1];
+        const l2 = lines[i + 2];
+        if (!l1.startsWith("1 ") || !l2.startsWith("2 ")) continue;
+        try { recs.push({ name, satrec: sat.twoline2satrec(l1, l2) }); } catch {}
+      }
+
+      const build = () => {
+        remove2DOverlay(key);
+        remove3DOverlay(key);
+
+        const now = new Date();
+        const gmst = sat.gstime(now);
+        const markers = [];
+        const ds = state.viewer3d ? new Cesium.CustomDataSource("satellites") : null;
+
+        for (const rec of recs.slice(0, 80)) {
+          const pv = sat.propagate(rec.satrec, now);
+          if (!pv.position) continue;
+          const geo = sat.eciToGeodetic(pv.position, gmst);
+          const lat = geo.latitude * 180 / Math.PI;
+          const lon = geo.longitude * 180 / Math.PI;
+          const altKm = geo.height;
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+          markers.push(
+            L.circleMarker([lat, lon], {
+              radius:3, color:"#c084fc", fillColor:"#a855f7", fillOpacity:.8, weight:1, pane:"overlay"
+            }).bindPopup(escapeHtml(rec.name))
+          );
+
+          if (ds) {
+            ds.entities.add({
+              position: Cesium.Cartesian3.fromDegrees(lon, lat, Math.max(0, altKm * 1000)),
+              point: { pixelSize:4, color: Cesium.Color.MAGENTA.withAlpha(.88) }
+            });
+          }
+        }
+
+        const group = L.layerGroup(markers);
+        state.overlays2d[key] = group;
+        group.addTo(state.map2d);
+        if (ds) add3DDataSourceOnly(key, ds);
+      };
+
+      build();
+      state.satelliteTimer = setInterval(build, 20000);
+      log(`Satellites ON (${Math.min(80, recs.length)} tracked)`);
+    } catch (e) {
+      log(`Satellites failed: ${e.message}`);
+    }
+  }
+
+  async function setSentinelFootprints(on){
+    const key = "sentinelFootprints";
+    state.overlayActive.sentinelFootprints = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log("Sentinel footprints OFF");
+
+    try {
+      const b = state.map2d.getBounds();
+      const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+      const end = new Date();
+      const start = new Date();
+      start.setUTCDate(start.getUTCDate() - 10);
+
+      const body = {
+        collections: ["sentinel-2-l2a"],
+        bbox,
+        datetime: `${start.toISOString()}/${end.toISOString()}`,
+        limit: 20,
+        query: { "eo:cloud_cover": { lte: 20 } }
+      };
+
+      const j = await fetchPostJson(CONFIG.earthSearchSearch, body, false);
+      const layers = [];
+      const dots = [];
+
+      for (const f of (j.features || [])) {
+        const geom = f.geometry;
+        const props = f.properties || {};
+        const title = props["sentinel:product_id"] || f.id || "Sentinel scene";
+        if (!geom) continue;
+
+        const geo = L.geoJSON(geom, {
+          pane:"overlay",
+          style: { color:"#7dd3fc", weight:2, opacity:.9, fillOpacity:.08 }
+        }).bindPopup(escapeHtml(title));
+
+        layers.push(geo);
+        collectCoords(geom).forEach(([lon, lat]) => dots.push({ lon, lat }));
+      }
+
+      const group = L.layerGroup(layers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("sentinelFootprints");
+        for (let i = 0; i < dots.length; i += 10) {
+          const p = dots[i];
+          ds.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+            point: { pixelSize:2, color: Cesium.Color.SKYBLUE.withAlpha(.8) }
+          });
+        }
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Sentinel footprints ON (${layers.length} scenes)`);
+    } catch (e) {
+      log(`Sentinel footprints failed: ${e.message}`);
+    }
+  }
+
+  function collectCoords(geom){
+    const pts = [];
+    if (geom.type === "Polygon") {
+      for (const ring of geom.coordinates || []) {
+        for (const c of ring || []) {
+          if (Array.isArray(c) && c.length >= 2) pts.push([Number(c[0]), Number(c[1])]);
+        }
+      }
+    } else if (geom.type === "MultiPolygon") {
+      for (const poly of geom.coordinates || []) {
+        for (const ring of poly || []) {
+          for (const c of ring || []) {
+            if (Array.isArray(c) && c.length >= 2) pts.push([Number(c[0]), Number(c[1])]);
+          }
+        }
+      }
+    }
+    return pts.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat));
+  }
+
+  async function setSentinelOverlay(on){
+    const key = "sentinelOverlay";
+    state.overlayActive.sentinelOverlay = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log("Sentinel imagery overlay OFF");
+
+    const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+    if (!tpl) return log("Sentinel imagery template missing");
+
+    try {
+      const layer2d = makeTileLayer(tpl, {
+        pane:"overlay",
+        maxZoom:19,
+        opacity:overlayAlpha(),
+        attribution:"Sentinel"
+      });
+      state.overlays2d[key] = layer2d;
+      layer2d.addTo(state.map2d);
+      if (state.viewer3d) add3DOverlayImageryOnly(key, makeCesiumXYZ(tpl, 19));
+      log("Sentinel imagery overlay ON");
+    } catch (e) {
+      log(`Sentinel imagery failed: ${e.message}`);
+    }
+  }
+
+  async function setGenericEndpointOverlay(key, on, inputId, style = {}){
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (!on) return log(`${key} OFF`);
+
+    const endpoint = $(inputId).value.trim();
+    if (!endpoint) return log(`${key} endpoint missing`);
+
+    try {
+      if (endpoint.includes("{z}") && endpoint.includes("{x}") && endpoint.includes("{y}")) {
+        const layer2d = makeTileLayer(endpoint, {
+          pane:"overlay",
+          maxZoom:22,
+          opacity:overlayAlpha(),
+          attribution:key
+        });
+        state.overlays2d[key] = layer2d;
+        layer2d.addTo(state.map2d);
+        if (state.viewer3d) add3DOverlayImageryOnly(key, makeCesiumXYZ(endpoint, 22));
+        log(`${key} XYZ ON`);
+        return;
+      }
+
+      if (/wms/i.test(endpoint)) {
+        const layer2d = L.tileLayer.wms(endpoint, {
+          layers: style.layers || "",
+          format:"image/png",
+          transparent:true,
+          pane:"overlay",
+          opacity:overlayAlpha()
+        });
+        state.overlays2d[key] = layer2d;
+        layer2d.addTo(state.map2d);
+        log(`${key} WMS ON`);
+        return;
+      }
+
+      const geojson = await fetchJson(endpoint, true);
+      const geo = L.geoJSON(geojson, {
+        pane:"overlay",
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+          radius: style.radius || 4,
+          color: style.color || "#ffffff",
+          fillColor: style.fillColor || style.color || "#ffffff",
+          fillOpacity: style.fillOpacity ?? .75,
+          weight: style.weight ?? 1
+        }),
+        style: () => ({
+          color: style.color || "#ffffff",
+          weight: style.weight ?? 2,
+          opacity: style.opacity ?? .85,
+          fillOpacity: style.polyFillOpacity ?? .12
+        })
+      });
+      state.overlays2d[key] = geo;
+      geo.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = await Cesium.GeoJsonDataSource.load(geojson, {
+          stroke: Cesium.Color.fromCssColorString(style.color || "#ffffff"),
+          fill: Cesium.Color.fromCssColorString(style.color || "#ffffff").withAlpha(.18),
+          strokeWidth: style.weight ?? 2,
+          clampToGround: true
+        });
+        add3DDataSourceOnly(key, ds);
+      }
+      log(`${key} GeoJSON ON`);
+    } catch (e) {
+      log(`${key} failed: ${e.message}`);
+    }
+  }
+
+  async function updateWeatherReadout(){
+    if (!state.map2d) return;
+    const c = state.map2d.getCenter();
+    try {
+      const url = `${CONFIG.openMeteo}?latitude=${encodeURIComponent(c.lat)}&longitude=${encodeURIComponent(c.lng)}&current=temperature_2m,wind_speed_10m,wind_direction_10m,pressure_msl`;
+      const j = await fetchJson(url, false);
+      const cur = j.current || {};
+      $("weatherReadout").textContent =
+        `Temp ${cur.temperature_2m ?? "—"}° • Wind ${cur.wind_speed_10m ?? "—"} @ ${cur.wind_direction_10m ?? "—"}° • Pressure ${cur.pressure_msl ?? "—"}`;
+    } catch (e) {
+      $("weatherReadout").textContent = `Weather readout failed`;
+    }
+  }
+
+  function astroUrl(target, survey){
+    const params = new URLSearchParams({
+      target,
+      survey,
+      cooFrame: "J2000",
+      fullScreen: "false",
+      showReticle: "false"
+    });
+    return `https://aladin.cds.unistra.fr/AladinLite/?${params.toString()}`;
+  }
+
+  function applyAstroVisualZoom(){
+    astroFrameWrap.style.transform = `scale(${state.astro.visualZoom})`;
+    $("astroZoomSlider").value = String(Math.round(state.astro.visualZoom * 100));
+    $("astroZoomReadout").textContent = `${Math.round(state.astro.visualZoom * 100)}%`;
+    astroCrosshair.classList.toggle("hidden", !state.astro.crosshair);
+    $("astroCrosshairBtn").textContent = state.astro.crosshair ? "Hide crosshair" : "Show crosshair";
+    updateHUD();
+  }
+
+  function ensureAstroFrame(){
+    if (!astroFrame.src) {
+      astroFrame.src = astroUrl(state.astro.target, state.astro.survey);
+      log("ASTRO iframe initialized OK");
+    }
+    applyAstroVisualZoom();
+  }
+
+  function refreshAstroFrame(){
+    state.astro.survey = $("astroSurvey").value || "P/DSS2/color";
+    astroFrame.src = astroUrl(state.astro.target, state.astro.survey);
+    applyAstroVisualZoom();
+    updateHUD();
+  }
+
+  function astroSearch(){
+    const q = $("astroSearchBox").value.trim();
+    if (!q) return;
+    state.astro.target = q;
+    refreshAstroFrame();
+    log(`ASTRO target: ${q}`);
+  }
+
+  function astroZoomIn(){
+    state.astro.visualZoom = Math.min(12, +(state.astro.visualZoom * 1.2).toFixed(4));
+    applyAstroVisualZoom();
+  }
+
+  function astroZoomOut(){
+    state.astro.visualZoom = Math.max(1, +(state.astro.visualZoom / 1.2).toFixed(4));
+    applyAstroVisualZoom();
+  }
+
+  function astroReset(){
+    state.astro.target = "0 +0";
+    state.astro.visualZoom = 1;
+    refreshAstroFrame();
+  }
+
+  async function showMode(mode){
+    state.mode = mode;
+    $("mode2d").classList.toggle("active", mode === "2d");
+    $("mode3d").classList.toggle("active", mode === "3d");
+    $("modeAstro").classList.toggle("active", mode === "astro");
+    updateModeBadge();
+
+    if (mode === "2d") {
+      $("map2d").style.display = "block";
+      $("map3d").style.display = "none";
+      $("astro").style.display = "none";
+      if (state.map2d) setTimeout(() => state.map2d.invalidateSize(true), 50);
+      updateHUD();
+      return;
+    }
+
+    if (mode === "3d") {
+      $("map2d").style.display = "none";
+      $("map3d").style.display = "block";
+      $("astro").style.display = "none";
+      ensureViewer();
+      setTimeout(() => {
+        state.viewer3d.resize();
+        state.viewer3d.scene.requestRender();
+        updateHUD();
+      }, 80);
+      return;
+    }
+
+    if (mode === "astro") {
+      $("map2d").style.display = "none";
+      $("map3d").style.display = "none";
+      $("astro").style.display = "block";
+      ensureAstroFrame();
+      updateHUD();
+    }
+  }
+
+  function zoomIn(){
+    if (state.mode === "2d" && state.map2d) return state.map2d.zoomIn();
+    if (state.mode === "3d" && state.viewer3d) {
+      const h = state.viewer3d.camera.positionCartographic.height;
+      state.viewer3d.camera.moveForward(Math.max(250, h * .25));
+      return updateHUD();
+    }
+    if (state.mode === "astro") return astroZoomIn();
+  }
+
+  function zoomOut(){
+    if (state.mode === "2d" && state.map2d) return state.map2d.zoomOut();
+    if (state.mode === "3d" && state.viewer3d) {
+      const h = state.viewer3d.camera.positionCartographic.height;
+      state.viewer3d.camera.moveBackward(Math.max(250, h * .25));
+      return updateHUD();
+    }
+    if (state.mode === "astro") return astroZoomOut();
+  }
+
+  function goHome(){
+    if (state.mode === "2d" && state.map2d) {
+      return state.map2d.setView([CONFIG.home.lat, CONFIG.home.lon], CONFIG.home.zoom2d, { animate:true });
+    }
+    if (state.mode === "3d") {
+      ensureViewer();
+      return state.viewer3d.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d),
+        duration: 1
+      });
+    }
+    if (state.mode === "astro") return astroReset();
+  }
+
+  async function smartSearch(){
+    const q = $("searchBox").value.trim();
+    if (!q) return;
+
+    const m = q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) {
+      const lat = Number(m[1]);
+      const lon = Number(m[3]);
+      return jumpToLatLon(lat, lon);
+    }
+
+    try {
+      const j = await fetchJson(CONFIG.nominatim + encodeURIComponent(q), false);
+      if (j.length) {
+        const lat = Number(j[0].lat);
+        const lon = Number(j[0].lon);
+        return jumpToLatLon(lat, lon);
+      }
+    } catch {}
+
+    await showMode("astro");
+    $("astroSearchBox").value = q;
+    astroSearch();
+  }
+
+  function jumpToLatLon(lat, lon){
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    if (state.map2d) state.map2d.setView([lat, lon], Math.max(8, state.map2d.getZoom()), { animate:true });
+    if (state.viewer3d) {
+      state.viewer3d.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1800000),
+        duration:1
+      });
+    }
+    updateWeatherReadout();
+    log(`Jump: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+  }
+
+  function applyOverlayOpacity(){
+    const a = overlayAlpha();
+
+    Object.values(state.overlays2d).forEach(layer => {
+      if (layer && layer.setOpacity) layer.setOpacity(a);
+      if (layer && layer.eachLayer) {
+        layer.eachLayer(l => {
+          if (l.setOpacity) l.setOpacity(a);
+          if (l.setStyle) {
+            l.setStyle({
+              fillOpacity: Math.min(.9, Math.max(.08, a * .3)),
+              opacity: Math.max(.25, a)
+            });
+          }
+        });
+      }
+    });
+
+    Object.values(state.overlays3d).forEach(layer => {
+      if (layer && typeof layer.alpha === "number") layer.alpha = a;
+    });
+  }
+
+  async function refreshEnabledOverlays(){
+    syncConfigFromInputs();
+
+    if (state.overlayActive.radar) await setRadar(true);
+    if (state.overlayActive.clouds) await setGibsOverlay("clouds", true);
+    if (state.overlayActive.thermal) await setGibsOverlay("thermal", true);
+    if (state.overlayActive.night) await setGibsOverlay("night", true);
+    if (state.overlayActive.fires) await setFires(true);
+    if (state.overlayActive.quakes) await setQuakes(true);
+    if (state.overlayActive.aircraft) await setAircraft(true);
+    if (state.overlayActive.satellites) await setSatellites(true);
+    if (state.overlayActive.sentinelFootprints) await setSentinelFootprints(true);
+    if (state.overlayActive.sentinelOverlay) await setSentinelOverlay(true);
+
+    if (state.overlayActive.traffic) await setGenericEndpointOverlay("traffic", true, "trafficEndpoint", { color:"#fb7185", radius:4 });
+    if (state.overlayActive.ships) await setGenericEndpointOverlay("ships", true, "shipsEndpoint", { color:"#10b981", radius:3 });
+    if (state.overlayActive.infra) await setGenericEndpointOverlay("infra", true, "infraEndpoint", { color:"#60a5fa", radius:3 });
+    if (state.overlayActive.env) await setGenericEndpointOverlay("env", true, "envEndpoint", { color:"#22c55e", radius:3 });
+    if (state.overlayActive.people) await setGenericEndpointOverlay("people", true, "peopleEndpoint", { color:"#eab308", radius:3 });
+    if (state.overlayActive.history) await setGenericEndpointOverlay("history", true, "historyEndpoint", { color:"#c084fc", radius:3 });
+  }
+
+  async function runHealth(){
+    log("=== HEALTH CHECK ===");
+    const tests = [
+      ["Esri", CONFIG.esri.replace("{z}", "2").replace("{y}", "1").replace("{x}", "1")],
+      ["OSM", CONFIG.osm.replace("{s}", "a").replace("{z}", "2").replace("{x}", "1").replace("{y}", "1")],
+      ["GIBS VIIRS", gibsBaseUrl(CONFIG.gibsViirs).replace("{z}", "2").replace("{y}", "1").replace("{x}", "1")],
+      ["RainViewer", CONFIG.rainViewerTimeline],
+      ["USGS quakes", CONFIG.usgsQuakesDay],
+      ["EONET fires", CONFIG.eonetWildfires],
+      ["OpenSky", CONFIG.openSkyStatesAll],
+      ["Open-Meteo", `${CONFIG.openMeteo}?latitude=28.5&longitude=-81.3&current=temperature_2m`]
+    ];
+
+    for (const [name, url] of tests) {
+      const ok = await probe(url);
+      log(`${name}: ${ok ? "OK" : "FAIL"}`);
+    }
+    log("=== END HEALTH ===");
+  }
+
+  function startLiveRefreshLoops(){
+    setInterval(async () => {
+      try { if (state.overlayActive.radar && !state.radar.timer) await setRadar(true); } catch {}
+    }, 180000);
+
+    setInterval(async () => {
+      try { if (state.overlayActive.fires) await setFires(true); } catch {}
+    }, 300000);
+
+    setInterval(async () => {
+      try { if (state.overlayActive.quakes) await setQuakes(true); } catch {}
+    }, 600000);
+
+    setInterval(async () => {
+      try { if (state.overlayActive.aircraft) await setAircraft(true); } catch {}
+    }, 300000);
+
+    setInterval(async () => {
+      try { if (state.overlayActive.satellites) await setSatellites(true); } catch {}
+    }, 300000);
+  }
+
+  function wireUI(){
+    menuToggle.onclick = () => {
+      controlPanel.classList.toggle("panel-hidden");
+      syncMobilePanelUI();
+    };
+    panelBackdrop.onclick = () => setPanelHidden(true);
+    if (isMobile()) setPanelHidden(true);
+    syncMobilePanelUI();
+    window.addEventListener("resize", syncMobilePanelUI);
+
+    $("mode2d").onclick = () => showMode("2d");
+    $("mode3d").onclick = () => { ensureViewer(); setBase3D($("baseSelect").value); showMode("3d"); };
+    $("modeAstro").onclick = () => showMode("astro");
+
+    $("zoomInBtn").onclick = zoomIn;
+    $("zoomOutBtn").onclick = zoomOut;
+    $("resetBtn").onclick = goHome;
+    $("homeBtn").onclick = goHome;
+
+    $("searchBtn").onclick = () => smartSearch().catch(e => log(`Search failed: ${e.message}`));
+    $("searchBox").addEventListener("keydown", e => {
+      if (e.key === "Enter") smartSearch().catch(err => log(`Search failed: ${err.message}`));
+    });
+
+    $("refreshBtn").onclick = () => refreshEnabledOverlays().catch(e => log(`Refresh failed: ${e.message}`));
+    $("healthBtn").onclick = runHealth;
+    $("copyLogBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(logEl.textContent);
+        log("Copied log.");
+      } catch (e) {
+        log(`Copy failed: ${e.message}`);
+      }
+    };
+
+    $("baseSelect").onchange = () => {
+      syncConfigFromInputs();
+      setBase2D($("baseSelect").value);
+      if (state.viewer3d) setBase3D($("baseSelect").value);
+    };
+
+    $("gibsDate").onchange = async () => {
+      if (["gibs_modis","gibs_viirs"].includes($("baseSelect").value)) {
+        setBase2D($("baseSelect").value);
+        if (state.viewer3d) setBase3D($("baseSelect").value);
+      }
+      if (state.overlayActive.clouds) await setGibsOverlay("clouds", true);
+      if (state.overlayActive.thermal) await setGibsOverlay("thermal", true);
+      if (state.overlayActive.night) await setGibsOverlay("night", true);
+    };
+
+    $("labelsChk").onchange = () => setLabels($("labelsChk").checked);
+
+    $("radarChk").onchange = () => setRadar($("radarChk").checked);
+    $("radarAnimateBtn").onclick = toggleRadarAnimation;
+    $("radarStepBtn").onclick = () => stepRadar().catch(e => log(`Radar step failed: ${e.message}`));
+    $("radarRefreshBtn").onclick = () => setRadar($("radarChk").checked).catch(e => log(`Radar reload failed: ${e.message}`));
+
+    $("cloudsChk").onchange = () => setGibsOverlay("clouds", $("cloudsChk").checked);
+    $("thermalChk").onchange = () => setGibsOverlay("thermal", $("thermalChk").checked);
+    $("nightChk").onchange = () => setGibsOverlay("night", $("nightChk").checked);
+    $("firesChk").onchange = () => setFires($("firesChk").checked);
+    $("quakesChk").onchange = () => setQuakes($("quakesChk").checked);
+    $("aircraftChk").onchange = () => setAircraft($("aircraftChk").checked);
+    $("satellitesChk").onchange = () => setSatellites($("satellitesChk").checked);
+    $("sentinelFootprintsChk").onchange = () => setSentinelFootprints($("sentinelFootprintsChk").checked);
+    $("sentinelOverlayChk").onchange = () => setSentinelOverlay($("sentinelOverlayChk").checked);
+
+    $("trafficChk").onchange = () => setGenericEndpointOverlay("traffic", $("trafficChk").checked, "trafficEndpoint", { color:"#fb7185", radius:4 });
+    $("shipsChk").onchange = () => setGenericEndpointOverlay("ships", $("shipsChk").checked, "shipsEndpoint", { color:"#10b981", radius:3 });
+    $("infraChk").onchange = () => setGenericEndpointOverlay("infra", $("infraChk").checked, "infraEndpoint", { color:"#60a5fa", radius:3 });
+    $("envChk").onchange = () => setGenericEndpointOverlay("env", $("envChk").checked, "envEndpoint", { color:"#22c55e", radius:3 });
+    $("peopleChk").onchange = () => setGenericEndpointOverlay("people", $("peopleChk").checked, "peopleEndpoint", { color:"#eab308", radius:3 });
+    $("historyChk").onchange = () => setGenericEndpointOverlay("history", $("historyChk").checked, "historyEndpoint", { color:"#c084fc", radius:3 });
+
+    $("overlayOpacity").oninput = applyOverlayOpacity;
+
+    $("astroSurvey").onchange = refreshAstroFrame;
+    $("astroSearchBtn").onclick = astroSearch;
+    $("astroResetBtn").onclick = astroReset;
+    $("astroCrosshairBtn").onclick = () => {
+      state.astro.crosshair = !state.astro.crosshair;
+      applyAstroVisualZoom();
+    };
+    $("astroSearchBox").addEventListener("keydown", e => {
+      if (e.key === "Enter") astroSearch();
+    });
+    $("astroZoomSlider").addEventListener("input", e => {
+      state.astro.visualZoom = Math.max(1, Math.min(12, Number(e.target.value) / 100));
+      applyAstroVisualZoom();
+    });
+
+    [
+      "sentinelTileTemplate","tleEndpoint","proxyPrefixInput","gibsCloudsId","gibsThermalId"
+    ].forEach(id => {
+      $(id).addEventListener("change", syncConfigFromInputs);
+      $(id).addEventListener("blur", syncConfigFromInputs);
+    });
+
+    log("UI handlers wired OK");
+  }
+
+  async function boot(){
+    $("gibsDate").value = yesterdayUTC();
+    syncConfigFromInputs();
+    updateModeBadge();
+    setStatus("Booting", "warn");
+    log(`Boot: ${CONFIG.appName}`);
+
+    wireUI();
+    init2D();
+    setBase2D("esri");
+    await discoverGIBS();
+    await preloadRadarTimeline();
+    await updateWeatherReadout();
+    startLiveRefreshLoops();
+    perfTick();
+    ensureAstroFrame();
+    updateHUD();
+    await showMode("2d");
+
+    setStatus("Ready", "ok");
+    log("Ready ✅");
+  }
+
+  boot().catch(e => {
+    setStatus("Fatal error", "bad");
+    log(`Fatal boot error: ${e.message}`);
+    console.error(e);
+  });
+})();
+</script>
+</body>
+</html>

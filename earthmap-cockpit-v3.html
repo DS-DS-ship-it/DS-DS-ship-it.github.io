@@ -1,0 +1,3231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Earth Cockpit v38 Weather + Space Weather Atlas Debug</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.css" />
+  <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
+
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#07111a;
+      --panel:#0d1723;
+      --panel2:#132031;
+      --line:rgba(255,255,255,.10);
+      --line2:rgba(255,255,255,.16);
+      --text:#edf6ff;
+      --muted:#95b5d6;
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#f87171;
+      --accent:#6cb8ff;
+      --shadow:0 18px 48px rgba(0,0,0,.42);
+      --safeTop:env(safe-area-inset-top,0px);
+      --safeBottom:env(safe-area-inset-bottom,0px);
+      --panelW:460px;
+      --radius:14px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text);
+      font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      -webkit-text-size-adjust:100%;
+    }
+    body{ touch-action:manipulation; }
+    #app{ width:100%; height:100%; display:grid; grid-template-columns:var(--panelW) 1fr; background:var(--bg); }
+    #panel{
+      overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y pinch-zoom;
+      background:linear-gradient(180deg, rgba(13,23,35,.985), rgba(7,13,20,.995));
+      border-right:1px solid var(--line); padding:10px; z-index:9000;
+      transition:transform .24s ease, opacity .24s ease, visibility .24s ease;
+    }
+    #stage{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; }
+    #map2d,#map3d,#astroWrap{ position:absolute; inset:0; width:100%; height:100%; background:#000; }
+    #map3d,#astroWrap{ display:none; }
+    #astroCanvas{ position:absolute; inset:0; width:100%; height:100%; background:#000; }
+    .box{
+      background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:var(--radius);
+      padding:10px; margin-bottom:10px; box-shadow:var(--shadow);
+    }
+    .title{ margin:0 0 6px; font-size:16px; font-weight:900; letter-spacing:.02em; }
+    .sub{ margin:0 0 8px; color:var(--muted); font-size:12px; }
+    .tiny{ color:var(--muted); font-size:12px; }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
+    .row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+    .row:last-child{ margin-bottom:0; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    .grid4{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
+    button,select,input[type="text"],input[type="date"],input[type="number"],input[type="range"],textarea{
+      width:100%; background:#0c1622; color:var(--text); border:1px solid var(--line2); border-radius:10px;
+      padding:8px 9px; font:inherit; outline:none;
+    }
+    select,input[type="text"],input[type="number"],textarea{ -webkit-appearance:none; appearance:none; font-size:16px; }
+    textarea{ min-height:58px; resize:vertical; }
+    button{ cursor:pointer; }
+    button.primary{ background:#173a5d; border-color:#78b9ff; }
+    button.active{ background:#173a5d; border-color:#78b9ff; }
+    label.check{ display:flex; gap:7px; align-items:center; margin-bottom:6px; user-select:none; }
+    label.check input{ width:auto; margin:0; }
+    .badge{
+      display:inline-flex; gap:6px; align-items:center; padding:4px 8px; border-radius:999px; border:1px solid var(--line);
+      background:rgba(255,255,255,.05); color:var(--muted); font-size:12px;
+    }
+    .badge.ok{ color:#dfffea; border-color:rgba(74,222,128,.45); background:rgba(74,222,128,.12); }
+    .badge.warn{ color:#fff4d4; border-color:rgba(251,191,36,.45); background:rgba(251,191,36,.12); }
+    .badge.bad{ color:#ffe1e1; border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.12); }
+    .kv{ display:grid; grid-template-columns:122px 1fr; gap:6px; align-items:center; margin-bottom:6px; }
+    .tinyout{
+      padding:8px 9px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.03); color:var(--text);
+      min-height:34px; display:flex; align-items:center; overflow:hidden;
+    }
+    .sep{ height:1px; background:rgba(255,255,255,.09); margin:8px 0; }
+    .help{ font-size:11px; color:rgba(237,246,255,.70); line-height:1.45; margin-top:4px; }
+
+    #hud,#perf,#routeHUD,#timeHUD,#busy,#weatherHUD,#spaceHUD{
+      position:absolute; z-index:9999; padding:10px 12px; border-radius:14px; border:1px solid var(--line2);
+      background:rgba(8,14,22,.80); backdrop-filter:blur(10px); box-shadow:var(--shadow); pointer-events:none;
+    }
+    #hud{ top:10px; right:10px; max-width:420px; }
+    #weatherHUD{ left:10px; top:10px; max-width:420px; }
+    #spaceHUD{ left:10px; top:182px; max-width:420px; }
+    #timeHUD{ right:10px; top:108px; max-width:420px; }
+    #perf{ left:10px; bottom:10px; min-width:230px; }
+    #routeHUD{ right:10px; bottom:10px; min-width:260px; max-width:460px; white-space:pre-wrap; }
+    #busy{
+      left:50%; top:50%; transform:translate(-50%,-50%); display:none; z-index:10001;
+      font-weight:900; border-radius:999px; background:rgba(8,14,22,.95);
+    }
+
+    .menu-toggle{
+      position:fixed; top:calc(12px + var(--safeTop)); left:12px; z-index:12000; font-size:20px;
+      background:rgba(10,12,18,.92); border:1px solid rgba(255,255,255,.16); color:white; padding:10px 14px; border-radius:12px;
+      cursor:pointer; box-shadow:var(--shadow); display:none;
+    }
+    #panelBackdrop{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:11000; display:none; }
+    #astroMiniHud{
+      position:absolute; right:10px; bottom:70px; z-index:10000; display:flex; gap:6px; flex-wrap:wrap; max-width:min(90vw, 580px);
+    }
+    #astroMiniHud button{ width:auto; min-width:64px; background:rgba(10,14,22,.84); }
+    #astroWeatherInset{
+      position:absolute; left:10px; bottom:10px; z-index:10000; width:min(34vw, 360px); min-width:260px;
+      border:1px solid var(--line2); border-radius:16px; background:rgba(8,14,22,.80); backdrop-filter:blur(10px);
+      box-shadow:var(--shadow); overflow:hidden;
+    }
+    #astroWeatherInsetHead{
+      padding:8px 10px; font-weight:800; font-size:12px; letter-spacing:.02em;
+      background:linear-gradient(180deg, rgba(20,36,58,.95), rgba(10,18,30,.92)); border-bottom:1px solid var(--line);
+    }
+    #astroWeatherMap{ width:100%; height:190px; background:#08111a; }
+    #astroWeatherCaption{ padding:7px 10px; color:var(--muted); font-size:11px; }
+    .leaflet-pane.terrain-pane{ mix-blend-mode:soft-light; }
+    body[data-mode="astro"] #weatherHUD{ left:auto; right:10px; top:10px; max-width:340px; }
+    body[data-mode="astro"] #spaceHUD{ left:auto; right:10px; top:186px; max-width:340px; }
+    body[data-mode="astro"] #hud{ top:auto; right:10px; bottom:10px; max-width:260px; }
+    body[data-mode="astro"] #routeHUD{ left:10px; right:auto; bottom:10px; max-width:280px; }
+
+    .leaflet-container{ background:#070b10; }
+    .leaflet-control-attribution{ background:rgba(8,14,22,.72)!important; color:#dce8f7!important; }
+    .leaflet-control-zoom a{ background:#111a24!important; color:#fff!important; border-color:rgba(255,255,255,.14)!important; }
+    .leaflet-pane.radar-main-pane{ mix-blend-mode:screen; }
+    .leaflet-pane.radar-glow-pane{ mix-blend-mode:screen; filter:blur(1.3px) saturate(1.3); }
+    .leaflet-pane.radar-trail-pane{ mix-blend-mode:screen; filter:saturate(1.35) contrast(1.05); }
+    .leaflet-pane.terminator-pane{ mix-blend-mode:multiply; }
+    .leaflet-pane.vector-pane{ mix-blend-mode:screen; }
+
+    @media (max-width:1080px){
+      #app{ display:block; }
+      #panel{
+        position:fixed; left:10px; top:calc(10px + var(--safeTop)); bottom:calc(10px + var(--safeBottom));
+        width:min(420px, calc(100vw - 20px)); max-width:calc(100vw - 20px);
+        border:1px solid var(--line); border-radius:16px; z-index:11500;
+        max-height:calc(100dvh - var(--safeTop) - var(--safeBottom) - 20px);
+      }
+      #panel.panel-hidden{
+        transform:translateX(calc(-100% - 16px)); opacity:0; visibility:hidden; pointer-events:none;
+      }
+      .menu-toggle{ display:block; }
+      #panelBackdrop.show{ display:block; }
+      #weatherHUD,#spaceHUD,#hud,#timeHUD{ max-width:min(84vw, 360px); }
+      #weatherHUD{ top:calc(10px + var(--safeTop)); left:auto; right:10px; }
+      #spaceHUD{ top:auto; bottom:calc(138px + var(--safeBottom)); left:auto; right:10px; }
+      #timeHUD{ top:auto; bottom:calc(10px + var(--safeBottom)); }
+      #routeHUD{ left:10px; right:auto; max-width:min(86vw, 350px); bottom:calc(10px + var(--safeBottom)); }
+      #astroWeatherInset{ width:min(86vw, 340px); min-width:0; left:10px; bottom:calc(10px + var(--safeBottom)); }
+      body[data-mode="astro"] #spaceHUD{ top:auto; bottom:calc(250px + var(--safeBottom)); right:10px; }
+    }
+  </style>
+</head>
+<body>
+  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu">Menu</button>
+  <div id="panelBackdrop"></div>
+
+  <div id="app">
+    <aside id="panel">
+      <div class="box">
+        <div class="title">Earth Cockpit v38 Weather + Space Weather Atlas Debug</div>
+        <div class="sub">2D + 3D + Astro | NWS weather intelligence | radar history + nowcast | aurora + SAA + solar wind</div>
+        <div class="grid3">
+          <button id="mode2d" class="primary active">2D</button>
+          <button id="mode3d">3D</button>
+          <button id="modeAstro">ASTRO</button>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <span id="modeBadge" class="badge">Mode: 2D</span>
+          <span id="statusBadge" class="badge warn">Booting</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="grid4">
+          <button id="zoomInBtn">Zoom +</button>
+          <button id="zoomOutBtn">Zoom -</button>
+          <button id="resetBtn">Reset</button>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+        <div class="grid4" style="margin-top:6px;">
+          <button id="healthBtn">Health</button>
+          <button id="copyLogBtn">Copy log</button>
+          <button id="downloadHtmlBtn">Save HTML</button>
+          <button id="downloadTxtBtn">Save TXT</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny">Search Earth or sky object</div>
+        <div class="row">
+          <input id="searchBox" type="text" placeholder="Orlando, 28.54,-81.38, M31, Vega, NGC 1300">
+        </div>
+        <div class="grid3">
+          <button id="searchBtn" class="primary">Go</button>
+          <button id="geoBtn">My location</button>
+          <button id="homeBtn">Home</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Base layer</b></div>
+        <div class="row">
+          <select id="baseSelect">
+            <option value="esri">Esri World Imagery</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="hot">OSM Humanitarian</option>
+            <option value="gibs_modis">NASA GIBS MODIS True Color</option>
+            <option value="gibs_viirs">NASA GIBS VIIRS True Color</option>
+            <option value="sentinel_template">Sentinel XYZ Template</option>
+            <option value="gee_template">Earth Engine XYZ Template</option>
+          </select>
+        </div>
+        <div class="tiny">NASA imagery date</div>
+        <div class="row"><input id="gibsDate" type="date"></div>
+        <label class="check"><input id="labelsChk" type="checkbox" checked> Labels / place names</label>
+        <label class="check"><input id="terrain3dChk" type="checkbox"> Terrain relief (2D) + terrain mesh (3D)</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Weather intelligence</b></div>
+        <div class="grid3">
+          <button id="weatherHereBtn" class="primary">Weather @ center</button>
+          <button id="weatherGeoBtn">Use my GPS</button>
+          <button id="weatherFollowBtn">Follow center: OFF</button>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <select id="weatherStyleSelect">
+            <option value="cinematic">Radar style: Cinematic</option>
+            <option value="classic">Radar style: Classic</option>
+            <option value="prismatic">Radar style: Prismatic</option>
+          </select>
+        </div>
+        <label class="check"><input id="radarChk" type="checkbox" checked> Radar animation (past hour + nowcast when available)</label>
+        <label class="check"><input id="windVectorChk" type="checkbox" checked> Wind / storm steering vector</label>
+        <label class="check"><input id="alertsChk" type="checkbox" checked> NWS alert polygons</label>
+        <label class="check"><input id="cloudsChk" type="checkbox"> NASA GIBS clouds</label>
+        <label class="check"><input id="precipChk" type="checkbox"> NASA GIBS precipitation</label>
+        <label class="check"><input id="thermalChk" type="checkbox"> NASA GIBS thermal anomalies</label>
+        <div class="grid3">
+          <button id="radarAnimateBtn">Animate</button>
+          <button id="radarStepBtn">Step</button>
+          <button id="radarReloadBtn">Reload</button>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <select id="radarTrailSelect">
+            <option value="0">Radar trail off</option>
+            <option value="2">2 trail frames</option>
+            <option value="4" selected>4 trail frames</option>
+            <option value="6">6 trail frames</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="timeSlider" type="range" min="0" max="0" value="0">
+        </div>
+        <div id="radarStamp" class="tiny">Radar idle</div>
+        <div class="sep"></div>
+        <div class="kv"><div class="tiny">Station</div><div id="wxStationOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Observed</div><div id="wxObsOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Forecast</div><div id="wxForecastOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Alerts</div><div id="wxAlertsOut" class="tinyout">-</div></div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Space weather / astronomical anomalies</b></div>
+        <div class="grid3">
+          <button id="spaceRefreshBtn" class="primary">Refresh</button>
+          <button id="spaceFollowBtn">Auto: OFF</button>
+          <button id="terminatorNowBtn">Terminator</button>
+        </div>
+        <label class="check"><input id="auroraChk" type="checkbox"> Aurora oval overlay</label>
+        <label class="check"><input id="saaChk" type="checkbox" checked> South Atlantic Anomaly overlay</label>
+        <label class="check"><input id="terminatorChk" type="checkbox" checked> Day/night terminator line</label>
+        <label class="check"><input id="satellitesChk" type="checkbox"> Real-time satellites (TLE)</label>
+        <label class="check"><input id="firesChk" type="checkbox"> Wildfires (NASA EONET)</label>
+        <label class="check"><input id="quakesChk" type="checkbox"> USGS earthquakes</label>
+        <div class="kv"><div class="tiny">Kp</div><div id="kpOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Solar wind</div><div id="solarWindOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Magnetic field</div><div id="magOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">NOAA scales</div><div id="scalesOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">Latest flare</div><div id="flareOut" class="tinyout">-</div></div>
+        <div class="kv"><div class="tiny">SW alerts</div><div id="swAlertsOut" class="tinyout">-</div></div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>ICRS / astronomy calculator</b></div>
+        <div class="row"><input id="icrsInput" type="text" placeholder="06 31 29.09 +05 00 42.2"></div>
+        <div class="grid2">
+          <button id="icrsParseBtn" class="primary">Convert</button>
+          <button id="astroSearchBtn">Find object</button>
+        </div>
+        <div class="grid2" style="margin-top:6px;">
+          <div class="tinyout" id="icrsRaOut">RA deg -</div>
+          <div class="tinyout" id="icrsDecOut">Dec deg -</div>
+        </div>
+        <div class="grid2" style="margin-top:6px;">
+          <div class="tinyout" id="icrsHmsOut">HMS -</div>
+          <div class="tinyout" id="icrsDmsOut">DMS -</div>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <select id="astroSurvey">
+            <option value="P/DSS2/color">DSS2 color</option>
+            <option value="P/2MASS/color">2MASS infrared</option>
+            <option value="P/allWISE/color">AllWISE infrared</option>
+            <option value="P/GALEXGR6/AIS/color">GALEX ultraviolet</option>
+            <option value="P/IRIS/color">IRIS infrared</option>
+            <option value="P/Planck/color">Planck</option>
+            <option value="P/RASS">ROSAT X-ray</option>
+          </select>
+        </div>
+        <div class="row"><input id="astroSearchBox" type="text" placeholder="M31, Vega, NGC 1300"></div>
+        <div class="grid4">
+          <button id="astroZoomInBtn">Sky +</button>
+          <button id="astroZoomOutBtn">Sky -</button>
+          <button id="astroFitBtn">Wide</button>
+          <button id="astroReticleBtn">Reticle</button>
+        </div>
+        <div class="help">
+          Weather tracking in this build is split into Earth weather and space weather.
+          Earth weather uses NWS point forecasts, observations, alerts, and radar.
+          Space weather uses NOAA SWPC Kp, aurora, solar wind, magnetic field, flare, and alert feeds.
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Optional keys / endpoint templates</b></div>
+        <div class="tiny" style="margin-top:6px;">Proxy prefix (optional)</div>
+        <input id="proxyPrefixInput" type="text" placeholder="http://127.0.0.1:8787/proxy?url=">
+        <div class="tiny" style="margin-top:6px;">OpenWeather API key (optional fallback)</div>
+        <input id="owmKey" type="text" placeholder="optional">
+        <div class="tiny" style="margin-top:6px;">Sentinel imagery XYZ template</div>
+        <input id="sentinelTileTemplate" type="text" placeholder="https://.../{z}/{x}/{y}.png">
+        <div class="tiny" style="margin-top:6px;">Earth Engine XYZ template</div>
+        <input id="geeTileTemplate" type="text" placeholder="https://.../{z}/{x}/{y}?token=...">
+        <div class="tiny" style="margin-top:6px;">Satellite TLE text endpoint</div>
+        <input id="tleEndpoint" type="text" placeholder="optional; default CelesTrak">
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Diagnostics</b></div>
+        <div id="log" class="mono tiny" style="max-height:260px;overflow:auto;"></div>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <div id="map2d"></div>
+      <div id="map3d"></div>
+      <div id="astroWrap">
+        <div id="astroCanvas"></div>
+        <div id="astroWeatherInset">
+          <div id="astroWeatherInsetHead">Earth weather lens</div>
+          <div id="astroWeatherMap"></div>
+          <div id="astroWeatherCaption">Weather around the current Earth focus appears here while Astro mode stays on the sky view.</div>
+        </div>
+        <div id="astroMiniHud">
+          <button id="astroHudMinus">-</button>
+          <button id="astroHudPlus">+</button>
+          <button id="astroHudWide">Wide</button>
+          <button id="astroHudReticle">Reticle</button>
+        </div>
+      </div>
+      <div id="weatherHUD" class="mono tiny">Weather idle</div>
+      <div id="spaceHUD" class="mono tiny">Space weather idle</div>
+      <div id="hud" class="mono tiny">Booting...</div>
+      <div id="timeHUD" class="mono tiny">Timeline idle</div>
+      <div id="perf" class="mono tiny">fps: -</div>
+      <div id="routeHUD" class="mono tiny">Route / astro idle</div>
+      <div id="busy">Loading...</div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  const CONFIG = {
+    home: { lat:28.538336, lon:-81.379234, zoom2d:5, height3d:18000000 },
+    proxyPrefix: "",
+    openWeatherApiKey: "",
+    sentinelTileTemplate: "",
+    geeTileTemplate: "",
+    tleEndpoint: "",
+
+    esri: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    labels: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    nominatim: "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=",
+
+    gibsWms: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
+    gibsCapabilities: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml",
+    gibsModis: "MODIS_Terra_CorrectedReflectance_TrueColor",
+    gibsViirs: "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+    rainViewerTimeline: "https://api.rainviewer.com/public/weather-maps.json",
+    esriHillshade: "https://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
+    arcgisTerrain: "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer",
+
+    usgsQuakesDay: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    eonetWildfires: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&limit=500",
+    defaultTleSource: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle",
+
+    nwsBase: "https://api.weather.gov",
+    swpcKp: "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+    swpcScales: "https://services.swpc.noaa.gov/products/noaa-scales.json",
+    swpcSolarWindPlasma: "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json",
+    swpcSolarWindMag: "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json",
+    swpcAurora: "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json",
+    swpcFlare: "https://services.swpc.noaa.gov/json/goes/primary/xray-flares-latest.json",
+    swpcAlerts: "https://services.swpc.noaa.gov/products/alerts.json"
+  };
+
+  const $ = id => document.getElementById(id);
+  const logEl = $("log");
+  const hudEl = $("hud");
+  const weatherHUDEl = $("weatherHUD");
+  const spaceHUDEl = $("spaceHUD");
+  const timeHUDEl = $("timeHUD");
+  const perfEl = $("perf");
+  const routeHUDEl = $("routeHUD");
+  const busyEl = $("busy");
+  const astroWeatherCaptionEl = $("astroWeatherCaption");
+  const panel = $("panel");
+  const panelBackdrop = $("panelBackdrop");
+
+  const state = {
+    mode: "2d",
+    map2d: null,
+    viewer3d: null,
+    base2dLayer: null,
+    terrain2dLayer: null,
+    base2dKey: "esri",
+    labels2dLayer: null,
+    labels3dLayer: null,
+    overlays2d: {},
+    overlays3d: {},
+    sources3d: {},
+    gibsCatalog: [],
+    gibsIds: { clouds:null, precip:null, thermal:null },
+    radar: {
+      frames: [],
+      index: 0,
+      timer: null,
+      trail2d: [],
+      glow2d: [],
+      trail3d: [],
+      sourceKind: "rainviewer",
+      host: "https://tilecache.rainviewer.com",
+      path: "/v2/radar",
+      availablePast: 0,
+      availableFuture: 0
+    },
+    weather: {
+      focus: { lat: CONFIG.home.lat, lon: CONFIG.home.lon },
+      autoTrack: false,
+      lastWeatherFetch: 0,
+      pointMeta: null,
+      obs: null,
+      forecast: null,
+      hourly: null,
+      alerts: [],
+      stationName: "",
+      marker2d: null,
+      marker3d: null,
+      alerts2d: null,
+      alerts3d: null,
+      vector2d: null,
+      vector3d: null
+    },
+    space: {
+      autoRefresh: false,
+      kpRaw: null,
+      scalesRaw: null,
+      plasmaRaw: null,
+      magRaw: null,
+      auroraRaw: null,
+      flareRaw: null,
+      alertsRaw: null,
+      aurora2d: null,
+      aurora3d: null,
+      saa2d: null,
+      saa3d: null,
+      terminator2d: null,
+      terminator3d: null,
+      satTimer: null
+    },
+    astro: {
+      instance: null,
+      survey: "P/DSS2/color",
+      target: "M31",
+      fov: 120,
+      reticle: true,
+      weatherMap: null,
+      weatherBase: null,
+      weatherRadarMain: null,
+      weatherRadarGlow: null,
+      weatherRadarTrail: [],
+      weatherAlerts: null,
+      weatherMarker: null,
+      weatherVector: null,
+      weatherClouds: null
+    },
+    loadingDepth: 0,
+    fps: 0,
+    fpsFrames: 0,
+    fpsLast: performance.now(),
+    satelliteJsReady: false,
+    silentMissingLogged: {}
+  };
+
+  function nowStamp(){
+    const d = new Date();
+    return `[${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}]`;
+  }
+  function log(msg){
+    const line = `${nowStamp()} ${msg}`;
+    console.log(line);
+    logEl.textContent += line + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function setStatus(text, kind=""){
+    $("statusBadge").textContent = text;
+    $("statusBadge").className = `badge ${kind}`.trim();
+  }
+  function busy(on, text="Loading..."){
+    if (on) {
+      state.loadingDepth++;
+      busyEl.textContent = text;
+      busyEl.style.display = "block";
+    } else {
+      state.loadingDepth = Math.max(0, state.loadingDepth - 1);
+      if (state.loadingDepth === 0) busyEl.style.display = "none";
+    }
+  }
+  function fmt(n, d=2){ return Number.isFinite(n) ? Number(n).toFixed(d) : "-"; }
+  function safeLeafletCenter(map){
+    try {
+      if (!map || typeof map.getCenter !== "function") return null;
+      const c = map.getCenter();
+      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) return c;
+    } catch {}
+    return null;
+  }
+  function safeLeafletZoom(map, fallback=0){
+    try {
+      if (!map || typeof map.getZoom !== "function") return fallback;
+      const z = map.getZoom();
+      return Number.isFinite(z) ? z : fallback;
+    } catch {}
+    return fallback;
+  }
+  function debugLog(tag, data){
+    try {
+      const clean = JSON.stringify(data, (k, v) => {
+        if (v instanceof Error) return { message:v.message, stack:v.stack };
+        if (typeof v === 'number' && !Number.isFinite(v)) return String(v);
+        return v;
+      });
+      log(`[debug:${tag}] ${clean}`);
+    } catch (e) {
+      log(`[debug:${tag}] (unserializable)`);
+    }
+  }
+  function getRadarDiagnostics(){
+    return {
+      mode: state.mode,
+      radarFrames: state.radar.frames.length,
+      radarIndex: state.radar.index,
+      radarChecked: !!($("radarChk") && $("radarChk").checked),
+      weatherFocus: state.weather && state.weather.focus ? state.weather.focus : null,
+      map2dReady: !!state.map2d,
+      map2dCenter: safeLeafletCenter(state.map2d),
+      map2dZoom: safeLeafletZoom(state.map2d, null),
+      astroWeatherMapReady: !!(state.astro && state.astro.weatherMap),
+      astroWeatherCenter: safeLeafletCenter(state.astro ? state.astro.weatherMap : null),
+      astroWeatherZoom: safeLeafletZoom(state.astro ? state.astro.weatherMap : null, null)
+    };
+  }
+  function isMobile(){ return window.matchMedia("(max-width:1080px)").matches; }
+  function setPanelHidden(hidden){
+    panel.classList.toggle("panel-hidden", !!hidden);
+    if (!isMobile()) {
+      panel.classList.remove("panel-hidden");
+      panelBackdrop.classList.remove("show");
+      return;
+    }
+    panelBackdrop.classList.toggle("show", !panel.classList.contains("panel-hidden"));
+  }
+  function escapeHtml(str){
+    return String(str || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+  function compact(obj){
+    const out = {};
+    Object.entries(obj).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== "") out[k] = v; });
+    return out;
+  }
+  function normalizeSubdomains(subdomains){
+    if (Array.isArray(subdomains) && subdomains.length) return subdomains;
+    if (typeof subdomains === "string" && subdomains.length) return subdomains;
+    return undefined;
+  }
+  function proxify(url){ return CONFIG.proxyPrefix ? CONFIG.proxyPrefix + encodeURIComponent(url) : url; }
+  async function fetchText(url, tryProxy=true, options={}){
+    const urls = [];
+    if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url));
+    urls.push(url);
+    let lastErr = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, Object.assign({ cache:"no-store" }, options));
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.text();
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("Fetch failed");
+  }
+  async function fetchJson(url, tryProxy=true, options={}){ return JSON.parse(await fetchText(url, tryProxy, options)); }
+  async function probe(url){
+    try { const r = await fetch(url, { method:"HEAD", cache:"no-store" }); return r.ok; }
+    catch {
+      try { const r = await fetch(url, { cache:"no-store" }); return r.ok; }
+      catch { return false; }
+    }
+  }
+  function parseXml(text){ return new DOMParser().parseFromString(text, "text/xml"); }
+  function descendantsByLocalName(root, name){ return Array.from(root.getElementsByTagName("*")).filter(n => n.localName === name); }
+  function childByLocalName(node, name){ return Array.from(node.children || []).find(n => n.localName === name) || null; }
+  function isoUTC(date){
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth()+1).padStart(2,"0");
+    const d = String(date.getUTCDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+  function yesterdayUTC(){ const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return isoUTC(d); }
+  function currentGibsDate(){ return $("gibsDate").value || yesterdayUTC(); }
+  function syncConfigFromInputs(){
+    CONFIG.proxyPrefix = $("proxyPrefixInput").value.trim();
+    CONFIG.openWeatherApiKey = $("owmKey").value.trim();
+    CONFIG.sentinelTileTemplate = $("sentinelTileTemplate").value.trim();
+    CONFIG.geeTileTemplate = $("geeTileTemplate").value.trim();
+    CONFIG.tleEndpoint = $("tleEndpoint").value.trim();
+  }
+  function installErrorHooks(){
+    window.addEventListener("error", ev => log(`WINDOW ERROR: ${ev.message} @ ${ev.filename || "?"}:${ev.lineno || 0}`));
+    window.addEventListener("unhandledrejection", ev => {
+      const reason = ev.reason && ev.reason.message ? ev.reason.message : String(ev.reason);
+      log(`PROMISE ERROR: ${reason}`);
+    });
+  }
+  function currentLatLon(){
+    if (state.mode === "2d" && state.map2d) {
+      const c = state.map2d.getCenter();
+      return { lat:c.lat, lon:c.lng };
+    }
+    if (state.mode === "3d" && state.viewer3d) {
+      const c = state.viewer3d.camera.positionCartographic;
+      return { lat: Cesium.Math.toDegrees(c.latitude), lon: Cesium.Math.toDegrees(c.longitude) };
+    }
+    return { lat: state.weather.focus.lat, lon: state.weather.focus.lon };
+  }
+  function updateModeBadge(){
+    $("modeBadge").textContent = `Mode: ${state.mode.toUpperCase()}`;
+    $("mode2d").classList.toggle("active", state.mode === "2d");
+    $("mode3d").classList.toggle("active", state.mode === "3d");
+    $("modeAstro").classList.toggle("active", state.mode === "astro");
+  }
+  function setHUD(text){ hudEl.textContent = text; }
+  function setTimeHUD(text){ timeHUDEl.textContent = text; }
+  function setRouteHUD(text){ routeHUDEl.textContent = text; }
+  function setWeatherHUD(text){ weatherHUDEl.textContent = text; }
+  function setSpaceHUD(text){ spaceHUDEl.textContent = text; }
+  function setAstroWeatherCaption(text){ if (astroWeatherCaptionEl) astroWeatherCaptionEl.textContent = text; }
+  function gibsBaseUrl(id){
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${currentGibsDate()}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+  }
+  function makeTileLayer(url, options={}){
+    return L.tileLayer(url, compact({
+      crossOrigin:true,
+      updateWhenIdle:false,
+      updateWhenZooming:true,
+      keepBuffer:8,
+      pane:options.pane,
+      subdomains:normalizeSubdomains(options.subdomains),
+      opacity:options.opacity ?? 1,
+      maxZoom:options.maxZoom ?? 19,
+      maxNativeZoom:options.maxNativeZoom,
+      attribution:options.attribution || ""
+    }));
+  }
+  function makeCesiumXYZ(url, maxLevel=19, subdomains=undefined){
+    return new Cesium.UrlTemplateImageryProvider(compact({ url, maximumLevel:maxLevel, subdomains:normalizeSubdomains(subdomains) }));
+  }
+
+  function init2D(){
+    if (state.map2d) return;
+    state.map2d = L.map("map2d", {
+      center:[CONFIG.home.lat, CONFIG.home.lon], zoom:CONFIG.home.zoom2d, worldCopyJump:true,
+      zoomControl:true, zoomAnimation:true, fadeAnimation:false, inertia:true, preferCanvas:true
+    });
+    [["base",200],["terrain-pane",415],["radar-trail-pane",425],["radar-glow-pane",426],["radar-main-pane",427],["overlay",430],["space-pane",520],["terminator-pane",590],["vector-pane",640],["labels",650]].forEach(([name,z]) => {
+      state.map2d.createPane(name); state.map2d.getPane(name).style.zIndex = z;
+    });
+    state.map2d.getPane("radar-main-pane").classList.add("radar-main-pane");
+    state.map2d.getPane("radar-glow-pane").classList.add("radar-glow-pane");
+    state.map2d.getPane("radar-trail-pane").classList.add("radar-trail-pane");
+    state.map2d.getPane("terrain-pane").classList.add("terrain-pane");
+    state.map2d.getPane("terminator-pane").classList.add("terminator-pane");
+    state.map2d.getPane("vector-pane").classList.add("vector-pane");
+    state.labels2dLayer = makeTileLayer(CONFIG.labels, { pane:"labels", subdomains:"abcd", maxZoom:20, attribution:"CARTO" });
+    state.map2d.on("move zoom zoomend moveend resize", () => { updateHUD(); if (state.weather.autoTrack) scheduleWeatherRefresh(); if ($("terminatorChk").checked) drawTerminator(); });
+    state.map2d.on("movestart", () => { if (isMobile()) setPanelHidden(true); });
+    log("2D initialized");
+  }
+
+  function applyRadarAestheticStyle(){
+    const style = $("weatherStyleSelect").value;
+    const applyToMap = (mapObj) => {
+      if (!mapObj) return;
+      const main = mapObj.getPane("radar-main-pane");
+      const glow = mapObj.getPane("radar-glow-pane");
+      const trail = mapObj.getPane("radar-trail-pane");
+      if (!main || !glow || !trail) return;
+      if (style === "classic") {
+        main.style.filter = "none";
+        glow.style.filter = "blur(1.2px) saturate(1.1)";
+        trail.style.filter = "saturate(1.15)";
+      } else if (style === "prismatic") {
+        main.style.filter = "saturate(1.5) contrast(1.18) hue-rotate(-12deg)";
+        glow.style.filter = "blur(1.7px) saturate(1.7) hue-rotate(18deg)";
+        trail.style.filter = "saturate(1.5) contrast(1.08) hue-rotate(12deg)";
+      } else {
+        main.style.filter = "saturate(1.28) contrast(1.14)";
+        glow.style.filter = "blur(1.6px) saturate(1.35)";
+        trail.style.filter = "saturate(1.35) contrast(1.06)";
+      }
+    };
+    applyToMap(state.map2d);
+    applyToMap(state.astro.weatherMap);
+  }
+
+  function clear2DBase(){
+    if (state.base2dLayer && state.map2d) { try { state.map2d.removeLayer(state.base2dLayer); } catch {} state.base2dLayer = null; }
+  }
+  function setLabels(on){
+    if (on) {
+      if (state.map2d && state.labels2dLayer && !state.map2d.hasLayer(state.labels2dLayer)) state.labels2dLayer.addTo(state.map2d);
+      if (state.viewer3d && !state.labels3dLayer) {
+        state.labels3dLayer = state.viewer3d.imageryLayers.addImageryProvider(makeCesiumXYZ(CONFIG.labels, 20, ["a","b","c","d"]));
+        state.labels3dLayer.alpha = 0.88;
+      }
+    } else {
+      if (state.map2d && state.labels2dLayer && state.map2d.hasLayer(state.labels2dLayer)) state.map2d.removeLayer(state.labels2dLayer);
+      if (state.viewer3d && state.labels3dLayer) { try { state.viewer3d.imageryLayers.remove(state.labels3dLayer, true); } catch {} state.labels3dLayer = null; }
+    }
+  }
+  function setBase2D(key){
+    if (!state.map2d) return;
+    clear2DBase();
+    state.base2dKey = key;
+    if (key === "esri") {
+      state.base2dLayer = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "osm") {
+      state.base2dLayer = makeTileLayer(CONFIG.osm, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "hot") {
+      state.base2dLayer = makeTileLayer(CONFIG.hot, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM HOT" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gibs_modis") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsModis), { pane:"base", maxZoom:9, maxNativeZoom:9, attribution:"NASA GIBS" });
+      if (state.map2d.getZoom() > 9) state.map2d.setZoom(9);
+      state.map2d.setMaxZoom(9);
+    } else if (key === "gibs_viirs") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsViirs), { pane:"base", maxZoom:9, maxNativeZoom:9, attribution:"NASA GIBS" });
+      if (state.map2d.getZoom() > 9) state.map2d.setZoom(9);
+      state.map2d.setMaxZoom(9);
+    } else if (key === "sentinel_template") {
+      const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+      if (!tpl) return setBase2D("esri");
+      state.base2dLayer = makeTileLayer(tpl, { pane:"base", maxZoom:19, attribution:"Sentinel" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gee_template") {
+      const tpl = $("geeTileTemplate").value.trim() || CONFIG.geeTileTemplate;
+      if (!tpl) return setBase2D("esri");
+      state.base2dLayer = makeTileLayer(tpl, { pane:"base", maxZoom:19, attribution:"Earth Engine" });
+      state.map2d.setMaxZoom(19);
+    } else return setBase2D("esri");
+    state.base2dLayer.addTo(state.map2d);
+    setTerrainRelief2D($("terrain3dChk").checked);
+    setLabels($("labelsChk").checked);
+    requestAnimationFrame(() => state.map2d.invalidateSize(true));
+    updateHUD();
+    log(`2D base set: ${key}`);
+  }
+
+  function ensureViewer(){
+    if (state.viewer3d) return;
+    state.viewer3d = new Cesium.Viewer("map3d", {
+      animation:false, timeline:false, geocoder:false, homeButton:false, sceneModePicker:false,
+      baseLayerPicker:false, navigationHelpButton:false, infoBox:false, selectionIndicator:false,
+      shouldAnimate:true, requestRenderMode:true, maximumRenderTimeChange:Infinity,
+      terrainProvider:new Cesium.EllipsoidTerrainProvider()
+    });
+    state.viewer3d.scene.globe.show = true;
+    state.viewer3d.scene.skyAtmosphere.show = true;
+    state.viewer3d.scene.fog.enabled = true;
+    state.viewer3d.scene.globe.depthTestAgainstTerrain = false;
+    const ssc = state.viewer3d.scene.screenSpaceCameraController;
+    ssc.enableZoom = true; ssc.enableRotate = true; ssc.enableTilt = true; ssc.enableTranslate = true;
+    ssc.minimumZoomDistance = 10.0; ssc.maximumZoomDistance = 7.0e7;
+    state.viewer3d.camera.moveEnd.addEventListener(() => { updateHUD(); if (state.weather.autoTrack) scheduleWeatherRefresh(); if ($("terminatorChk").checked) drawTerminator(); });
+    state.viewer3d.camera.changed.addEventListener(() => { if (isMobile()) setPanelHidden(true); });
+    log("3D initialized");
+  }
+  function clearTerrainRelief2D(){
+    if (state.terrain2dLayer && state.map2d) { try { state.map2d.removeLayer(state.terrain2dLayer); } catch {} }
+    state.terrain2dLayer = null;
+  }
+  function setTerrainRelief2D(on){
+    if (!state.map2d) return;
+    clearTerrainRelief2D();
+    if (!on) return;
+    state.terrain2dLayer = makeTileLayer(CONFIG.esriHillshade, { pane:"terrain-pane", maxZoom:13, maxNativeZoom:13, opacity:0.34, attribution:"Esri Hillshade" });
+    state.terrain2dLayer.addTo(state.map2d);
+  }
+  async function buildTerrainProvider3D(){
+    let lastErr = null;
+    try {
+      if (Cesium.ArcGISTiledElevationTerrainProvider && Cesium.ArcGISTiledElevationTerrainProvider.fromUrl) {
+        return await Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(CONFIG.arcgisTerrain);
+      }
+    } catch (e) { lastErr = e; }
+    try {
+      if (Cesium.createWorldTerrainAsync && Cesium.Ion && Cesium.Ion.defaultAccessToken) {
+        return await Cesium.createWorldTerrainAsync();
+      }
+    } catch (e) { lastErr = e; }
+    throw lastErr || new Error("No terrain provider available in this build");
+  }
+  async function setTerrain3D(on){
+    setTerrainRelief2D(on);
+    if (!state.viewer3d) return;
+    if (!on) { state.viewer3d.terrainProvider = new Cesium.EllipsoidTerrainProvider(); state.viewer3d.scene.requestRender(); return; }
+    try {
+      const tp = await buildTerrainProvider3D();
+      if (!state.viewer3d) return;
+      state.viewer3d.terrainProvider = tp;
+      state.viewer3d.scene.requestRender();
+      log("3D terrain enabled");
+    } catch (err) {
+      log(`3D terrain unavailable: ${err.message}`);
+      $("terrain3dChk").checked = false;
+      state.viewer3d.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+      state.viewer3d.scene.requestRender();
+    }
+  }
+  function clear3DImagery(){
+    if (!state.viewer3d) return;
+    const layers = state.viewer3d.imageryLayers;
+    while (layers.length > 0) layers.remove(layers.get(0), true);
+    state.labels3dLayer = null;
+  }
+  function setBase3D(key){
+    ensureViewer();
+    clear3DImagery();
+    let provider = null;
+    if (key === "esri") provider = makeCesiumXYZ(CONFIG.esri, 19);
+    else if (key === "osm") provider = makeCesiumXYZ(CONFIG.osm, 19, ["a","b","c"]);
+    else if (key === "hot") provider = makeCesiumXYZ(CONFIG.hot, 19, ["a","b","c"]);
+    else if (key === "gibs_modis") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsModis), 9);
+    else if (key === "gibs_viirs") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsViirs), 9);
+    else if (key === "sentinel_template") {
+      const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+      if (!tpl) return setBase3D("esri");
+      provider = makeCesiumXYZ(tpl, 19);
+    } else if (key === "gee_template") {
+      const tpl = $("geeTileTemplate").value.trim() || CONFIG.geeTileTemplate;
+      if (!tpl) return setBase3D("esri");
+      provider = makeCesiumXYZ(tpl, 19);
+    } else return setBase3D("esri");
+    state.viewer3d.imageryLayers.addImageryProvider(provider);
+    setLabels($("labelsChk").checked);
+    setTerrain3D($("terrain3dChk").checked);
+    state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d), duration:0 });
+    state.viewer3d.resize();
+    state.viewer3d.scene.requestRender();
+    updateHUD();
+    log(`3D base set: ${key}`);
+  }
+
+  function safeAstroCall(fn){ try { fn(); } catch (e) { log(`Astro note: ${e.message}`); } }
+  function ensureAstro(){
+    if (state.astro.instance) return;
+    state.astro.instance = A.aladin("#astroCanvas", {
+      survey: state.astro.survey, target: state.astro.target, fov: state.astro.fov, cooFrame:"J2000",
+      showReticle: state.astro.reticle, showZoomControl:false, showFullscreenControl:false,
+      showLayersControl:false, showGotoControl:false, reticleColor:"#6cb8ff"
+    });
+    log("Astro initialized");
+  }
+  function astroApply(){
+    ensureAstro();
+    state.astro.survey = $("astroSurvey").value;
+    safeAstroCall(() => state.astro.instance.setImageSurvey(state.astro.survey));
+    safeAstroCall(() => state.astro.instance.setFoV(state.astro.fov));
+    if (typeof state.astro.instance.showReticle === "function") safeAstroCall(() => state.astro.instance.showReticle(state.astro.reticle));
+    updateHUD();
+  }
+  function astroSearch(){
+    ensureAstro();
+    const q = $("astroSearchBox").value.trim() || $("searchBox").value.trim();
+    if (!q) return;
+    state.astro.target = q;
+    safeAstroCall(() => state.astro.instance.gotoObject(q));
+    setRouteHUD(`Astro target\n${q}`);
+    updateHUD();
+  }
+  function astroZoomIn(){ ensureAstro(); state.astro.fov = Math.max(0.01, state.astro.fov * 0.65); safeAstroCall(() => state.astro.instance.setFoV(state.astro.fov)); updateHUD(); }
+  function astroZoomOut(){ ensureAstro(); state.astro.fov = Math.min(180, state.astro.fov * 1.45); safeAstroCall(() => state.astro.instance.setFoV(state.astro.fov)); updateHUD(); }
+  function astroWide(){ ensureAstro(); state.astro.fov = 120; safeAstroCall(() => state.astro.instance.setFoV(state.astro.fov)); updateHUD(); }
+
+  function ensureAstroWeatherMini(){
+    if (state.astro.weatherMap) return;
+    const m = L.map("astroWeatherMap", { zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, keyboard:false, tap:false, preferCanvas:true, zoomSnap:0.25 });
+    [["base",200],["terrain-pane",415],["radar-trail-pane",425],["radar-glow-pane",426],["radar-main-pane",427],["overlay",430],["vector-pane",640]].forEach(([name,z]) => { m.createPane(name); m.getPane(name).style.zIndex = z; });
+    m.getPane("terrain-pane").classList.add("terrain-pane");
+    m.getPane("radar-main-pane").classList.add("radar-main-pane");
+    m.getPane("radar-glow-pane").classList.add("radar-glow-pane");
+    m.getPane("radar-trail-pane").classList.add("radar-trail-pane");
+    m.getPane("vector-pane").classList.add("vector-pane");
+    state.astro.weatherMap = m;
+    state.astro.weatherBase = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" }).addTo(m);
+    setTimeout(() => { try { m.setView([state.weather.focus.lat, state.weather.focus.lon], 5); m.invalidateSize(true); } catch {} }, 20);
+  }
+  function clearAstroWeatherMiniLayers(){
+    const m = state.astro.weatherMap; if (!m) return;
+    if (state.astro.weatherMarker) { try { m.removeLayer(state.astro.weatherMarker); } catch {} state.astro.weatherMarker = null; }
+    if (state.astro.weatherVector) { try { m.removeLayer(state.astro.weatherVector); } catch {} state.astro.weatherVector = null; }
+    if (state.astro.weatherAlerts) { try { m.removeLayer(state.astro.weatherAlerts); } catch {} state.astro.weatherAlerts = null; }
+    if (state.astro.weatherClouds) { try { m.removeLayer(state.astro.weatherClouds); } catch {} state.astro.weatherClouds = null; }
+    if (state.astro.weatherRadarMain) { try { m.removeLayer(state.astro.weatherRadarMain); } catch {} state.astro.weatherRadarMain = null; }
+    if (state.astro.weatherRadarGlow) { try { m.removeLayer(state.astro.weatherRadarGlow); } catch {} state.astro.weatherRadarGlow = null; }
+    (state.astro.weatherRadarTrail || []).forEach(l => { try { m.removeLayer(l); } catch {} });
+    state.astro.weatherRadarTrail = [];
+  }
+  function syncAstroWeatherInset(){
+    ensureAstroWeatherMini();
+    const m = state.astro.weatherMap; if (!m) return;
+    clearAstroWeatherMiniLayers();
+    const lat = state.weather.focus.lat, lon = state.weather.focus.lon;
+    try { m.setView([lat, lon], state.mode === "astro" ? 5 : m.getZoom() || 5, { animate:false }); } catch {}
+    if ($("terrain3dChk").checked) {
+      const terrain = makeTileLayer(CONFIG.esriHillshade, { pane:"terrain-pane", maxZoom:13, maxNativeZoom:13, opacity:0.28, attribution:"Esri Hillshade" });
+      terrain.addTo(m);
+      state.astro.weatherRadarTrail.push(terrain);
+    }
+    state.astro.weatherMarker = L.circleMarker([lat, lon], { pane:"vector-pane", radius:7, color:"#dbeafe", fillColor:"#2563eb", fillOpacity:0.95, weight:2 }).addTo(m);
+    if ($("windVectorChk").checked) {
+      const obs = state.weather.obs?.properties || {};
+      const currentPeriod = state.weather.forecast?.properties?.periods?.[0] || state.weather.hourly?.properties?.periods?.[0] || null;
+      const dirDeg = Number.isFinite(obs.windDirection?.value) ? obs.windDirection.value : cardinalToDegrees(currentPeriod?.windDirection);
+      const speedMph = Number.isFinite(obs.windSpeed?.value) ? msToMph(obs.windSpeed.value) : parseNwsWindSpeed(currentPeriod?.windSpeed);
+      if (Number.isFinite(dirDeg)) {
+        const lenKm = Math.max(35, Math.min(180, (Number.isFinite(speedMph) ? speedMph : 35) * 2.2));
+        const bearing = dirDeg * Math.PI / 180;
+        const dLat = (lenKm / 111) * Math.cos(bearing);
+        const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+        const endLat = lat + dLat, endLon = lon + dLon;
+        const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:"vector-pane", color:"#7dd3fc", weight:3, opacity:0.92, dashArray:"9 6" });
+        const head = L.circleMarker([endLat, endLon], { pane:"vector-pane", radius:5, color:"#dbeafe", fillColor:"#7dd3fc", fillOpacity:0.95, weight:2 });
+        state.astro.weatherVector = L.layerGroup([line, head]).addTo(m);
+      }
+    }
+    if ($("alertsChk").checked && (state.weather.alerts || []).length) {
+      const geojson = { type:"FeatureCollection", features:(state.weather.alerts || []).filter(f => f.geometry) };
+      state.astro.weatherAlerts = L.geoJSON(geojson, { pane:"overlay", style:f => {
+        const sev = String(f.properties?.severity || "").toLowerCase();
+        const color = sev.includes("extreme") || sev.includes("severe") ? "#f87171" : sev.includes("moderate") ? "#fbbf24" : "#60a5fa";
+        return { color, weight:2, opacity:0.92, fillOpacity:0.06 };
+      } }).addTo(m);
+    }
+    if ($("cloudsChk").checked && state.gibsIds.clouds) {
+      state.astro.weatherClouds = L.tileLayer.wms(CONFIG.gibsWms, { layers: state.gibsIds.clouds, format:"image/png", transparent:true, version:"1.1.1", time: currentGibsDate(), pane:"overlay", opacity:0.45, attribution:"NASA GIBS" }).addTo(m);
+    }
+    if ($("radarChk").checked && state.radar.frames.length) {
+      const trailCount = Number($("radarTrailSelect").value) || 0;
+      for (let back = trailCount; back >= 1; back--) {
+        const idx = state.radar.index - back; if (idx < 0) continue;
+        const prev = state.radar.frames[idx];
+        const tl = makeTileLayer(radarFrameUrl(prev), { pane:"radar-trail-pane", maxZoom:12, maxNativeZoom:12, opacity:Math.max(0.10, 0.42 - back * 0.06), attribution:"RainViewer" });
+        tl.addTo(m); state.astro.weatherRadarTrail.push(tl);
+      }
+      const url = radarFrameUrl(state.radar.frames[state.radar.index]);
+      state.astro.weatherRadarMain = makeTileLayer(url, { pane:"radar-main-pane", maxZoom:12, maxNativeZoom:12, opacity:0.78, attribution:"RainViewer" }).addTo(m);
+      state.astro.weatherRadarGlow = makeTileLayer(url, { pane:"radar-glow-pane", maxZoom:12, maxNativeZoom:12, opacity:0.28, attribution:"RainViewer" }).addTo(m);
+    }
+    applyRadarAestheticStyle();
+    setAstroWeatherCaption(`Earth weather lens centered at ${fmt(lat,2)}, ${fmt(lon,2)} | radar frame ${state.radar.frames.length ? state.radar.index + 1 : 0}/${state.radar.frames.length || 0}`);
+  }
+  async function refreshModeOverlays(){
+    if ($("radarChk").checked) await setRadar(true);
+    if ($("cloudsChk").checked) await setGibsOverlay("clouds", true);
+    if ($("precipChk").checked) await setGibsOverlay("precip", true);
+    if ($("thermalChk").checked) await setGibsOverlay("thermal", true);
+    if ($("alertsChk").checked) await drawWeatherAlerts();
+    if ($("windVectorChk").checked) drawWeatherWindVector();
+    if ($("auroraChk").checked) drawAurora();
+    if ($("saaChk").checked) drawSAA();
+    if ($("terminatorChk").checked) drawTerminator();
+    if ($("satellitesChk").checked) await setSatellites(true);
+    if ($("firesChk").checked) await setFires(true);
+    if ($("quakesChk").checked) await setQuakes(true);
+    syncAstroWeatherInset();
+  }
+
+  function showMode(mode){
+    state.mode = mode;
+    document.body.dataset.mode = mode;
+    updateModeBadge();
+    document.body.dataset.mode = state.mode;
+    $("map2d").style.display = mode === "2d" ? "block" : "none";
+    $("map3d").style.display = mode === "3d" ? "block" : "none";
+    $("astroWrap").style.display = mode === "astro" ? "block" : "none";
+    if (mode === "2d" && state.map2d) setTimeout(() => { state.map2d.invalidateSize(true); refreshModeOverlays().catch(e => log(`Overlay refresh failed: ${e.message}`)); }, 80);
+    if (mode === "3d") { ensureViewer(); setBase3D($("baseSelect").value); setTimeout(() => { state.viewer3d.resize(); state.viewer3d.scene.requestRender(); refreshModeOverlays().catch(e => log(`Overlay refresh failed: ${e.message}`)); }, 120); }
+    if (mode === "astro") { ensureAstro(); ensureAstroWeatherMini(); setTimeout(() => { astroApply(); syncAstroWeatherInset(); }, 40); }
+    updateHUD();
+    if (isMobile()) setPanelHidden(true);
+  }
+
+  function updateHUD(){
+    if (state.mode === "2d" && state.map2d) {
+      const c = state.map2d.getCenter();
+      setHUD(`Mode: 2D\nBase: ${$("baseSelect").value}\nZoom: ${state.map2d.getZoom()}\nlat ${fmt(c.lat,4)} lon ${fmt(c.lng,4)}\nRadar frames: ${state.radar.frames.length}`);
+    } else if (state.mode === "3d" && state.viewer3d) {
+      const c = state.viewer3d.camera.positionCartographic;
+      setHUD(`Mode: 3D\nBase: ${$("baseSelect").value}\nHeight: ${Math.round(c.height)} m\nlat ${fmt(Cesium.Math.toDegrees(c.latitude),4)} lon ${fmt(Cesium.Math.toDegrees(c.longitude),4)}\nRadar frames: ${state.radar.frames.length}`);
+    } else {
+      setHUD(`Mode: ASTRO\nSurvey: ${state.astro.survey}\nTarget: ${state.astro.target}\nFoV: ${fmt(state.astro.fov,2)} deg\nReticle: ${state.astro.reticle ? "ON" : "OFF"}
+Earth weather lens: READY`);
+    }
+  }
+  function updatePerf(){
+    perfEl.textContent = `fps: ${state.fps || "-"}\nmode: ${state.mode.toUpperCase()}\nradarFrames: ${state.radar.frames.length}\nweatherAuto: ${state.weather.autoTrack ? "on" : "off"}\nspaceAuto: ${state.space.autoRefresh ? "on" : "off"}`;
+  }
+  function perfTick(){
+    state.fpsFrames++;
+    const now = performance.now();
+    if (now - state.fpsLast >= 1000) {
+      state.fps = state.fpsFrames;
+      state.fpsFrames = 0;
+      state.fpsLast = now;
+      updatePerf();
+    }
+    requestAnimationFrame(perfTick);
+  }
+
+  async function smartSearch(){
+    const q = $("searchBox").value.trim();
+    if (!q) return;
+    const m = q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) return jumpToLatLon(Number(m[1]), Number(m[3]), true);
+    try {
+      const j = await fetchJson(CONFIG.nominatim + encodeURIComponent(q), false, { headers: { "Accept":"application/json", "User-Agent":"EarthCockpit-v32" } });
+      if (Array.isArray(j) && j.length) {
+        const lat = Number(j[0].lat), lon = Number(j[0].lon);
+        jumpToLatLon(lat, lon, true);
+        return;
+      }
+    } catch {}
+    showMode("astro");
+    $("astroSearchBox").value = q;
+    astroSearch();
+  }
+  function jumpToLatLon(lat, lon, fetchWeather=true){
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    state.weather.focus = { lat, lon };
+    if (state.map2d) state.map2d.setView([lat, lon], Math.max(7, state.map2d.getZoom()));
+    if (state.viewer3d) state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1800000), duration:1 });
+    log(`Jump: ${fmt(lat,4)}, ${fmt(lon,4)}`);
+    if (fetchWeather) refreshWeatherAt(lat, lon).catch(e => log(`Weather fetch failed: ${e.message}`));
+  }
+  function goHome(){
+    if (state.mode === "2d" && state.map2d) state.map2d.setView([CONFIG.home.lat, CONFIG.home.lon], CONFIG.home.zoom2d);
+    else if (state.mode === "3d") { ensureViewer(); state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d), duration:1 }); }
+    else if (state.mode === "astro") { $("astroSearchBox").value = "M31"; astroSearch(); }
+    state.weather.focus = { lat: CONFIG.home.lat, lon: CONFIG.home.lon };
+  }
+  function useMyLocation(){
+    if (!navigator.geolocation) return log("Geolocation unavailable");
+    navigator.geolocation.getCurrentPosition(pos => { jumpToLatLon(pos.coords.latitude, pos.coords.longitude, true); }, err => log(`Geolocation failed: ${err.message}`), { enableHighAccuracy:true, timeout:10000 });
+  }
+
+  function remove2DOverlay(key){ const layer = state.overlays2d[key]; if (!layer || !state.map2d) return; try { state.map2d.removeLayer(layer); } catch {} delete state.overlays2d[key]; }
+  function remove3DOverlay(key){
+    if (!state.viewer3d) return;
+    if (state.overlays3d[key]) { try { state.viewer3d.imageryLayers.remove(state.overlays3d[key], true); } catch {} delete state.overlays3d[key]; }
+    if (state.sources3d[key]) { try { state.viewer3d.dataSources.remove(state.sources3d[key], true); } catch {} delete state.sources3d[key]; }
+  }
+  function add3DOverlayImageryOnly(key, provider, alpha=0.78){
+    remove3DOverlay(key);
+    const lyr = state.viewer3d.imageryLayers.addImageryProvider(provider);
+    lyr.alpha = alpha;
+    state.overlays3d[key] = lyr;
+    if (state.labels3dLayer) state.viewer3d.imageryLayers.raiseToTop(state.labels3dLayer);
+    state.viewer3d.scene.requestRender();
+  }
+  function add3DDataSourceOnly(key, ds){ remove3DOverlay(key); state.viewer3d.dataSources.add(ds); state.sources3d[key] = ds; state.viewer3d.scene.requestRender(); }
+
+  async function discoverGIBS(){
+    try {
+      const xmlText = await fetchText(CONFIG.gibsCapabilities, false);
+      const xml = parseXml(xmlText);
+      const layers = descendantsByLocalName(xml, "Layer");
+      const out = [];
+      for (const layer of layers) {
+        const idNode = childByLocalName(layer, "Identifier");
+        if (!idNode) continue;
+        const titleNode = childByLocalName(layer, "Title");
+        out.push({ id:idNode.textContent.trim(), title:titleNode ? titleNode.textContent.trim() : idNode.textContent.trim() });
+      }
+      state.gibsCatalog = out;
+      state.gibsIds.clouds = pickLayerId(["Cloud", "cloud fraction", "cloud mask", "cloud top"]);
+      state.gibsIds.precip = pickLayerId(["IMERG", "precipitation", "rain rate"]);
+      state.gibsIds.thermal = pickLayerId(["Thermal_Anomalies", "thermal anomalies", "thermal"]);
+      log(`GIBS layers discovered: ${out.length}`);
+    } catch (e) { log(`GIBS discovery failed: ${e.message}`); }
+  }
+  function pickLayerId(words){
+    const terms = words.map(x => x.toLowerCase());
+    const found = state.gibsCatalog.find(layer => terms.some(t => (`${layer.id} ${layer.title}`).toLowerCase().includes(t)));
+    return found ? found.id : null;
+  }
+  function leafletGibsWms(layerId){
+    return L.tileLayer.wms(CONFIG.gibsWms, { layers: layerId, format:"image/png", transparent:true, version:"1.1.1", time: currentGibsDate(), pane:"overlay", opacity:0.78, attribution:"NASA GIBS" });
+  }
+  function cesiumGibsWms(layerId){
+    return new Cesium.WebMapServiceImageryProvider({ url: CONFIG.gibsWms, layers: layerId, parameters: { transparent:true, format:"image/png", version:"1.1.1", time: currentGibsDate() } });
+  }
+  async function setGibsOverlay(kind, on){
+    remove2DOverlay(kind); remove3DOverlay(kind);
+    if (!on) { log(`${kind} OFF`); return; }
+    const layerId = state.gibsIds[kind];
+    if (!layerId) return log(`${kind} GIBS layer not found`);
+    try {
+      const layer2d = leafletGibsWms(layerId);
+      state.overlays2d[kind] = layer2d;
+      layer2d.addTo(state.map2d);
+      if (state.viewer3d) add3DOverlayImageryOnly(kind, cesiumGibsWms(layerId), 0.72);
+      log(`${kind} ON (${layerId})`);
+    } catch (e) { log(`${kind} failed: ${e.message}`); }
+  }
+
+  function radarFrameUrl(frame){ return `${state.radar.host}${state.radar.path}/${frame.time}/256/{z}/{x}/{y}/2/1_1.png`; }
+  async function preloadRadarTimeline(){
+    try {
+      const j = await fetchJson(CONFIG.rainViewerTimeline, false);
+      const past = (j.radar?.past || []).slice(-7).map(x => ({ kind:"past", time:x.time }));
+      const future = (j.radar?.nowcast || []).slice(0, 7).map(x => ({ kind:"future", time:x.time }));
+      state.radar.host = j.host || "https://tilecache.rainviewer.com";
+      state.radar.path = j.radar?.path || "/v2/radar";
+      state.radar.frames = [...past, ...future];
+      state.radar.availablePast = past.length;
+      state.radar.availableFuture = future.length;
+      state.radar.index = Math.max(0, past.length - 1);
+      $("timeSlider").min = 0;
+      $("timeSlider").max = String(Math.max(0, state.radar.frames.length - 1));
+      $("timeSlider").value = String(state.radar.index);
+      updateRadarStamp();
+      log(`Radar timeline ready: ${past.length} past / ${future.length} future`);
+    } catch (e) { log(`Radar preload failed: ${e.message}`); }
+  }
+  function clearRadar2D(){
+    remove2DOverlay("radar"); remove2DOverlay("radar-glow");
+    for (const l of state.radar.trail2d) { try { state.map2d.removeLayer(l); } catch {} }
+    state.radar.trail2d = [];
+  }
+  function clearRadar3D(){
+    remove3DOverlay("radar");
+    for (const l of state.radar.trail3d) { try { state.viewer3d.imageryLayers.remove(l, true); } catch {} }
+    state.radar.trail3d = [];
+  }
+  function updateRadarStamp(){
+    const frame = state.radar.frames[state.radar.index];
+    if (!frame) { $("radarStamp").textContent = "Radar idle"; setTimeHUD("Timeline idle"); return; }
+    const d = new Date(frame.time * 1000);
+    const label = `${frame.kind === "future" ? "Nowcast / hypothetical" : "Observed"}  |  ${d.toUTCString()}`;
+    $("radarStamp").textContent = `${label}  |  ${state.radar.availablePast} past / ${state.radar.availableFuture} future`;
+    setTimeHUD(`Radar timeline\nFrame ${state.radar.index + 1}/${state.radar.frames.length}\n${label}`);
+  }
+  async function setRadar(on){
+    clearRadar2D(); clearRadar3D();
+    if (!on) { $("radarStamp").textContent = "Radar off"; return; }
+    if (!state.radar.frames.length) await preloadRadarTimeline();
+    if (!state.radar.frames.length) return;
+    const frame = state.radar.frames[state.radar.index];
+    const url = radarFrameUrl(frame);
+    const trailCount = Number($("radarTrailSelect").value) || 0;
+    for (let back = trailCount; back >= 1; back--) {
+      const idx = state.radar.index - back;
+      if (idx < 0) continue;
+      const prev = state.radar.frames[idx];
+      const op = Math.max(0.12, 0.54 - back * 0.08);
+      const tl = makeTileLayer(radarFrameUrl(prev), { pane:"radar-trail-pane", maxZoom:12, maxNativeZoom:12, opacity:op, attribution:"RainViewer" });
+      state.radar.trail2d.push(tl);
+      tl.addTo(state.map2d);
+      if (state.viewer3d) {
+        const lyr = state.viewer3d.imageryLayers.addImageryProvider(makeCesiumXYZ(radarFrameUrl(prev), 12));
+        lyr.alpha = op * 0.8;
+        state.radar.trail3d.push(lyr);
+      }
+    }
+    const main = makeTileLayer(url, { pane:"radar-main-pane", maxZoom:12, maxNativeZoom:12, opacity:0.82, attribution:"RainViewer" });
+    state.overlays2d["radar"] = main; main.addTo(state.map2d);
+    const glow = makeTileLayer(url, { pane:"radar-glow-pane", maxZoom:12, maxNativeZoom:12, opacity:0.30, attribution:"RainViewer" });
+    state.overlays2d["radar-glow"] = glow; glow.addTo(state.map2d);
+    if (state.viewer3d) add3DOverlayImageryOnly("radar", makeCesiumXYZ(url, 12), 0.72);
+    updateRadarStamp(); applyRadarAestheticStyle(); if ($("windVectorChk").checked) drawWeatherWindVector();
+    syncAstroWeatherInset();
+  }
+  function toggleRadarAnimation(){
+    if (state.radar.timer) { clearInterval(state.radar.timer); state.radar.timer = null; $("radarAnimateBtn").textContent = "Animate"; return; }
+    $("radarAnimateBtn").textContent = "Stop";
+    state.radar.timer = setInterval(async () => {
+      if (!state.radar.frames.length) return;
+      state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+      $("timeSlider").value = String(state.radar.index);
+      if ($("radarChk").checked) await setRadar(true);
+    }, 850);
+  }
+  async function stepRadar(){
+    if (!state.radar.frames.length) return;
+    state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+    $("timeSlider").value = String(state.radar.index);
+    if ($("radarChk").checked) await setRadar(true);
+  }
+
+  function cardinalToDegrees(txt){
+    if (!txt) return NaN;
+    const t = String(txt).trim().toUpperCase();
+    const map = { N:0, NNE:22.5, NE:45, ENE:67.5, E:90, ESE:112.5, SE:135, SSE:157.5, S:180, SSW:202.5, SW:225, WSW:247.5, W:270, WNW:292.5, NW:315, NNW:337.5 };
+    if (map[t] !== undefined) return map[t];
+    const n = Number(t);
+    return Number.isFinite(n) ? n : NaN;
+  }
+  function msToMph(ms){ return Number.isFinite(ms) ? ms * 2.23693629 : NaN; }
+  function parseNwsWindSpeed(text){
+    if (!text) return NaN;
+    const m = String(text).match(/(\d+(?:\.\d+)?)/);
+    return m ? Number(m[1]) : NaN;
+  }
+  function scheduleWeatherRefresh(){
+    const now = Date.now();
+    if (now - state.weather.lastWeatherFetch < 2500) return;
+    const { lat, lon } = currentLatLon();
+    state.weather.lastWeatherFetch = now;
+    refreshWeatherAt(lat, lon).catch(e => log(`Weather refresh failed: ${e.message}`));
+  }
+  function updateWeatherOutputs(){
+    const obs = state.weather.obs?.properties || {};
+    const currentPeriod = state.weather.forecast?.properties?.periods?.[0] || state.weather.hourly?.properties?.periods?.[0] || null;
+    const alerts = state.weather.alerts || [];
+    const station = state.weather.stationName || "-";
+    const tempC = obs.temperature?.value;
+    const tempF = Number.isFinite(tempC) ? tempC * 9/5 + 32 : currentPeriod?.temperature;
+    const windMph = Number.isFinite(obs.windSpeed?.value) ? msToMph(obs.windSpeed.value) : parseNwsWindSpeed(currentPeriod?.windSpeed);
+    const windDir = Number.isFinite(obs.windDirection?.value) ? obs.windDirection.value : cardinalToDegrees(currentPeriod?.windDirection);
+    const text = currentPeriod?.shortForecast || currentPeriod?.detailedForecast || obs.textDescription || "-";
+    const obsTime = obs.timestamp ? new Date(obs.timestamp).toLocaleString() : "-";
+    $("wxStationOut").textContent = station;
+    $("wxObsOut").textContent = Number.isFinite(tempF) ? `${Math.round(tempF)} degF  |  wind ${Number.isFinite(windMph) ? Math.round(windMph) + " mph" : "-"}  |  ${obsTime}` : `${obs.textDescription || "-"}  |  ${obsTime}`;
+    $("wxForecastOut").textContent = `${text}`.slice(0, 140);
+    $("wxAlertsOut").textContent = alerts.length ? alerts.slice(0, 3).map(a => `${a.properties?.event || "Alert"}${a.properties?.severity ? " (" + a.properties.severity + ")" : ""}`).join("  |  ") : "No active alerts";
+    setWeatherHUD(`Weather focus\nlat ${fmt(state.weather.focus.lat,4)} lon ${fmt(state.weather.focus.lon,4)}\nStation: ${station}\nTemp: ${Number.isFinite(tempF) ? Math.round(tempF) + " degF" : "-"}\nWind: ${Number.isFinite(windMph) ? Math.round(windMph) + " mph" : "-"} @ ${Number.isFinite(windDir) ? Math.round(windDir) + " deg" : "-"}\nText: ${text}\nAlerts: ${alerts.length}`);
+  }
+  function clearWeatherPoint(){
+    if (state.weather.marker2d && state.map2d) { try { state.map2d.removeLayer(state.weather.marker2d); } catch {} }
+    state.weather.marker2d = null;
+    if (state.weather.marker3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.marker3d); } catch {} state.weather.marker3d = null; }
+  }
+  function drawWeatherPoint(){
+    clearWeatherPoint();
+    const { lat, lon } = state.weather.focus;
+    if (state.map2d) state.weather.marker2d = L.circleMarker([lat, lon], { pane:"vector-pane", radius:8, color:"#93c5fd", fillColor:"#2563eb", fillOpacity:0.95, weight:2 }).bindPopup("Weather focus").addTo(state.map2d);
+    if (state.viewer3d) {
+      state.weather.marker3d = state.viewer3d.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, 1500), point: { pixelSize:10, color: Cesium.Color.DODGERBLUE.withAlpha(0.95), outlineWidth:2, outlineColor: Cesium.Color.WHITE } });
+      state.viewer3d.scene.requestRender();
+    }
+    syncAstroWeatherInset();
+  }
+  function clearWeatherAlerts(){
+    if (state.weather.alerts2d && state.map2d) { try { state.map2d.removeLayer(state.weather.alerts2d); } catch {} }
+    state.weather.alerts2d = null;
+    if (state.weather.alerts3d && state.viewer3d) { try { state.viewer3d.dataSources.remove(state.weather.alerts3d, true); } catch {} state.weather.alerts3d = null; }
+  }
+  async function drawWeatherAlerts(){
+    clearWeatherAlerts();
+    if (!$("alertsChk").checked) return;
+    const features = state.weather.alerts || [];
+    if (!features.length) return;
+    const geojson = { type:"FeatureCollection", features: features.filter(f => f.geometry) };
+    if (state.map2d) {
+      state.weather.alerts2d = L.geoJSON(geojson, { pane:"overlay", style:f => {
+        const sev = String(f.properties?.severity || "").toLowerCase();
+        const color = sev.includes("extreme") || sev.includes("severe") ? "#f87171" : sev.includes("moderate") ? "#fbbf24" : "#60a5fa";
+        return { color, weight:3, opacity:0.92, fillOpacity:0.08 };
+      }, onEachFeature:(f, layer) => { layer.bindPopup(`<b>${escapeHtml(f.properties?.event || "Alert")}</b><br>${escapeHtml(f.properties?.headline || "")}`); } }).addTo(state.map2d);
+    }
+    if (state.viewer3d) {
+      const ds = await Cesium.GeoJsonDataSource.load(geojson, { stroke: Cesium.Color.ORANGERED, fill: Cesium.Color.ORANGERED.withAlpha(0.08), strokeWidth:3, clampToGround:true });
+      state.viewer3d.dataSources.add(ds); state.weather.alerts3d = ds; state.viewer3d.scene.requestRender();
+    }
+    syncAstroWeatherInset();
+  }
+  function clearWeatherWindVector(){
+    if (state.weather.vector2d && state.map2d) { try { state.map2d.removeLayer(state.weather.vector2d); } catch {} }
+    state.weather.vector2d = null;
+    if (state.weather.vector3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.vector3d); } catch {} state.weather.vector3d = null; }
+  }
+  function drawWeatherWindVector(){
+    clearWeatherWindVector();
+    if (!$("windVectorChk").checked) return;
+    const obs = state.weather.obs?.properties || {};
+    const currentPeriod = state.weather.forecast?.properties?.periods?.[0] || state.weather.hourly?.properties?.periods?.[0] || null;
+    const dirDeg = Number.isFinite(obs.windDirection?.value) ? obs.windDirection.value : cardinalToDegrees(currentPeriod?.windDirection);
+    const speedMph = Number.isFinite(obs.windSpeed?.value) ? msToMph(obs.windSpeed.value) : parseNwsWindSpeed(currentPeriod?.windSpeed);
+    if (!Number.isFinite(dirDeg)) return;
+    const { lat, lon } = state.weather.focus;
+    const lenKm = Math.max(45, Math.min(240, (Number.isFinite(speedMph) ? speedMph : 35) * 3));
+    const bearing = dirDeg * Math.PI / 180;
+    const dLat = (lenKm / 111) * Math.cos(bearing);
+    const dLon = (lenKm / (111 * Math.cos(lat * Math.PI / 180))) * Math.sin(bearing);
+    const endLat = lat + dLat, endLon = lon + dLon;
+    if (state.map2d) {
+      const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:"vector-pane", color:"#7dd3fc", weight:4, opacity:0.92, dashArray:"10 6" });
+      const head = L.circleMarker([endLat, endLon], { pane:"vector-pane", radius:6, color:"#dbeafe", fillColor:"#7dd3fc", fillOpacity:0.95, weight:2 });
+      state.weather.vector2d = L.layerGroup([line, head]).addTo(state.map2d);
+    }
+    if (state.viewer3d) {
+      state.weather.vector3d = state.viewer3d.entities.add({ polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([lon, lat, 1500, endLon, endLat, 1500]), width:4, material: Cesium.Color.CYAN.withAlpha(0.92) } });
+      state.viewer3d.scene.requestRender();
+    }
+    syncAstroWeatherInset();
+  }
+  async function refreshWeatherAt(lat, lon){
+    busy(true, "Loading NWS weather...");
+    try {
+      state.weather.focus = { lat, lon };
+      drawWeatherPoint();
+      const pointUrl = `${CONFIG.nwsBase}/points/${lat.toFixed(4)},${lon.toFixed(4)}`;
+      const point = await fetchJson(pointUrl, false, { headers:{ "Accept":"application/geo+json" } });
+      state.weather.pointMeta = point;
+      const forecastUrl = point.properties?.forecast;
+      const hourlyUrl = point.properties?.forecastHourly;
+      const stationsUrl = point.properties?.observationStations;
+      const alertsUrl = `${CONFIG.nwsBase}/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`;
+      const [forecast, hourly, alerts, stations] = await Promise.all([
+        forecastUrl ? fetchJson(forecastUrl, false, { headers:{ "Accept":"application/geo+json" } }).catch(() => null) : Promise.resolve(null),
+        hourlyUrl ? fetchJson(hourlyUrl, false, { headers:{ "Accept":"application/geo+json" } }).catch(() => null) : Promise.resolve(null),
+        fetchJson(alertsUrl, false, { headers:{ "Accept":"application/geo+json" } }).catch(() => ({ features:[] })),
+        stationsUrl ? fetchJson(stationsUrl, false, { headers:{ "Accept":"application/geo+json" } }).catch(() => null) : Promise.resolve(null)
+      ]);
+      state.weather.forecast = forecast;
+      state.weather.hourly = hourly;
+      state.weather.alerts = alerts?.features || [];
+      let obs = null;
+      let stationName = "";
+      const firstStation = stations?.features?.[0]?.id || stations?.observationStations?.[0] || null;
+      if (firstStation) {
+        try {
+          const latestObsUrl = `${firstStation.replace(/\/$/, "")}/observations/latest`;
+          const obsJson = await fetchJson(latestObsUrl, false, { headers:{ "Accept":"application/geo+json" } });
+          obs = obsJson;
+          stationName = obsJson?.properties?.station || stations?.features?.[0]?.properties?.stationIdentifier || firstStation.split("/").pop();
+        } catch {}
+      }
+      state.weather.obs = obs;
+      state.weather.stationName = stationName || stations?.features?.[0]?.properties?.stationIdentifier || "Nearest NWS station";
+      updateWeatherOutputs();
+      await drawWeatherAlerts();
+      drawWeatherWindVector();
+      const office = point.properties?.cwa || point.properties?.gridId || "-";
+      const gridX = point.properties?.gridX, gridY = point.properties?.gridY;
+      log(`Weather refreshed: ${fmt(lat,4)}, ${fmt(lon,4)}  |  office ${office}${Number.isFinite(gridX) ? ` grid ${gridX},${gridY}` : ""}`);
+    } finally { busy(false); }
+  }
+
+  function arrayTableToObjects(data){
+    if (Array.isArray(data) && data.length && Array.isArray(data[0])) {
+      const headers = data[0];
+      return data.slice(1).map(row => {
+        const obj = {}; headers.forEach((h, i) => { obj[String(h)] = row[i]; }); return obj;
+      });
+    }
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return arrayTableToObjects(data.data);
+    if (data && Array.isArray(data.results)) return arrayTableToObjects(data.results);
+    return [];
+  }
+  function latestByNumericKey(rows, preferredKeys){
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i]; if (!row || typeof row !== "object") continue;
+      for (const key of preferredKeys) {
+        const foundKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase() || k.toLowerCase().includes(key.toLowerCase()));
+        if (foundKey && Number.isFinite(Number(row[foundKey]))) return { row, key:foundKey, value:Number(row[foundKey]) };
+      }
+    }
+    return null;
+  }
+  function parseAuroraCoordinates(raw){
+    if (!raw) return [];
+    if (Array.isArray(raw.coordinates)) return raw.coordinates;
+    if (Array.isArray(raw) && raw.length && Array.isArray(raw[0])) return raw;
+    if (raw.data && Array.isArray(raw.data.coordinates)) return raw.data.coordinates;
+    return [];
+  }
+  function auroraColor(p){
+    const v = Math.max(0, Math.min(100, Number(p) || 0));
+    if (v >= 70) return "#ef4444";
+    if (v >= 50) return "#fb7185";
+    if (v >= 35) return "#a3e635";
+    if (v >= 20) return "#22c55e";
+    return "#60a5fa";
+  }
+  function clearAurora(){
+    if (state.space.aurora2d && state.map2d) { try { state.map2d.removeLayer(state.space.aurora2d); } catch {} }
+    state.space.aurora2d = null;
+    if (state.space.aurora3d && state.viewer3d) { try { state.viewer3d.dataSources.remove(state.space.aurora3d, true); } catch {} state.space.aurora3d = null; }
+  }
+  function drawAurora(){
+    clearAurora();
+    if (!$("auroraChk").checked || !state.space.auroraRaw) return;
+    const coords = parseAuroraCoordinates(state.space.auroraRaw);
+    if (!coords.length) return;
+    const sampled = [];
+    for (let i = 0; i < coords.length; i += 12) {
+      const c = coords[i];
+      const lon = Number(c[0]), lat = Number(c[1]), p = Number(c[2]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(p)) continue;
+      if (Math.abs(lat) < 48 || p < 8) continue;
+      sampled.push([lat, lon, p]);
+    }
+    const markers = sampled.map(([lat, lon, p]) => L.circleMarker([lat, lon], { pane:"space-pane", radius:Math.max(2, Math.min(8, p / 12)), color:auroraColor(p), fillColor:auroraColor(p), fillOpacity:0.33, opacity:0.5, weight:1 }).bindPopup(`Aurora probability ${Math.round(p)}%`));
+    state.space.aurora2d = L.layerGroup(markers).addTo(state.map2d);
+    if (state.viewer3d) {
+      const ds = new Cesium.CustomDataSource("aurora");
+      sampled.forEach(([lat, lon, p], idx) => { if (idx % 2 !== 0) return; ds.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, 140000), point: { pixelSize: Math.max(2, Math.min(7, p / 15)), color: Cesium.Color.fromCssColorString(auroraColor(p)).withAlpha(0.42) } }); });
+      state.viewer3d.dataSources.add(ds); state.space.aurora3d = ds; state.viewer3d.scene.requestRender();
+    }
+  }
+  function saaPolygon(){
+    const points = [], centerLat = -26, centerLon = -50, rx = 36, ry = 18;
+    for (let deg = 0; deg <= 360; deg += 4) {
+      const a = deg * Math.PI / 180;
+      points.push([centerLat + ry * Math.sin(a), centerLon + rx * Math.cos(a)]);
+    }
+    return points;
+  }
+  function clearSAA(){
+    if (state.space.saa2d && state.map2d) { try { state.map2d.removeLayer(state.space.saa2d); } catch {} }
+    state.space.saa2d = null;
+    if (state.space.saa3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.space.saa3d); } catch {} state.space.saa3d = null; }
+  }
+  function drawSAA(){
+    clearSAA();
+    if (!$("saaChk").checked) return;
+    const poly = saaPolygon();
+    if (state.map2d) state.space.saa2d = L.polygon(poly, { pane:"space-pane", color:"#f59e0b", weight:2, dashArray:"8 6", fillOpacity:0.07 }).bindPopup("South Atlantic Anomaly approximation").addTo(state.map2d);
+    if (state.viewer3d) {
+      const flat = []; poly.forEach(([lat, lon]) => flat.push(lon, lat, 150000));
+      state.space.saa3d = state.viewer3d.entities.add({ polygon: { hierarchy: Cesium.Cartesian3.fromDegreesArrayHeights(flat), material: Cesium.Color.ORANGE.withAlpha(0.08), outline:true, outlineColor: Cesium.Color.ORANGE } });
+      state.viewer3d.scene.requestRender();
+    }
+  }
+  function solarDeclinationAndEqTime(date){
+    const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+    const now = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+    const day = (now - start) / 86400000;
+    const gamma = 2 * Math.PI / 365 * (day - 1);
+    const eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+    const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+    return { decl, eqtime };
+  }
+  function terminatorPoints(date = new Date()){
+    const { decl, eqtime } = solarDeclinationAndEqTime(date);
+    const utcMinutes = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
+    const subsolarLon = -(utcMinutes + eqtime - 720) / 4;
+    const points = [];
+    for (let lon = -180; lon <= 180; lon += 2) {
+      let lat;
+      if (Math.abs(Math.tan(decl)) < 1e-5) lat = 0;
+      else lat = Math.atan(-Math.cos((lon - subsolarLon) * Math.PI / 180) / Math.tan(decl)) * 180 / Math.PI;
+      if (Number.isFinite(lat)) points.push([lat, lon]);
+    }
+    return points;
+  }
+  function clearTerminator(){
+    if (state.space.terminator2d && state.map2d) { try { state.map2d.removeLayer(state.space.terminator2d); } catch {} }
+    state.space.terminator2d = null;
+    if (state.space.terminator3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.space.terminator3d); } catch {} state.space.terminator3d = null; }
+  }
+  function drawTerminator(){
+    clearTerminator();
+    if (!$("terminatorChk").checked) return;
+    const pts = terminatorPoints(new Date());
+    if (state.map2d) state.space.terminator2d = L.polyline(pts, { pane:"terminator-pane", color:"#93c5fd", weight:2, opacity:0.72, dashArray:"8 8" }).bindPopup("Day/night terminator").addTo(state.map2d);
+    if (state.viewer3d) {
+      const flat = []; pts.forEach(([lat, lon]) => flat.push(lon, lat, 25000));
+      state.space.terminator3d = state.viewer3d.entities.add({ polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights(flat), width:2, material: Cesium.Color.LIGHTSKYBLUE.withAlpha(0.82) } });
+      state.viewer3d.scene.requestRender();
+    }
+  }
+
+  async function refreshSpaceWeather(){
+    busy(true, "Loading space weather...");
+    try {
+      const [kp, scales, plasma, mag, aurora, flare, alerts] = await Promise.all([
+        fetchJson(CONFIG.swpcKp, false).catch(() => null),
+        fetchJson(CONFIG.swpcScales, false).catch(() => null),
+        fetchJson(CONFIG.swpcSolarWindPlasma, false).catch(() => null),
+        fetchJson(CONFIG.swpcSolarWindMag, false).catch(() => null),
+        fetchJson(CONFIG.swpcAurora, false).catch(() => null),
+        fetchJson(CONFIG.swpcFlare, false).catch(() => null),
+        fetchJson(CONFIG.swpcAlerts, false).catch(() => null)
+      ]);
+      state.space.kpRaw = kp; state.space.scalesRaw = scales; state.space.plasmaRaw = plasma; state.space.magRaw = mag; state.space.auroraRaw = aurora; state.space.flareRaw = flare; state.space.alertsRaw = alerts;
+      const kpRows = arrayTableToObjects(kp);
+      const kpLatest = latestByNumericKey(kpRows, ["kp_index", "kp", "planetary_k"]);
+      $("kpOut").textContent = kpLatest ? `${fmt(kpLatest.value,1)} Kp` : "Unavailable";
+      const plasmaRows = arrayTableToObjects(plasma);
+      const swSpeed = latestByNumericKey(plasmaRows, ["speed", "solar_wind_speed"]);
+      const swDensity = latestByNumericKey(plasmaRows, ["density", "proton_density"]);
+      $("solarWindOut").textContent = swSpeed ? `${Math.round(swSpeed.value)} km/s${swDensity ? `  |  n=${fmt(swDensity.value,1)}` : ""}` : "Unavailable";
+      const magRows = arrayTableToObjects(mag);
+      const bt = latestByNumericKey(magRows, ["bt", "total_field", "total"]);
+      const bz = latestByNumericKey(magRows, ["bz_gsm", "bz"]);
+      $("magOut").textContent = bt ? `Bt ${fmt(bt.value,1)} nT${bz ? `  |  Bz ${fmt(bz.value,1)} nT` : ""}` : "Unavailable";
+      let scalesText = "Unavailable";
+      if (scales && typeof scales === "object") {
+        const compactVals = [];
+        ["0","1","2","3","4","5"].forEach(k => {
+          const v = scales[k];
+          if (v && typeof v === "object") {
+            const label = v.Scale || v.scale || v.Product || v.product || k;
+            const val = v.Current || v.current || v.Observed || v.observed || v.Value || v.value || "";
+            if (val !== "") compactVals.push(`${label}:${val}`);
+          }
+        });
+        if (!compactVals.length) for (const [k,v] of Object.entries(scales)) if ((typeof v === "string" || typeof v === "number") && compactVals.length < 4) compactVals.push(`${k}:${v}`);
+        if (compactVals.length) scalesText = compactVals.slice(0, 4).join("  |  ");
+      }
+      $("scalesOut").textContent = scalesText;
+      let flareText = "Unavailable";
+      if (flare && typeof flare === "object" && !Array.isArray(flare)) flareText = flare.max_class || flare.class || flare.current_class || flare.xray_class || JSON.stringify(flare).slice(0, 120);
+      else if (Array.isArray(flare) && flare.length) flareText = JSON.stringify(flare[flare.length - 1]).slice(0, 120);
+      $("flareOut").textContent = flareText;
+      let alertsText = "None";
+      if (Array.isArray(alerts) && alerts.length) alertsText = alerts.slice(-3).map(x => x.message || x.product_id || x.issue_datetime || JSON.stringify(x).slice(0, 50)).join("  |  ");
+      else if (alerts && Array.isArray(alerts.alerts) && alerts.alerts.length) alertsText = alerts.alerts.slice(-3).map(x => x.message || JSON.stringify(x).slice(0, 60)).join("  |  ");
+      $("swAlertsOut").textContent = alertsText;
+      setSpaceHUD(`Space weather\nKp: ${$("kpOut").textContent}\nSolar wind: ${$("solarWindOut").textContent}\nField: ${$("magOut").textContent}\nScales: ${$("scalesOut").textContent}\nFlare: ${$("flareOut").textContent}`);
+      if ($("auroraChk").checked) drawAurora();
+      if ($("saaChk").checked) drawSAA();
+      if ($("terminatorChk").checked) drawTerminator();
+      log("Space weather refreshed");
+    } finally { busy(false); }
+  }
+
+  async function setFires(on){
+    remove2DOverlay("fires"); remove3DOverlay("fires");
+    if (!on) return log("Fires OFF");
+    const j = await fetchJson(CONFIG.eonetWildfires, true);
+    const markers = [], pts = [];
+    for (const ev of (j.events || [])) for (const g of (ev.geometry || [])) {
+      const c = g.coordinates;
+      if (!Array.isArray(c) || c.length < 2) continue;
+      const lon = Number(c[0]), lat = Number(c[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      markers.push(L.circleMarker([lat, lon], { radius:4, color:"#ff776b", fillColor:"#ff3b30", fillOpacity:0.82, weight:1, pane:"overlay" }).bindPopup(`<b>${escapeHtml(ev.title)}</b><br>${escapeHtml(g.date || "")}`));
+      pts.push({lat, lon});
+    }
+    const group = L.layerGroup(markers).addTo(state.map2d);
+    state.overlays2d["fires"] = group;
+    if (state.viewer3d) {
+      const ds = new Cesium.CustomDataSource("fires");
+      pts.forEach(p => ds.entities.add({ position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0), point: { pixelSize:6, color: Cesium.Color.ORANGERED } }));
+      add3DDataSourceOnly("fires", ds);
+    }
+    log(`Fires ON (${markers.length})`);
+  }
+  async function setQuakes(on){
+    remove2DOverlay("quakes"); remove3DOverlay("quakes");
+    if (!on) return log("Quakes OFF");
+    const j = await fetchJson(CONFIG.usgsQuakesDay, false);
+    const markers = [], pts = [];
+    for (const f of (j.features || [])) {
+      const c = f.geometry?.coordinates || [];
+      const lon = Number(c[0]), lat = Number(c[1]), mag = Number(f.properties?.mag || 0);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      const r = Math.max(2, Math.min(12, mag * 2));
+      markers.push(L.circleMarker([lat, lon], { radius:r, color:"#ffd166", fillColor:"#ffb703", fillOpacity:0.8, weight:1, pane:"overlay" }).bindPopup(`<b>${escapeHtml(f.properties?.title || "Earthquake")}</b>`));
+      pts.push({lat, lon, mag});
+    }
+    const group = L.layerGroup(markers).addTo(state.map2d);
+    state.overlays2d["quakes"] = group;
+    if (state.viewer3d) {
+      const ds = new Cesium.CustomDataSource("quakes");
+      pts.forEach(p => ds.entities.add({ position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0), point: { pixelSize: Math.max(4, p.mag * 3), color: Cesium.Color.GOLD.withAlpha(0.84) } }));
+      add3DDataSourceOnly("quakes", ds);
+    }
+    log(`Quakes ON (${markers.length})`);
+  }
+
+  function loadScript(src){
+    return new Promise((resolve, reject) => {
+      if ([...document.scripts].some(s => s.src === src)) return resolve();
+      const script = document.createElement("script"); script.src = src; script.async = true;
+      script.onload = () => resolve(); script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+  async function ensureSatelliteJsLoaded(){
+    if (window.satellite) { state.satelliteJsReady = true; return window.satellite; }
+    busy(true, "Loading satellite.js...");
+    try {
+      await loadScript("https://unpkg.com/satellite.js/dist/satellite.min.js");
+      let tries = 0; while (!window.satellite && tries < 20) { await new Promise(r => setTimeout(r, 100)); tries++; }
+      if (!window.satellite) throw new Error("satellite.js global missing");
+      state.satelliteJsReady = true; return window.satellite;
+    } finally { busy(false); }
+  }
+  async function setSatellites(on){
+    remove2DOverlay("satellites"); remove3DOverlay("satellites");
+    if (state.space.satTimer) { clearInterval(state.space.satTimer); state.space.satTimer = null; }
+    if (!on) return log("Satellites OFF");
+    const sat = await ensureSatelliteJsLoaded();
+    const tleUrl = $("tleEndpoint").value.trim() || CONFIG.tleEndpoint || CONFIG.defaultTleSource;
+    const tleText = await fetchText(tleUrl, true);
+    const lines = tleText.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    const recs = [];
+    for (let i = 0; i < lines.length - 2; i += 3) {
+      const name = lines[i], l1 = lines[i+1], l2 = lines[i+2];
+      if (!l1.startsWith("1 ") || !l2.startsWith("2 ")) continue;
+      try { recs.push({ name, satrec: sat.twoline2satrec(l1, l2) }); } catch {}
+    }
+    const build = () => {
+      remove2DOverlay("satellites"); remove3DOverlay("satellites");
+      const now = new Date(); const gmst = sat.gstime(now); const markers = []; const ds = state.viewer3d ? new Cesium.CustomDataSource("satellites") : null;
+      for (const rec of recs.slice(0, 120)) {
+        const pv = sat.propagate(rec.satrec, now); if (!pv.position) continue;
+        const geo = sat.eciToGeodetic(pv.position, gmst);
+        const lat = geo.latitude * 180 / Math.PI, lon = geo.longitude * 180 / Math.PI, altKm = geo.height;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        markers.push(L.circleMarker([lat, lon], { radius:3, color:"#c084fc", fillColor:"#a855f7", fillOpacity:0.8, weight:1, pane:"space-pane" }).bindPopup(escapeHtml(rec.name)));
+        if (ds) ds.entities.add({ position: Cesium.Cartesian3.fromDegrees(lon, lat, Math.max(0, altKm * 1000)), point: { pixelSize:4, color: Cesium.Color.MAGENTA.withAlpha(0.88) } });
+      }
+      const group = L.layerGroup(markers).addTo(state.map2d); state.overlays2d["satellites"] = group; if (ds) add3DDataSourceOnly("satellites", ds);
+    };
+    build(); state.space.satTimer = setInterval(build, 20000); log(`Satellites ON (${Math.min(120, recs.length)} tracked)`);
+  }
+
+  function hmsToDegrees(h, m, s){ return 15 * (Number(h) + Number(m) / 60 + Number(s) / 3600); }
+  function dmsToDegrees(sign, d, m, s){ const abs = Math.abs(Number(d)) + Number(m) / 60 + Number(s) / 3600; return sign < 0 ? -abs : abs; }
+  function parseIcrsText(text){
+    const cleaned = String(text || "").trim().replace(/[hHdD deg]/g, " ").replace(/[mM'']/g, " ").replace(/[sS""]/g, " ").replace(/:/g, " ").replace(/\s+/g, " ");
+    const m = cleaned.match(/^([+-]?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+([+-]?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/);
+    if (!m) throw new Error("ICRS format not recognized");
+    const rah = Number(m[1]), ram = Number(m[2]), ras = Number(m[3]), decdRaw = Number(m[4]), decm = Number(m[5]), decs = Number(m[6]);
+    const sign = decdRaw < 0 || String(m[4]).startsWith("-") ? -1 : 1;
+    return { raDeg:hmsToDegrees(rah, ram, ras), decDeg:dmsToDegrees(sign, decdRaw, decm, decs), rah, ram, ras, decdRaw, decm, decs };
+  }
+  function updateIcrsOutputs(parsed){
+    if (!parsed) { $("icrsRaOut").textContent = "RA deg -"; $("icrsDecOut").textContent = "Dec deg -"; $("icrsHmsOut").textContent = "HMS -"; $("icrsDmsOut").textContent = "DMS -"; return; }
+    $("icrsRaOut").textContent = `RA deg ${parsed.raDeg.toFixed(10)}`;
+    $("icrsDecOut").textContent = `Dec deg ${parsed.decDeg.toFixed(10)}`;
+    $("icrsHmsOut").textContent = `HMS ${parsed.rah} ${parsed.ram} ${parsed.ras}`;
+    $("icrsDmsOut").textContent = `DMS ${parsed.decdRaw >= 0 ? "+" : "-"}${String(Math.abs(Math.trunc(parsed.decdRaw))).padStart(2,"0")} ${String(Math.trunc(parsed.decm)).padStart(2,"0")} ${parsed.decs}`;
+  }
+
+  async function runHealth(){
+    log("=== HEALTH CHECK ===");
+    const tests = [
+      ["Esri", CONFIG.esri.replace("{z}","2").replace("{y}","1").replace("{x}","1")],
+      ["OSM", CONFIG.osm.replace("{s}","a").replace("{z}","2").replace("{x}","1").replace("{y}","1")],
+      ["NASA GIBS", gibsBaseUrl(CONFIG.gibsModis).replace("{z}","2").replace("{y}","1").replace("{x}","1")],
+      ["RainViewer", CONFIG.rainViewerTimeline],
+      ["NWS API", `${CONFIG.nwsBase}/points/39.7456,-97.0892`],
+      ["SWPC Kp", CONFIG.swpcKp],
+      ["SWPC aurora", CONFIG.swpcAurora],
+      ["USGS quakes", CONFIG.usgsQuakesDay],
+      ["EONET fires", CONFIG.eonetWildfires]
+    ];
+    for (const [name, url] of tests) {
+      const ok = await probe(url);
+      log(`${name}: ${ok ? "OK" : "FAIL"}${ok ? "" : " " + url}`);
+    }
+    log("=== END HEALTH ===");
+  }
+
+  function downloadText(name, text, type){
+    const blob = new Blob([text], { type });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  function wireUI(){
+    $("menuToggle").onclick = () => setPanelHidden(!panel.classList.contains("panel-hidden"));
+    panelBackdrop.onclick = () => setPanelHidden(true);
+    window.addEventListener("resize", () => { if (!isMobile()) setPanelHidden(false); else panelBackdrop.classList.toggle("show", !panel.classList.contains("panel-hidden")); });
+    if (isMobile()) setPanelHidden(true); else setPanelHidden(false);
+    let startX = 0;
+    document.addEventListener("touchstart", e => { if (!e.touches?.length) return; startX = e.touches[0].clientX; }, { passive:true });
+    document.addEventListener("touchend", e => { if (!e.changedTouches?.length) return; const endX = e.changedTouches[0].clientX; if (startX < 32 && endX > 120) setPanelHidden(false); if (startX > 180 && endX < 90 && isMobile()) setPanelHidden(true); }, { passive:true });
+    $("mode2d").onclick = () => showMode("2d");
+    $("mode3d").onclick = () => showMode("3d");
+    $("modeAstro").onclick = () => showMode("astro");
+    $("zoomInBtn").onclick = () => { if (state.mode === "2d" && state.map2d) state.map2d.zoomIn(); else if (state.mode === "3d" && state.viewer3d) { const h = state.viewer3d.camera.positionCartographic.height; state.viewer3d.camera.moveForward(Math.max(250, h * 0.25)); state.viewer3d.scene.requestRender(); } else if (state.mode === "astro") astroZoomIn(); };
+    $("zoomOutBtn").onclick = () => { if (state.mode === "2d" && state.map2d) state.map2d.zoomOut(); else if (state.mode === "3d" && state.viewer3d) { const h = state.viewer3d.camera.positionCartographic.height; state.viewer3d.camera.moveBackward(Math.max(250, h * 0.25)); state.viewer3d.scene.requestRender(); } else if (state.mode === "astro") astroZoomOut(); };
+    $("resetBtn").onclick = goHome;
+    $("refreshBtn").onclick = async () => {
+      await refreshWeatherAt(currentLatLon().lat, currentLatLon().lon).catch(e => log(`Weather refresh failed: ${e.message}`));
+      await refreshSpaceWeather().catch(e => log(`Space refresh failed: ${e.message}`));
+      await refreshModeOverlays().catch(e => log(`Overlay refresh failed: ${e.message}`));
+    };
+    $("healthBtn").onclick = runHealth;
+    $("homeBtn").onclick = goHome;
+    $("searchBtn").onclick = () => smartSearch().catch(e => log(`Search failed: ${e.message}`));
+    $("searchBox").addEventListener("keydown", e => { if (e.key === "Enter") smartSearch().catch(err => log(`Search failed: ${err.message}`)); });
+    $("geoBtn").onclick = useMyLocation;
+    $("copyLogBtn").onclick = async () => { try { await navigator.clipboard.writeText(logEl.textContent); log("Copied log to clipboard."); } catch (e) { log(`Copy failed: ${e.message}`); } };
+    $("downloadHtmlBtn").onclick = () => downloadText("earth-cockpit-v38-weather-space-debug.html", "<!doctype html>\n" + document.documentElement.outerHTML, "text/html");
+    $("downloadTxtBtn").onclick = () => downloadText("earth-cockpit-v38-weather-space-debug.txt", "<!doctype html>\n" + document.documentElement.outerHTML, "text/plain");
+    $("baseSelect").onchange = () => { syncConfigFromInputs(); setBase2D($("baseSelect").value); if (state.viewer3d) setBase3D($("baseSelect").value); syncAstroWeatherInset(); };
+    $("gibsDate").onchange = () => { if (state.map2d) setBase2D($("baseSelect").value); if (state.viewer3d) setBase3D($("baseSelect").value); syncAstroWeatherInset(); };
+    $("labelsChk").onchange = () => setLabels($("labelsChk").checked);
+    $("terrain3dChk").onchange = () => setTerrain3D($("terrain3dChk").checked).catch(e => log(`Terrain failed: ${e.message}`));
+    $("weatherHereBtn").onclick = () => { const { lat, lon } = currentLatLon(); refreshWeatherAt(lat, lon).catch(e => log(`Weather @ center failed: ${e.message}`)); };
+    $("weatherGeoBtn").onclick = useMyLocation;
+    $("weatherFollowBtn").onclick = () => { state.weather.autoTrack = !state.weather.autoTrack; $("weatherFollowBtn").textContent = `Follow center: ${state.weather.autoTrack ? "ON" : "OFF"}`; if (state.weather.autoTrack) scheduleWeatherRefresh(); };
+    $("windVectorChk").onchange = () => drawWeatherWindVector();
+    $("alertsChk").onchange = () => drawWeatherAlerts().catch(e => log(`Alert draw failed: ${e.message}`));
+    $("weatherStyleSelect").onchange = () => { applyRadarAestheticStyle(); if ($("radarChk").checked) setRadar(true).catch(()=>{}); };
+    $("radarChk").onchange = () => setRadar($("radarChk").checked).catch(e => log(`Radar failed: ${e.message}`));
+    $("radarAnimateBtn").onclick = toggleRadarAnimation;
+    $("radarStepBtn").onclick = () => stepRadar().catch(e => log(`Radar step failed: ${e.message}`));
+    $("radarReloadBtn").onclick = async () => { await preloadRadarTimeline(); if ($("radarChk").checked) await setRadar(true); };
+    $("radarTrailSelect").onchange = () => { if ($("radarChk").checked) setRadar(true).catch(()=>{}); };
+    $("timeSlider").oninput = async () => { state.radar.index = Number($("timeSlider").value) || 0; if ($("radarChk").checked) await setRadar(true); };
+    $("cloudsChk").onchange = () => setGibsOverlay("clouds", $("cloudsChk").checked).catch(e => log(`Clouds failed: ${e.message}`));
+    $("precipChk").onchange = () => setGibsOverlay("precip", $("precipChk").checked).catch(e => log(`Precip failed: ${e.message}`));
+    $("thermalChk").onchange = () => setGibsOverlay("thermal", $("thermalChk").checked).catch(e => log(`Thermal failed: ${e.message}`));
+    $("spaceRefreshBtn").onclick = () => refreshSpaceWeather().catch(e => log(`Space refresh failed: ${e.message}`));
+    $("spaceFollowBtn").onclick = () => { state.space.autoRefresh = !state.space.autoRefresh; $("spaceFollowBtn").textContent = `Auto: ${state.space.autoRefresh ? "ON" : "OFF"}`; if (state.space.autoRefresh) refreshSpaceWeather().catch(()=>{}); };
+    $("auroraChk").onchange = () => drawAurora();
+    $("saaChk").onchange = () => drawSAA();
+    $("terminatorChk").onchange = () => drawTerminator();
+    $("terminatorNowBtn").onclick = drawTerminator;
+    $("satellitesChk").onchange = () => setSatellites($("satellitesChk").checked).catch(e => log(`Satellites failed: ${e.message}`));
+    $("firesChk").onchange = () => setFires($("firesChk").checked).catch(e => log(`Fires failed: ${e.message}`));
+    $("quakesChk").onchange = () => setQuakes($("quakesChk").checked).catch(e => log(`Quakes failed: ${e.message}`));
+    $("icrsParseBtn").onclick = () => { try { updateIcrsOutputs(parseIcrsText($("icrsInput").value)); } catch (e) { log(`ICRS convert failed: ${e.message}`); } };
+    $("astroSearchBtn").onclick = astroSearch;
+    $("astroSurvey").onchange = astroApply;
+    $("astroZoomInBtn").onclick = astroZoomIn;
+    $("astroZoomOutBtn").onclick = astroZoomOut;
+    $("astroFitBtn").onclick = astroWide;
+    $("astroReticleBtn").onclick = () => { state.astro.reticle = !state.astro.reticle; astroApply(); };
+    $("astroHudPlus").onclick = astroZoomIn;
+    $("astroHudMinus").onclick = astroZoomOut;
+    $("astroHudWide").onclick = astroWide;
+    $("astroHudReticle").onclick = () => { state.astro.reticle = !state.astro.reticle; astroApply(); };
+    ["proxyPrefixInput","owmKey","sentinelTileTemplate","geeTileTemplate","tleEndpoint"].forEach(id => {
+      $(id).addEventListener("change", () => syncConfigFromInputs());
+      $(id).addEventListener("blur", () => syncConfigFromInputs());
+    });
+    log("UI wired");
+  }
+
+  async function boot(){
+    $("gibsDate").value = yesterdayUTC();
+    $("astroSearchBox").value = "M31";
+    $("astroSurvey").value = state.astro.survey;
+    syncConfigFromInputs();
+    installErrorHooks();
+    updateModeBadge();
+    setStatus("Booting", "warn");
+    setTimeHUD("Timeline idle");
+    setRouteHUD("Route / astro idle");
+    updateIcrsOutputs(null);
+    log("Boot: Earth Cockpit v38 Weather + Space Weather Atlas Debug");
+    debugLog('boot.env', { userAgent:navigator.userAgent, width:window.innerWidth, height:window.innerHeight });
+    wireUI();
+    installV34Patches();
+    log('Boot stage: init2D');
+    init2D();
+    setBase2D("esri");
+    log('Boot stage: discoverGIBS');
+    await discoverGIBS();
+    log('Boot stage: preloadRadarTimeline');
+    await preloadRadarTimeline();
+    applyRadarAestheticStyle();
+    if ($("radarChk").checked) {
+      try {
+        log('Boot stage: setRadar');
+        await setRadar(true);
+      } catch (e) {
+        log(`Boot radar fallback: ${e.message}`);
+        debugLog('boot.radar.error', { error:e.message, diagnostics:getRadarDiagnostics() });
+      }
+    }
+    try {
+      log('Boot stage: refreshWeather');
+      await refreshWeatherAt(CONFIG.home.lat, CONFIG.home.lon);
+    } catch (e) {
+      log(`Initial weather failed: ${e.message}`);
+      debugLog('boot.weather.error', { error:e.message, diagnostics:getRadarDiagnostics() });
+    }
+    try {
+      log('Boot stage: refreshSpaceWeather');
+      await refreshSpaceWeather();
+    } catch (e) {
+      log(`Initial space weather failed: ${e.message}`);
+      debugLog('boot.space.error', { error:e.message });
+    }
+    try { drawSAA(); } catch (e) { log(`Boot SAA note: ${e.message}`); }
+    try { drawTerminator(); } catch (e) { log(`Boot terminator note: ${e.message}`); }
+    perfTick();
+    updateHUD();
+    showMode("2d");
+    setStatus("Ready", "ok");
+    try { syncAstroWeatherInset(); } catch (e) { log(`Boot astro lens note: ${e.message}`); debugLog('boot.astroLens.error', { error:e.message, diagnostics:getRadarDiagnostics() }); }
+    log("Ready OK");
+    setInterval(() => { if ($("radarChk").checked) preloadRadarTimeline().then(() => setRadar(true)).catch(err => { log(`Radar interval note: ${err.message}`); debugLog('interval.radar.error', { error:err.message, diagnostics:getRadarDiagnostics() }); }); }, 5 * 60 * 1000);
+    setInterval(() => { if (state.space.autoRefresh) refreshSpaceWeather().catch(err => log(`Space interval note: ${err.message}`)); }, 5 * 60 * 1000);
+    setInterval(() => { if ($("terminatorChk").checked) drawTerminator(); }, 60 * 1000);
+  }
+
+  
+
+  /* v34 patch: NOAA MRMS radar overlays + clickable anomaly focus */
+  function installV34Patches(){
+    if (state.__v34Installed) return;
+    state.__v34Installed = true;
+    state.radar.repaintTimer = null;
+    state.radar.lastObservedEpoch = 0;
+    state.radar.futureShiftFactor = 0.70;
+    CONFIG.noaaRadarExport = "https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer/exportImage";
+    CONFIG.noaaRadarCurrentExport = "https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer/export";
+
+    const spaceBox = $("swAlertsOut")?.closest(".box");
+    if (spaceBox && !$("anomalyList")) {
+      const wrap = document.createElement("div");
+      wrap.innerHTML = `
+        <div class="sep"></div>
+        <div class="tiny"><b>Clickable anomaly focus</b></div>
+        <div id="anomalyList" style="display:grid;gap:6px;margin-top:6px;"></div>
+      `;
+      spaceBox.appendChild(wrap);
+    }
+
+    const magOut = $("magOut");
+    if (magOut) {
+      magOut.style.cursor = "pointer";
+      magOut.title = "Click to focus the current magnetic-field anomaly";
+      magOut.addEventListener("click", () => focusAnomalyById("field"));
+    }
+
+    const origRefreshWeatherAt = refreshWeatherAt;
+    refreshWeatherAt = async function(lat, lon){
+      await origRefreshWeatherAt(lat, lon);
+      try { if ($("radarChk")?.checked) await setRadar(true); } catch (e) { log(`Radar refresh failed: ${e.message}`); }
+      updateAnomalyList();
+    };
+
+    const origRefreshSpaceWeather = refreshSpaceWeather;
+    refreshSpaceWeather = async function(){
+      await origRefreshSpaceWeather();
+      updateAnomalyList();
+    };
+
+    const origEnsureViewer = ensureViewer;
+    ensureViewer = function(){
+      origEnsureViewer();
+      if (state.viewer3d && !state.__v34ViewerHooked) {
+        state.__v34ViewerHooked = true;
+        state.viewer3d.camera.moveEnd.addEventListener(() => {
+          if ($("radarChk")?.checked) scheduleRadarRepaint();
+        });
+      }
+    };
+
+    const origInit2D = init2D;
+    init2D = function(){
+      origInit2D();
+      if (state.map2d && !state.__v34MapHooked) {
+        state.__v34MapHooked = true;
+        state.map2d.on("moveend zoomend", () => {
+          if ($("radarChk")?.checked) scheduleRadarRepaint();
+        });
+      }
+    };
+
+    refreshModeOverlays = async function(){
+      const tasks = [
+        ["radar", async()=>{ if ($("radarChk").checked) await setRadar(true); }],
+        ["clouds", async()=>{ if ($("cloudsChk").checked) await setGibsOverlay("clouds", true); }],
+        ["precip", async()=>{ if ($("precipChk").checked) await setGibsOverlay("precip", true); }],
+        ["thermal", async()=>{ if ($("thermalChk").checked) await setGibsOverlay("thermal", true); }],
+        ["alerts", async()=>{ if ($("alertsChk").checked) await drawWeatherAlerts(); }],
+        ["wind", async()=>{ if ($("windVectorChk").checked) drawWeatherWindVector(); }],
+        ["aurora", async()=>{ if ($("auroraChk").checked) drawAurora(); }],
+        ["saa", async()=>{ if ($("saaChk").checked) drawSAA(); }],
+        ["terminator", async()=>{ if ($("terminatorChk").checked) drawTerminator(); }],
+        ["satellites", async()=>{ if ($("satellitesChk").checked) await setSatellites(true); }],
+        ["fires", async()=>{ if ($("firesChk").checked) await setFires(true); }],
+        ["quakes", async()=>{ if ($("quakesChk").checked) await setQuakes(true); }]
+      ];
+      for (const [name, task] of tasks) {
+        try { await task(); } catch (e) { log(`${name} overlay failed: ${e.message}`); }
+      }
+      syncAstroWeatherInset();
+      updateAnomalyList();
+    };
+
+    ensureSatelliteJsLoaded = async function(){
+      if (window.satellite) { state.satelliteJsReady = true; return window.satellite; }
+      busy(true, "Loading satellite.js...");
+      const urls = [
+        "https://cdn.jsdelivr.net/npm/satellite.js/dist/satellite.min.js",
+        "https://unpkg.com/satellite.js/dist/satellite.min.js"
+      ];
+      try {
+        for (const src of urls) {
+          try {
+            await loadScript(src);
+            let tries = 0;
+            while (!window.satellite && tries < 25) { await new Promise(r => setTimeout(r, 120)); tries++; }
+            if (window.satellite) { state.satelliteJsReady = true; return window.satellite; }
+          } catch {}
+        }
+        throw new Error("satellite.js global missing");
+      } finally { busy(false); }
+    };
+  }
+
+  function scheduleRadarRepaint(){
+    clearTimeout(state.radar.repaintTimer);
+    state.radar.repaintTimer = setTimeout(() => {
+      if ($("radarChk")?.checked) setRadar(true).catch(e => log(`Radar redraw failed: ${e.message}`));
+    }, 260);
+  }
+
+  function roundDownTo5Minutes(ms){
+    const step = 5 * 60 * 1000;
+    return Math.floor(ms / step) * step;
+  }
+  function isoForRadar(ms){ return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+  function focusBounds(lat, lon, spanLon=65, spanLat=40){
+    return {
+      west: Math.max(-179.5, lon - spanLon/2),
+      south: Math.max(-85, lat - spanLat/2),
+      east: Math.min(179.5, lon + spanLon/2),
+      north: Math.min(85, lat + spanLat/2)
+    };
+  }
+  function leafletBoundsObj(map){
+    if (!map) return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+    try {
+      const b = map.getBounds();
+      return { west:b.getWest(), south:b.getSouth(), east:b.getEast(), north:b.getNorth() };
+    } catch {
+      return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+    }
+  }
+  function cesiumViewBounds(){
+    if (!state.viewer3d) return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+    try {
+      const rect = state.viewer3d.camera.computeViewRectangle(state.viewer3d.scene.globe.ellipsoid);
+      if (!rect) return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+      return {
+        west: Cesium.Math.toDegrees(rect.west),
+        south: Math.max(-85, Cesium.Math.toDegrees(rect.south)),
+        east: Cesium.Math.toDegrees(rect.east),
+        north: Math.min(85, Cesium.Math.toDegrees(rect.north))
+      };
+    } catch {
+      return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+    }
+  }
+  function normalizeBounds(bounds){
+    let west = Number(bounds.west), east = Number(bounds.east), south = Number(bounds.south), north = Number(bounds.north);
+    if (!Number.isFinite(west) || !Number.isFinite(east) || !Number.isFinite(south) || !Number.isFinite(north)) return focusBounds(state.weather.focus.lat, state.weather.focus.lon);
+    if (east <= west) east = west + 1;
+    if (north <= south) north = south + 1;
+    if (east - west > 178) {
+      const mid = (east + west) / 2;
+      west = mid - 89;
+      east = mid + 89;
+    }
+    return { west, south:Math.max(-85, south), east, north:Math.min(85, north) };
+  }
+  function radarExportUrl(bounds, epochMs, width, height, latest=false){
+    const b = normalizeBounds(bounds);
+    const params = new URLSearchParams({
+      bbox: `${b.west},${b.south},${b.east},${b.north}`,
+      bboxSR: '4326',
+      imageSR: '4326',
+      size: `${Math.round(width)},${Math.round(height)}`,
+      format: 'png32',
+      transparent: 'true',
+      interpolation: 'RSP_NearestNeighbor',
+      f: 'image'
+    });
+    if (!latest) params.set('time', String(epochMs));
+    return `${latest ? CONFIG.noaaRadarCurrentExport : CONFIG.noaaRadarExport}?${params.toString()}`;
+  }
+  function getRadarMotion(){
+    const obs = state.weather.obs?.properties || {};
+    const currentPeriod = state.weather.forecast?.properties?.periods?.[0] || state.weather.hourly?.properties?.periods?.[0] || null;
+    const dirDeg = Number.isFinite(obs.windDirection?.value) ? obs.windDirection.value : cardinalToDegrees(currentPeriod?.windDirection);
+    const speedMph = Number.isFinite(obs.windSpeed?.value) ? msToMph(obs.windSpeed.value) : parseNwsWindSpeed(currentPeriod?.windSpeed);
+    return {
+      dirDeg: Number.isFinite(dirDeg) ? dirDeg : 90,
+      speedMph: Number.isFinite(speedMph) ? speedMph : 22
+    };
+  }
+  function shiftedBoundsForFuture(bounds, minutesAhead){
+    const b = normalizeBounds(bounds);
+    const { dirDeg, speedMph } = getRadarMotion();
+    const centerLat = (b.north + b.south) / 2;
+    const km = Math.max(0, speedMph * 1.60934 * (minutesAhead / 60) * state.radar.futureShiftFactor);
+    const br = dirDeg * Math.PI / 180;
+    const dLat = (km / 111) * Math.cos(br);
+    const dLon = (km / (111 * Math.max(0.25, Math.cos(centerLat * Math.PI / 180)))) * Math.sin(br);
+    return { west:b.west + dLon, south:b.south + dLat, east:b.east + dLon, north:b.north + dLat };
+  }
+  function radarFrameSpec(frame, bounds, width, height){
+    const observedFrames = state.radar.frames.filter(f => f.kind !== 'future');
+    const latestObserved = observedFrames.length ? observedFrames[observedFrames.length - 1].time : roundDownTo5Minutes(Date.now());
+    state.radar.lastObservedEpoch = latestObserved;
+    if (frame.kind === 'future') {
+      const minutesAhead = Math.max(0, (frame.time - latestObserved) / 60000);
+      const shifted = shiftedBoundsForFuture(bounds, minutesAhead);
+      return {
+        url: radarExportUrl(bounds, latestObserved, width, height, false),
+        bounds: shifted,
+        label: `Hypothetical +${Math.round(minutesAhead)}m`
+      };
+    }
+    return {
+      url: radarExportUrl(bounds, frame.time, width, height, false),
+      bounds,
+      label: new Date(frame.time).toUTCString()
+    };
+  }
+  function imageOverlayForSpec(spec, pane, opacity){
+    return L.imageOverlay(spec.url, [[spec.bounds.south, spec.bounds.west], [spec.bounds.north, spec.bounds.east]], {
+      pane,
+      opacity,
+      interactive:false,
+      crossOrigin:true,
+      className: pane === 'radar-main-pane' ? 'radar-main-img' : ''
+    });
+  }
+  function singleTileProviderForSpec(spec){
+    return new Cesium.SingleTileImageryProvider({
+      url: spec.url,
+      rectangle: Cesium.Rectangle.fromDegrees(spec.bounds.west, spec.bounds.south, spec.bounds.east, spec.bounds.north)
+    });
+  }
+
+  preloadRadarTimeline = async function(){
+    const now = roundDownTo5Minutes(Date.now());
+    const past = [];
+    for (let i = 12; i >= 0; i--) past.push({ kind:'past', time: now - i * 5 * 60 * 1000 });
+    const future = [];
+    for (let i = 1; i <= 12; i++) future.push({ kind:'future', time: now + i * 5 * 60 * 1000 });
+    state.radar.frames = [...past, ...future];
+    state.radar.availablePast = past.length;
+    state.radar.availableFuture = future.length;
+    state.radar.index = Math.max(0, past.length - 1);
+    $("timeSlider").min = 0;
+    $("timeSlider").max = String(state.radar.frames.length - 1);
+    $("timeSlider").value = String(state.radar.index);
+    updateRadarStamp();
+    log(`Radar timeline ready: ${past.length} past / ${future.length} future (NOAA observed + synthetic future)`);
+  };
+  updateRadarStamp = function(){
+    const frame = state.radar.frames[state.radar.index];
+    if (!frame) { $("radarStamp").textContent = 'Radar idle'; setTimeHUD('Timeline idle'); return; }
+    const d = new Date(frame.time);
+    const label = `${frame.kind === 'future' ? 'Hypothetical / projected' : 'Observed'} | ${d.toUTCString()}`;
+    $("radarStamp").textContent = `${label} | ${state.radar.availablePast} past / ${state.radar.availableFuture} future`;
+    setTimeHUD(`Radar timeline\nFrame ${state.radar.index + 1}/${state.radar.frames.length}\n${label}`);
+  };
+
+  setRadar = async function(on){
+    clearRadar2D(); clearRadar3D();
+    if (!on) { $("radarStamp").textContent = 'Radar off'; syncAstroWeatherInset(); return; }
+    if (!state.radar.frames.length) await preloadRadarTimeline();
+    if (!state.radar.frames.length) return;
+
+    const frame = state.radar.frames[state.radar.index];
+    const trailCount = Number($("radarTrailSelect").value) || 0;
+    const bounds2d = normalizeBounds(leafletBoundsObj(state.map2d));
+    const size2d = { width: Math.min(1800, Math.max(900, state.map2d ? state.map2d.getSize().x * 1.5 : 1200)), height: Math.min(1200, Math.max(700, state.map2d ? state.map2d.getSize().y * 1.5 : 900)) };
+
+    for (let back = trailCount; back >= 1; back--) {
+      const idx = state.radar.index - back;
+      if (idx < 0) continue;
+      const prev = state.radar.frames[idx];
+      const spec = radarFrameSpec(prev, bounds2d, size2d.width, size2d.height);
+      const op = Math.max(0.10, 0.50 - back * 0.07);
+      const overlay = imageOverlayForSpec(spec, 'radar-trail-pane', op);
+      state.radar.trail2d.push(overlay);
+      overlay.addTo(state.map2d);
+    }
+
+    const mainSpec2d = radarFrameSpec(frame, bounds2d, size2d.width, size2d.height);
+    const main = imageOverlayForSpec(mainSpec2d, 'radar-main-pane', 0.86);
+    const glow = imageOverlayForSpec(mainSpec2d, 'radar-glow-pane', 0.34);
+    state.overlays2d['radar'] = main; main.addTo(state.map2d);
+    state.overlays2d['radar-glow'] = glow; glow.addTo(state.map2d);
+
+    if (state.viewer3d) {
+      const bounds3d = normalizeBounds(cesiumViewBounds());
+      const size3d = { width: 2048, height: 1024 };
+      for (let back = trailCount; back >= 1; back--) {
+        const idx = state.radar.index - back;
+        if (idx < 0) continue;
+        const prev = state.radar.frames[idx];
+        const spec = radarFrameSpec(prev, bounds3d, size3d.width, size3d.height);
+        try {
+          const lyr = state.viewer3d.imageryLayers.addImageryProvider(singleTileProviderForSpec(spec));
+          lyr.alpha = Math.max(0.08, 0.42 - back * 0.06);
+          state.radar.trail3d.push(lyr);
+        } catch (e) { log(`3D radar trail note: ${e.message}`); }
+      }
+      try {
+        add3DOverlayImageryOnly('radar', singleTileProviderForSpec(radarFrameSpec(frame, bounds3d, size3d.width, size3d.height)), 0.78);
+      } catch (e) {
+        log(`3D radar note: ${e.message}`);
+      }
+    }
+
+    updateRadarStamp();
+    applyRadarAestheticStyle();
+    if ($("windVectorChk").checked) drawWeatherWindVector();
+    syncAstroWeatherInset();
+  };
+
+  syncAstroWeatherInset = function(){
+    ensureAstroWeatherMini();
+    const m = state.astro.weatherMap;
+    if (!m) return;
+    clearAstroWeatherMiniLayers();
+    const lat = state.weather.focus.lat, lon = state.weather.focus.lon;
+    try { m.setView([lat, lon], state.mode === 'astro' ? 5 : (m.getZoom() || 5), { animate:false }); } catch {}
+    if ($("terrain3dChk").checked) {
+      const terrain = makeTileLayer(CONFIG.esriHillshade, { pane:'terrain-pane', maxZoom:13, maxNativeZoom:13, opacity:0.28, attribution:'Esri Hillshade' });
+      terrain.addTo(m);
+      state.astro.weatherRadarTrail.push(terrain);
+    }
+    state.astro.weatherMarker = L.circleMarker([lat, lon], { pane:'vector-pane', radius:7, color:'#dbeafe', fillColor:'#2563eb', fillOpacity:0.95, weight:2 }).addTo(m);
+    if ($("windVectorChk").checked) {
+      const { dirDeg, speedMph } = getRadarMotion();
+      const lenKm = Math.max(35, Math.min(180, speedMph * 2.2));
+      const bearing = dirDeg * Math.PI / 180;
+      const dLat = (lenKm / 111) * Math.cos(bearing);
+      const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+      const endLat = lat + dLat, endLon = lon + dLon;
+      const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:'vector-pane', color:'#7dd3fc', weight:3, opacity:0.92, dashArray:'9 6' });
+      const head = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:5, color:'#dbeafe', fillColor:'#7dd3fc', fillOpacity:0.95, weight:2 });
+      state.astro.weatherVector = L.layerGroup([line, head]).addTo(m);
+    }
+    if ($("alertsChk").checked && (state.weather.alerts || []).length) {
+      const geojson = { type:'FeatureCollection', features:(state.weather.alerts || []).filter(f => f.geometry) };
+      state.astro.weatherAlerts = L.geoJSON(geojson, { pane:'overlay', style:f => {
+        const sev = String(f.properties?.severity || '').toLowerCase();
+        const color = sev.includes('extreme') || sev.includes('severe') ? '#f87171' : sev.includes('moderate') ? '#fbbf24' : '#60a5fa';
+        return { color, weight:2, opacity:0.92, fillOpacity:0.06 };
+      } }).addTo(m);
+    }
+    if ($("cloudsChk").checked && state.gibsIds.clouds) {
+      state.astro.weatherClouds = L.tileLayer.wms(CONFIG.gibsWms, { layers: state.gibsIds.clouds, format:'image/png', transparent:true, version:'1.1.1', time: currentGibsDate(), pane:'overlay', opacity:0.45, attribution:'NASA GIBS' }).addTo(m);
+    }
+    if ($("radarChk").checked && state.radar.frames.length) {
+      const trailCount = Number($("radarTrailSelect").value) || 0;
+      const bounds = normalizeBounds(leafletBoundsObj(m));
+      const size = { width: 920, height: 560 };
+      for (let back = trailCount; back >= 1; back--) {
+        const idx = state.radar.index - back; if (idx < 0) continue;
+        const prev = state.radar.frames[idx];
+        const spec = radarFrameSpec(prev, bounds, size.width, size.height);
+        const tl = imageOverlayForSpec(spec, 'radar-trail-pane', Math.max(0.10, 0.42 - back * 0.06));
+        tl.addTo(m); state.astro.weatherRadarTrail.push(tl);
+      }
+      const spec = radarFrameSpec(state.radar.frames[state.radar.index], bounds, size.width, size.height);
+      state.astro.weatherRadarMain = imageOverlayForSpec(spec, 'radar-main-pane', 0.84).addTo(m);
+      state.astro.weatherRadarGlow = imageOverlayForSpec(spec, 'radar-glow-pane', 0.32).addTo(m);
+    }
+    applyRadarAestheticStyle();
+    setAstroWeatherCaption(`Focus ${fmt(lat,4)}, ${fmt(lon,4)} | Weather lens synced${state.radar.frames.length ? ` | radar frame ${state.radar.index + 1}/${state.radar.frames.length}` : ''}`);
+  };
+
+  function gmstDegrees(date=new Date()){
+    const jd = date.getTime() / 86400000 + 2440587.5;
+    const d = jd - 2451545.0;
+    let gmst = 280.46061837 + 360.98564736629 * d;
+    gmst = ((gmst % 360) + 360) % 360;
+    return gmst;
+  }
+  function earthLatLonToDerivedIcrs(lat, lon, date=new Date()){
+    const ra = ((gmstDegrees(date) + lon) % 360 + 360) % 360;
+    const dec = Math.max(-90, Math.min(90, lat));
+    return { ra, dec };
+  }
+  function formatRaDec(ra, dec){
+    const rah = ((ra / 15) % 24 + 24) % 24;
+    const h = Math.floor(rah);
+    const m1 = (rah - h) * 60;
+    const m = Math.floor(m1);
+    const s = (m1 - m) * 60;
+    const sign = dec < 0 ? '-' : '+';
+    const abs = Math.abs(dec);
+    const d = Math.floor(abs);
+    const dm1 = (abs - d) * 60;
+    const dm = Math.floor(dm1);
+    const ds = (dm1 - dm) * 60;
+    return `${String(h).padStart(2,'0')} ${String(m).padStart(2,'0')} ${s.toFixed(1)} ${sign}${String(d).padStart(2,'0')} ${String(dm).padStart(2,'0')} ${ds.toFixed(1)}`;
+  }
+  function setDerivedIcrsOutputs(ra, dec){
+    $("icrsInput").value = formatRaDec(ra, dec);
+    $("icrsRaOut").textContent = `RA deg ${ra.toFixed(6)}`;
+    $("icrsDecOut").textContent = `Dec deg ${dec.toFixed(6)}`;
+    const txt = formatRaDec(ra, dec).split(' ');
+    $("icrsHmsOut").textContent = `HMS ${txt[0]} ${txt[1]} ${txt[2]}`;
+    $("icrsDmsOut").textContent = `DMS ${txt[3]} ${txt[4]} ${txt[5]}`;
+  }
+  function strongestAuroraPoint(){
+    const coords = parseAuroraCoordinates(state.space.auroraRaw);
+    let best = null;
+    for (const c of coords || []) {
+      const lon = Number(c[0]), lat = Number(c[1]), p = Number(c[2]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(p)) continue;
+      if (!best || p > best.p) best = { lat, lon, p };
+    }
+    return best;
+  }
+  function buildAnomalies(){
+    const list = [];
+    const wf = state.weather.focus || { lat: CONFIG.home.lat, lon: CONFIG.home.lon };
+    const fieldText = $("magOut")?.textContent || 'Magnetic field';
+    list.push({ id:'weather', label:'Weather focus', lat:wf.lat, lon:wf.lon, note:$("wxForecastOut")?.textContent || 'Forecast focus' });
+    list.push({ id:'field', label:'Field anomaly', lat:wf.lat, lon:wf.lon, note:fieldText });
+    list.push({ id:'saa', label:'South Atlantic Anomaly', lat:-26.5, lon:-52.0, note:'Radiation weak spot / SAA reference' });
+    const aur = strongestAuroraPoint();
+    if (aur) list.push({ id:'aurora', label:'Aurora peak', lat:aur.lat, lon:aur.lon, note:`Probability ${Math.round(aur.p)}%` });
+    return list.map(item => ({ ...item, icrs: earthLatLonToDerivedIcrs(item.lat, item.lon) }));
+  }
+  function updateAnomalyList(){
+    state.space.anomalies = buildAnomalies();
+    const el = $("anomalyList");
+    if (!el) return;
+    el.innerHTML = state.space.anomalies.map(item => `
+      <button data-anomaly-id="${escapeHtml(item.id)}" style="text-align:left;padding:8px 9px;background:#0c1622;border:1px solid rgba(255,255,255,.12);border-radius:10px;">
+        <div style="font-weight:700;">${escapeHtml(item.label)}</div>
+        <div style="font-size:11px;color:#9fb7d6;">lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}</div>
+        <div style="font-size:11px;color:#cfe2ff;white-space:normal;">${escapeHtml(String(item.note || ''))}</div>
+      </button>
+    `).join('');
+    if (!el.__bound) {
+      el.__bound = true;
+      el.addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-anomaly-id]');
+        if (!btn) return;
+        focusAnomalyById(btn.getAttribute('data-anomaly-id'));
+      });
+    }
+  }
+  function focusAnomalyById(id){
+    const item = (state.space.anomalies || []).find(x => x.id === id);
+    if (!item) return;
+    setDerivedIcrsOutputs(item.icrs.ra, item.icrs.dec);
+    if (state.mode === 'astro') {
+      ensureAstro();
+      try { state.astro.instance.gotoRaDec(item.icrs.ra, item.icrs.dec); } catch {}
+    } else {
+      jumpToLatLon(item.lat, item.lon, false);
+    }
+    log(`Focused anomaly: ${item.label} | lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}`);
+  }
+
+
+  /* v35 patch: stable radar domains, scientific styles, interactive weather lens, richer anomaly focus */
+  const __origInstallV34Patches = installV34Patches;
+  installV34Patches = function(){
+    __origInstallV34Patches();
+    if (state.__v35Installed) return;
+    state.__v35Installed = true;
+
+    state.weather.domain2d = null;
+    state.weather.domain3d = null;
+    state.weather.domainBox2d = null;
+    state.weather.domainBox3d = null;
+    state.weather.vectorLabel2d = null;
+    state.weather.vectorLabel3d = null;
+
+    const styleSel = $("weatherStyleSelect");
+    if (styleSel) {
+      styleSel.innerHTML = [
+        '<option value="scientific">Radar style: Scientific</option>',
+        '<option value="cinematic">Radar style: Cinematic</option>',
+        '<option value="prismatic">Radar style: Prismatic</option>'
+      ].join('');
+      styleSel.value = 'scientific';
+    }
+
+    const weatherBox = state.weather.followBtn ? state.weather.followBtn.closest('.box') : null;
+    if (weatherBox && !$("lensHelpOut")) {
+      const row = document.createElement('div');
+      row.className = 'help';
+      row.id = 'lensHelpOut';
+      row.textContent = 'Tip: in Astro mode, click inside Earth weather lens to move the weather focus there.';
+      weatherBox.appendChild(row);
+    }
+
+    ensureAstroWeatherMini = function(){
+      if (state.astro.weatherMap) return;
+      const m = L.map("astroWeatherMap", {
+        zoomControl:false,
+        attributionControl:false,
+        dragging:true,
+        scrollWheelZoom:true,
+        doubleClickZoom:true,
+        boxZoom:false,
+        keyboard:false,
+        tap:false,
+        preferCanvas:true,
+        zoomSnap:0.25
+      });
+      [["base",200],["terrain-pane",415],["radar-trail-pane",425],["radar-glow-pane",426],["radar-main-pane",427],["overlay",430],["vector-pane",640]].forEach(([name,z]) => { m.createPane(name); m.getPane(name).style.zIndex = z; });
+      m.getPane("terrain-pane").classList.add("terrain-pane");
+      m.getPane("radar-main-pane").classList.add("radar-main-pane");
+      m.getPane("radar-glow-pane").classList.add("radar-glow-pane");
+      m.getPane("radar-trail-pane").classList.add("radar-trail-pane");
+      m.getPane("vector-pane").classList.add("vector-pane");
+      state.astro.weatherMap = m;
+      state.astro.weatherBase = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" }).addTo(m);
+      m.on('click', ev => {
+        const {lat, lng} = ev.latlng;
+        jumpToLatLon(lat, lng, true);
+        if (state.mode === 'astro') setAstroWeatherCaption(`Earth weather lens moved to ${fmt(lat,2)}, ${fmt(lng,2)} and refreshed.`);
+      });
+      m.on('moveend zoomend', () => {
+        if (state.mode === 'astro') { const c = safeLeafletCenter(m); setAstroWeatherCaption(c ? `Earth weather lens at ${fmt(c.lat,2)}, ${fmt(c.lng,2)} | zoom ${fmt(safeLeafletZoom(m,0),1)}` : 'Earth weather lens initializing...'); }
+      });
+      setTimeout(() => {
+        try {
+          m.setView([state.weather.focus.lat, state.weather.focus.lon], 5);
+          m.invalidateSize(true);
+        } catch {}
+      }, 30);
+    };
+
+    clearAstroWeatherMiniLayers = function(){
+      const m = state.astro.weatherMap; if (!m) return;
+      ['weatherMarker','weatherVector','weatherAlerts','weatherClouds','weatherRadarMain','weatherRadarGlow','weatherDomainBox'].forEach(k => {
+        if (state.astro[k]) { try { m.removeLayer(state.astro[k]); } catch {} state.astro[k] = null; }
+      });
+      (state.astro.weatherRadarTrail || []).forEach(l => { try { m.removeLayer(l); } catch {} });
+      state.astro.weatherRadarTrail = [];
+    };
+
+    function radarDomainSpanForMap(map){
+      if (map === 'astro') return { lon:40, lat:26 };
+      if (map === '3d') {
+        const h = state.viewer3d ? state.viewer3d.camera.positionCartographic.height : CONFIG.home.height3d;
+        if (h > 2.5e7) return { lon:95, lat:55 };
+        if (h > 1.2e7) return { lon:72, lat:42 };
+        if (h > 4.5e6) return { lon:48, lat:30 };
+        if (h > 1.2e6) return { lon:28, lat:20 };
+        return { lon:18, lat:14 };
+      }
+      const z = state.map2d ? state.map2d.getZoom() : CONFIG.home.zoom2d;
+      if (z <= 3) return { lon:95, lat:55 };
+      if (z <= 4) return { lon:72, lat:42 };
+      if (z <= 5.5) return { lon:48, lat:30 };
+      if (z <= 7) return { lon:28, lat:20 };
+      return { lon:18, lat:14 };
+    }
+
+    function currentRadarDomain(map){
+      const focus = state.weather.focus || CONFIG.home;
+      const span = radarDomainSpanForMap(map);
+      return normalizeBounds(focusBounds(focus.lat, focus.lon, span.lon, span.lat));
+    }
+
+    function clearWeatherDomainBoxes(){
+      if (state.weather.domainBox2d && state.map2d) { try { state.map2d.removeLayer(state.weather.domainBox2d); } catch {} }
+      state.weather.domainBox2d = null;
+      if (state.astro.weatherDomainBox && state.astro.weatherMap) { try { state.astro.weatherMap.removeLayer(state.astro.weatherDomainBox); } catch {} }
+      state.astro.weatherDomainBox = null;
+      if (state.weather.domainBox3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.domainBox3d); } catch {} }
+      state.weather.domainBox3d = null;
+    }
+
+    function drawWeatherDomainBox(bounds2d, bounds3d){
+      clearWeatherDomainBoxesV36();
+      if (state.map2d && bounds2d) {
+        state.weather.domainBox2d = L.rectangle([[bounds2d.south, bounds2d.west], [bounds2d.north, bounds2d.east]], {
+          pane:'vector-pane',
+          color:'#dbeafe',
+          weight:1.5,
+          opacity:0.55,
+          fillOpacity:0,
+          dashArray:'6 6'
+        }).bindPopup('Radar weather domain').addTo(state.map2d);
+      }
+      if (state.astro.weatherMap && bounds2d) {
+        state.astro.weatherDomainBox = L.rectangle([[bounds2d.south, bounds2d.west], [bounds2d.north, bounds2d.east]], {
+          pane:'vector-pane', color:'#dbeafe', weight:1.2, opacity:0.45, fillOpacity:0, dashArray:'6 6'
+        }).addTo(state.astro.weatherMap);
+      }
+      if (state.viewer3d && bounds3d) {
+        const coords = [
+          bounds3d.west, bounds3d.south,
+          bounds3d.east, bounds3d.south,
+          bounds3d.east, bounds3d.north,
+          bounds3d.west, bounds3d.north,
+          bounds3d.west, bounds3d.south
+        ];
+        state.weather.domainBox3d = state.viewer3d.entities.add({
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArrayHeights([].concat(...coords.reduce((acc,v,i)=>{ if(i%2===0) acc.push([coords[i], coords[i+1], 800]); return acc; },[]))),
+            width: 1.5,
+            material: Cesium.Color.WHITE.withAlpha(0.5)
+          }
+        });
+      }
+    }
+
+    applyRadarAestheticStyle = function(){
+      const style = $("weatherStyleSelect").value;
+      const applyToMap = (mapObj) => {
+        if (!mapObj) return;
+        const main = mapObj.getPane("radar-main-pane");
+        const glow = mapObj.getPane("radar-glow-pane");
+        const trail = mapObj.getPane("radar-trail-pane");
+        if (!main || !glow || !trail) return;
+        if (style === "scientific") {
+          main.style.filter = "none";
+          glow.style.filter = "blur(0.6px) saturate(1.02)";
+          trail.style.filter = "none";
+        } else if (style === "prismatic") {
+          main.style.filter = "saturate(1.35) contrast(1.14) hue-rotate(-10deg)";
+          glow.style.filter = "blur(1.8px) saturate(1.55) hue-rotate(10deg)";
+          trail.style.filter = "saturate(1.32) contrast(1.07) hue-rotate(8deg)";
+        } else {
+          main.style.filter = "saturate(1.15) contrast(1.08)";
+          glow.style.filter = "blur(1.2px) saturate(1.22)";
+          trail.style.filter = "saturate(1.12) contrast(1.04)";
+        }
+      };
+      applyToMap(state.map2d);
+      applyToMap(state.astro.weatherMap);
+    };
+
+    drawWeatherWindVector = function(){
+      clearWeatherWindVector();
+      if (state.weather.vectorLabel2d && state.map2d) { try { state.map2d.removeLayer(state.weather.vectorLabel2d); } catch {} }
+      state.weather.vectorLabel2d = null;
+      if (state.weather.vectorLabel3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.vectorLabel3d); } catch {} }
+      state.weather.vectorLabel3d = null;
+      if (!$('windVectorChk').checked) return;
+      const { dirDeg, speedMph } = getRadarMotion();
+      if (!Number.isFinite(dirDeg)) return;
+      const { lat, lon } = state.weather.focus;
+      const lenKm = Math.max(70, Math.min(260, (Number.isFinite(speedMph) ? speedMph : 30) * 3));
+      const bearing = dirDeg * Math.PI / 180;
+      const dLat = (lenKm / 111) * Math.cos(bearing);
+      const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+      const endLat = lat + dLat, endLon = lon + dLon;
+      const label = `Motion ${Math.round(dirDeg)} deg  |  ${Math.round(speedMph || 0)} mph`;
+      if (state.map2d) {
+        const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:'vector-pane', color:'#7dd3fc', weight:4, opacity:0.95, dashArray:'10 6' });
+        const head = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:6, color:'#dbeafe', fillColor:'#7dd3fc', fillOpacity:0.95, weight:2 });
+        state.weather.vector2d = L.layerGroup([line, head]).addTo(state.map2d);
+        state.weather.vectorLabel2d = L.marker([endLat, endLon], { pane:'vector-pane', interactive:false, icon: L.divIcon({ className:'', html:`<div style="padding:2px 6px;border-radius:999px;background:rgba(8,14,22,.88);border:1px solid rgba(255,255,255,.14);color:#dbeafe;font-size:11px;white-space:nowrap;">${escapeHtml(label)}</div>` }) }).addTo(state.map2d);
+      }
+      if (state.viewer3d) {
+        state.weather.vector3d = state.viewer3d.entities.add({ polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([lon, lat, 1500, endLon, endLat, 1500]), width:4, material: Cesium.Color.CYAN.withAlpha(0.94) } });
+        state.weather.vectorLabel3d = state.viewer3d.entities.add({ position: Cesium.Cartesian3.fromDegrees(endLon, endLat, 1500), label: { text: label, font:'12px sans-serif', showBackground:true, backgroundColor: Cesium.Color.fromCssColorString('#08111a').withAlpha(0.82), fillColor: Cesium.Color.WHITE, pixelOffset: new Cesium.Cartesian2(0, -18) } });
+        state.viewer3d.scene.requestRender();
+      }
+      syncAstroWeatherInset();
+    };
+
+    function radarFrameSpecV35(frame, bounds, width, height){
+      const observedFrames = state.radar.frames.filter(f => f.kind !== 'future');
+      const latestObserved = observedFrames.length ? observedFrames[observedFrames.length - 1].time : roundDownTo5Minutes(Date.now());
+      if (frame.kind === 'future') {
+        const minutesAhead = Math.max(0, (frame.time - latestObserved) / 60000);
+        const shifted = shiftedBoundsForFuture(bounds, minutesAhead);
+        return { url: radarExportUrl(bounds, latestObserved, width, height, false), bounds: shifted, label:`Projected +${Math.round(minutesAhead)}m` };
+      }
+      return { url: radarExportUrl(bounds, frame.time, width, height, false), bounds, label:new Date(frame.time).toUTCString() };
+    }
+
+    setRadar = async function(on){
+      clearRadar2D();
+      clearRadar3D();
+      clearWeatherDomainBoxesV36();
+      if (!on) {
+        $('radarStamp').textContent = 'Radar off';
+        syncAstroWeatherInset();
+        return;
+      }
+      if (!state.radar.frames.length) await preloadRadarTimeline();
+      if (!state.radar.frames.length) return;
+
+      const frame = state.radar.frames[state.radar.index];
+      const trailCount = Math.max(0, Number($('radarTrailSelect').value) || 0);
+      const bounds2d = currentRadarDomain('2d');
+      const bounds3d = currentRadarDomain('3d');
+      state.weather.domain2d = bounds2d;
+      state.weather.domain3d = bounds3d;
+
+      const size2d = { width: 1400, height: 900 };
+      const size3d = { width: 2048, height: 1100 };
+
+      for (let back = trailCount; back >= 1; back--) {
+        const idx = state.radar.index - back;
+        if (idx < 0) continue;
+        const prev = state.radar.frames[idx];
+        const spec = radarFrameSpecV35(prev, bounds2d, size2d.width, size2d.height);
+        const op = $("weatherStyleSelect").value === 'scientific' ? Math.max(0.08, 0.28 - back * 0.03) : Math.max(0.10, 0.42 - back * 0.06);
+        const overlay = imageOverlayForSpec(spec, 'radar-trail-pane', op);
+        state.radar.trail2d.push(overlay);
+        overlay.addTo(state.map2d);
+      }
+
+      const mainSpec2d = radarFrameSpecV35(frame, bounds2d, size2d.width, size2d.height);
+      const mainOpacity = $("weatherStyleSelect").value === 'scientific' ? 0.92 : 0.86;
+      const glowOpacity = $("weatherStyleSelect").value === 'scientific' ? 0.10 : 0.30;
+      const main = imageOverlayForSpec(mainSpec2d, 'radar-main-pane', mainOpacity);
+      const glow = imageOverlayForSpec(mainSpec2d, 'radar-glow-pane', glowOpacity);
+      state.overlays2d['radar'] = main;
+      state.overlays2d['radar-glow'] = glow;
+      main.addTo(state.map2d);
+      glow.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        for (let back = trailCount; back >= 1; back--) {
+          const idx = state.radar.index - back;
+          if (idx < 0) continue;
+          const prev = state.radar.frames[idx];
+          const spec = radarFrameSpecV35(prev, bounds3d, size3d.width, size3d.height);
+          try {
+            const lyr = state.viewer3d.imageryLayers.addImageryProvider(singleTileProviderForSpec(spec));
+            lyr.alpha = $("weatherStyleSelect").value === 'scientific' ? Math.max(0.05, 0.22 - back * 0.02) : Math.max(0.08, 0.42 - back * 0.06);
+            state.radar.trail3d.push(lyr);
+          } catch (e) { log(`3D radar trail note: ${e.message}`); }
+        }
+        try {
+          add3DOverlayImageryOnly('radar', singleTileProviderForSpec(radarFrameSpecV35(frame, bounds3d, size3d.width, size3d.height)), $("weatherStyleSelect").value === 'scientific' ? 0.88 : 0.78);
+        } catch (e) {
+          log(`3D radar note: ${e.message}`);
+        }
+      }
+
+      drawWeatherDomainBox(bounds2d, bounds3d);
+      updateRadarStamp();
+      debugLog('radar.set.done', { frame: state.radar.index, intensity: weatherIntensity(), bounds2d });
+      applyRadarAestheticStyle();
+      if ($('windVectorChk').checked) drawWeatherWindVector();
+      syncAstroWeatherInset();
+    };
+
+    syncAstroWeatherInset = function(){
+      ensureAstroWeatherMini();
+      const m = state.astro.weatherMap;
+      if (!m) return;
+      clearAstroWeatherMiniLayers();
+      const lat = state.weather.focus.lat, lon = state.weather.focus.lon;
+      try {
+        m.setView([lat, lon], state.mode === 'astro' ? Math.max(4.5, m.getZoom() || 5) : (m.getZoom() || 5), { animate:false });
+        m.invalidateSize(true);
+      } catch {}
+      if ($('terrain3dChk').checked) {
+        const terrain = makeTileLayer(CONFIG.esriHillshade, { pane:'terrain-pane', maxZoom:13, maxNativeZoom:13, opacity:0.28, attribution:'Esri Hillshade' });
+        terrain.addTo(m);
+        state.astro.weatherRadarTrail.push(terrain);
+      }
+      state.astro.weatherMarker = L.circleMarker([lat, lon], {
+        pane:'vector-pane', radius:7, color:'#dbeafe', fillColor:'#2563eb', fillOpacity:0.95, weight:2
+      }).bindTooltip('Weather focus', {permanent:false}).addTo(m);
+      state.astro.weatherMarker.on('click', () => focusAnomalyById('weather'));
+
+      if ($('windVectorChk').checked) {
+        const { dirDeg, speedMph } = getRadarMotion();
+        const lenKm = Math.max(35, Math.min(180, (speedMph || 30) * 2.2));
+        const bearing = dirDeg * Math.PI / 180;
+        const dLat = (lenKm / 111) * Math.cos(bearing);
+        const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+        const endLat = lat + dLat, endLon = lon + dLon;
+        const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:'vector-pane', color:'#7dd3fc', weight:3, opacity:0.92, dashArray:'9 6' });
+        const head = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:5, color:'#dbeafe', fillColor:'#7dd3fc', fillOpacity:0.95, weight:2 }).bindTooltip(`Motion ${Math.round(dirDeg)} deg  |  ${Math.round(speedMph || 0)} mph`);
+        line.on('click', () => focusAnomalyById('motion'));
+        head.on('click', () => focusAnomalyById('motion'));
+        state.astro.weatherVector = L.layerGroup([line, head]).addTo(m);
+      }
+
+      if ($('alertsChk').checked && (state.weather.alerts || []).length) {
+        const geojson = { type:'FeatureCollection', features:(state.weather.alerts || []).filter(f => f.geometry) };
+        state.astro.weatherAlerts = L.geoJSON(geojson, {
+          pane:'overlay',
+          style:f => {
+            const sev = String(f.properties?.severity || '').toLowerCase();
+            const color = sev.includes('extreme') || sev.includes('severe') ? '#f87171' : sev.includes('moderate') ? '#fbbf24' : '#60a5fa';
+            return { color, weight:2, opacity:0.92, fillOpacity:0.06 };
+          },
+          onEachFeature:(f, layer) => {
+            layer.bindPopup(`<b>${escapeHtml(f.properties?.event || 'Alert')}</b><br>${escapeHtml(f.properties?.headline || '')}`);
+            layer.on('click', () => {
+              const c = layer.getBounds ? layer.getBounds().getCenter() : null;
+              if (c) jumpToLatLon(c.lat, c.lng, true);
+            });
+          }
+        }).addTo(m);
+      }
+      if ($('cloudsChk').checked && state.gibsIds.clouds) {
+        state.astro.weatherClouds = L.tileLayer.wms(CONFIG.gibsWms, { layers: state.gibsIds.clouds, format:'image/png', transparent:true, version:'1.1.1', time: currentGibsDate(), pane:'overlay', opacity:0.35, attribution:'NASA GIBS' }).addTo(m);
+      }
+      if ($('radarChk').checked && state.radar.frames.length) {
+        const trailCount = Math.max(0, Number($('radarTrailSelect').value) || 0);
+        const bounds = currentRadarDomain('astro');
+        const size = { width: 980, height: 620 };
+        for (let back = trailCount; back >= 1; back--) {
+          const idx = state.radar.index - back; if (idx < 0) continue;
+          const prev = state.radar.frames[idx];
+          const spec = radarFrameSpecV35(prev, bounds, size.width, size.height);
+          const tl = imageOverlayForSpec(spec, 'radar-trail-pane', $("weatherStyleSelect").value === 'scientific' ? Math.max(0.06, 0.22 - back * 0.02) : Math.max(0.10, 0.42 - back * 0.06));
+          tl.addTo(m); state.astro.weatherRadarTrail.push(tl);
+        }
+        const spec = radarFrameSpecV35(state.radar.frames[state.radar.index], bounds, size.width, size.height);
+        state.astro.weatherRadarMain = imageOverlayForSpec(spec, 'radar-main-pane', $("weatherStyleSelect").value === 'scientific' ? 0.90 : 0.84).addTo(m);
+        state.astro.weatherRadarGlow = imageOverlayForSpec(spec, 'radar-glow-pane', $("weatherStyleSelect").value === 'scientific' ? 0.10 : 0.32).addTo(m);
+        state.astro.weatherDomainBox = L.rectangle([[bounds.south, bounds.west], [bounds.north, bounds.east]], { pane:'vector-pane', color:'#dbeafe', weight:1.2, opacity:0.42, fillOpacity:0, dashArray:'6 6' }).addTo(m);
+      }
+      applyRadarAestheticStyle();
+      setAstroWeatherCaption(`Click inside lens to move weather focus | ${fmt(lat,2)}, ${fmt(lon,2)} | frame ${state.radar.frames.length ? state.radar.index + 1 : 0}/${state.radar.frames.length || 0}`);
+    };
+
+    function centroidFromFeature(feature){
+      try {
+        if (!feature?.geometry) return null;
+        const gj = L.geoJSON(feature);
+        const bounds = gj.getBounds();
+        if (bounds && bounds.isValid()) return bounds.getCenter();
+      } catch {}
+      return null;
+    }
+
+    buildAnomalies = function(){
+      const list = [];
+      const wf = state.weather.focus || { lat: CONFIG.home.lat, lon: CONFIG.home.lon };
+      const fieldText = $('magOut')?.textContent || 'Magnetic field';
+      list.push({ id:'weather', label:'Weather focus', lat:wf.lat, lon:wf.lon, note:$('wxForecastOut')?.textContent || 'Forecast focus' });
+      const { dirDeg, speedMph } = getRadarMotion();
+      if (Number.isFinite(dirDeg)) {
+        const bearing = dirDeg * Math.PI / 180;
+        const km = Math.max(60, Math.min(240, (speedMph || 30) * 3));
+        const dLat = (km / 111) * Math.cos(bearing);
+        const dLon = (km / (111 * Math.max(0.35, Math.cos(wf.lat * Math.PI / 180)))) * Math.sin(bearing);
+        list.push({ id:'motion', label:'Projected motion target', lat:wf.lat + dLat, lon:wf.lon + dLon, note:`Steering vector ${Math.round(dirDeg)} deg at ${Math.round(speedMph || 0)} mph` });
+      }
+      list.push({ id:'field', label:'Field anomaly', lat:wf.lat, lon:wf.lon, note:fieldText });
+      list.push({ id:'saa', label:'South Atlantic Anomaly', lat:-26.5, lon:-52.0, note:'Radiation weak spot / SAA reference' });
+      (state.weather.alerts || []).slice(0, 5).forEach((feature, idx) => {
+        const c = centroidFromFeature(feature);
+        if (!c) return;
+        list.push({ id:`alert-${idx}`, label: feature.properties?.event || `Alert ${idx + 1}`, lat:c.lat, lon:c.lng, note: feature.properties?.headline || feature.properties?.severity || 'NWS alert centroid' });
+      });
+      const aur = strongestAuroraPoint();
+      if (aur) list.push({ id:'aurora', label:'Aurora peak', lat:aur.lat, lon:aur.lon, note:`Probability ${Math.round(aur.p)}%` });
+      return list.map(item => ({ ...item, icrs: earthLatLonToDerivedIcrs(item.lat, item.lon) }));
+    };
+
+    updateAnomalyList = function(){
+      state.space.anomalies = buildAnomalies();
+      const el = $('anomalyList');
+      if (!el) return;
+      el.innerHTML = state.space.anomalies.map(item => `
+        <button data-anomaly-id="${escapeHtml(item.id)}" style="text-align:left;padding:8px 9px;background:#0c1622;border:1px solid rgba(255,255,255,.12);border-radius:10px;">
+          <div style="font-weight:700;">${escapeHtml(item.label)}</div>
+          <div style="font-size:11px;color:#9fb7d6;">lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}</div>
+          <div style="font-size:11px;color:#cfe2ff;white-space:normal;">${escapeHtml(String(item.note || ''))}</div>
+        </button>
+      `).join('');
+      if (!el.__bound) {
+        el.__bound = true;
+        el.addEventListener('click', ev => {
+          const btn = ev.target.closest('[data-anomaly-id]');
+          if (!btn) return;
+          focusAnomalyById(btn.getAttribute('data-anomaly-id'));
+        });
+      }
+    };
+
+    focusAnomalyById = function(id){
+      const item = (state.space.anomalies || []).find(x => x.id === id);
+      if (!item) return;
+      setDerivedIcrsOutputs(item.icrs.ra, item.icrs.dec);
+      jumpToLatLon(item.lat, item.lon, id.startsWith('alert-') || id === 'weather' || id === 'motion');
+      if (state.mode === 'astro') {
+        ensureAstro();
+        try { state.astro.instance.gotoRaDec(item.icrs.ra, item.icrs.dec); } catch {}
+        syncAstroWeatherInset();
+      }
+      log(`Focused anomaly: ${item.label} | lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}`);
+    };
+
+    const origShowMode = showMode;
+    showMode = function(mode){
+      origShowMode(mode);
+      if (mode === 'astro') {
+        ensureAstroWeatherMini();
+        setTimeout(() => { try { state.astro.weatherMap.invalidateSize(true); } catch {} syncAstroWeatherInset(); }, 90);
+      }
+    };
+  };
+
+
+  /* v36 patch: global weather coverage, intensity slider, richer anomaly focus, ASCII UI cleanup */
+  const __origInstallV35Patch = installV34Patches;
+  installV34Patches = function(){
+    __origInstallV35Patch();
+    if (state.__v36Installed) return;
+    state.__v36Installed = true;
+
+    function sanitizeAscii(str){
+      return String(str || "")
+        .replace(/\u00b0/g, ' deg')
+        .replace(/\u2022/g, ' | ')
+        .replace(/\u2032/g, "'")
+        .replace(/\u2033/g, '"')
+        .replace(/[\u2012\u2013\u2014\u2212]/g, '-')
+        .replace(/\u2630/g, 'Menu');
+    }
+    function sanitizeAsciiUI(){
+      const menu = document.getElementById('menuToggle');
+      if (menu) menu.textContent = 'Menu';
+      document.querySelectorAll('button, option, .tiny, .sub, .title').forEach(el => {
+        if (el && el.childNodes && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+          el.textContent = sanitizeAscii(el.textContent);
+        }
+      });
+    }
+    sanitizeAsciiUI();
+
+    const weatherBox = $('weatherHereBtn') ? $('weatherHereBtn').closest('.box') : null;
+    if (weatherBox && !$('weatherIntensitySlider')) {
+      const host = document.createElement('div');
+      host.innerHTML = [
+        '<div class="tiny" style="margin-top:6px;">Global weather overlay intensity</div>',
+        '<div class="row"><input id="weatherIntensitySlider" type="range" min="0" max="100" value="82"></div>',
+        '<div id="weatherIntensityOut" class="tiny">82 percent</div>'
+      ].join('');
+      const stamp = $('radarStamp');
+      if (stamp && stamp.parentNode === weatherBox) weatherBox.insertBefore(host, stamp);
+      else weatherBox.appendChild(host);
+    }
+    function weatherIntensity(){
+      return Math.max(0.05, Math.min(1, Number(($('weatherIntensitySlider') && $('weatherIntensitySlider').value) || 82) / 100));
+    }
+    function updateWeatherIntensityOut(){
+      if ($('weatherIntensityOut')) $('weatherIntensityOut').textContent = `${Math.round(weatherIntensity() * 100)} percent`;
+      state.weather.intensity = weatherIntensity();
+    }
+    updateWeatherIntensityOut();
+    if ($('weatherIntensitySlider') && !$('weatherIntensitySlider').__bound) {
+      $('weatherIntensitySlider').__bound = true;
+      $('weatherIntensitySlider').addEventListener('input', () => {
+        updateWeatherIntensityOut();
+        if ($('radarChk') && $('radarChk').checked) Promise.resolve(setRadar(true)).catch(() => {});
+      });
+    }
+
+    if ($('weatherStyleSelect')) {
+      $('weatherStyleSelect').innerHTML = [
+        '<option value="scientific">Radar style: Scientific</option>',
+        '<option value="cinematic">Radar style: Cinematic</option>',
+        '<option value="prismatic">Radar style: Prismatic</option>'
+      ].join('');
+      $('weatherStyleSelect').value = 'scientific';
+    }
+
+    state.weather.motionPoint2d = null;
+    state.weather.motionPoint3d = null;
+    state.weather.global2d = [];
+    state.weather.global3d = [];
+    state.astro.weatherPrecip = null;
+
+    function removeWeatherGlobals2D(){
+      ['weather-global-clouds','weather-global-precip','weather-global-clouds-glow'].forEach(remove2DOverlay);
+      state.weather.global2d = [];
+    }
+    function removeWeatherGlobals3D(){
+      ['weather-global-clouds','weather-global-precip'].forEach(remove3DOverlay);
+      state.weather.global3d = [];
+    }
+    function addGlobalWeather2D(){
+      removeWeatherGlobals2D();
+      const a = weatherIntensity();
+      if (state.gibsIds.clouds) {
+        const clouds = leafletGibsWms(state.gibsIds.clouds);
+        clouds.setOpacity(Math.max(0.35, 0.38 + a * 0.42));
+        state.overlays2d['weather-global-clouds'] = clouds;
+        clouds.addTo(state.map2d);
+        state.weather.global2d.push(clouds);
+      }
+      if (state.gibsIds.precip) {
+        const precip = leafletGibsWms(state.gibsIds.precip);
+        precip.setOpacity(Math.max(0.18, 0.12 + a * 0.30));
+        state.overlays2d['weather-global-precip'] = precip;
+        precip.addTo(state.map2d);
+        state.weather.global2d.push(precip);
+      }
+    }
+    function addGlobalWeather3D(){
+      removeWeatherGlobals3D();
+      const a = weatherIntensity();
+      if (state.viewer3d && state.gibsIds.clouds) add3DOverlayImageryOnly('weather-global-clouds', cesiumGibsWms(state.gibsIds.clouds), Math.max(0.34, 0.35 + a * 0.38));
+      if (state.viewer3d && state.gibsIds.precip) add3DOverlayImageryOnly('weather-global-precip', cesiumGibsWms(state.gibsIds.precip), Math.max(0.16, 0.10 + a * 0.26));
+    }
+    function clearAstroWeatherMiniLayersV36(){
+      const m = state.astro.weatherMap;
+      if (!m) return;
+      ['weatherMarker','weatherVector','weatherAlerts','weatherClouds','weatherPrecip','weatherRadarMain','weatherRadarGlow','weatherDomainBox'].forEach(k => {
+        if (state.astro[k]) {
+          try { m.removeLayer(state.astro[k]); } catch {}
+          state.astro[k] = null;
+        }
+      });
+      (state.astro.weatherRadarTrail || []).forEach(l => { try { m.removeLayer(l); } catch {} });
+      state.astro.weatherRadarTrail = [];
+    }
+
+    function clearWeatherDomainBoxesV36(){
+      if (state.weather.domainBox2d && state.map2d) {
+        try { state.map2d.removeLayer(state.weather.domainBox2d); } catch {}
+      }
+      state.weather.domainBox2d = null;
+      if (state.astro.weatherDomainBox && state.astro.weatherMap) {
+        try { state.astro.weatherMap.removeLayer(state.astro.weatherDomainBox); } catch {}
+      }
+      state.astro.weatherDomainBox = null;
+      if (state.weather.domainBox3d && state.viewer3d) {
+        try { state.viewer3d.entities.remove(state.weather.domainBox3d); } catch {}
+      }
+      state.weather.domainBox3d = null;
+    }
+
+    updateRadarStamp = function(){
+      const frame = state.radar.frames[state.radar.index];
+      if (!frame) {
+        $('radarStamp').textContent = 'Radar idle';
+        setTimeHUD('Timeline idle');
+        return;
+      }
+      const d = new Date(frame.time);
+      const phase = frame.kind === 'future' ? 'Projected future' : 'Observed';
+      const intensityText = `${Math.round(weatherIntensity() * 100)} percent global weather`;
+      $('radarStamp').textContent = `${phase} | ${d.toUTCString()} | ${state.radar.availablePast} past / ${state.radar.availableFuture} future | ${intensityText}`;
+      setTimeHUD(`Radar timeline\nFrame ${state.radar.index + 1}/${state.radar.frames.length}\n${phase} | ${d.toUTCString()}\n${intensityText}`);
+    };
+
+    applyRadarAestheticStyle = function(){
+      const style = $('weatherStyleSelect') ? $('weatherStyleSelect').value : 'scientific';
+      const applyToMap = (mapObj) => {
+        if (!mapObj) return;
+        const main = mapObj.getPane('radar-main-pane');
+        const glow = mapObj.getPane('radar-glow-pane');
+        const trail = mapObj.getPane('radar-trail-pane');
+        if (!main || !glow || !trail) return;
+        if (style === 'scientific') {
+          main.style.filter = 'contrast(1.35) saturate(1.15) brightness(1.08)';
+          glow.style.filter = 'blur(0.9px) contrast(1.20) saturate(1.08)';
+          trail.style.filter = 'contrast(1.15) saturate(1.00)';
+        } else if (style === 'prismatic') {
+          main.style.filter = 'contrast(1.18) saturate(1.55) hue-rotate(-12deg) brightness(1.05)';
+          glow.style.filter = 'blur(1.8px) saturate(1.70) hue-rotate(8deg)';
+          trail.style.filter = 'contrast(1.05) saturate(1.40) hue-rotate(10deg)';
+        } else {
+          main.style.filter = 'contrast(1.22) saturate(1.25) brightness(1.04)';
+          glow.style.filter = 'blur(1.4px) contrast(1.10) saturate(1.28)';
+          trail.style.filter = 'contrast(1.08) saturate(1.10)';
+        }
+      };
+      applyToMap(state.map2d);
+      applyToMap(state.astro.weatherMap);
+    };
+
+    drawWeatherWindVector = function(){
+      clearWeatherWindVector();
+      if (state.weather.vectorLabel2d && state.map2d) { try { state.map2d.removeLayer(state.weather.vectorLabel2d); } catch {} }
+      state.weather.vectorLabel2d = null;
+      if (state.weather.vectorLabel3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.vectorLabel3d); } catch {} }
+      state.weather.vectorLabel3d = null;
+      if (state.weather.motionPoint2d && state.map2d) { try { state.map2d.removeLayer(state.weather.motionPoint2d); } catch {} }
+      state.weather.motionPoint2d = null;
+      if (state.weather.motionPoint3d && state.viewer3d) { try { state.viewer3d.entities.remove(state.weather.motionPoint3d); } catch {} }
+      state.weather.motionPoint3d = null;
+      if (!$('windVectorChk').checked) return;
+      const motion = getRadarMotion();
+      const dirDeg = motion.dirDeg, speedMph = motion.speedMph;
+      const lat = state.weather.focus.lat, lon = state.weather.focus.lon;
+      const lenKm = Math.max(90, Math.min(340, (speedMph || 25) * 3.2));
+      const bearing = dirDeg * Math.PI / 180;
+      const dLat = (lenKm / 111) * Math.cos(bearing);
+      const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+      const endLat = lat + dLat, endLon = lon + dLon;
+      const label = `Motion ${Math.round(dirDeg)} deg at ${Math.round(speedMph || 0)} mph`;
+      if (state.map2d) {
+        const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:'vector-pane', color:'#7dd3fc', weight:4, opacity:0.96, dashArray:'10 6' });
+        const head = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:7, color:'#dbeafe', fillColor:'#60a5fa', fillOpacity:0.98, weight:2 });
+        head.on('click', () => focusAnomalyById('motion'));
+        state.weather.vector2d = L.layerGroup([line, head]).addTo(state.map2d);
+        state.weather.vectorLabel2d = L.marker([endLat, endLon], { pane:'vector-pane', interactive:false, icon: L.divIcon({ className:'', html:`<div style="padding:2px 6px;border-radius:999px;background:rgba(8,14,22,.90);border:1px solid rgba(255,255,255,.14);color:#dbeafe;font-size:11px;white-space:nowrap;">${escapeHtml(label)}</div>` }) }).addTo(state.map2d);
+        state.weather.motionPoint2d = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:9, color:'#ffffff', fillColor:'#93c5fd', fillOpacity:0.18, weight:1.5 }).bindPopup(label).addTo(state.map2d);
+        state.weather.motionPoint2d.on('click', () => focusAnomalyById('motion'));
+      }
+      if (state.viewer3d) {
+        state.weather.vector3d = state.viewer3d.entities.add({ polyline: { positions: Cesium.Cartesian3.fromDegreesArrayHeights([lon, lat, 1600, endLon, endLat, 1600]), width:4, material: Cesium.Color.CYAN.withAlpha(0.94) } });
+        state.weather.motionPoint3d = state.viewer3d.entities.add({ position: Cesium.Cartesian3.fromDegrees(endLon, endLat, 1600), point: { pixelSize:11, color: Cesium.Color.fromCssColorString('#93c5fd').withAlpha(0.92), outlineWidth:2, outlineColor: Cesium.Color.WHITE } });
+        state.weather.vectorLabel3d = state.viewer3d.entities.add({ position: Cesium.Cartesian3.fromDegrees(endLon, endLat, 1600), label: { text: label, font:'12px sans-serif', showBackground:true, backgroundColor: Cesium.Color.fromCssColorString('#08111a').withAlpha(0.84), fillColor: Cesium.Color.WHITE, pixelOffset: new Cesium.Cartesian2(0, -18) } });
+        state.viewer3d.scene.requestRender();
+      }
+      syncAstroWeatherInset();
+    };
+
+    function frameSpecForBounds(frame, bounds, width, height){
+      return radarFrameSpec(frame, bounds, width, height);
+    }
+
+    setRadar = async function(on){
+      debugLog('radar.set.start', getRadarDiagnostics());
+      clearRadar2D();
+      clearRadar3D();
+      removeWeatherGlobals2D();
+      removeWeatherGlobals3D();
+      clearWeatherDomainBoxesV36();
+      if (!on) {
+        $('radarStamp').textContent = 'Radar off';
+        syncAstroWeatherInset();
+        return;
+      }
+      if (!state.radar.frames.length) await preloadRadarTimeline();
+      if (!state.radar.frames.length) return;
+      const a = weatherIntensity();
+      addGlobalWeather2D();
+      if (state.viewer3d) addGlobalWeather3D();
+
+      const frame = state.radar.frames[state.radar.index];
+      const trailCount = Math.max(0, Number($('radarTrailSelect').value) || 0);
+      const bounds2d = normalizeBounds(leafletBoundsObj(state.map2d));
+      debugLog('radar.bounds2d', bounds2d);
+      const size2d = { width: 2048, height: 1152 };
+      for (let back = trailCount; back >= 1; back--) {
+        const idx = state.radar.index - back;
+        if (idx < 0) continue;
+        const spec = frameSpecForBounds(state.radar.frames[idx], bounds2d, size2d.width, size2d.height);
+        const op = Math.max(0.06, (0.10 + a * 0.18) - back * 0.02);
+        const overlay = imageOverlayForSpec(spec, 'radar-trail-pane', op);
+        state.radar.trail2d.push(overlay);
+        overlay.addTo(state.map2d);
+      }
+      const mainSpec2d = frameSpecForBounds(frame, bounds2d, size2d.width, size2d.height);
+      const main2d = imageOverlayForSpec(mainSpec2d, 'radar-main-pane', Math.max(0.56, 0.50 + a * 0.34));
+      const glow2d = imageOverlayForSpec(mainSpec2d, 'radar-glow-pane', Math.max(0.12, 0.10 + a * 0.22));
+      state.overlays2d['radar'] = main2d;
+      state.overlays2d['radar-glow'] = glow2d;
+      main2d.addTo(state.map2d);
+      glow2d.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const bounds3d = normalizeBounds(cesiumViewBounds());
+        const size3d = { width: 2048, height: 1152 };
+        for (let back = trailCount; back >= 1; back--) {
+          const idx = state.radar.index - back;
+          if (idx < 0) continue;
+          try {
+            const spec = frameSpecForBounds(state.radar.frames[idx], bounds3d, size3d.width, size3d.height);
+            const lyr = state.viewer3d.imageryLayers.addImageryProvider(singleTileProviderForSpec(spec));
+            lyr.alpha = Math.max(0.05, (0.08 + a * 0.16) - back * 0.02);
+            state.radar.trail3d.push(lyr);
+          } catch (e) { log(`3D radar trail note: ${e.message}`); }
+        }
+        try {
+          const main3d = frameSpecForBounds(frame, bounds3d, size3d.width, size3d.height);
+          add3DOverlayImageryOnly('radar', singleTileProviderForSpec(main3d), Math.max(0.50, 0.44 + a * 0.30));
+        } catch (e) { log(`3D radar note: ${e.message}`); }
+      }
+
+      updateRadarStamp();
+      debugLog('radar.set.done', { frame: state.radar.index, intensity: weatherIntensity(), bounds2d });
+      applyRadarAestheticStyle();
+      if ($('alertsChk').checked) await drawWeatherAlerts();
+      if ($('windVectorChk').checked) drawWeatherWindVector();
+      syncAstroWeatherInset();
+    };
+
+    syncAstroWeatherInset = function(){
+      ensureAstroWeatherMini();
+      const m = state.astro.weatherMap;
+      if (!m) return;
+      clearAstroWeatherMiniLayersV36();
+      const lat = state.weather.focus.lat, lon = state.weather.focus.lon;
+      try {
+        const center = safeLeafletCenter(m);
+        if (!center) m.setView([lat, lon], 3.5, { animate:false });
+        else m.invalidateSize(true);
+      } catch (e) {
+        log(`Astro lens init note: ${e.message}`);
+        try { m.setView([lat, lon], 3.5, { animate:false }); } catch {}
+      }
+      if ($('terrain3dChk').checked) {
+        const terrain = makeTileLayer(CONFIG.esriHillshade, { pane:'terrain-pane', maxZoom:13, maxNativeZoom:13, opacity:0.24, attribution:'Esri Hillshade' });
+        terrain.addTo(m);
+        state.astro.weatherRadarTrail.push(terrain);
+      }
+      const a = weatherIntensity();
+      if (state.gibsIds.clouds) {
+        state.astro.weatherClouds = leafletGibsWms(state.gibsIds.clouds);
+        state.astro.weatherClouds.setOpacity(Math.max(0.34, 0.34 + a * 0.42));
+        state.astro.weatherClouds.addTo(m);
+      }
+      if (state.gibsIds.precip) {
+        state.astro.weatherPrecip = leafletGibsWms(state.gibsIds.precip);
+        state.astro.weatherPrecip.setOpacity(Math.max(0.12, 0.08 + a * 0.24));
+        state.astro.weatherPrecip.addTo(m);
+      }
+      if (state.radar.frames.length) {
+        const frame = state.radar.frames[state.radar.index];
+        const trailCount = Math.max(0, Number($('radarTrailSelect').value) || 0);
+        const bounds = normalizeBounds(leafletBoundsObj(m));
+        const size = { width: 1024, height: 640 };
+        for (let back = trailCount; back >= 1; back--) {
+          const idx = state.radar.index - back;
+          if (idx < 0) continue;
+          const spec = frameSpecForBounds(state.radar.frames[idx], bounds, size.width, size.height);
+          const tl = imageOverlayForSpec(spec, 'radar-trail-pane', Math.max(0.05, (0.08 + a * 0.16) - back * 0.02));
+          state.astro.weatherRadarTrail.push(tl);
+          tl.addTo(m);
+        }
+        const spec = frameSpecForBounds(frame, bounds, size.width, size.height);
+        state.astro.weatherRadarMain = imageOverlayForSpec(spec, 'radar-main-pane', Math.max(0.52, 0.46 + a * 0.28)).addTo(m);
+        state.astro.weatherRadarGlow = imageOverlayForSpec(spec, 'radar-glow-pane', Math.max(0.10, 0.10 + a * 0.18)).addTo(m);
+      }
+      state.astro.weatherMarker = L.circleMarker([lat, lon], { pane:'vector-pane', radius:7, color:'#dbeafe', fillColor:'#2563eb', fillOpacity:0.95, weight:2 }).bindTooltip('Weather focus').addTo(m);
+      state.astro.weatherMarker.on('click', () => focusAnomalyById('weather'));
+      if ($('windVectorChk').checked) {
+        const motion = getRadarMotion();
+        const lenKm = Math.max(45, Math.min(180, (motion.speedMph || 25) * 2.3));
+        const bearing = motion.dirDeg * Math.PI / 180;
+        const dLat = (lenKm / 111) * Math.cos(bearing);
+        const dLon = (lenKm / (111 * Math.max(0.35, Math.cos(lat * Math.PI / 180)))) * Math.sin(bearing);
+        const endLat = lat + dLat, endLon = lon + dLon;
+        const line = L.polyline([[lat, lon], [endLat, endLon]], { pane:'vector-pane', color:'#7dd3fc', weight:3, opacity:0.92, dashArray:'9 6' });
+        const head = L.circleMarker([endLat, endLon], { pane:'vector-pane', radius:5, color:'#dbeafe', fillColor:'#7dd3fc', fillOpacity:0.95, weight:2 }).bindTooltip(`Motion ${Math.round(motion.dirDeg)} deg at ${Math.round(motion.speedMph || 0)} mph`);
+        line.on('click', () => focusAnomalyById('motion'));
+        head.on('click', () => focusAnomalyById('motion'));
+        state.astro.weatherVector = L.layerGroup([line, head]).addTo(m);
+      }
+      if ($('alertsChk').checked && (state.weather.alerts || []).length) {
+        const geojson = { type:'FeatureCollection', features:(state.weather.alerts || []).filter(f => f.geometry) };
+        state.astro.weatherAlerts = L.geoJSON(geojson, {
+          pane:'overlay',
+          style:f => {
+            const sev = String(f.properties?.severity || '').toLowerCase();
+            const color = sev.includes('extreme') || sev.includes('severe') ? '#f87171' : sev.includes('moderate') ? '#fbbf24' : '#60a5fa';
+            return { color, weight:2, opacity:0.92, fillOpacity:0.08 };
+          },
+          onEachFeature:(f, layer) => {
+            layer.bindPopup(`<b>${escapeHtml(f.properties?.event || 'Alert')}</b><br>${escapeHtml(f.properties?.headline || '')}`);
+            layer.on('click', () => {
+              const c = layer.getBounds ? layer.getBounds().getCenter() : null;
+              if (c) jumpToLatLon(c.lat, c.lng, true);
+            });
+          }
+        }).addTo(m);
+      }
+      applyRadarAestheticStyle();
+      { const c = safeLeafletCenter(m); setAstroWeatherCaption(c ? `Earth weather lens at ${fmt(c.lat,2)}, ${fmt(c.lng,2)} | global weather ${Math.round(a * 100)} percent | frame ${state.radar.frames.length ? state.radar.index + 1 : 0}/${state.radar.frames.length || 0}` : `Earth weather lens initializing... | global weather ${Math.round(a * 100)} percent | frame ${state.radar.frames.length ? state.radar.index + 1 : 0}/${state.radar.frames.length || 0}`); }
+    };
+
+    function centroidFromFeatureV36(feature){
+      try {
+        if (!feature?.geometry) return null;
+        const gj = L.geoJSON(feature);
+        const bounds = gj.getBounds();
+        if (bounds && bounds.isValid()) return bounds.getCenter();
+      } catch {}
+      return null;
+    }
+    function strongestAuroraHemisphere(sign){
+      const coords = parseAuroraCoordinates(state.space.auroraRaw);
+      let best = null;
+      for (const c of coords || []) {
+        const lon = Number(c[0]), lat = Number(c[1]), p = Number(c[2]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(p)) continue;
+        if (sign > 0 && lat < 0) continue;
+        if (sign < 0 && lat > 0) continue;
+        if (!best || p > best.p) best = { lat, lon, p };
+      }
+      return best;
+    }
+    function subsolarPoint(date = new Date()){
+      const se = solarDeclinationAndEqTime(date);
+      const utcMinutes = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
+      const lon = -(utcMinutes + se.eqtime - 720) / 4;
+      return { lat: se.decl * 180 / Math.PI, lon };
+    }
+    buildAnomalies = function(){
+      const list = [];
+      const wf = state.weather.focus || { lat: CONFIG.home.lat, lon: CONFIG.home.lon };
+      const fieldText = $('magOut') ? $('magOut').textContent : 'Magnetic field';
+      list.push({ id:'weather', label:'Weather focus', lat:wf.lat, lon:wf.lon, note:($('wxForecastOut') ? $('wxForecastOut').textContent : 'Forecast focus') });
+      const motion = getRadarMotion();
+      if (Number.isFinite(motion.dirDeg)) {
+        const bearing = motion.dirDeg * Math.PI / 180;
+        const km = Math.max(90, Math.min(340, (motion.speedMph || 25) * 3.2));
+        const dLat = (km / 111) * Math.cos(bearing);
+        const dLon = (km / (111 * Math.max(0.35, Math.cos(wf.lat * Math.PI / 180)))) * Math.sin(bearing);
+        list.push({ id:'motion', label:'Projected motion target', lat:wf.lat + dLat, lon:wf.lon + dLon, note:`Storm steering ${Math.round(motion.dirDeg)} deg at ${Math.round(motion.speedMph || 0)} mph` });
+      }
+      list.push({ id:'field', label:'Magnetic field focus', lat:wf.lat, lon:wf.lon, note:fieldText });
+      list.push({ id:'saa', label:'South Atlantic Anomaly', lat:-26.5, lon:-52.0, note:'Radiation weak spot reference' });
+      const northAur = strongestAuroraHemisphere(1);
+      if (northAur) list.push({ id:'aurora-north', label:'Aurora north peak', lat:northAur.lat, lon:northAur.lon, note:`Probability ${Math.round(northAur.p)} percent` });
+      const southAur = strongestAuroraHemisphere(-1);
+      if (southAur) list.push({ id:'aurora-south', label:'Aurora south peak', lat:southAur.lat, lon:southAur.lon, note:`Probability ${Math.round(southAur.p)} percent` });
+      const sub = subsolarPoint(new Date());
+      list.push({ id:'subsolar', label:'Subsolar point', lat:sub.lat, lon:sub.lon, note:'Current sun-facing point on Earth' });
+      list.push({ id:'antisolar', label:'Anti-solar point', lat:-sub.lat, lon:(((sub.lon + 180) % 360) + 360) % 360 - 180, note:'Current midnight-space point on Earth' });
+      (state.weather.alerts || []).slice(0, 6).forEach((feature, idx) => {
+        const c = centroidFromFeatureV36(feature);
+        if (!c) return;
+        list.push({ id:`alert-${idx}`, label:(feature.properties?.event || `Alert ${idx + 1}`), lat:c.lat, lon:c.lng, note:(feature.properties?.headline || feature.properties?.severity || 'NWS alert centroid') });
+      });
+      state.space.anomalies = list.map(item => ({ ...item, icrs: earthLatLonToDerivedIcrs(item.lat, item.lon) }));
+      return state.space.anomalies;
+    };
+    updateAnomalyList = function(){
+      const el = $('anomalyList');
+      if (!el) return;
+      const items = buildAnomalies();
+      el.innerHTML = items.map(item => [
+        `<button data-anomaly-id="${escapeHtml(item.id)}" style="text-align:left;padding:8px 9px;background:#0c1622;border:1px solid rgba(255,255,255,.12);border-radius:10px;">`,
+        `<div style="font-weight:700;">${escapeHtml(item.label)}</div>`,
+        `<div style="font-size:11px;color:#9fb7d6;">lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}</div>`,
+        `<div style="font-size:11px;color:#cfe2ff;white-space:normal;">${escapeHtml(String(item.note || ''))}</div>`,
+        `</button>`
+      ].join('')).join('');
+      if (!el.__boundV36) {
+        el.__boundV36 = true;
+        el.addEventListener('click', ev => {
+          const btn = ev.target.closest('[data-anomaly-id]');
+          if (!btn) return;
+          focusAnomalyById(btn.getAttribute('data-anomaly-id'));
+        });
+      }
+    };
+    focusAnomalyById = function(id){
+      const item = (state.space.anomalies || []).find(x => x.id === id);
+      if (!item) return;
+      setDerivedIcrsOutputs(item.icrs.ra, item.icrs.dec);
+      jumpToLatLon(item.lat, item.lon, true);
+      if (state.mode === 'astro') {
+        ensureAstro();
+        try { state.astro.instance.gotoRaDec(item.icrs.ra, item.icrs.dec); } catch {}
+        syncAstroWeatherInset();
+      }
+      log(`Focused anomaly: ${item.label} | lat ${fmt(item.lat,2)} lon ${fmt(item.lon,2)} | RA ${fmt(item.icrs.ra,2)} Dec ${fmt(item.icrs.dec,2)}`);
+    };
+
+    const __origRefreshWeatherAtV36 = refreshWeatherAt;
+    refreshWeatherAt = async function(lat, lon){
+      await __origRefreshWeatherAtV36(lat, lon);
+      updateAnomalyList();
+    };
+    const __origRefreshSpaceWeatherV36 = refreshSpaceWeather;
+    refreshSpaceWeather = async function(){
+      await __origRefreshSpaceWeatherV36();
+      updateAnomalyList();
+    };
+    const __origShowModeV36 = showMode;
+    showMode = function(mode){
+      __origShowModeV36(mode);
+      if (mode === 'astro') {
+        ensureAstroWeatherMini();
+        setTimeout(() => { try { state.astro.weatherMap.invalidateSize(true); } catch {} syncAstroWeatherInset(); }, 90);
+      }
+      sanitizeAsciiUI();
+    };
+    if ($('weatherStyleSelect')) $('weatherStyleSelect').onchange = () => { applyRadarAestheticStyle(); if ($('radarChk') && $('radarChk').checked) Promise.resolve(setRadar(true)).catch(() => {}); };
+  };
+
+
+  boot().catch(e => { setStatus("Fatal error", "bad"); log(`Fatal boot error: ${e.message}`); console.error(e); });
+})();
+</script>
+</body>
+</html>
+

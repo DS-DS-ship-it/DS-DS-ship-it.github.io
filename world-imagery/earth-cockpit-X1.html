@@ -1,0 +1,1080 @@
+<!doctype html>
+<!--
+Earth Cockpit X1 — SINGLE FILE • 2D + 3D + Astro • Radar + Quakes + Fires • Hard Debug
+- 2D boots first, always.
+- Cesium loads ONLY when you click 3D/Astro (prevents "black screen" cascade).
+- Radar uses RainViewer frames (past+nowcast), with cache-bust and optional trail.
+- Fires uses NASA GIBS WMTS tile (stable, no API key, no EONET 500).
+- Earthquakes uses USGS all_day GeoJSON.
+Local test:
+python3 -m http.server 8080
+http://127.0.0.1:8080/world-imagery/earth-cockpit-X1.html?v=1
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Earth Cockpit X1 — 2D + 3D + Radar + Quakes + Fires</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --vh: 1vh;
+      --panelW: 390px;
+    }
+    html, body{
+      margin:0;
+      height:100%;
+      overflow:hidden;
+      background:#0b0c10;
+      color:#e9eef5;
+      font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
+    body{
+      height: 100dvh;
+      height: calc(var(--vh) * 100);
+    }
+
+    #app{
+      height:100%;
+      display:grid;
+      grid-template-columns: var(--panelW) 1fr;
+      overflow:hidden;
+    }
+
+    #panel{
+      position:relative;
+      z-index:10;
+      background: rgba(12,14,18,.95);
+      border-right: 1px solid rgba(255,255,255,.10);
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      padding:12px;
+    }
+
+    body.minimized #panel{
+      transform: translateX(-110%);
+      pointer-events:none;
+    }
+    body.minimized { --panelW: 0px; }
+
+    #viewWrap{
+      position:relative;
+      min-width:0;
+      height:100%;
+      background:#000;
+    }
+
+    #map2d, #globe3d{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      background:#000;
+    }
+    #globe3d{ display:none; }
+
+    h1{ font-size:14px; margin:0 0 6px; font-weight:900; letter-spacing:.2px; }
+    .sub{ font-size:12px; opacity:.8; margin:0 0 10px; }
+    .box{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      padding:10px;
+      margin:10px 0;
+      background: rgba(15,18,24,.65);
+    }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .toggle{ display:flex; gap:8px; }
+    .toggle button{ flex:1 1 auto; }
+    .hr{ height:1px; background: rgba(255,255,255,.10); margin:10px 0; }
+
+    input, select, button{
+      background:#0f141c;
+      color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+    }
+    button{ cursor:pointer; }
+    button.primary{ background:#1b2a46; border-color: rgba(120,170,255,.45); }
+    button.warn{ background:#3a1f1f; border-color: rgba(255,120,120,.45); }
+    .smallbtn{ padding:6px 8px; border-radius:9px; font-size:12px; }
+    .tiny{ font-size:12px; opacity:.85; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; font-size:12px; }
+
+    #hud{
+      position:absolute;
+      right:10px;
+      top: calc(10px + var(--safeTop));
+      z-index:6;
+      background: rgba(12,14,18,.60);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      padding: 6px 10px;
+      pointer-events:none;
+      white-space:pre;
+    }
+
+    #panelFab{
+      position: fixed;
+      left: 12px;
+      bottom: calc(12px + var(--safeBottom));
+      z-index: 999999;
+      display:none;
+      border-radius:999px;
+      padding:12px 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      color:#e9eef5;
+      font-weight:900;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #panelFab.show{ display:inline-flex; gap:10px; align-items:center; }
+
+    @media (max-width: 720px){
+      #app{ display:block; height:100%; }
+      #viewWrap{
+        position:fixed;
+        left:0; right:0; top:0; bottom:0;
+        height:100%;
+      }
+      #panel{
+        position:fixed;
+        left:10px;
+        top: calc(10px + var(--safeTop));
+        bottom: calc(10px + var(--safeBottom));
+        width: min(390px, calc(100vw - 20px));
+        border-right:none;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:14px;
+        box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      }
+    }
+
+    /* Leaflet control styling */
+    .leaflet-control-zoom a { background: rgba(15,18,24,.9) !important; color:#e9eef5 !important; border-color: rgba(255,255,255,.15) !important; }
+    .leaflet-control-attribution { background: rgba(12,14,18,.75) !important; color:#cbd5e1 !important; }
+
+    /* Debug console */
+    #debugWrap{ display:none; }
+    body.debugOn #debugWrap{ display:block; }
+    #debugLog{
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow:auto;
+      padding:10px;
+      border-radius:12px;
+      background: rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.10);
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div id="panel">
+    <div class="row" style="justify-content:space-between; align-items:flex-start;">
+      <div style="min-width:0;">
+        <h1>Earth Cockpit X1</h1>
+        <div class="sub">Single-file • 2D boots first • 3D loads on-demand • Radar + Quakes + Fires • Hard Debug</div>
+      </div>
+      <button id="minBtn" class="smallbtn" title="Hide panel">Minimize</button>
+    </div>
+
+    <div class="toggle" style="margin-top:8px;">
+      <button id="btn2D" class="primary">2D Map</button>
+      <button id="btn3D">3D Globe</button>
+      <button id="btnASTRO">Astronomy</button>
+    </div>
+
+    <div class="box">
+      <div class="row">
+        <span class="tiny">Mode:</span><b id="modeLabel">2D</b>
+        <span class="tiny" style="margin-left:10px;">Center:</span><span class="mono" id="centerReadout">—</span>
+        <span class="tiny">Zoom:</span><span class="mono" id="zoomReadout">—</span>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <input id="q" type="text" placeholder="Try: Orlando, Tokyo, 28.54,-81.38" style="flex:1 1 auto; min-width: 210px;" />
+        <button id="go" class="smallbtn primary">Go</button>
+        <button id="home" class="smallbtn">Home</button>
+      </div>
+      <div class="tiny" id="searchMsg" style="opacity:.75; margin-top:6px;"></div>
+    </div>
+
+    <div class="box">
+      <div class="row" style="justify-content:space-between;">
+        <b>Overlays</b>
+        <button id="btnDebug" class="smallbtn">Debug</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button id="radarToggle" class="smallbtn">Radar OFF</button>
+        <button id="radarRefresh" class="smallbtn">Refresh</button>
+        <button id="radarSample" class="smallbtn">Sample Tile</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <span class="tiny">Frame</span>
+        <input id="radarSlider" type="range" min="0" max="0" value="0" style="flex:1 1 auto;" />
+        <button id="radarPlay" class="smallbtn primary">Play</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <span class="tiny">Trail</span>
+        <select id="trailMode">
+          <option value="off">Off</option>
+          <option value="last5">Last 5</option>
+          <option value="last10">Last 10</option>
+        </select>
+        <span class="tiny">Opacity</span>
+        <input id="radarOpacity" type="range" min="0" max="100" value="75" style="width:140px;">
+      </div>
+      <div class="tiny" id="radarStatus" style="opacity:.75; margin-top:8px;">Radar not loaded yet.</div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button id="quakesToggle" class="smallbtn">Quakes OFF</button>
+        <button id="quakesRefresh" class="smallbtn">Refresh</button>
+      </div>
+      <div class="tiny" id="quakesStatus" style="opacity:.75; margin-top:6px;">USGS feed: —</div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button id="firesToggle" class="smallbtn">Fires OFF</button>
+        <select id="firesSource">
+          <option value="modis">MODIS Terra Thermal</option>
+          <option value="viirs">VIIRS Thermal</option>
+        </select>
+      </div>
+      <div class="tiny" id="firesStatus" style="opacity:.75; margin-top:6px;">NASA GIBS tiles.</div>
+    </div>
+
+    <div id="debugWrap" class="box">
+      <div class="row" style="justify-content:space-between;">
+        <b>Debug Console</b>
+        <div class="row">
+          <button id="dbgCopy" class="smallbtn">Copy</button>
+          <button id="dbgClear" class="smallbtn warn">Clear</button>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="tiny mono" id="debugLog"></div>
+    </div>
+
+    <div class="box">
+      <b>3D Controls</b>
+      <div class="hr"></div>
+      <div class="row">
+        <button id="btnRecover3D" class="smallbtn">Recover 3D</button>
+        <button id="btnRebuild3D" class="smallbtn warn">Rebuild 3D</button>
+      </div>
+      <div class="tiny" style="opacity:.75; margin-top:6px;">
+        3D loads only when you click 3D/Astro (prevents whole-app black screens).
+      </div>
+    </div>
+  </div>
+
+  <div id="viewWrap">
+    <div id="map2d"></div>
+    <div id="globe3d"></div>
+    <div id="hud" class="mono"></div>
+  </div>
+</div>
+
+<button id="panelFab" aria-label="Open panel">≡ Panel</button>
+
+<script>
+(() => {
+  // -----------------------
+  // iOS viewport fix
+  // -----------------------
+  function setVhVar(){
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty("--vh", `${vh}px`);
+  }
+  setVhVar();
+  window.addEventListener("resize", setVhVar, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(setVhVar, 120), {passive:true});
+
+  const $ = (id) => document.getElementById(id);
+  const hud = $("hud");
+
+  // -----------------------
+  // Hard debug logger
+  // -----------------------
+  const DBG = {
+    on: false,
+    buf: [],
+    max: 900
+  };
+  function dbg(...args){
+    const s = args.map(a => {
+      try { return typeof a === "string" ? a : JSON.stringify(a); }
+      catch { return String(a); }
+    }).join(" ");
+    const line = `[${new Date().toLocaleTimeString()}] ${s}`;
+    DBG.buf.push(line);
+    if (DBG.buf.length > DBG.max) DBG.buf.shift();
+    if (DBG.on) $("debugLog").textContent = DBG.buf.join("\n");
+    console.log(line);
+  }
+  window.addEventListener("error", (e) => dbg("WINDOW ERROR:", e.message, "at", e.filename+":"+e.lineno+":"+e.colno));
+  window.addEventListener("unhandledrejection", (e) => dbg("PROMISE REJECTION:", (e.reason && e.reason.message) ? e.reason.message : String(e.reason)));
+
+  function setDebug(on){
+    DBG.on = !!on;
+    document.body.classList.toggle("debugOn", DBG.on);
+    $("btnDebug").classList.toggle("primary", DBG.on);
+    $("btnDebug").textContent = DBG.on ? "Debug ON" : "Debug";
+    if (DBG.on) $("debugLog").textContent = DBG.buf.join("\n");
+  }
+
+  $("btnDebug").onclick = () => setDebug(!DBG.on);
+  $("dbgClear").onclick = () => { DBG.buf = []; $("debugLog").textContent = ""; };
+  $("dbgCopy").onclick = async () => {
+    try{ await navigator.clipboard.writeText(DBG.buf.join("\n")); dbg("Copied debug log"); }
+    catch{ prompt("Copy debug log:", DBG.buf.join("\n")); }
+  };
+
+  // -----------------------
+  // Panel minimize
+  // -----------------------
+  function isMobile(){ return window.matchMedia("(max-width: 720px)").matches; }
+
+  function pokeSizes(){
+    try { map.invalidateSize(true); } catch {}
+    try { if (viewer) viewer.resize(); } catch {}
+  }
+
+  function setMinimized(on){
+    document.body.classList.toggle("minimized", !!on);
+    $("panelFab").classList.toggle("show", !!on);
+    $("minBtn").textContent = on ? "Show" : "Minimize";
+    pokeSizes(); setTimeout(pokeSizes, 80); setTimeout(pokeSizes, 260);
+  }
+  $("minBtn").onclick = () => setMinimized(!document.body.classList.contains("minimized"));
+  $("panelFab").onclick = () => setMinimized(false);
+  if (isMobile()) setMinimized(true);
+
+  // -----------------------
+  // State
+  // -----------------------
+  const HOME = { lat: 28.538336, lon: -81.379234, z: 6 };
+  const state = {
+    mode: "2d",
+    labels: true,
+    radarOn: false,
+    radarFrames: [],
+    radarIndex: 0,
+    radarTimer: null,
+    radarOpacity: 0.75,
+    trailMode: "off",
+    rainviewer: { host:"https://tilecache.rainviewer.com", path:"/v2/radar" },
+
+    quakesOn: false,
+    firesOn: false,
+    firesSource: "modis",
+    tileErrors2D: 0,
+    lastTileURL2D: "",
+    radarTileErrors: 0,
+    lastRadarTileURL: "",
+    lastRadarTs: null,
+
+    cesiumLoaded: false,
+    cesiumLoading: false,
+    cesiumInitCount: 0,
+    cesiumLastError: "",
+  };
+
+  function fmt(n, d=5){ return (typeof n==="number" && isFinite(n)) ? n.toFixed(d) : "—"; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  // -----------------------
+  // 2D Leaflet
+  // -----------------------
+  const map = L.map("map2d", { zoomControl:false, worldCopyJump:true, preferCanvas:true })
+    .setView([HOME.lat, HOME.lon], HOME.z);
+
+  L.control.zoom({ position:"bottomright" }).addTo(map);
+
+  map.createPane("basePane");   map.getPane("basePane").style.zIndex = 200;
+  map.createPane("radarPane");  map.getPane("radarPane").style.zIndex = 450;
+  map.createPane("firesPane");  map.getPane("firesPane").style.zIndex = 470;
+  map.createPane("quakesPane"); map.getPane("quakesPane").style.zIndex = 490;
+  map.createPane("labelsPane"); map.getPane("labelsPane").style.zIndex = 500;
+
+  const esri2D = L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { pane:"basePane", maxZoom:19, crossOrigin:true, attribution:"Esri World Imagery" }
+  ).addTo(map);
+
+  const labels2D = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    { pane:"labelsPane", subdomains:"abcd", maxZoom:20, crossOrigin:true, attribution:"CARTO/OSM" }
+  ).addTo(map);
+
+  let radar2D = L.tileLayer("", { pane:"radarPane", opacity: state.radarOpacity, crossOrigin:true, updateWhenIdle:false, keepBuffer:6 });
+  let radarTrailLayers = [];
+  let quakesLayer = null;
+  let firesLayer = null;
+
+  function hookTileEvents(layer){
+    layer.on("tileerror", (e)=>{
+      state.tileErrors2D++;
+      if (e && e.tile && e.tile.src) state.lastTileURL2D = e.tile.src;
+      dbg("2D tileerror:", state.lastTileURL2D);
+      updateHUD();
+    });
+    layer.on("tileload", (e)=>{
+      if (e && e.tile && e.tile.src) state.lastTileURL2D = e.tile.src;
+    });
+  }
+  hookTileEvents(esri2D); hookTileEvents(labels2D);
+
+  function hookRadarTileEvents(layer){
+    layer.off("tileerror"); layer.off("tileload");
+    layer.on("tileerror", (e)=>{
+      state.radarTileErrors++;
+      if (e && e.tile && e.tile.src) state.lastRadarTileURL = e.tile.src;
+      dbg("RADAR tileerror:", state.lastRadarTileURL);
+      updateHUD();
+    });
+    layer.on("tileload", (e)=>{
+      if (e && e.tile && e.tile.src) state.lastRadarTileURL = e.tile.src;
+    });
+  }
+  hookRadarTileEvents(radar2D);
+
+  function ensureOrdering2D(){
+    try{
+      if (state.radarOn && state.radarFrames.length){
+        if (!map.hasLayer(radar2D)) radar2D.addTo(map);
+        radar2D.bringToFront();
+        for (const l of radarTrailLayers) l.bringToFront();
+      }
+      if (state.firesOn && firesLayer){
+        if (!map.hasLayer(firesLayer)) firesLayer.addTo(map);
+        firesLayer.bringToFront();
+      }
+      if (state.quakesOn && quakesLayer){
+        if (!map.hasLayer(quakesLayer)) quakesLayer.addTo(map);
+        quakesLayer.bringToFront();
+      }
+      if (state.labels){
+        if (!map.hasLayer(labels2D)) labels2D.addTo(map);
+        labels2D.bringToFront();
+      }
+    }catch{}
+  }
+
+  function updateReadouts2D(){
+    const c = map.getCenter();
+    $("centerReadout").textContent = `${fmt(c.lat,5)}, ${fmt(c.lng,5)}`;
+    $("zoomReadout").textContent = String(map.getZoom());
+  }
+  map.on("moveend zoomend", ()=>{ if (state.mode==="2d") { updateReadouts2D(); updateHUD(); } });
+  updateReadouts2D();
+
+  // -----------------------
+  // Radar (RainViewer)
+  // -----------------------
+  async function fetchRainViewer(){
+    $("radarStatus").textContent = "Loading RainViewer timeline…";
+    dbg("Fetching RainViewer frames…");
+    try{
+      const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache:"no-store" });
+      const j = await r.json();
+
+      state.rainviewer.host = j.host || "https://tilecache.rainviewer.com";
+      state.rainviewer.path = (j.radar && j.radar.path) ? j.radar.path : "/v2/radar";
+
+      const past = (j.radar && j.radar.past) ? j.radar.past.map(x=>x.time) : [];
+      const now = (j.radar && j.radar.nowcast) ? j.radar.nowcast.map(x=>x.time) : [];
+      const times = [...past, ...now].filter(Boolean);
+
+      state.radarFrames = times;
+      state.radarIndex = times.length ? times.length - 1 : 0;
+      $("radarSlider").min = 0;
+      $("radarSlider").max = Math.max(0, times.length - 1);
+      $("radarSlider").value = String(state.radarIndex);
+
+      const msg = times.length
+        ? `Frames: ${times.length} • Latest: ${new Date(times[times.length-1]*1000).toUTCString()}`
+        : "No radar frames available right now.";
+      $("radarStatus").textContent = msg + " • Tiles can be transparent if no rain.";
+      dbg("RainViewer OK. frames=", times.length, "host=", state.rainviewer.host, "path=", state.rainviewer.path);
+
+      if (state.radarOn) updateRadarLayers(true);
+      updateHUD();
+    }catch(e){
+      $("radarStatus").textContent = "RainViewer fetch failed (network/CORS).";
+      dbg("RainViewer fetch FAILED:", e && e.message ? e.message : String(e));
+    }
+  }
+
+  function radarUrl(ts, bust){
+    const host = state.rainviewer.host || "https://tilecache.rainviewer.com";
+    const path = state.rainviewer.path || "/v2/radar";
+    const cb = bust ? `?cb=${Date.now()}` : "";
+    return `${host}${path}/${ts}/256/{z}/{x}/{y}/2/1_1.png${cb}`;
+  }
+
+  function clearRadarTrail(){
+    for (const l of radarTrailLayers){
+      try{ if (map.hasLayer(l)) map.removeLayer(l); }catch{}
+    }
+    radarTrailLayers = [];
+  }
+
+  function updateRadarButton(){
+    const b = $("radarToggle");
+    b.textContent = state.radarOn ? "Radar ON" : "Radar OFF";
+    b.classList.toggle("primary", state.radarOn);
+  }
+
+  function updateRadarLayers(forceBust=false){
+    if (!state.radarOn || !state.radarFrames.length){
+      try{ if (map.hasLayer(radar2D)) map.removeLayer(radar2D); }catch{}
+      clearRadarTrail();
+      ensureOrdering2D();
+      updateHUD();
+      return;
+    }
+
+    const idx = clamp(state.radarIndex, 0, state.radarFrames.length-1);
+    const ts = state.radarFrames[idx];
+    state.lastRadarTs = ts;
+
+    radar2D.setUrl(radarUrl(ts, forceBust));
+    radar2D.setOpacity(state.radarOpacity);
+    hookRadarTileEvents(radar2D);
+    if (!map.hasLayer(radar2D)) radar2D.addTo(map);
+
+    clearRadarTrail();
+    const trailCount = (state.trailMode==="last10") ? 10 : (state.trailMode==="last5") ? 5 : 0;
+    if (trailCount > 0){
+      for (let k=trailCount; k>=1; k--){
+        const tIdx = idx - k;
+        if (tIdx < 0) continue;
+        const tts = state.radarFrames[tIdx];
+        const op = state.radarOpacity * (0.35 * (1 - (k-1)/trailCount));
+        const tl = L.tileLayer(radarUrl(tts, forceBust), {
+          pane:"radarPane",
+          opacity: op,
+          crossOrigin:true,
+          updateWhenIdle:false,
+          keepBuffer:6
+        });
+        hookRadarTileEvents(tl);
+        tl.addTo(map);
+        radarTrailLayers.push(tl);
+      }
+    }
+
+    const dt = new Date(ts*1000).toUTCString();
+    $("radarStatus").textContent = `Radar ${idx+1}/${state.radarFrames.length} • ${dt} • Opacity ${Math.round(state.radarOpacity*100)}% • Trail ${state.trailMode}`;
+    ensureOrdering2D();
+    updateHUD();
+  }
+
+  function radarPlayStart(){
+    if (state.radarTimer) return;
+    state.radarTimer = setInterval(()=>{
+      if (!state.radarFrames.length) return;
+      state.radarIndex = (state.radarIndex + 1) % state.radarFrames.length;
+      $("radarSlider").value = String(state.radarIndex);
+      updateRadarLayers(false);
+    }, 700);
+    $("radarPlay").textContent = "Pause";
+  }
+  function radarPlayStop(){
+    if (!state.radarTimer) return;
+    clearInterval(state.radarTimer);
+    state.radarTimer = null;
+    $("radarPlay").textContent = "Play";
+  }
+
+  function openRadarSample(){
+    if (!state.radarFrames.length){
+      alert("No radar frames loaded yet. Click Refresh.");
+      return;
+    }
+    const ts = state.radarFrames[state.radarIndex];
+    const host = state.rainviewer.host || "https://tilecache.rainviewer.com";
+    const path = state.rainviewer.path || "/v2/radar";
+    const sample = `${host}${path}/${ts}/256/2/1/1/2/1_1.png`;
+    window.open(sample, "_blank", "noopener,noreferrer");
+  }
+
+  // -----------------------
+  // Earthquakes (USGS)
+  // -----------------------
+  async function loadQuakes(){
+    $("quakesStatus").textContent = "Loading USGS quakes…";
+    dbg("Fetching USGS quakes…");
+    try{
+      const url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
+      const gj = await fetch(url, { cache:"no-store" }).then(r=>r.json());
+      if (quakesLayer){
+        try{ if (map.hasLayer(quakesLayer)) map.removeLayer(quakesLayer); }catch{}
+      }
+      quakesLayer = L.geoJSON(gj, {
+        pane:"quakesPane",
+        pointToLayer:(f, latlng)=>{
+          const mag = (f && f.properties && f.properties.mag != null) ? f.properties.mag : 0;
+          const r = Math.max(3, Math.min(16, 3 + mag*2));
+          return L.circleMarker(latlng, { radius:r, weight:1, color:"#fff", fillColor:"#ff5b5b", fillOpacity:0.75 });
+        },
+        onEachFeature:(f, l)=>{
+          const p = f.properties || {};
+          const t = p.title || "Earthquake";
+          const when = p.time ? new Date(p.time).toLocaleString() : "";
+          const link = p.url ? `<a href="${p.url}" target="_blank" rel="noreferrer">USGS</a>` : "";
+          l.bindPopup(`<b>${t}</b><br>${when}<br>${link}`);
+        }
+      });
+      $("quakesStatus").textContent = `USGS: loaded ${gj && gj.features ? gj.features.length : 0} events`;
+      dbg("USGS quakes OK");
+      if (state.quakesOn && quakesLayer) quakesLayer.addTo(map);
+      ensureOrdering2D();
+      updateHUD();
+    }catch(e){
+      $("quakesStatus").textContent = "USGS fetch failed.";
+      dbg("USGS quakes FAILED:", e && e.message ? e.message : String(e));
+    }
+  }
+
+  function updateQuakesButton(){
+    const b = $("quakesToggle");
+    b.textContent = state.quakesOn ? "Quakes ON" : "Quakes OFF";
+    b.classList.toggle("primary", state.quakesOn);
+  }
+
+  // -----------------------
+  // Fires (NASA GIBS WMTS tiles)
+  // -----------------------
+  function utcDateISO(){
+    return new Date().toISOString().slice(0,10);
+  }
+  function firesLayerURL(source){
+    const date = utcDateISO();
+    const layerName = (source === "viirs")
+      ? "VIIRS_SNPP_Thermal_Anomalies_375m_All"
+      : "MODIS_Terra_Thermal_Anomalies_All";
+    // WMTS (WebMercator) google-compatible:
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerName}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+  }
+
+  function loadFiresTiles(){
+    const src = state.firesSource;
+    if (firesLayer){
+      try{ if (map.hasLayer(firesLayer)) map.removeLayer(firesLayer); }catch{}
+      firesLayer = null;
+    }
+    firesLayer = L.tileLayer(firesLayerURL(src), {
+      pane:"firesPane",
+      opacity: 0.78,
+      crossOrigin:true,
+      maxZoom: 9,
+      attribution: "NASA GIBS Fires"
+    });
+    hookTileEvents(firesLayer);
+    $("firesStatus").textContent = `NASA GIBS tiles: ${src.toUpperCase()} • date ${utcDateISO()} • max z=9`;
+    dbg("Fires tiles ready:", src);
+
+    if (state.firesOn) firesLayer.addTo(map);
+    ensureOrdering2D();
+    updateHUD();
+  }
+
+  function updateFiresButton(){
+    const b = $("firesToggle");
+    b.textContent = state.firesOn ? "Fires ON" : "Fires OFF";
+    b.classList.toggle("primary", state.firesOn);
+  }
+
+  // -----------------------
+  // Search / Go
+  // -----------------------
+  async function geocode(q){
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("q", q);
+    url.searchParams.set("format", "json");
+    url.searchParams.set("limit", "1");
+    const r = await fetch(url.toString(), { cache:"no-store" });
+    const j = await r.json();
+    return j && j[0] ? { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) } : null;
+  }
+
+  async function doGo(){
+    const text = ($("q").value||"").trim();
+    $("searchMsg").textContent = "";
+    if (!text) return;
+
+    const m = text.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    try{
+      let target = null;
+      if (m) target = { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
+      else {
+        $("searchMsg").textContent = "Searching…";
+        target = await geocode(text);
+      }
+      if (!target || !isFinite(target.lat) || !isFinite(target.lon)){
+        $("searchMsg").textContent = "Not found. Try city or lat,lon.";
+        return;
+      }
+
+      if (state.mode === "2d"){
+        map.setView([target.lat, target.lon], Math.max(map.getZoom(), 8), { animate:true });
+        ensureOrdering2D();
+        pokeSizes();
+      } else {
+        await ensureCesium();
+        if (viewer){
+          viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, 1.4e6), duration:1.0 });
+          viewer.scene.requestRender();
+        }
+      }
+      $("searchMsg").textContent = `Jumped to ${target.lat.toFixed(4)}, ${target.lon.toFixed(4)}.`;
+    }catch(e){
+      $("searchMsg").textContent = "Search failed (network/CORS).";
+      dbg("Search FAILED:", e && e.message ? e.message : String(e));
+    }
+  }
+
+  function goHome(){
+    if (state.mode === "2d"){
+      map.setView([HOME.lat, HOME.lon], HOME.z, { animate:true });
+      ensureOrdering2D(); pokeSizes();
+    } else {
+      ensureCesium().then(()=>{
+        if (viewer){
+          viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7), duration:0.8 });
+          viewer.scene.requestRender();
+        }
+      });
+    }
+  }
+
+  // -----------------------
+  // 3D Cesium: Load only on demand
+  // -----------------------
+  let viewer = null;
+  let Cesium = null;
+
+  // IMPORTANT: must be correct for on-demand script
+  window.CESIUM_BASE_URL = "https://unpkg.com/cesium@1.121.1/Build/Cesium/";
+
+  function loadScript(src){
+    return new Promise((resolve, reject)=>{
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Failed to load: " + src));
+      document.head.appendChild(s);
+    });
+  }
+  function loadCSS(href){
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = href;
+    document.head.appendChild(l);
+  }
+
+  async function ensureCesium(){
+    if (state.cesiumLoaded && viewer) return;
+    if (state.cesiumLoading) return;
+    state.cesiumLoading = true;
+    dbg("Loading Cesium… base:", window.CESIUM_BASE_URL);
+
+    try{
+      // Widgets CSS
+      loadCSS("https://unpkg.com/cesium@1.121.1/Build/Cesium/Widgets/widgets.css");
+      // Cesium JS (on demand)
+      await loadScript("https://unpkg.com/cesium@1.121.1/Build/Cesium/Cesium.js");
+      Cesium = window.Cesium;
+
+      // Hard sanity: if Cesium didn't attach, fail
+      if (!Cesium || !Cesium.Viewer) throw new Error("Cesium global not available after load.");
+
+      // Create viewer
+      viewer = new Cesium.Viewer("globe3d", {
+        animation:false,
+        timeline:false,
+        geocoder:false,
+        homeButton:false,
+        sceneModePicker:false,
+        baseLayerPicker:false,
+        navigationHelpButton:false,
+        infoBox:false,
+        selectionIndicator:false,
+        shouldAnimate:true,
+        requestRenderMode:true,
+        maximumRenderTimeChange: Infinity,
+        terrainProvider: new Cesium.EllipsoidTerrainProvider()
+      });
+
+      state.cesiumInitCount++;
+      state.cesiumLoaded = true;
+      state.cesiumLastError = "";
+      dbg("Cesium init OK. count=", state.cesiumInitCount);
+
+      // Base imagery
+      viewer.imageryLayers.removeAll(true);
+      viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+        url:"https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        maximumLevel: 19,
+        credit: "Esri"
+      }));
+
+      // Labels overlay
+      const labelsLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+        url:"https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+        subdomains:["a","b","c","d"],
+        maximumLevel: 20,
+        credit: "CARTO/OSM"
+      }));
+      labelsLayer.alpha = 1.0;
+
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7),
+        duration: 0.0
+      });
+
+      viewer.scene.globe.show = true;
+      viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.fog.enabled = true;
+
+      // context lost hooks
+      viewer.scene.canvas.addEventListener("webglcontextlost", ()=>dbg("Cesium WebGL context LOST"), false);
+      viewer.scene.canvas.addEventListener("webglcontextrestored", ()=>dbg("Cesium WebGL context RESTORED"), false);
+
+      // resize poke
+      setTimeout(()=>{ try{ viewer.resize(); viewer.scene.requestRender(); }catch{} }, 80);
+
+    }catch(e){
+      state.cesiumLastError = (e && e.message) ? e.message : String(e);
+      dbg("Cesium FAILED:", state.cesiumLastError);
+    } finally {
+      state.cesiumLoading = false;
+      updateHUD();
+    }
+  }
+
+  function setCesiumPreset(kind){
+    if (!viewer || !Cesium) return;
+    if (kind === "astro"){
+      viewer.scene.globe.show = false;
+      viewer.scene.skyBox.show = true;
+      viewer.scene.skyAtmosphere.show = false;
+      viewer.scene.fog.enabled = false;
+
+      const c = viewer.camera.positionCartographic;
+      const lat = Cesium.Math.toDegrees(c.latitude);
+      const lon = Cesium.Math.toDegrees(c.longitude);
+      viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 6.0e7), duration:0.6 });
+    } else {
+      viewer.scene.globe.show = true;
+      viewer.scene.skyBox.show = false;
+      viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.fog.enabled = true;
+    }
+    viewer.scene.requestRender();
+  }
+
+  function recover3D(){
+    try{
+      if (viewer){
+        viewer.resize();
+        viewer.scene.requestRender();
+        dbg("Recover 3D: resize+render ok");
+      } else dbg("Recover 3D: viewer not initialized");
+    }catch(e){
+      dbg("Recover 3D FAILED:", e && e.message ? e.message : String(e));
+    }
+  }
+
+  function rebuild3D(){
+    try{
+      if (viewer) viewer.destroy();
+    }catch{}
+    viewer = null;
+    state.cesiumLoaded = false;
+    state.cesiumLoading = false;
+    state.cesiumLastError = "";
+    dbg("Rebuild 3D requested.");
+    ensureCesium();
+  }
+
+  // -----------------------
+  // Mode switching
+  // -----------------------
+  function setMode(m){
+    state.mode = m;
+    $("modeLabel").textContent = (m==="2d") ? "2D" : (m==="3d") ? "3D" : "ASTRO";
+
+    $("btn2D").classList.toggle("primary", m==="2d");
+    $("btn3D").classList.toggle("primary", m==="3d");
+    $("btnASTRO").classList.toggle("primary", m==="astro");
+
+    $("map2d").style.display = (m==="2d") ? "block" : "none";
+    $("globe3d").style.display = (m==="2d") ? "none" : "block";
+
+    if (m==="2d"){
+      setTimeout(()=>{ map.invalidateSize(true); ensureOrdering2D(); }, 60);
+      updateReadouts2D();
+      updateHUD();
+      pokeSizes();
+      return;
+    }
+
+    // 3D / Astro on demand
+    ensureCesium().then(()=>{
+      setTimeout(()=>{
+        recover3D();
+        setCesiumPreset(m==="astro" ? "astro" : "3d");
+        updateHUD();
+        pokeSizes();
+      }, 90);
+    });
+  }
+
+  // -----------------------
+  // HUD
+  // -----------------------
+  function updateHUD(){
+    const c = map.getCenter();
+    const z = map.getZoom();
+    const radar = state.radarOn ? `ON ${state.radarFrames.length ? (state.radarIndex+1)+"/"+state.radarFrames.length : ""}` : "OFF";
+    const q = state.quakesOn ? "ON" : "OFF";
+    const f = state.firesOn ? `ON(${state.firesSource})` : "OFF";
+    const ces = state.cesiumLoaded ? `YES(${state.cesiumInitCount})` : (state.cesiumLoading ? "LOADING" : "NO");
+    const ce = state.cesiumLastError ? ` ERR:${state.cesiumLastError}` : "";
+    hud.textContent =
+`Mode: ${state.mode.toUpperCase()}
+2D: lat ${fmt(c.lat,5)} lon ${fmt(c.lng,5)} z ${z}
+Radar: ${radar}  (tileErr ${state.radarTileErrors})
+Quakes: ${q}  Fires: ${f}
+Cesium: ${ces}${ce}
+2D tileErr: ${state.tileErrors2D}`;
+  }
+
+  // -----------------------
+  // UI wiring
+  // -----------------------
+  $("btn2D").onclick = ()=>setMode("2d");
+  $("btn3D").onclick = ()=>setMode("3d");
+  $("btnASTRO").onclick = ()=>setMode("astro");
+
+  $("go").onclick = doGo;
+  $("q").addEventListener("keydown", (e)=>{ if (e.key==="Enter") doGo(); });
+  $("home").onclick = goHome;
+
+  // Radar UI
+  $("radarToggle").onclick = async ()=>{
+    state.radarOn = !state.radarOn;
+    updateRadarButton();
+    if (state.radarOn && !state.radarFrames.length) await fetchRainViewer();
+    updateRadarLayers(true);
+    ensureOrdering2D();
+  };
+  $("radarRefresh").onclick = async ()=>{
+    await fetchRainViewer();
+    if (state.radarOn) updateRadarLayers(true);
+  };
+  $("radarSample").onclick = openRadarSample;
+
+  $("radarSlider").oninput = ()=>{
+    state.radarIndex = parseInt($("radarSlider").value,10) || 0;
+    if (state.radarOn) updateRadarLayers(false);
+  };
+  $("radarOpacity").oninput = ()=>{
+    state.radarOpacity = (parseInt($("radarOpacity").value,10)||0)/100;
+    if (state.radarOn) updateRadarLayers(false);
+  };
+  $("trailMode").onchange = ()=>{
+    state.trailMode = $("trailMode").value;
+    if (state.radarOn) updateRadarLayers(true);
+  };
+  $("radarPlay").onclick = ()=>{
+    if (!state.radarOn) return;
+    if (state.radarTimer) radarPlayStop(); else radarPlayStart();
+  };
+
+  // Quakes UI
+  $("quakesToggle").onclick = async ()=>{
+    state.quakesOn = !state.quakesOn;
+    updateQuakesButton();
+    if (state.quakesOn && !quakesLayer) await loadQuakes();
+    if (quakesLayer){
+      if (state.quakesOn) quakesLayer.addTo(map);
+      else { try{ if (map.hasLayer(quakesLayer)) map.removeLayer(quakesLayer); }catch{} }
+    }
+    ensureOrdering2D();
+    updateHUD();
+  };
+  $("quakesRefresh").onclick = loadQuakes;
+
+  // Fires UI
+  $("firesToggle").onclick = ()=>{
+    state.firesOn = !state.firesOn;
+    updateFiresButton();
+    if (!firesLayer) loadFiresTiles();
+    if (firesLayer){
+      if (state.firesOn) firesLayer.addTo(map);
+      else { try{ if (map.hasLayer(firesLayer)) map.removeLayer(firesLayer); }catch{} }
+    }
+    ensureOrdering2D();
+    updateHUD();
+  };
+  $("firesSource").onchange = ()=>{
+    state.firesSource = $("firesSource").value;
+    loadFiresTiles();
+  };
+
+  // 3D buttons
+  $("btnRecover3D").onclick = ()=>recover3D();
+  $("btnRebuild3D").onclick = ()=>rebuild3D();
+
+  // -----------------------
+  // Init
+  // -----------------------
+  updateRadarButton();
+  updateQuakesButton();
+  updateFiresButton();
+  loadFiresTiles(); // prepare tiles; not shown until toggled
+  fetchRainViewer().catch(()=>{});
+  loadQuakes().catch(()=>{});
+  updateHUD();
+
+  // safety resize pokes
+  pokeSizes(); setTimeout(pokeSizes, 140); setTimeout(pokeSizes, 420);
+
+  // keep overlay ordering stable
+  map.on("layeradd", ensureOrdering2D);
+  map.on("zoomend moveend", ensureOrdering2D);
+
+  dbg("Earth Cockpit X1 boot OK");
+})();
+</script>
+</body>
+</html>

@@ -99,57 +99,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
       pointer-events:none;
       white-space: pre;
     }
-  
-
-  /* ===== Mobile Minimize Patch ===== */
-  :root{
-    --safeTop: env(safe-area-inset-top, 0px);
-    --safeBottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  #panel{
-    max-height: calc(100vh - 24px - var(--safeTop) - var(--safeBottom));
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  #panel.minimized{
-    height: auto !important;
-    max-height: none !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-  }
-  #panel.minimized .panel-body,
-  #panel.minimized .panel-sections,
-  #panel.minimized .panel-content,
-  #panel.minimized .inner{
-    display: none !important;
-  }
-
-  #panelFab{
-    position: fixed;
-    left: 12px;
-    bottom: calc(12px + var(--safeBottom));
-    z-index: 999999;
-    display: none;
-    border-radius: 999px;
-    padding: 12px 14px;
-    border: 1px solid rgba(255,255,255,.14);
-    background: rgba(15,18,24,.72);
-    backdrop-filter: blur(10px);
-    color: #e9eef5;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 18px 60px rgba(0,0,0,.55);
-    user-select: none;
-  }
-  #panelFab.show{
-    display: inline-flex;
-    align-items:center;
-    gap:10px;
-  }
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -1262,52 +1212,7 @@ Open: http://127.0.0.1:8080/world-imagery/earth-cockpit-v5_6_1.html
 
   // Prefetch radar timeline so it’s ready (does NOT turn it on)
   fetchRainViewerFrames().catch(()=>{});
-
-
-  // ===== Mobile Minimize Logic =====
-  (function(){
-    const panel = document.getElementById("panel");
-    const fab   = document.getElementById("panelFab");
-    const btnMin = document.getElementById("btnMin");
-
-    function setMinimized(on){
-      if(!panel) return;
-      panel.classList.toggle("minimized", !!on);
-      if(fab) fab.classList.toggle("show", !!on);
-      if(btnMin) btnMin.textContent = on ? "Open" : "Minimize";
-    }
-
-    if(btnMin){
-      btnMin.addEventListener("click", function(){
-        setMinimized(!panel.classList.contains("minimized"));
-      });
-    }
-
-    if(fab){
-      fab.addEventListener("click", function(){
-        setMinimized(false);
-      });
-    }
-
-    if(window.map && window.map.on){
-      window.map.on("movestart", function(){
-        if(window.matchMedia("(max-width: 720px)").matches){
-          setMinimized(true);
-        }
-      });
-    }
-
-    if(window.matchMedia("(max-width: 720px)").matches){
-      setMinimized(true);
-    }
-
-  })();
-
 })();
 </script>
-
-
-<button id="panelFab" aria-label="Open panel">☰ Panel</button>
-
 </body>
 </html>

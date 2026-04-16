@@ -343,55 +343,7 @@
       </div>
     </section>
 
-    
-<section class="section" id="how-it-works">
-  <h2>How it works</h2>
-  <div class="grid">
-    <div class="card span-4">
-      <strong>1. Signed transactions</strong>
-      <p class="muted">
-        Fortiq transactions are created and signed by a client, then submitted to a live AXIOM-powered node.
-        The node validates the transaction, checks nonce and balance rules, and places valid transactions into the mempool.
-      </p>
-    </div>
-    <div class="card span-4">
-      <strong>2. Propose, vote, commit</strong>
-      <p class="muted">
-        On the live devnet, validators connect as authenticated peers, propose blocks, exchange votes, and commit new blocks
-        when the required voting threshold is reached. That gives the network a shared canonical tip.
-      </p>
-    </div>
-    <div class="card span-4">
-      <strong>3. State and explorer updates</strong>
-      <p class="muted">
-        When a block commits, AXIOM applies deterministic state changes, updates balances and nonces, persists the result,
-        and exposes live network data through explorer-style endpoints for status, peers, blocks, and accounts.
-      </p>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="why-fortiq">
-  <h2>Why Fortiq</h2>
-  <div class="grid">
-    <div class="card span-6">
-      <strong>Clear public branding</strong>
-      <p class="muted">
-        Fortiq gives the network a strong public-facing identity while AXIOM remains the technical core. That separation helps
-        distinguish the market brand from the protocol implementation underneath it.
-      </p>
-    </div>
-    <div class="card span-6">
-      <strong>Fortress + intelligence</strong>
-      <p class="muted">
-        The Fortiq name is meant to communicate security, structure, and smart execution. It fits the project’s visual language
-        and makes the network easier to present, market, and remember than a purely technical protocol label alone.
-      </p>
-    </div>
-  </div>
-</section>
-
-<div class="footer">
+    <div class="footer">
       This page is for live demo and development workflow. The faucet helper should only be used on your local devnet or controlled test environment.
     </div>
   </div>

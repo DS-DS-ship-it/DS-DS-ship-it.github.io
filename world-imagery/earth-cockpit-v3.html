@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Earth Cockpit v3 — History + Weather</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --panelW: 380px;
+      --glass: rgba(15,18,24,.72);
+      --stroke: rgba(255,255,255,.12);
+      --txt: #e9eef5;
+    }
+    html,body{height:100%;margin:0;background:#0b0c10;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+    #map{height:100%;width:100%;}
+    .leaflet-container{background:#0b0c10;}
+    .leaflet-control-attribution{opacity:.85;}
+
+    .panel{
+      position:fixed;top:12px;left:12px;width:var(--panelW);
+      max-height:calc(100% - 24px);overflow:auto;z-index:9999;
+      border:1px solid var(--stroke);background:var(--glass);
+      backdrop-filter: blur(10px);
+      border-radius:14px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      color:var(--txt);
+    }
+    .hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.10);}
+    .title{font-weight:900;letter-spacing:.2px;}
+    .sub{opacity:.78;font-size:12px;margin-top:2px;}
+    .inner{padding:12px;}
+
+    .sec{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10);}
+    .label{font-size:12px;opacity:.82;margin:0 0 6px 0;}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .field{width:100%;display:flex;gap:8px;align-items:center;}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;}
+
+    input[type="text"], input[type="range"], select{
+      width:100%;padding:10px 12px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.25);color:var(--txt);outline:none;
+    }
+    select{padding:9px 10px;}
+    .btn{
+      appearance:none;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);color:var(--txt);
+      padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:800;
+    }
+    .btn.small{padding:6px 8px;font-size:12px;border-radius:9px;}
+    .btn:hover{filter:brightness(1.08);}
+    .btn:active{transform:translateY(1px);}
+
+    .pill{border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.22);
+      padding:8px 10px;border-radius:12px;}
+    .toggle{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;
+      border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.22);
+      padding:8px 10px;border-radius:12px;cursor:pointer;user-select:none;
+    }
+    .dot{width:10px;height:10px;border-radius:999px;background:#666;box-shadow:0 0 0 2px rgba(255,255,255,.10) inset;}
+    .dot.on{background:#39d98a;}
+
+    .warn{margin-top:8px;color:rgba(255,220,140,.95);display:none;}
+    .err{margin-top:8px;color:rgba(255,140,140,.95);display:none;}
+
+    .panel.min{width:auto;max-height:none;overflow:hidden;padding:0;background:transparent;border:none;box-shadow:none;backdrop-filter:none;}
+    .panel.min .hdr{display:none;}
+    .panel.min .inner{display:none;}
+    .fab{
+      position:fixed;left:12px;bottom:12px;z-index:9999;display:none;
+      border-radius:999px;padding:12px 14px;box-shadow:0 18px 60px rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(15,18,24,.70);backdrop-filter:blur(10px);
+      color:var(--txt);font-weight:900;cursor:pointer;
+    }
+    .fab.show{display:inline-flex;align-items:center;gap:10px;}
+
+    @media(max-width:720px){
+      :root{--panelW:min(94vw, 420px);}
+      .panel{top:10px;left:10px;}
+      .fab{left:10px;bottom:10px;}
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel" id="panel">
+    <div class="hdr">
+      <div>
+        <div class="title">Earth Cockpit v3</div>
+        <div class="sub">Satellite + Historical + Radar Timelapse + Diagnostics</div>
+      </div>
+      <button class="btn small" id="btnMin">Minimize</button>
+    </div>
+
+    <div class="inner">
+
+      <div class="sec" style="border-top:none;padding-top:0;margin-top:0;">
+        <div class="label">Search / Jump</div>
+        <div class="field">
+          <input id="q" type="text" placeholder="Search (e.g., Orlando, Tokyo, Eiffel Tower)"/>
+          <button class="btn" id="btnGo">Go</button>
+          <button class="btn" id="btnHome">Home</button>
+        </div>
+        <div class="sub" style="margin-top:6px;opacity:.75;">
+          Paste coordinates like <span class="mono">28.54,-81.38</span> (no personal address examples shown).
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Mode</div>
+        <select id="mode">
+          <option value="esri" selected>Satellite (Esri World Imagery)</option>
+          <option value="gibs_modis_tc">Historical (NASA GIBS MODIS True Color)</option>
+          <option value="gibs_viirs_tc">Historical (NASA GIBS VIIRS True Color)</option>
+        </select>
+
+        <div class="sec" style="padding-top:10px;">
+          <div class="label">Historical Date (UTC)</div>
+          <div class="row">
+            <input id="date" type="text" class="mono" style="flex:1;min-width:170px;" placeholder="YYYY-MM-DD"/>
+            <button class="btn" id="btnToday">Today</button>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" id="btnPrev">◀︎ Day</button>
+            <button class="btn" id="btnNext">Day ▶︎</button>
+          </div>
+          <div class="sub" style="margin-top:8px;opacity:.75;">
+            Historical layers are <b>lower native zoom</b>. This program auto-clamps to prevent black/garbled tiles.
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Labels (Town/City names)</div>
+        <div class="row">
+          <div class="toggle" id="togLabelsEsri" style="flex:1;">
+            <span>Esri Reference</span><div class="dot" id="dotLabelsEsri"></div>
+          </div>
+          <div class="toggle" id="togLabelsCarto" style="flex:1;">
+            <span>CARTO labels (fallback)</span><div class="dot" id="dotLabelsCarto"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Weather — Radar Timelapse (Storm tracking)</div>
+        <div class="toggle" id="togRadar">
+          <span>Radar Overlay (RainViewer)</span><div class="dot" id="dotRadar"></div>
+        </div>
+
+        <div class="row" style="margin-top:8px;">
+          <div class="toggle" id="togTrail" style="flex:1;">
+            <span>Trail mode (last frames)</span><div class="dot" id="dotTrail"></div>
+          </div>
+          <div class="pill mono" id="trailInfo" style="flex:1;">Trail: off</div>
+        </div>
+
+        <div class="sec" style="padding-top:10px;">
+          <div class="label">Radar Frame</div>
+          <input id="radarSlider" type="range" min="0" max="0" value="0"/>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" id="radarBack">◀︎ ~15m</button>
+            <button class="btn" id="radarPlay">Play</button>
+            <button class="btn" id="radarFwd">~15m ▶︎</button>
+            <button class="btn" id="radarRefresh">Refresh</button>
+          </div>
+          <div class="pill mono" id="radarInfo" style="margin-top:8px;">Radar frames: not loaded</div>
+          <div class="sub" style="margin-top:8px;opacity:.75;">
+            Public radar history is usually <b>hours</b> (not weeks). This program shows the full available range,
+            and steps playback in ~15-minute jumps.
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Other Data Layers</div>
+        <div class="toggle" id="togQuakes">
+          <span>Earthquakes (USGS past 24h)</span><div class="dot" id="dotQuakes"></div>
+        </div>
+        <div class="toggle" id="togFires" style="margin-top:8px;">
+          <span>Thermal / Fires (NASA GIBS VIIRS)</span><div class="dot" id="dotFires"></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Tools</div>
+        <div class="row">
+          <button class="btn" id="btnZp">Zoom +</button>
+          <button class="btn" id="btnZm">Zoom −</button>
+          <button class="btn" id="btnReset">Reset View</button>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button class="btn" id="btnCopy">Copy Link</button>
+          <button class="btn" id="btnStreet">Street (Mapillary)</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="label">Troubleshooting</div>
+        <div class="row">
+          <button class="btn" id="btnSelfTest">Self-Test (tile URL)</button>
+          <button class="btn" id="btnResetAll">Reset Everything</button>
+          <button class="btn" id="btnClearMsg">Clear Messages</button>
+        </div>
+        <div class="pill mono" id="status" style="margin-top:8px;">Loading…</div>
+        <div class="pill mono" id="diag" style="margin-top:8px;">tileerror: 0 | lastTest: none</div>
+        <div class="warn" id="warn"></div>
+        <div class="err" id="err"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <button class="fab" id="fab">☰ Panel</button>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const pad2 = (n) => String(n).padStart(2,"0");
+  const fmtDateUTC = (d) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`;
+  const parseDate = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s||"").trim());
+    if(!m) return null;
+    const y=+m[1], mo=+m[2]-1, da=+m[3];
+    const d = new Date(Date.UTC(y,mo,da));
+    if(d.getUTCFullYear()!==y || d.getUTCMonth()!==mo || d.getUTCDate()!==da) return null;
+    return d;
+  };
+  const toLL = (ll) => `${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}`;
+
+  function setDot(id,on){ $(id).classList.toggle("on", !!on); }
+  function setWarn(txt){ const w=$("warn"); w.style.display=txt?"block":"none"; w.textContent=txt||""; }
+  function setErr(txt){ const e=$("err"); e.style.display=txt?"block":"none"; e.textContent=txt||""; }
+
+  // ===== MAP =====
+  const home = { center:[20,0], zoom:2 };
+  const map = L.map("map", { worldCopyJump:true, zoomControl:true, preferCanvas:true })
+    .setView(home.center, home.zoom);
+
+  // ===== BASE LAYERS =====
+  const esriImagery = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom:19, maxNativeZoom:19, attribution:"Esri World Imagery" }
+  );
+
+  // ✅ Correct NASA GIBS WMTS REST (EPSG:3857)
+  const gibsBase = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
+  function gibsTileLayer(layerName, dateStr, ext, maxNativeZoom=9){
+    return L.tileLayer(
+      `${gibsBase}/${layerName}/default/${dateStr}/GoogleMapsCompatible/{z}/{y}/{x}.${ext}`,
+      { maxZoom:19, maxNativeZoom, tileSize:256, attribution:"NASA GIBS" }
+    );
+  }
+
+  // ===== LABEL OVERLAYS =====
+  const esriReference = L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom:19, maxNativeZoom:19, attribution:"Esri Reference" }
+  );
+  const cartoLabels = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    { subdomains:"abcd", maxZoom:20, maxNativeZoom:20, attribution:"CARTO" }
+  );
+
+  // ===== OTHER OVERLAYS =====
+  // Radar
+  let radarOn=false;
+  let radarLayer=null;         // current frame
+  let radarFrames=[];          // unix seconds
+  let radarIdx=0;
+  let radarTimer=null;
+
+  // Trail mode: show last N frames as faint layers to visualize motion direction
+  let trailOn=false;
+  let trailN=6;                // last frames count
+  let trailLayers=[];
+
+  // Quakes
+  let quakesOn=false;
+  const quakesLayer = L.layerGroup();
+
+  // Fires
+  let firesOn=false;
+  let firesLayer=null;
+
+  // Active base
+  let base=esriImagery;
+  let gibs=null;
+
+  // Diagnostics
+  let tileErrorCount=0;
+  let lastSelfTest="none";
+
+  function updateDiag(){
+    $("diag").textContent = `tileerror: ${tileErrorCount} | lastTest: ${lastSelfTest}`;
+  }
+  function attachTileErrorHandler(layer){
+    layer.off("tileerror");
+    layer.on("tileerror", () => {
+      tileErrorCount++;
+      updateDiag();
+      setWarn("Some tiles failed (missing date/area or provider issue). Run Self-Test to see exact URL/status.");
+    });
+  }
+
+  // add initial layers
+  base.addTo(map);
+  esriReference.addTo(map);
+  setDot("dotLabelsEsri", true);
+  setDot("dotLabelsCarto", false);
+
+  // ===== DATE =====
+  function todayUTC(){
+    const n = new Date();
+    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+  }
+  let currentDate = todayUTC();
+  $("date").value = fmtDateUTC(currentDate);
+
+  // ===== STATUS =====
+  function updateStatus(){
+    const c = map.getCenter();
+    $("status").textContent =
+      `Zoom: ${map.getZoom()} | Center: ${toLL(c)} | Mode: ${$("mode").value} | Date: ${$("date").value} | Radar: ${radarOn?"ON":"OFF"}`;
+  }
+
+  // ===== MODE SWITCH (Historical Fix) =====
+  function enforceHistoricalZoom(){
+    if(!gibs) return;
+    const nz = gibs.options.maxNativeZoom ?? 9;
+    // allow a small upscale buffer, but don't request higher tiles
+    if(map.getZoom() > nz + 2) map.setZoom(nz + 2);
+  }
+
+  function setBaseMode(mode){
+    setWarn(""); setErr("");
+
+    if(base) map.removeLayer(base);
+    if(gibs){ map.removeLayer(gibs); gibs=null; }
+
+    if(mode==="esri"){
+      base=esriImagery;
+      base.addTo(map);
+      updateStatus();
+      return;
+    }
+
+    const d = parseDate($("date").value.trim());
+    if(!d){
+      setErr("Invalid date. Use YYYY-MM-DD.");
+      $("mode").value="esri";
+      base=esriImagery; base.addTo(map);
+      updateStatus();
+      return;
+    }
+
+    const t = todayUTC();
+    if(d > t){
+      setErr("Future dates aren’t available. Using today.");
+      $("date").value = fmtDateUTC(t);
+    }
+    const dateStr = $("date").value.trim();
+
+    if(mode==="gibs_modis_tc"){
+      gibs = gibsTileLayer("MODIS_Terra_CorrectedReflectance_TrueColor", dateStr, "jpg", 9);
+    } else if(mode==="gibs_viirs_tc"){
+      gibs = gibsTileLayer("VIIRS_SNPP_CorrectedReflectance_TrueColor", dateStr, "jpg", 9);
+    }
+
+    base=gibs;
+    base.addTo(map);
+    attachTileErrorHandler(gibs);
+    enforceHistoricalZoom();
+    updateStatus();
+  }
+
+  // ===== SEARCH =====
+  async function goSearch(){
+    const raw = $("q").value.trim();
+    if(!raw) return;
+
+    // lat,lng direct
+    const m = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if(m){
+      const lat=parseFloat(m[1]), lng=parseFloat(m[2]);
+      if(isFinite(lat)&&isFinite(lng)){
+        map.setView([clamp(lat,-85,85), ((lng+540)%360)-180], Math.max(map.getZoom(), 13));
+        updateStatus();
+        return;
+      }
+    }
+
+    // Nominatim place lookup
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(raw)}&limit=1`;
+    try{
+      const r = await fetch(url, { headers:{ "Accept":"application/json" }});
+      const j = await r.json();
+      if(!j || !j.length){ setWarn("No results. Try a broader search."); return; }
+      map.setView([+j[0].lat, +j[0].lon], Math.max(map.getZoom(), 13));
+      updateStatus();
+    }catch{
+      setErr("Search failed (network/CORS).");
+    }
+  }
+
+  // ===== QUAKES =====
+  async function loadQuakes(){
+    quakesLayer.clearLayers();
+    const url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
+    const r = await fetch(url, { cache:"no-store" });
+    const j = await r.json();
+    (j.features||[]).forEach(f=>{
+      const p=f.properties||{};
+      const c=f.geometry && f.geometry.coordinates;
+      if(!c||c.length<2) return;
+      const lng=c[0], lat=c[1];
+      const mag=(p.mag==null)?0:p.mag;
+      const rad=clamp(3+mag*2.2,3,18);
+      L.circleMarker([lat,lng],{radius:rad,weight:1,opacity:0.9,fillOpacity:0.35})
+        .bindPopup(`<b>${p.title||"Earthquake"}</b><br><span class="mono">Mag ${mag}</span><br>${p.time?new Date(p.time).toUTCString():""}`)
+        .addTo(quakesLayer);
+    });
+  }
+
+  // ===== FIRES (GIBS overlay; date-dependent) =====
+  function ensureFiresLayer(){
+    if(firesLayer) return;
+    const d = parseDate($("date").value.trim()) || todayUTC();
+    const dateStr = fmtDateUTC(d);
+    firesLayer = L.tileLayer(
+      `${gibsBase}/VIIRS_SNPP_Thermal_Anomalies_375m/default/${dateStr}/GoogleMapsCompatible/{z}/{y}/{x}.png`,
+      { opacity:0.65, maxZoom:19, maxNativeZoom:9, tileSize:256, attribution:"NASA GIBS (VIIRS Thermal)" }
+    );
+    attachTileErrorHandler(firesLayer);
+  }
+
+  // ===== RADAR (RainViewer) =====
+  function radarTileUrlFor(timeSec){
+    return `https://tilecache.rainviewer.com/v2/radar/${timeSec}/256/{z}/{x}/{y}/2/1_1.png`;
+  }
+
+  async function fetchRadarFrames(){
+    $("radarInfo").textContent = "Radar frames: loading…";
+    setWarn(""); setErr("");
+
+    try{
+      const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache:"no-store" });
+      const j = await r.json();
+
+      const past = (j.radar && j.radar.past) ? j.radar.past.map(x=>x.time) : [];
+      const nowcast = (j.radar && j.radar.nowcast) ? j.radar.nowcast.map(x=>x.time) : [];
+      let frames = past.concat(nowcast).filter(x=>typeof x==="number").sort((a,b)=>a-b);
+
+      if(!frames.length){
+        radarFrames=[];
+        $("radarInfo").textContent="Radar frames: none available";
+        setWarn("RainViewer returned no frames. Try again later.");
+        return;
+      }
+
+      radarFrames = frames;
+      radarIdx = radarFrames.length - 1;
+
+      $("radarSlider").min="0";
+      $("radarSlider").max=String(radarFrames.length-1);
+      $("radarSlider").value=String(radarIdx);
+
+      updateRadarLayer();
+      updateRadarInfo();
+    }catch(e){
+      radarFrames=[];
+      $("radarInfo").textContent="Radar frames: failed";
+      setErr("Radar frames failed (network/CORS). Click Refresh or try another network.");
+    }
+  }
+
+  function updateRadarInfo(){
+    if(!radarFrames.length){
+      $("radarInfo").textContent="Radar frames: not loaded";
+      return;
+    }
+    const min=radarFrames[0], max=radarFrames[radarFrames.length-1];
+    const spanMin = Math.round((max-min)/60);
+    const t=radarFrames[radarIdx];
+    $("radarInfo").textContent =
+      `Frames: ${radarFrames.length} | Range: ~${spanMin} min | Frame: ${radarIdx+1}/${radarFrames.length} @ ${new Date(t*1000).toUTCString()}`;
+  }
+
+  function clearTrail(){
+    trailLayers.forEach(l => map.removeLayer(l));
+    trailLayers=[];
+    $("trailInfo").textContent = trailOn ? "Trail: waiting…" : "Trail: off";
+  }
+
+  function updateTrailLayers(){
+    clearTrail();
+    if(!trailOn || !radarOn || !radarFrames.length) return;
+
+    // add last N frames behind current as faint layers
+    const start = Math.max(0, radarIdx - trailN);
+    const end = radarIdx; // exclude current frame (which is radarLayer)
+    const count = end - start;
+
+    for(let i=start;i<end;i++){
+      const t = radarFrames[i];
+      const age = end - i; // older => higher age
+      const opacity = clamp(0.08 + (1 - (age/(trailN+1))) * 0.22, 0.06, 0.28);
+
+      const l = L.tileLayer(radarTileUrlFor(t), { opacity, maxZoom:19, maxNativeZoom:19, attribution:"RainViewer (trail)" });
+      attachTileErrorHandler(l);
+      l.addTo(map);
+      trailLayers.push(l);
+    }
+    $("trailInfo").textContent = `Trail: ${trailLayers.length} frames`;
+  }
+
+  function updateRadarLayer(){
+    if(!radarOn) return;
+    if(!radarFrames.length) return;
+
+    const t = radarFrames[radarIdx];
+    const url = radarTileUrlFor(t);
+
+    if(radarLayer){ map.removeLayer(radarLayer); radarLayer=null; }
+    radarLayer = L.tileLayer(url, { opacity:0.55, maxZoom:19, maxNativeZoom:19, attribution:"RainViewer" });
+    attachTileErrorHandler(radarLayer);
+    radarLayer.addTo(map);
+
+    updateTrailLayers();
+  }
+
+  function radarStep(direction){
+    if(!radarFrames.length) return;
+
+    // jump to closest frame ~15 minutes away
+    const curT = radarFrames[radarIdx];
+    const target = curT + direction * 15 * 60;
+    let bestI = radarIdx, bestD = Infinity;
+
+    for(let i=0;i<radarFrames.length;i++){
+      const d = Math.abs(radarFrames[i]-target);
+      if(d<bestD){ bestD=d; bestI=i; }
+    }
+
+    radarIdx = clamp(bestI, 0, radarFrames.length-1);
+    $("radarSlider").value = String(radarIdx);
+    updateRadarLayer();
+    updateRadarInfo();
+    updateStatus();
+  }
+
+  function radarPlayToggle(){
+    if(radarTimer){
+      clearInterval(radarTimer);
+      radarTimer=null;
+      $("radarPlay").textContent="Play";
+      return;
+    }
+    if(!radarFrames.length){
+      fetchRadarFrames().then(()=>radarPlayToggle());
+      return;
+    }
+    $("radarPlay").textContent="Pause";
+    radarTimer = setInterval(()=>{
+      const before = radarIdx;
+      radarStep(+1);
+      if(radarIdx===before){
+        clearInterval(radarTimer);
+        radarTimer=null;
+        $("radarPlay").textContent="Play";
+      }
+    }, 650);
+  }
+
+  // ===== SELF TEST (Tile URL) =====
+  function latLngToTileXY(lat,lng,z){
+    const n = Math.pow(2,z);
+    const x = Math.floor((lng+180)/360*n);
+    const latRad = lat*Math.PI/180;
+    const y = Math.floor((1 - Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n);
+    return { x: clamp(x,0,n-1), y: clamp(y,0,n-1) };
+  }
+
+  function sampleTileURL(){
+    const c = map.getCenter();
+    const z = map.getZoom();
+
+    if($("mode").value==="esri"){
+      const t = latLngToTileXY(c.lat, c.lng, clamp(z,0,19));
+      return {
+        url:`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${clamp(z,0,19)}/${t.y}/${t.x}`,
+        testZ: clamp(z,0,19)
+      };
+    }
+
+    const d = parseDate($("date").value.trim());
+    if(!d) return { url:"(invalid date)", testZ:z };
+
+    const dateStr = fmtDateUTC(d);
+    const layerName = $("mode").value==="gibs_modis_tc"
+      ? "MODIS_Terra_CorrectedReflectance_TrueColor"
+      : "VIIRS_SNPP_CorrectedReflectance_TrueColor";
+
+    const testZ = clamp(z,0,9);
+    const txy = latLngToTileXY(c.lat, c.lng, testZ);
+    return {
+      url:`${gibsBase}/${layerName}/default/${dateStr}/GoogleMapsCompatible/${testZ}/${txy.y}/${txy.x}.jpg`,
+      testZ
+    };
+  }
+
+  async function runSelfTest(){
+    setWarn(""); setErr("");
+    const { url, testZ } = sampleTileURL();
+    const t0 = performance.now();
+    try{
+      const r = await fetch(url, { cache:"no-store" });
+      const ms = Math.round(performance.now()-t0);
+      lastSelfTest = `${r.status} in ${ms}ms @z${testZ}`;
+      updateDiag();
+
+      if(!r.ok){
+        setErr(`Self-Test FAILED: HTTP ${r.status}. Tile URL returned error.`);
+        $("diag").textContent += `\nURL: ${url}`;
+        return;
+      }
+      setWarn(`Self-Test OK: HTTP ${r.status} (${ms}ms). If imagery still looks wrong, it’s likely zoom/date availability.`);
+      $("diag").textContent = `tileerror: ${tileErrorCount} | lastTest: ${lastSelfTest}\nURL: ${url}`;
+    }catch(e){
+      const ms = Math.round(performance.now()-t0);
+      lastSelfTest = `network error in ${ms}ms`;
+      updateDiag();
+      setErr("Self-Test FAILED: network/CORS blocked request. Try another network / disable extensions / refresh.");
+      $("diag").textContent = `tileerror: ${tileErrorCount} | lastTest: ${lastSelfTest}\nURL: ${url}`;
+    }
+  }
+
+  // ===== DEEP LINK SHARE =====
+  function buildShareURL(){
+    const c = map.getCenter();
+    const p = new URLSearchParams({
+      z:String(map.getZoom()),
+      lat:c.lat.toFixed(6),
+      lng:c.lng.toFixed(6),
+      mode:$("mode").value,
+      date:$("date").value.trim(),
+      radar: radarOn ? "1":"0",
+      trail: trailOn ? "1":"0",
+      quakes: quakesOn ? "1":"0",
+      fires: firesOn ? "1":"0",
+      esriLabels: map.hasLayer(esriReference) ? "1":"0",
+      cartoLabels: map.hasLayer(cartoLabels) ? "1":"0",
+    });
+    return `${location.origin}${location.pathname}?${p.toString()}`;
+  }
+
+  async function copyShareURL(){
+    const url = buildShareURL();
+    await navigator.clipboard.writeText(url);
+    setWarn("Share link copied.");
+    setTimeout(()=>setWarn(""), 1200);
+  }
+
+  function restoreFromURL(){
+    const p = new URLSearchParams(location.search);
+    if(!p.size) return;
+
+    const z = parseInt(p.get("z")||"",10);
+    const lat = parseFloat(p.get("lat")||"");
+    const lng = parseFloat(p.get("lng")||"");
+    if(isFinite(z)&&isFinite(lat)&&isFinite(lng)){
+      map.setView([lat,lng], clamp(z,1,19));
+    }
+
+    const date = p.get("date");
+    if(date) $("date").value = date;
+
+    const mode = p.get("mode");
+    if(mode) $("mode").value = mode;
+
+    // labels
+    const esriOn = (p.get("esriLabels")||"1")==="1";
+    const cartoOn = (p.get("cartoLabels")||"0")==="1";
+    if(esriOn && !map.hasLayer(esriReference)) esriReference.addTo(map);
+    if(!esriOn && map.hasLayer(esriReference)) map.removeLayer(esriReference);
+    if(cartoOn && !map.hasLayer(cartoLabels)) cartoLabels.addTo(map);
+    if(!cartoOn && map.hasLayer(cartoLabels)) map.removeLayer(cartoLabels);
+    setDot("dotLabelsEsri", map.hasLayer(esriReference));
+    setDot("dotLabelsCarto", map.hasLayer(cartoLabels));
+
+    // base mode
+    setBaseMode($("mode").value);
+
+    // overlays
+    const rOn = (p.get("radar")||"0")==="1";
+    const trOn = (p.get("trail")||"0")==="1";
+    const qOn = (p.get("quakes")||"0")==="1";
+    const fOn = (p.get("fires")||"0")==="1";
+
+    if(rOn) $("togRadar").click();
+    if(trOn) $("togTrail").click();
+    if(qOn) $("togQuakes").click();
+    if(fOn) $("togFires").click();
+  }
+
+  // ===== UI WIRING =====
+  $("mode").addEventListener("change", () => setBaseMode($("mode").value));
+
+  $("btnToday").addEventListener("click", () => {
+    currentDate = todayUTC();
+    $("date").value = fmtDateUTC(currentDate);
+    setBaseMode($("mode").value);
+    if(firesLayer){ map.removeLayer(firesLayer); firesLayer=null; if(firesOn){ ensureFiresLayer(); firesLayer.addTo(map); } }
+  });
+  $("btnPrev").addEventListener("click", () => {
+    const d = parseDate($("date").value) || todayUTC();
+    d.setUTCDate(d.getUTCDate()-1);
+    $("date").value = fmtDateUTC(d);
+    setBaseMode($("mode").value);
+    if(firesLayer){ map.removeLayer(firesLayer); firesLayer=null; if(firesOn){ ensureFiresLayer(); firesLayer.addTo(map); } }
+  });
+  $("btnNext").addEventListener("click", () => {
+    const d = parseDate($("date").value) || todayUTC();
+    d.setUTCDate(d.getUTCDate()+1);
+    if(d > todayUTC()){ setWarn("Future dates aren’t available."); return; }
+    $("date").value = fmtDateUTC(d);
+    setBaseMode($("mode").value);
+    if(firesLayer){ map.removeLayer(firesLayer); firesLayer=null; if(firesOn){ ensureFiresLayer(); firesLayer.addTo(map); } }
+  });
+
+  $("btnGo").addEventListener("click", goSearch);
+  $("q").addEventListener("keydown", (e)=>{ if(e.key==="Enter") goSearch(); });
+
+  $("btnHome").addEventListener("click", ()=>{ map.setView(home.center, home.zoom); updateStatus(); });
+  $("btnZp").addEventListener("click", ()=>map.zoomIn());
+  $("btnZm").addEventListener("click", ()=>map.zoomOut());
+  $("btnReset").addEventListener("click", ()=>{ map.setView(home.center, home.zoom); updateStatus(); });
+
+  $("togLabelsEsri").addEventListener("click", ()=>{
+    if(map.hasLayer(esriReference)) map.removeLayer(esriReference);
+    else esriReference.addTo(map);
+    setDot("dotLabelsEsri", map.hasLayer(esriReference));
+    updateStatus();
+  });
+  $("togLabelsCarto").addEventListener("click", ()=>{
+    if(map.hasLayer(cartoLabels)) map.removeLayer(cartoLabels);
+    else cartoLabels.addTo(map);
+    setDot("dotLabelsCarto", map.hasLayer(cartoLabels));
+    updateStatus();
+  });
+
+  $("togRadar").addEventListener("click", async ()=>{
+    radarOn = !radarOn;
+    setDot("dotRadar", radarOn);
+
+    if(!radarOn){
+      if(radarTimer){ clearInterval(radarTimer); radarTimer=null; $("radarPlay").textContent="Play"; }
+      if(radarLayer){ map.removeLayer(radarLayer); radarLayer=null; }
+      clearTrail();
+      updateStatus();
+      return;
+    }
+    if(!radarFrames.length) await fetchRadarFrames();
+    updateRadarLayer();
+    updateRadarInfo();
+    updateStatus();
+  });
+
+  $("togTrail").addEventListener("click", ()=>{
+    trailOn = !trailOn;
+    setDot("dotTrail", trailOn);
+    if(!trailOn) clearTrail();
+    else updateTrailLayers();
+    $("trailInfo").textContent = trailOn ? `Trail: ${trailLayers.length} frames` : "Trail: off";
+  });
+
+  $("radarSlider").addEventListener("input", ()=>{
+    if(!radarFrames.length) return;
+    radarIdx = parseInt($("radarSlider").value,10) || 0;
+    updateRadarLayer();
+    updateRadarInfo();
+    updateStatus();
+  });
+  $("radarBack").addEventListener("click", ()=>radarStep(-1));
+  $("radarFwd").addEventListener("click", ()=>radarStep(+1));
+  $("radarPlay").addEventListener("click", radarPlayToggle);
+  $("radarRefresh").addEventListener("click", fetchRadarFrames);
+
+  $("togQuakes").addEventListener("click", async ()=>{
+    quakesOn = !quakesOn;
+    setDot("dotQuakes", quakesOn);
+    if(!quakesOn){
+      if(map.hasLayer(quakesLayer)) map.removeLayer(quakesLayer);
+      updateStatus();
+      return;
+    }
+    try{
+      await loadQuakes();
+      quakesLayer.addTo(map);
+    }catch{
+      quakesOn=false; setDot("dotQuakes", false);
+      setErr("USGS quake feed failed to load.");
+    }
+    updateStatus();
+  });
+
+  $("togFires").addEventListener("click", ()=>{
+    firesOn = !firesOn;
+    setDot("dotFires", firesOn);
+    if(!firesOn){
+      if(firesLayer && map.hasLayer(firesLayer)) map.removeLayer(firesLayer);
+      updateStatus();
+      return;
+    }
+    ensureFiresLayer();
+    firesLayer.addTo(map);
+    updateStatus();
+  });
+
+  $("btnSelfTest").addEventListener("click", runSelfTest);
+
+  $("btnResetAll").addEventListener("click", ()=>{
+    setWarn(""); setErr("");
+    tileErrorCount=0; lastSelfTest="none"; updateDiag();
+
+    // stop radar
+    if(radarTimer){ clearInterval(radarTimer); radarTimer=null; $("radarPlay").textContent="Play"; }
+    radarOn=false; setDot("dotRadar", false);
+    if(radarLayer){ map.removeLayer(radarLayer); radarLayer=null; }
+    radarFrames=[]; radarIdx=0;
+    $("radarSlider").min="0"; $("radarSlider").max="0"; $("radarSlider").value="0";
+    $("radarInfo").textContent="Radar frames: not loaded";
+
+    // trail
+    trailOn=false; setDot("dotTrail", false);
+    clearTrail();
+    $("trailInfo").textContent="Trail: off";
+
+    // quakes
+    quakesOn=false; setDot("dotQuakes", false);
+    if(map.hasLayer(quakesLayer)) map.removeLayer(quakesLayer);
+
+    // fires
+    firesOn=false; setDot("dotFires", false);
+    if(firesLayer && map.hasLayer(firesLayer)) map.removeLayer(firesLayer);
+    firesLayer=null;
+
+    // base
+    $("mode").value="esri";
+    setBaseMode("esri");
+
+    // view
+    map.setView(home.center, home.zoom);
+
+    updateStatus();
+  });
+
+  $("btnClearMsg").addEventListener("click", ()=>{ setWarn(""); setErr(""); });
+
+  $("btnCopy").addEventListener("click", copyShareURL);
+
+  $("btnStreet").addEventListener("click", ()=>{
+    const c = map.getCenter();
+    window.open(`https://www.mapillary.com/app/?lat=${encodeURIComponent(c.lat)}&lng=${encodeURIComponent(c.lng)}&z=17`,
+      "_blank","noopener,noreferrer");
+  });
+
+  // ===== Panel minimize =====
+  const panel = $("panel");
+  const fab = $("fab");
+  function setMin(min){
+    panel.classList.toggle("min", !!min);
+    fab.classList.toggle("show", !!min);
+    $("btnMin").textContent = min ? "Open":"Minimize";
+  }
+  $("btnMin").addEventListener("click", ()=>setMin(!panel.classList.contains("min")));
+  fab.addEventListener("click", ()=>setMin(false));
+  map.on("movestart", ()=>{ if(window.matchMedia("(max-width: 720px)").matches) setMin(true); });
+
+  map.on("moveend", updateStatus);
+  map.on("zoomend", ()=>{ enforceHistoricalZoom(); updateStatus(); });
+
+  // ===== Restore deep link =====
+  restoreFromURL();
+
+  // ===== Register SW (shell only) =====
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./earth-cockpit-v3-sw.js",{scope:"./"});
+  }
+
+  updateDiag();
+  updateStatus();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Earth Cockpit Hybrid (2D + 3D)</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Cesium -->
+  <link href="https://unpkg.com/cesium@1.121/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  
+<script>
+window.CESIUM_BASE_URL = "https://unpkg.com/cesium.121/Build/Cesium/";
+</script>
+<script>
+</script>
+<script src="https://unpkg.com/cesium@1.121/Build/Cesium/Cesium.js"></script>
+
+
+  <style>
+    :root { color-scheme: dark; --panelW: 360px; --glass: rgba(15,18,24,.72); --stroke: rgba(255,255,255,.12); }
+    html, body { height:100%; margin:0; background:#0b0c10; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden; }
+
+    /* Two render targets */
+    #map2d, #globe3d { position:fixed; inset:0;  width:100%; height:100%; }
+    #globe3d { display:none; } /* start in 2D */
+    .hidden { display:none !important; }
+
+    /* Panel */
+    #panel{
+      position:fixed; top:12px; left:12px; width:var(--panelW);
+      max-height: calc(100% - 24px);
+      overflow:auto;
+      z-index: 99999;
+      border:1px solid var(--stroke);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y; /* allow panel scroll */
+    }
+    #panel.minimized{ width:auto; max-height:none; overflow:hidden; background:transparent; border:none; box-shadow:none; backdrop-filter:none; }
+    #panel.minimized .inner{ display:none; }
+
+    .hdr{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.10); }
+    .title{ font-weight:800; }
+    .sub{ opacity:.78; font-size:12px; margin-top:2px; }
+    .inner{ padding:12px; }
+
+    .btn{
+      appearance:none; border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06); color:#e9eef5;
+      padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:650;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.small{ padding:6px 8px; font-size:12px; border-radius:9px; }
+    .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .sec{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.10); }
+    .toggle{
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor:pointer;
+      user-select:none;
+      touch-action: manipulation; /* iOS: make taps reliable */
+    }
+    .dot{ width:10px; height:10px; border-radius:999px; background:#666; box-shadow:0 0 0 2px rgba(255,255,255,.10) inset; }
+    .dot.on{ background:#39d98a; }
+
+    .fab{
+      position: fixed; left:12px; bottom:12px;
+      z-index: 99999;
+      display:none;
+      border-radius:999px;
+      padding: 12px 14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      color:#e9eef5; font-weight:750;
+      cursor:pointer;
+    }
+    .fab.show{ display:inline-flex; gap:10px; align-items:center; }
+
+    @media (max-width: 720px){
+      :root{ --panelW: min(94vw, 420px); }
+      #panel{ top:10px; left:10px; }
+      .fab{ left:10px; bottom:10px; }
+    }
+
+    /* Make sure Cesium doesn't swallow UI taps */
+    #globe3d canvas { touch-action: none; } /* globe handles its own gestures */
+  </style>
+</head>
+
+<body>
+  <div id="map2d"></div>
+  <div id="globe3d"></div>
+
+  <div id="panel">
+    <div class="hdr">
+      <div>
+        <div class="title">Earth Cockpit Hybrid</div>
+        <div class="sub">2D Leaflet + 3D Cesium (real globe)</div>
+      </div>
+      <button class="btn small" id="btnMin">Minimize</button>
+    </div>
+
+    <div class="inner">
+      <div class="sec" style="border-top:none; padding-top:0; margin-top:0;">
+        <div class="row">
+          <button class="btn" id="btn2d">2D Map</button>
+          <button class="btn" id="btn3d">3D Globe</button>
+          <button class="btn" id="btnHome">Home</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="row">
+          <div class="toggle" id="togRadar" style="flex:1;">
+            <span>Weather Radar</span><div class="dot" id="dotRadar"></div>
+          </div>
+          <div class="toggle" id="togQuakes" style="flex:1;">
+            <span>Earthquakes (24h)</span><div class="dot" id="dotQuakes"></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <div class="toggle" id="togFires" style="flex:1;">
+            <span>Fires (GIBS)</span><div class="dot" id="dotFires"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="row">
+          <button class="btn" id="btnCopy">Copy Link</button>
+          <button class="btn" id="btnResetCam">Sync 2D ⇄ 3D</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="toggle" id="togDebug">
+          <span>Show debug</span><div class="dot" id="dotDebug"></div>
+        </div>
+        <pre id="debug" style="display:none; white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10);"></pre>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab" id="fab">☰ Panel</button>
+
+  <script type="module" src="./hybrid/app.js?v=574"></script>
+</body>
+</html>

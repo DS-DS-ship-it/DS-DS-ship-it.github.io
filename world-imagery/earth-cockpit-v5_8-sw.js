@@ -1,9 +1,12 @@
-/* earth-cockpit-v5-sw.js — minimal offline shell cache */
-const VERSION = "earth-cockpit-v5-7-2-b574";
+/* earth-cockpit-v5-sw.js
+   Minimal offline shell cache.
+   Save alongside the HTML as: earth-cockpit-v5-sw.js
+*/
+const VERSION = "earth-cockpit-v5_8-zoomhandlers1";
 const CACHE = `${VERSION}-shell`;
 
 const ASSETS = [
-  "./earth-cockpit-v5_7_0.html",
+  "./earth-cockpit-v5_6_1.html",
   "./earth-cockpit-v5-sw.js",
 ];
 
@@ -39,7 +42,7 @@ self.addEventListener("fetch", (event) => {
       return res;
     } catch (e) {
       if (event.request.mode === "navigate") {
-        const shell = await c.match("./earth-cockpit-v5_7_0.html");
+        const shell = await c.match("./earth-cockpit-v5_6_1.html");
         if (shell) return shell;
       }
       throw e;

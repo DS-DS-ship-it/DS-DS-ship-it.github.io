@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Earth Cockpit v32 Precision Navigation Debug</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+html,body{margin:0;height:100%;background:#050a12;color:#e6f0ff;font-family:system-ui}
+#panel{position:absolute;left:0;top:0;width:340px;height:100%;background:#0b1522;border-right:1px solid rgba(255,255,255,.1);padding:12px;overflow:auto}
+#space{position:absolute;left:340px;top:0;right:0;bottom:0;background:#000}
+canvas{width:100%;height:100%}
+button,input{width:100%;margin-top:6px;padding:8px;background:#0f2238;color:white;border:1px solid rgba(255,255,255,.15);border-radius:6px}
+.log{font-family:monospace;font-size:12px;margin-top:10px;white-space:pre-wrap}
+</style>
+</head>
+
+<body>
+
+<div id="panel">
+<h3>Space Navigation Debug</h3>
+
+<label>Start X</label>
+<input id="sx" type="number" value="0">
+
+<label>Start Y</label>
+<input id="sy" type="number" value="0">
+
+<label>Start Z</label>
+<input id="sz" type="number" value="0">
+
+<label>Target X</label>
+<input id="tx" type="number" value="2537000">
+
+<label>Target Y</label>
+<input id="ty" type="number" value="0">
+
+<label>Target Z</label>
+<input id="tz" type="number" value="0">
+
+<button onclick="buildRoute()">Build Route</button>
+<button onclick="zoomIn()">Zoom +</button>
+<button onclick="zoomOut()">Zoom â</button>
+<button onclick="fit()">Fit Route</button>
+
+<div id="log" class="log"></div>
+</div>
+
+<div id="space">
+<canvas id="c"></canvas>
+</div>
+
+<script>
+const canvas=document.getElementById("c")
+const ctx=canvas.getContext("2d")
+let zoom=1
+let offsetX=0
+let offsetY=0
+let route=null
+
+function resize(){
+canvas.width=canvas.clientWidth
+canvas.height=canvas.clientHeight
+draw()
+}
+window.addEventListener("resize",resize)
+resize()
+
+function log(t){
+document.getElementById("log").textContent+=t+"\n"
+}
+
+function buildRoute(){
+const sx=+sxEl.value
+const sy=+syEl.value
+const sz=+szEl.value
+const tx=+txEl.value
+const ty=+tyEl.value
+const tz=+tzEl.value
+
+route={sx,sy,sz,tx,ty,tz}
+
+const dx=tx-sx
+const dy=ty-sy
+const dz=tz-sz
+const dist=Math.sqrt(dx*dx+dy*dy+dz*dz)
+
+document.getElementById("log").textContent=""
+log("Start XYZ: "+sx+","+sy+","+sz)
+log("Target XYZ: "+tx+","+ty+","+tz)
+log("Delta XYZ: "+dx+","+dy+","+dz)
+log("Distance: "+dist.toFixed(2))
+
+draw()
+}
+
+const sxEl=document.getElementById("sx")
+const syEl=document.getElementById("sy")
+const szEl=document.getElementById("sz")
+const txEl=document.getElementById("tx")
+const tyEl=document.getElementById("ty")
+const tzEl=document.getElementById("tz")
+
+function zoomIn(){zoom*=1.5;draw()}
+function zoomOut(){zoom/=1.5;draw()}
+
+function fit(){
+zoom=1
+offsetX=0
+offsetY=0
+draw()
+}
+
+let dragging=false
+let lastX=0
+let lastY=0
+
+canvas.addEventListener("mousedown",e=>{
+dragging=true
+lastX=e.clientX
+lastY=e.clientY
+})
+
+window.addEventListener("mouseup",()=>dragging=false)
+
+window.addEventListener("mousemove",e=>{
+if(!dragging)return
+offsetX+=e.clientX-lastX
+offsetY+=e.clientY-lastY
+lastX=e.clientX
+lastY=e.clientY
+draw()
+})
+
+canvas.addEventListener("wheel",e=>{
+e.preventDefault()
+if(e.deltaY<0)zoom*=1.2
+else zoom/=1.2
+draw()
+})
+
+function project(x,y){
+return [
+canvas.width/2 + (x*zoom)+offsetX,
+canvas.height/2 + (y*zoom)+offsetY
+]
+}
+
+function draw(){
+ctx.fillStyle="#000"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+if(!route)return
+
+const s=project(route.sx,route.sy)
+const t=project(route.tx,route.ty)
+
+ctx.strokeStyle="#6cb8ff"
+ctx.lineWidth=2
+ctx.beginPath()
+ctx.moveTo(s[0],s[1])
+ctx.lineTo(t[0],t[1])
+ctx.stroke()
+
+ctx.fillStyle="#00ff9c"
+ctx.beginPath()
+ctx.arc(s[0],s[1],5,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="#ff5e5e"
+ctx.beginPath()
+ctx.arc(t[0],t[1],5,0,Math.PI*2)
+ctx.fill()
+}
+
+log("Boot: Precision Space Navigation Debug Ready")
+</script>
+
+</body>
+</html>
+

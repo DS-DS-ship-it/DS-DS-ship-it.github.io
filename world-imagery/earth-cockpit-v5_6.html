@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Earth Cockpit v5.6 — 2D + 3D Globe + Astronomy (FIX: hidden-init black screen)</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <!-- CesiumJS -->
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height:100%; margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    #app { height:100%; display:grid; grid-template-columns: 360px 1fr; }
+    #panel {
+      padding:12px;
+      border-right: 1px solid rgba(255,255,255,.08);
+      background: rgba(12,14,18,.95);
+      overflow:auto;
+    }
+    #viewWrap { position:relative; min-width:0; height:100%; }
+    #map, #cesiumContainer { position:absolute; inset:0; }
+    #map { display:block; }
+    #cesiumContainer { display:none; background:#000; }
+
+    h1 { font-size:14px; margin:0 0 8px; font-weight:700; letter-spacing:.2px; }
+    .sub { font-size:12px; opacity:.8; margin:0 0 10px; }
+    .box { border:1px solid rgba(255,255,255,.10); border-radius:12px; padding:10px; margin:10px 0; background: rgba(15,18,24,.65); }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .row > * { flex:0 0 auto; }
+    label { font-size:12px; opacity:.85; }
+    input, select, button, textarea {
+      background:#0f141c; color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+    }
+    input[type="text"], textarea, select { width:100%; }
+    button { cursor:pointer; }
+    button.primary { background:#1b2a46; border-color: rgba(120,170,255,.45); }
+    button.warn { background:#3a1f1f; border-color: rgba(255,120,120,.45); }
+    .tiny { font-size:12px; opacity:.85; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; }
+    .pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+    }
+    .toggle { display:flex; gap:8px; }
+    .toggle button { flex:1 1 auto; }
+    .hr { height:1px; background: rgba(255,255,255,.10); margin:10px 0; }
+    .stickyTop { position:sticky; top:0; z-index:5; padding-bottom:10px; background: rgba(12,14,18,.95); }
+    .kbd { font-family: ui-monospace, Menlo, monospace; border:1px solid rgba(255,255,255,.18); border-bottom-width:2px; border-radius:6px; padding:1px 6px; }
+    .list { margin:0; padding-left:16px; }
+    .list li { margin:4px 0; }
+
+    /* Tiny HUD */
+    #hud {
+      position:absolute; right:12px; top:12px; z-index:50;
+      background: rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      padding:8px 10px;
+      font-size:12px;
+      pointer-events:none;
+      max-width: 44vw;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div id="panel">
+    <div class="stickyTop">
+      <h1>Earth Cockpit v5.6</h1>
+      <div class="sub">Fix: Cesium no longer initializes while hidden (Safari black screen bug). Adds Astronomy + real zoom + HARD diagnostics.</div>
+
+      <div class="toggle">
+        <button id="btn2D" class="primary">2D Map</button>
+        <button id="btn3D">3D Globe</button>
+        <button id="btnAstro">Astronomy</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="row">
+        <span class="pill">Mode: <b id="modeLabel">2D</b></span>
+        <span class="pill">Center: <span class="mono" id="centerReadout">—</span></span>
+        <span class="pill">Zoom: <span class="mono" id="zoomReadout">—</span></span>
+      </div>
+
+      <div class="hr"></div>
+
+      <label>Search / Jump</label>
+      <div class="row">
+        <input id="q" type="text" placeholder="Try: Orlando, Tokyo, Yellowstone, 28.54,-81.38" />
+        <button id="go" class="primary">Go</button>
+        <button id="home">Home</button>
+      </div>
+      <div class="tiny" id="searchMsg" style="opacity:.75;"></div>
+    </div>
+
+    <div class="box">
+      <label>Base Imagery</label>
+      <select id="baseMode">
+        <option value="esri">Satellite (Esri World Imagery)</option>
+        <option value="gibs_modis">Historical (NASA GIBS — MODIS True Color)</option>
+        <option value="gibs_viirs">Historical (NASA GIBS — VIIRS True Color)</option>
+      </select>
+
+      <div class="hr"></div>
+
+      <label>Historical Date (UTC)</label>
+      <div class="row">
+        <button id="dayPrev">◀ Day</button>
+        <input id="histDate" type="date" />
+        <button id="dayNext">Day ▶</button>
+        <button id="today">Today</button>
+        <button id="fixHist">Fix Hist (Clamp)</button>
+      </div>
+
+      <div class="tiny" style="opacity:.7; margin-top:6px;">
+        GIBS max zoom is limited. This app auto-clamps to prevent black/garbled tiles.
+      </div>
+    </div>
+
+    <div class="box">
+      <label>Labels</label>
+      <div class="row">
+        <button id="labelsOn" class="primary">Labels ON</button>
+        <button id="labelsOff">Labels OFF</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <label>3D / Astronomy Controls</label>
+      <div class="row">
+        <button id="zoomIn">Zoom +</button>
+        <button id="zoomOut">Zoom –</button>
+        <button id="resetCam">Reset Camera</button>
+        <button id="rebuild3D" class="warn">Rebuild 3D Engine</button>
+      </div>
+      <div class="tiny" style="opacity:.75; margin-top:6px;">
+        Mouse wheel zoom works once the Cesium canvas is created while visible. Double-click zooms in.
+      </div>
+    </div>
+
+    <div class="box">
+      <label>HARD Diagnostics</label>
+      <div class="row">
+        <button id="diagRun">Run checks</button>
+        <button id="diagCopy">Copy diag</button>
+      </div>
+      <div class="tiny mono" id="diagOut" style="white-space:pre-wrap; margin-top:8px;"></div>
+    </div>
+
+    <div class="box tiny" style="opacity:.75;">
+      Tips:
+      <ul class="list">
+        <li>If 3D is black: hit <b>Rebuild 3D Engine</b>.</li>
+        <li>If it still fails: the diagnostics will tell us if <b>WebGL is blocked / context lost / canvas is 0×0</b>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="viewWrap">
+    <div id="map"></div>
+    <div id="cesiumContainer" tabindex="0"></div>
+    <div id="hud" class="mono"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d=5) => (typeof n === "number" ? n.toFixed(d) : "—");
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const hud = (t) => { $("hud").textContent = t || ""; };
+
+  // --- STATE ---
+  const state = {
+    mode: "2d",            // "2d" | "3d" | "astro"
+    labels: true,
+    base: "esri",
+    histDateISO: null,
+    tileErrors: 0,
+    lastTileURL: "",
+    cesium: {
+      viewer: null,
+      layers: null,
+      esriLayer: null,
+      labelsLayer: null,
+      gibsLayer: null,
+      resizeObs: null,
+      contextLost: false,
+      initCount: 0,
+      lastError: ""
+    }
+  };
+
+  // Default historical date = today UTC
+  const toISODateUTC = (d) => {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,"0");
+    const da = String(d.getUTCDate()).padStart(2,"0");
+    return `${y}-${m}-${da}`;
+  };
+  state.histDateISO = toISODateUTC(new Date());
+  $("histDate").value = state.histDateISO;
+
+  // --- 2D MAP ---
+  const HOME = { lat: 28.538336, lon: -81.379234, z: 6 };
+
+  const map = L.map("map", {
+    zoomControl: false,
+    worldCopyJump: true,
+    preferCanvas: true
+  }).setView([HOME.lat, HOME.lon], HOME.z);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+
+  const esri2D = L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, crossOrigin: true, attribution: "Esri" }
+  );
+
+  const labels2D = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    { subdomains:"abcd", maxZoom: 20, opacity: 1, crossOrigin: true, attribution: "CARTO/OSM" }
+  );
+
+  const GIBS = {
+    modis: "MODIS_Terra_CorrectedReflectance_TrueColor",
+    viirs: "VIIRS_SNPP_CorrectedReflectance_TrueColor"
+  };
+
+  const gibsLayerURL = (layer, dateISO) =>
+    `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${dateISO}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+
+  let gibs2D = null;
+
+  function hookTileEvents(layer) {
+    layer.on("tileerror", (e) => {
+      state.tileErrors++;
+      if (e?.tile?.src) state.lastTileURL = e.tile.src;
+      quickDiag();
+    });
+    layer.on("tileload", (e) => {
+      if (e?.tile?.src) state.lastTileURL = e.tile.src;
+    });
+  }
+  hookTileEvents(esri2D);
+  hookTileEvents(labels2D);
+
+  esri2D.addTo(map);
+  labels2D.addTo(map);
+
+  function updateReadouts() {
+    if (state.mode !== "2d") return;
+    const c = map.getCenter();
+    $("centerReadout").textContent = `${fmt(c.lat,5)}, ${fmt(c.lng,5)}`;
+    $("zoomReadout").textContent = String(map.getZoom());
+  }
+  map.on("moveend zoomend", updateReadouts);
+  updateReadouts();
+
+  // --- CESIUM (INIT ONLY WHEN VISIBLE) ---
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  function webglProbe() {
+    try {
+      const c = document.createElement("canvas");
+      const gl = c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl");
+      return !!gl;
+    } catch { return false; }
+  }
+
+  function mkCesiumXYZ(url, opts={}) {
+    return new Cesium.UrlTemplateImageryProvider(Object.assign({
+      url,
+      maximumLevel: opts.maximumLevel ?? 19,
+      credit: opts.credit || ""
+    }, opts));
+  }
+
+  function mkGibs3DProvider(layer, dateISO) {
+    return mkCesiumXYZ(
+      `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${dateISO}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+      { credit: "NASA GIBS", maximumLevel: 9 }
+    );
+  }
+
+  async function ensureCesiumReady() {
+    if (state.cesium.viewer) return;
+
+    const el = $("cesiumContainer");
+    // MUST be visible and sized BEFORE init
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 50 || rect.height < 50) {
+      // wait a frame (mode switch sets display:block)
+      await new Promise(requestAnimationFrame);
+    }
+
+    // probe WebGL
+    if (!webglProbe()) {
+      state.cesium.lastError = "WebGL not available (Safari setting or GPU blocked).";
+      hud("❌ WebGL not available.\nSafari → Settings → Advanced → WebGL");
+      quickDiag();
+      return;
+    }
+
+    state.cesium.initCount++;
+
+    try {
+      const viewer = new Cesium.Viewer("cesiumContainer", {
+        animation: false,
+        timeline: false,
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: false,
+        baseLayerPicker: false,
+        navigationHelpButton: false,
+        infoBox: false,
+        selectionIndicator: true,
+        shouldAnimate: true,
+        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+        requestRenderMode: false // continuous render to avoid "stuck black" on Safari
+      });
+
+      // stop Cesium from scrolling the page; keep Cesium zoom
+      el.addEventListener("wheel", (e) => e.preventDefault(), { passive:false });
+      el.addEventListener("pointerdown", () => el.focus());
+
+      // WebGL context loss detection
+      viewer.scene.canvas.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        state.cesium.contextLost = true;
+        state.cesium.lastError = "WebGL context lost.";
+        hud("❌ WebGL context lost.\nTry Rebuild 3D Engine.");
+        quickDiag();
+      }, false);
+
+      // enable controls aggressively
+      const ctrl = viewer.scene.screenSpaceCameraController;
+      ctrl.enableZoom = true;
+      ctrl.enableRotate = true;
+      ctrl.enableTilt = true;
+      ctrl.enableTranslate = true;
+      ctrl.minimumZoomDistance = 20.0;
+      ctrl.maximumZoomDistance = 8.0e7;
+
+      // Double-click zoom in
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      handler.setInputAction(() => {
+        try { viewer.camera.zoomIn(viewer.camera.positionCartographic.height * 0.20); } catch {}
+      }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+      // imagery layers
+      const layers = viewer.imageryLayers;
+      layers.removeAll(true);
+
+      const esriProvider = mkCesiumXYZ(
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { credit: "Esri", maximumLevel: 19 }
+      );
+
+      const labelsProvider = mkCesiumXYZ(
+        "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+        { credit: "CARTO/OSM", maximumLevel: 20, subdomains: ["a","b","c","d"] }
+      );
+
+      // HARD provider error logging
+      const hookProviderErrors = (prov, name) => {
+        prov.errorEvent.addEventListener((err) => {
+          const msg = (err && err.message) ? err.message : String(err);
+          state.cesium.lastError = `${name} imagery error: ${msg}`;
+          hud(`⚠️ ${name} imagery error:\n${msg}`);
+          quickDiag();
+        });
+      };
+      hookProviderErrors(esriProvider, "Esri");
+      hookProviderErrors(labelsProvider, "Labels");
+
+      const esriLayer = layers.addImageryProvider(esriProvider);
+      const labelsLayer = layers.addImageryProvider(labelsProvider);
+      labelsLayer.alpha = 1.0;
+
+      // loading progress HUD
+      viewer.scene.globe.tileLoadProgressEvent.addEventListener((n) => {
+        if (state.mode === "3d" || state.mode === "astro") {
+          hud(`${state.mode.toUpperCase()} • tiles loading: ${n}\n(init #${state.cesium.initCount})`);
+        }
+      });
+
+      // resize observer keeps Cesium valid on panel resizes
+      const ro = new ResizeObserver(() => {
+        try { viewer.resize(); } catch {}
+      });
+      ro.observe(el);
+
+      // store
+      state.cesium.viewer = viewer;
+      state.cesium.layers = layers;
+      state.cesium.esriLayer = esriLayer;
+      state.cesium.labelsLayer = labelsLayer;
+      state.cesium.resizeObs = ro;
+      state.cesium.contextLost = false;
+      state.cesium.lastError = "";
+
+      // initial camera
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7),
+        duration: 0.1
+      });
+
+      quickDiag();
+    } catch (e) {
+      state.cesium.lastError = `Cesium init failed: ${e?.message || e}`;
+      hud("❌ Cesium init failed.\nOpen Diagnostics.");
+      quickDiag();
+    }
+  }
+
+  function destroyCesium() {
+    try {
+      if (state.cesium.resizeObs) {
+        state.cesium.resizeObs.disconnect();
+        state.cesium.resizeObs = null;
+      }
+      if (state.cesium.viewer) {
+        state.cesium.viewer.destroy();
+      }
+    } catch {}
+    state.cesium.viewer = null;
+    state.cesium.layers = null;
+    state.cesium.esriLayer = null;
+    state.cesium.labelsLayer = null;
+    state.cesium.gibsLayer = null;
+    state.cesium.contextLost = false;
+  }
+
+  function set3DPreset(mode) {
+    const v = state.cesium.viewer;
+    if (!v) return;
+
+    if (mode === "3d") {
+      // Globe mode
+      v.scene.globe.show = true;
+      v.scene.skyAtmosphere.show = true;
+      v.scene.fog.enabled = true;
+      v.scene.globe.enableLighting = true;
+      if (v.scene.skyBox) v.scene.skyBox.show = false; // keep background simple to avoid black-screen chain
+      v.scene.backgroundColor = Cesium.Color.BLACK;
+    } else {
+      // Astronomy mode (space)
+      v.scene.globe.show = false;        // stars only
+      v.scene.skyAtmosphere.show = false;
+      v.scene.fog.enabled = false;
+      if (v.scene.skyBox) v.scene.skyBox.show = true; // Cesium default skybox if present
+      v.scene.backgroundColor = Cesium.Color.BLACK;
+    }
+
+    // labels toggle
+    if (state.cesium.labelsLayer) state.cesium.labelsLayer.alpha = state.labels ? 1.0 : 0.0;
+
+    // base mode
+    applyBaseMode();
+
+    // force resize + render
+    try { v.resize(); } catch {}
+  }
+
+  function applyBaseMode() {
+    const v = state.cesium.viewer;
+    if (!v) return;
+
+    // remove old gibs layer if present
+    if (state.cesium.gibsLayer) {
+      try { state.cesium.layers.remove(state.cesium.gibsLayer, true); } catch {}
+      state.cesium.gibsLayer = null;
+    }
+
+    // base always Esri (layer 0)
+    if (state.cesium.esriLayer) state.cesium.esriLayer.alpha = 1.0;
+
+    if (state.base.startsWith("gibs")) {
+      const layerName = (state.base === "gibs_modis") ? GIBS.modis : GIBS.viirs;
+      // add GIBS on top of Esri so you can compare
+      const gibsProv = mkGibs3DProvider(layerName, state.histDateISO);
+      gibsProv.errorEvent.addEventListener((err) => {
+        const msg = (err && err.message) ? err.message : String(err);
+        state.cesium.lastError = `GIBS imagery error: ${msg}`;
+        hud(`⚠️ GIBS imagery error:\n${msg}`);
+        quickDiag();
+      });
+      const gibsLayer = state.cesium.layers.addImageryProvider(gibsProv);
+      gibsLayer.alpha = 1.0;
+      state.cesium.gibsLayer = gibsLayer;
+    }
+
+    // keep labels on top
+    try { state.cesium.layers.raiseToTop(state.cesium.labelsLayer); } catch {}
+  }
+
+  // --- BASE MODE (2D + 3D) ---
+  function setBase(mode) {
+    state.base = mode;
+
+    // 2D: remove old bases
+    if (map.hasLayer(esri2D)) map.removeLayer(esri2D);
+    if (gibs2D && map.hasLayer(gibs2D)) map.removeLayer(gibs2D);
+
+    if (mode === "esri") {
+      esri2D.addTo(map);
+      map.setMaxZoom(19);
+    } else {
+      const layerName = (mode === "gibs_modis") ? GIBS.modis : GIBS.viirs;
+      gibs2D = L.tileLayer(gibsLayerURL(layerName, state.histDateISO), {
+        maxZoom: 9, minZoom: 0, crossOrigin: true, attribution: "NASA GIBS"
+      });
+      hookTileEvents(gibs2D);
+      gibs2D.addTo(map);
+      map.setMaxZoom(9);
+      if (map.getZoom() > 9) map.setZoom(9);
+    }
+
+    // 3D: apply if ready
+    if (state.cesium.viewer) applyBaseMode();
+
+    quickDiag();
+  }
+
+  function setLabels(on) {
+    state.labels = on;
+    $("labelsOn").classList.toggle("primary", on);
+    $("labelsOff").classList.toggle("primary", !on);
+
+    if (state.mode === "2d") {
+      if (on) { if (!map.hasLayer(labels2D)) labels2D.addTo(map); }
+      else { if (map.hasLayer(labels2D)) map.removeLayer(labels2D); }
+    } else if (state.cesium.labelsLayer) {
+      state.cesium.labelsLayer.alpha = on ? 1.0 : 0.0;
+    }
+
+    quickDiag();
+  }
+
+  function fixHistClamp() {
+    if (state.base.startsWith("gibs")) {
+      map.setMaxZoom(9);
+      if (map.getZoom() > 9) map.setZoom(9);
+    } else {
+      map.setMaxZoom(19);
+    }
+    quickDiag();
+  }
+
+  function setHistDate(dateISO) {
+    state.histDateISO = dateISO;
+    if (state.base.startsWith("gibs")) setBase(state.base);
+    if (state.cesium.viewer) applyBaseMode();
+    quickDiag();
+  }
+
+  // --- MODE SWITCHING ---
+  async function setMode(m) {
+    state.mode = m;
+    $("modeLabel").textContent = (m === "2d" ? "2D" : (m === "3d" ? "3D" : "ASTRO"));
+
+    $("btn2D").classList.toggle("primary", m === "2d");
+    $("btn3D").classList.toggle("primary", m === "3d");
+    $("btnAstro").classList.toggle("primary", m === "astro");
+
+    if (m === "2d") {
+      $("map").style.display = "block";
+      $("cesiumContainer").style.display = "none";
+      hud("");
+      setLabels(state.labels);
+      setTimeout(() => map.invalidateSize(true), 50);
+      updateReadouts();
+      quickDiag();
+      return;
+    }
+
+    // show 3D container first (VISIBLE), then init Cesium
+    $("map").style.display = "none";
+    $("cesiumContainer").style.display = "block";
+
+    await ensureCesiumReady();
+
+    if (!state.cesium.viewer) {
+      // WebGL/Cesium failed; diagnostics will explain.
+      quickDiag();
+      return;
+    }
+
+    // apply presets
+    set3DPreset(m === "3d" ? "3d" : "astro");
+
+    // update readouts from camera
+    try {
+      const c = state.cesium.viewer.camera.positionCartographic;
+      $("centerReadout").textContent = `${fmt(Cesium.Math.toDegrees(c.latitude),5)}, ${fmt(Cesium.Math.toDegrees(c.longitude),5)}`;
+      $("zoomReadout").textContent = "—";
+    } catch {}
+
+    // focus and force resize twice (Safari)
+    $("cesiumContainer").focus();
+    try { state.cesium.viewer.resize(); } catch {}
+    requestAnimationFrame(() => { try { state.cesium.viewer.resize(); } catch {} });
+
+    quickDiag();
+  }
+
+  // --- ZOOM / CAMERA ---
+  function zoomIn() {
+    const v = state.cesium.viewer; if (!v) return;
+    try { v.camera.zoomIn(v.camera.positionCartographic.height * 0.22); } catch {}
+  }
+  function zoomOut() {
+    const v = state.cesium.viewer; if (!v) return;
+    try { v.camera.zoomOut(v.camera.positionCartographic.height * 0.28); } catch {}
+  }
+  function resetCam() {
+    const v = state.cesium.viewer; if (!v) return;
+    v.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7),
+      duration: 0.6
+    });
+  }
+
+  // --- SEARCH ---
+  async function geocode(q) {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("q", q);
+    url.searchParams.set("format", "json");
+    url.searchParams.set("limit", "1");
+    const r = await fetch(url.toString(), { cache: "no-store" });
+    const j = await r.json();
+    return j && j[0] ? { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) } : null;
+  }
+
+  async function doGo() {
+    const text = ($("q").value || "").trim();
+    $("searchMsg").textContent = "";
+    if (!text) return;
+
+    const m = text.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    let target = null;
+
+    try {
+      if (m) target = { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
+      else {
+        $("searchMsg").textContent = "Searching…";
+        target = await geocode(text);
+      }
+
+      if (!target || !isFinite(target.lat) || !isFinite(target.lon)) {
+        $("searchMsg").textContent = "Not found. Try city/region or lat,lon.";
+        return;
+      }
+
+      if (state.mode === "2d") {
+        map.setView([target.lat, target.lon], Math.max(map.getZoom(), 8), { animate:true });
+        updateReadouts();
+      } else if (state.cesium.viewer) {
+        state.cesium.viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, 1.4e6),
+          duration: 1.0
+        });
+      }
+
+      $("searchMsg").textContent = `Jumped to ${target.lat.toFixed(4)}, ${target.lon.toFixed(4)}.`;
+      quickDiag();
+    } catch {
+      $("searchMsg").textContent = "Search failed (network/CORS).";
+      quickDiag();
+    }
+  }
+
+  function goHome() {
+    if (state.mode === "2d") {
+      map.setView([HOME.lat, HOME.lon], HOME.z, { animate:true });
+      updateReadouts();
+    } else if (state.cesium.viewer) {
+      resetCam();
+    }
+  }
+
+  // --- DIAGNOSTICS ---
+  function quickDiag() {
+    const lines = [];
+    const rect = $("cesiumContainer").getBoundingClientRect();
+    lines.push(`Mode: ${state.mode.toUpperCase()}`);
+    lines.push(`Base: ${state.base}`);
+    lines.push(`Hist date UTC: ${state.histDateISO}`);
+    lines.push(`Labels: ${state.labels ? "ON" : "OFF"}`);
+    lines.push(`2D tile errors: ${state.tileErrors}`);
+    lines.push(`Last 2D tile URL: ${state.lastTileURL || "—"}`);
+    lines.push("");
+    lines.push(`WebGL probe: ${webglProbe() ? "OK" : "FAIL"}`);
+    lines.push(`Cesium initialized: ${state.cesium.viewer ? "YES" : "NO"}`);
+    lines.push(`Cesium init count: ${state.cesium.initCount}`);
+    lines.push(`Cesium container size: ${Math.round(rect.width)}x${Math.round(rect.height)} (must be non-zero)`);
+    lines.push(`WebGL context lost: ${state.cesium.contextLost ? "YES" : "NO"}`);
+    lines.push(`Cesium last error: ${state.cesium.lastError || "—"}`);
+
+    // show camera if available
+    if (state.cesium.viewer) {
+      try {
+        const c = state.cesium.viewer.camera.positionCartographic;
+        lines.push(`Camera lat/lon: ${Cesium.Math.toDegrees(c.latitude).toFixed(5)}, ${Cesium.Math.toDegrees(c.longitude).toFixed(5)}`);
+        lines.push(`Camera height: ${c.height.toFixed(0)} m`);
+      } catch {}
+    }
+
+    $("diagOut").textContent = lines.join("\n");
+  }
+
+  async function runDiagnostics() {
+    quickDiag();
+    const tests = [
+      ["RainViewer API", "https://api.rainviewer.com/public/weather-maps.json"],
+      ["CARTO labels tile", "https://a.basemaps.cartocdn.com/light_only_labels/2/1/1.png"],
+      ["Esri tile", "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/1"],
+      ["NASA GIBS sample", `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS.modis}/default/${state.histDateISO}/GoogleMapsCompatible_Level9/2/1/1.jpg`]
+    ];
+
+    $("diagOut").textContent += "\n\nFetch checks:";
+    let ok = 0;
+    for (const [name, url] of tests) {
+      try {
+        const r = await fetch(url, { method:"GET", cache:"no-store" });
+        $("diagOut").textContent += `\n- ${name}: ${r.ok ? "OK" : "FAIL"} (${r.status})`;
+        if (r.ok) ok++;
+      } catch {
+        $("diagOut").textContent += `\n- ${name}: FAIL (network/CORS)`;
+      }
+    }
+    $("diagOut").textContent += `\nSummary: ${ok}/${tests.length} returned HTTP 200.`;
+  }
+
+  // --- UI WIRING ---
+  $("btn2D").onclick = () => setMode("2d");
+  $("btn3D").onclick = () => setMode("3d");
+  $("btnAstro").onclick = () => setMode("astro");
+
+  $("go").onclick = doGo;
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doGo(); });
+  $("home").onclick = goHome;
+
+  $("baseMode").onchange = () => setBase($("baseMode").value);
+
+  $("histDate").onchange = () => setHistDate($("histDate").value);
+
+  $("today").onclick = () => {
+    state.histDateISO = toISODateUTC(new Date());
+    $("histDate").value = state.histDateISO;
+    setHistDate(state.histDateISO);
+  };
+
+  $("dayPrev").onclick = () => {
+    const d = new Date(state.histDateISO + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 1);
+    state.histDateISO = toISODateUTC(d);
+    $("histDate").value = state.histDateISO;
+    setHistDate(state.histDateISO);
+  };
+
+  $("dayNext").onclick = () => {
+    const d = new Date(state.histDateISO + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + 1);
+    state.histDateISO = toISODateUTC(d);
+    $("histDate").value = state.histDateISO;
+    setHistDate(state.histDateISO);
+  };
+
+  $("fixHist").onclick = fixHistClamp;
+
+  $("labelsOn").onclick = () => setLabels(true);
+  $("labelsOff").onclick = () => setLabels(false);
+
+  $("zoomIn").onclick = () => { if (state.mode !== "2d") zoomIn(); };
+  $("zoomOut").onclick = () => { if (state.mode !== "2d") zoomOut(); };
+  $("resetCam").onclick = () => { if (state.mode !== "2d") resetCam(); };
+
+  $("rebuild3D").onclick = async () => {
+    hud("Rebuilding 3D engine…");
+    destroyCesium();
+    await setMode(state.mode === "2d" ? "3d" : state.mode);
+    hud("");
+    quickDiag();
+  };
+
+  $("diagRun").onclick = runDiagnostics;
+  $("diagCopy").onclick = async () => {
+    try { await navigator.clipboard.writeText($("diagOut").textContent || ""); } catch {}
+  };
+
+  // --- INIT ---
+  setLabels(true);
+  setBase("esri");
+  quickDiag();
+})();
+</script>
+</body>
+</html>

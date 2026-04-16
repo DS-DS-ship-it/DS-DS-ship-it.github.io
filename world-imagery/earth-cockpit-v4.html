@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Earth Cockpit v4 — History + Weather Timelapse + Diagnostics</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height:100%; margin:0; background:#0b0c10; }
+    #map { position:fixed; inset:0; }
+
+    .panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 330px;
+      max-height: calc(100vh - 20px);
+      overflow: auto;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(10,12,18,0.78);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.55);
+      font: 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color: #e9eef5;
+      z-index: 9999;
+    }
+    .panel h1 { font-size: 14px; margin: 0 0 6px 0; letter-spacing: .2px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin: 8px 0; }
+    .row > * { flex: 0 0 auto; }
+    .muted { color: rgba(233,238,245,.75); }
+    .tiny { font-size: 12px; }
+    input[type="text"], input[type="date"], select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #e9eef5;
+      outline: none;
+    }
+    button {
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: #e9eef5;
+      cursor: pointer;
+      user-select: none;
+    }
+    button:hover { background: rgba(255,255,255,0.12); }
+    button.primary { background: rgba(70,160,255,0.18); border-color: rgba(70,160,255,0.35); }
+    button.danger  { background: rgba(255,90,90,0.14); border-color: rgba(255,90,90,0.35); }
+
+    .chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      font-size: 12px;
+    }
+
+    .sep { height: 1px; background: rgba(255,255,255,0.10); margin: 10px 0; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.25);
+      color: #e9eef5;
+      font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      font-size: 11px;
+      line-height: 1.25;
+      white-space: pre;
+    }
+
+    /* mobile */
+    @media (max-width: 720px) {
+      .panel { width: calc(100vw - 20px); }
+    }
+
+    /* Map attribution legibility */
+    .leaflet-control-attribution { background: rgba(0,0,0,.35) !important; color: #e9eef5 !important; }
+    .leaflet-control-attribution a { color: #9fd0ff !important; }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <div class="panel" id="panel">
+    <div class="row" style="justify-content:space-between;">
+      <h1>Earth Cockpit v4</h1>
+      <button id="btnMin" class="tiny">Minimize</button>
+    </div>
+    <div class="muted tiny">Satellite + Historical (NASA GIBS) + Radar timelapse + 7-day weather stats + diagnostics</div>
+
+    <div class="sep"></div>
+
+    <div class="row">
+      <div style="flex:1;">
+        <div class="tiny muted">Search / Jump</div>
+        <input id="q" type="text" placeholder="Search e.g., Orlando, Tokyo, 28.54,-81.38 (no personal address examples)"/>
+      </div>
+      <button id="btnGo" class="primary">Go</button>
+      <button id="btnHome">Home</button>
+    </div>
+
+    <div class="row">
+      <span class="chip">Z: <span id="z">—</span></span>
+      <span class="chip">Center: <span id="ctr">—</span></span>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="tiny muted">Mode</div>
+    <select id="mode">
+      <option value="sat">Satellite (Esri World Imagery)</option>
+      <option value="gibs_modis">Historical (NASA GIBS — MODIS True Color)</option>
+      <option value="gibs_viirs">Historical (NASA GIBS — VIIRS True Color)</option>
+    </select>
+
+    <div class="row" style="margin-top:8px;">
+      <div style="flex:1;">
+        <div class="tiny muted">Historical Date (UTC)</div>
+        <input id="histDate" type="date"/>
+      </div>
+      <button id="btnToday">Today</button>
+    </div>
+
+    <div class="grid3" style="margin-top:8px;">
+      <button id="btnDayBack">◀ Day</button>
+      <button id="btnDayFwd">Day ▶</button>
+      <button id="btnHistFix" title="Clamp zoom + refresh historical tiles">Fix Hist</button>
+    </div>
+
+    <div class="tiny muted" id="histHint" style="margin-top:8px;">
+      Historical layers have lower native max zoom. This app clamps max zoom per-layer to prevent black/garbled tiles.
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="tiny muted">Labels (Town/City names)</div>
+    <div class="row">
+      <button id="lblOff">Labels Off</button>
+      <button id="lblCarto" class="primary">CARTO Labels</button>
+      <button id="lblEsriRef">Esri Reference</button>
+    </div>
+    <div class="tiny muted">Tip: labels are an overlay; if you don’t see names, enable one of the label layers above.</div>
+
+    <div class="sep"></div>
+
+    <div class="tiny muted">Weather — Radar Timelapse (Storm tracking)</div>
+    <div class="row">
+      <span class="chip">Provider: RainViewer</span>
+      <button id="btnRadarToggle" class="primary">Radar: OFF</button>
+    </div>
+
+    <div class="row">
+      <button id="btnRadarRefresh">Refresh frames</button>
+      <button id="btnRadarPlay">Play</button>
+      <button id="btnRadarStop">Stop</button>
+    </div>
+
+    <div class="row">
+      <button id="btnRadarBack">◀ −15m</button>
+      <button id="btnRadarFwd">+15m ▶</button>
+    </div>
+
+    <div class="row">
+      <span class="chip">Frames: <span id="radCount">0</span></span>
+      <span class="chip">Index: <span id="radIdx">—</span></span>
+    </div>
+
+    <div class="row">
+      <label class="chip" style="gap:10px;">
+        Trail
+        <select id="trail" style="width:auto; padding:4px 8px;">
+          <option value="0">off</option>
+          <option value="4">last 4</option>
+          <option value="8">last 8</option>
+          <option value="12">last 12</option>
+        </select>
+      </label>
+      <label class="chip" style="gap:10px;">
+        Opacity
+        <input id="radOpacity" type="range" min="0" max="1" step="0.05" value="0.6"/>
+      </label>
+    </div>
+
+    <div class="tiny muted" id="radHint">
+      Reality check: public radar tile history is usually hours, not days. For 7-day radar playback you’d need an archive-tile provider or your own backend.
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="tiny muted">7-Day Weather Stats (center point)</div>
+    <div class="row">
+      <button id="btnWxFetch" class="primary">Fetch 7-day stats</button>
+      <button id="btnWxCopy">Copy summary</button>
+    </div>
+    <textarea id="wxOut" spellcheck="false" placeholder="Weather stats will appear here…"></textarea>
+
+    <div class="sep"></div>
+
+    <div class="tiny muted">Troubleshooting / Diagnostics</div>
+    <div class="row">
+      <button id="btnDiagClear">Clear</button>
+      <button id="btnDiagCopy">Copy</button>
+      <button id="btnForceRedraw">Force redraw</button>
+    </div>
+    <textarea id="diag" spellcheck="false"></textarea>
+
+    <div class="sep"></div>
+
+    <div class="row">
+      <button id="btnCopyLink">Copy link</button>
+      <button id="btnStreet">Street (Mapillary)</button>
+      <button id="btnReset" class="danger">Reset view</button>
+    </div>
+
+    <div class="tiny muted">
+      Local test URL should be like: <code>http://localhost:8080/world-imagery/earth-cockpit-v4.html</code>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---------------------------
+  // Small utilities
+  // ---------------------------
+  const $ = (id) => document.getElementById(id);
+  const diag = (msg) => {
+    const t = new Date().toISOString().replace('T',' ').replace('Z','');
+    $('diag').value = `[${t}] ${msg}\n` + $('diag').value;
+  };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const fmt = (n, d=5) => (Math.round(n * 10**d) / 10**d).toFixed(d);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function copyText(text) {
+    navigator.clipboard?.writeText(text).then(() => diag('Copied to clipboard.')).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      diag('Copied (fallback).');
+    });
+  }
+
+  // ---------------------------
+  // Map setup
+  // ---------------------------
+  const HOME = { lat: 28.54, lng: -81.38, z: 6 }; // generic central FL-ish area (not an address)
+  const map = L.map('map', {
+    zoomControl: true,
+    worldCopyJump: true,
+    preferCanvas: true
+  }).setView([HOME.lat, HOME.lng], HOME.z);
+
+  // Keep UI chips updated
+  function updateHud() {
+    const c = map.getCenter();
+    $('z').textContent = map.getZoom();
+    $('ctr').textContent = `${fmt(c.lat, 5)}, ${fmt(c.lng, 5)}`;
+  }
+  map.on('move zoom', updateHud);
+  updateHud();
+
+  // ---------------------------
+  // Base layers
+  // ---------------------------
+  const esriSat = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Esri' }
+  );
+
+  // NASA GIBS (EPSG:3857) — IMPORTANT: correct WMTS -> GoogleMapsCompatible levels
+  // These layers have lower effective max zoom; clamp to avoid "black/garbled".
+  const GIBS = {
+    modis: { // Terra MODIS CorrectedReflectance_TrueColor
+      layer: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+      ext: 'jpg',
+      maxZoom: 9
+    },
+    viirs: { // VIIRS SNPP CorrectedReflectance_TrueColor
+      layer: 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
+      ext: 'jpg',
+      maxZoom: 8
+    }
+  };
+
+  function gibsUrl(layerName, timeYYYYMMDD, z) {
+    // Example:
+    // https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/<LAYER>/default/<DATE>/GoogleMapsCompatible_Level<Z>/{y}/{x}.jpg
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerName}/default/${timeYYYYMMDD}/GoogleMapsCompatible_Level${z}/{y}/{x}.jpg`;
+  }
+
+  function makeGibsTileLayer(whichKey, dateYYYYMMDD) {
+    const meta = GIBS[whichKey];
+    const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${meta.layer}/default/${dateYYYYMMDD}/GoogleMapsCompatible_Level{z}/{y}/{x}.${meta.ext}`;
+    const tl = L.tileLayer(url, {
+      maxZoom: meta.maxZoom,
+      minZoom: 1,
+      attribution: 'NASA GIBS',
+      updateWhenIdle: true,
+      keepBuffer: 2
+    });
+
+    tl.on('tileerror', (e) => {
+      // Leaflet doesn’t always expose full URL, so we log context.
+      diag(`GIBS tileerror @ z=${map.getZoom()} date=${dateYYYYMMDD} layer=${meta.layer} (likely missing tile / zoom too high)`);
+    });
+
+    return tl;
+  }
+
+  let activeBase = null;
+  let activeGibs = null;
+
+  function setBase(layer) {
+    if (activeBase) map.removeLayer(activeBase);
+    activeBase = layer;
+    activeBase.addTo(map);
+  }
+
+  // Start with satellite
+  setBase(esriSat);
+
+  // ---------------------------
+  // Labels layers
+  // ---------------------------
+  const cartoLabels = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
+    { subdomains: 'abcd', maxZoom: 20, attribution: 'CARTO / OSM', opacity: 0.95 }
+  );
+
+  // Esri reference labels (sometimes great; sometimes not everywhere)
+  const esriRef = L.tileLayer(
+    'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 20, attribution: 'Esri Reference', opacity: 0.95 }
+  );
+
+  let activeLabels = null;
+  function setLabels(layerOrNull) {
+    if (activeLabels) map.removeLayer(activeLabels);
+    activeLabels = layerOrNull;
+    if (activeLabels) activeLabels.addTo(map);
+    diag(`Labels: ${activeLabels ? (activeLabels === cartoLabels ? 'CARTO' : 'Esri Reference') : 'OFF'}`);
+  }
+
+  // Default: CARTO labels ON (so you actually see town/city names)
+  setLabels(cartoLabels);
+
+  // ---------------------------
+  // Historical date controls
+  // ---------------------------
+  function ymd(d) {
+    const yr = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth()+1).padStart(2,'0');
+    const da = String(d.getUTCDate()).padStart(2,'0');
+    return `${yr}-${mo}-${da}`;
+  }
+  function todayUTCDateStr() { return ymd(new Date()); }
+
+  $('histDate').value = todayUTCDateStr();
+
+  function clampZoomForMode(modeKey) {
+    const z = map.getZoom();
+    if (modeKey === 'gibs_modis') {
+      const mz = GIBS.modis.maxZoom;
+      if (z > mz) { map.setZoom(mz); diag(`Clamped zoom to ${mz} for MODIS historical.`); }
+    }
+    if (modeKey === 'gibs_viirs') {
+      const mz = GIBS.viirs.maxZoom;
+      if (z > mz) { map.setZoom(mz); diag(`Clamped zoom to ${mz} for VIIRS historical.`); }
+    }
+  }
+
+  async function switchMode(modeKey) {
+    diag(`Switch mode -> ${modeKey}`);
+
+    // Remove active GIBS layer if present
+    if (activeGibs) {
+      map.removeLayer(activeGibs);
+      activeGibs = null;
+    }
+
+    if (modeKey === 'sat') {
+      setBase(esriSat);
+      $('histHint').textContent = 'Satellite mode: full zoom range (up to ~19, depends on area).';
+      return;
+    }
+
+    // historical
+    const date = $('histDate').value || todayUTCDateStr();
+    clampZoomForMode(modeKey);
+
+    // Keep EsriSat as a "fallback underneath" so missing historical tiles don’t become blank.
+    // We do: sat base + gibs overlay as base-ish layer (opaque). This prevents full blackouts.
+    setBase(esriSat);
+
+    const whichKey = (modeKey === 'gibs_modis') ? 'modis' : 'viirs';
+    const meta = GIBS[whichKey];
+
+    activeGibs = makeGibsTileLayer(whichKey, date);
+    activeGibs.setOpacity(1.0);
+    activeGibs.addTo(map);
+
+    $('histHint').textContent = `Historical ${whichKey.toUpperCase()} using NASA GIBS. Max zoom ~${meta.maxZoom}. If you go higher, tiles may be missing. This app clamps zoom and logs tile errors in Diagnostics.`;
+
+    // Force redraw after a tiny delay (helps Safari sometimes)
+    await sleep(50);
+    activeGibs.redraw();
+  }
+
+  $('mode').addEventListener('change', () => switchMode($('mode').value));
+  $('btnToday').addEventListener('click', () => { $('histDate').value = todayUTCDateStr(); switchMode($('mode').value); });
+  $('btnDayBack').addEventListener('click', () => {
+    const d = new Date(($('histDate').value || todayUTCDateStr()) + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    $('histDate').value = ymd(d);
+    switchMode($('mode').value);
+  });
+  $('btnDayFwd').addEventListener('click', () => {
+    const d = new Date(($('histDate').value || todayUTCDateStr()) + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    $('histDate').value = ymd(d);
+    switchMode($('mode').value);
+  });
+  $('btnHistFix').addEventListener('click', () => {
+    clampZoomForMode($('mode').value);
+    if (activeGibs) activeGibs.redraw();
+    diag('Historical: clamp + redraw');
+  });
+
+  // ---------------------------
+  // Search / Jump (Nominatim)
+  // ---------------------------
+  async function geocode(q) {
+    // If user pasted lat,lng
+    const m = q.trim().match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[3]), display_name: 'Coordinates' };
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' }});
+    const j = await r.json();
+    return j?.[0] || null;
+  }
+
+  async function doGo() {
+    const q = $('q').value.trim();
+    if (!q) return;
+    diag(`Search: "${q}"`);
+    try {
+      const hit = await geocode(q);
+      if (!hit) { diag('No result.'); return; }
+      const lat = parseFloat(hit.lat), lon = parseFloat(hit.lon);
+      map.setView([lat, lon], Math.max(map.getZoom(), 10), { animate: true });
+      diag(`Found: ${hit.display_name || 'OK'} @ ${lat},${lon}`);
+    } catch (e) {
+      diag(`Search error: ${e?.message || e}`);
+    }
+  }
+
+  $('btnGo').addEventListener('click', doGo);
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') doGo(); });
+
+  $('btnHome').addEventListener('click', () => map.setView([HOME.lat, HOME.lng], HOME.z, { animate: true }));
+  $('btnReset').addEventListener('click', () => {
+    $('mode').value = 'sat';
+    $('histDate').value = todayUTCDateStr();
+    switchMode('sat');
+    setLabels(cartoLabels);
+    radarOff();
+    map.setView([HOME.lat, HOME.lng], HOME.z, { animate: true });
+    diag('Reset view/settings');
+  });
+
+  // ---------------------------
+  // Labels buttons
+  // ---------------------------
+  $('lblOff').addEventListener('click', () => setLabels(null));
+  $('lblCarto').addEventListener('click', () => setLabels(cartoLabels));
+  $('lblEsriRef').addEventListener('click', () => setLabels(esriRef));
+
+  // ---------------------------
+  // Radar (RainViewer) timelapse
+  // ---------------------------
+  // RainViewer frames endpoint:
+  // https://api.rainviewer.com/public/weather-maps.json
+  // Provides radar frames (past/future). Public availability varies; often hours.
+  let radarOn = false;
+  let radarFrames = []; // array of {time, path}
+  let radarIdx = -1;
+  let radarLayer = null;
+  let radarTrailLayers = [];
+  let radarTimer = null;
+
+  function setRadarButton() {
+    $('btnRadarToggle').textContent = radarOn ? 'Radar: ON' : 'Radar: OFF';
+    $('btnRadarToggle').classList.toggle('primary', !radarOn);
+  }
+
+  async function fetchRadarFrames() {
+    try {
+      diag('Radar: fetching frames…');
+      const r = await fetch('https://api.rainviewer.com/public/weather-maps.json', { cache: 'no-store' });
+      const j = await r.json();
+      const host = j.host;
+      const past = (j.radar && j.radar.past) ? j.radar.past : [];
+      const nowcast = (j.radar && j.radar.nowcast) ? j.radar.nowcast : [];
+
+      // Build full list (past then nowcast)
+      const list = [...past, ...nowcast].map(f => ({
+        time: f.time,
+        path: `${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png` // RainViewer tile template
+      }));
+
+      radarFrames = list;
+      $('radCount').textContent = String(radarFrames.length);
+      radarIdx = radarFrames.length ? radarFrames.length - 1 : -1;
+      $('radIdx').textContent = radarIdx >= 0 ? `${radarIdx+1}/${radarFrames.length}` : '—';
+
+      diag(`Radar: frames=${radarFrames.length} (note: public history is limited; not 7 days)`);
+      return true;
+    } catch (e) {
+      diag(`Radar fetch error: ${e?.message || e}`);
+      return false;
+    }
+  }
+
+  function clearRadarLayers() {
+    if (radarLayer) { map.removeLayer(radarLayer); radarLayer = null; }
+    radarTrailLayers.forEach(l => map.removeLayer(l));
+    radarTrailLayers = [];
+  }
+
+  function drawRadarFrame(i) {
+    if (!radarOn) return;
+    if (!radarFrames.length) return;
+    radarIdx = clamp(i, 0, radarFrames.length - 1);
+    $('radIdx').textContent = `${radarIdx+1}/${radarFrames.length}`;
+
+    const opacity = parseFloat($('radOpacity').value || '0.6');
+    const trailN = parseInt($('trail').value || '0', 10);
+
+    clearRadarLayers();
+
+    // Trail
+    if (trailN > 0) {
+      const start = clamp(radarIdx - trailN, 0, radarIdx);
+      for (let k = start; k < radarIdx; k++) {
+        const alpha = opacity * ((k - start + 1) / (radarIdx - start + 1)) * 0.65;
+        const tl = L.tileLayer(radarFrames[k].path, { opacity: alpha, zIndex: 450 });
+        tl.on('tileerror', () => diag(`Radar tileerror (trail frame idx=${k})`));
+        tl.addTo(map);
+        radarTrailLayers.push(tl);
+      }
+    }
+
+    // Main frame
+    radarLayer = L.tileLayer(radarFrames[radarIdx].path, { opacity, zIndex: 500 });
+    radarLayer.on('tileerror', () => diag(`Radar tileerror (frame idx=${radarIdx})`));
+    radarLayer.addTo(map);
+
+    const t = new Date(radarFrames[radarIdx].time * 1000);
+    diag(`Radar frame: ${t.toUTCString()}`);
+  }
+
+  async function radarOnFn() {
+    radarOn = true;
+    setRadarButton();
+    const ok = await fetchRadarFrames();
+    if (!ok || !radarFrames.length) {
+      diag('Radar: no frames available right now (provider limitation or network).');
+      return;
+    }
+    drawRadarFrame(radarIdx);
+  }
+
+  function radarOff() {
+    radarOn = false;
+    setRadarButton();
+    stopRadar();
+    clearRadarLayers();
+    diag('Radar: OFF');
+  }
+
+  function playRadar() {
+    if (!radarOn || radarIdx < 0) return;
+    stopRadar();
+    radarTimer = setInterval(() => {
+      if (!radarFrames.length) return;
+      let next = radarIdx + 1;
+      if (next >= radarFrames.length) next = clamp(radarFrames.length - 1, 0, radarFrames.length - 1);
+      drawRadarFrame(next);
+      if (next === radarFrames.length - 1) stopRadar();
+    }, 650);
+    diag('Radar: play');
+  }
+
+  function stopRadar() {
+    if (radarTimer) { clearInterval(radarTimer); radarTimer = null; }
+    diag('Radar: stop');
+  }
+
+  $('btnRadarToggle').addEventListener('click', async () => {
+    if (radarOn) radarOff();
+    else await radarOnFn();
+  });
+  $('btnRadarRefresh').addEventListener('click', async () => {
+    if (!radarOn) { diag('Radar is OFF. Toggle it ON first.'); return; }
+    const ok = await fetchRadarFrames();
+    if (ok && radarFrames.length) drawRadarFrame(radarFrames.length - 1);
+  });
+  $('btnRadarPlay').addEventListener('click', playRadar);
+  $('btnRadarStop').addEventListener('click', stopRadar);
+  $('btnRadarBack').addEventListener('click', () => drawRadarFrame(radarIdx - 1));
+  $('btnRadarFwd').addEventListener('click', () => drawRadarFrame(radarIdx + 1));
+  $('trail').addEventListener('change', () => drawRadarFrame(radarIdx));
+  $('radOpacity').addEventListener('input', () => drawRadarFrame(radarIdx));
+
+  // ---------------------------
+  // 7-day Weather Stats (Open-Meteo)
+  // ---------------------------
+  async function fetchWeatherStats() {
+    const c = map.getCenter();
+    const lat = c.lat, lon = c.lng;
+
+    // 7 day past + 7 day future-ish with hourly stats
+    // Open-Meteo supports past_days; no key required.
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}` +
+      `&hourly=temperature_2m,precipitation,cloud_cover,wind_speed_10m,wind_direction_10m` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max` +
+      `&past_days=7&forecast_days=2&timezone=UTC`;
+
+    $('wxOut').value = 'Fetching…';
+    diag(`Weather stats fetch: ${url}`);
+
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+
+      const lines = [];
+      lines.push(`Center: ${fmt(lat,5)}, ${fmt(lon,5)} (UTC)`);
+      lines.push('');
+      lines.push('Daily:');
+      if (j.daily && j.daily.time) {
+        for (let i = 0; i < j.daily.time.length; i++) {
+          const day = j.daily.time[i];
+          const tmax = j.daily.temperature_2m_max?.[i];
+          const tmin = j.daily.temperature_2m_min?.[i];
+          const psum = j.daily.precipitation_sum?.[i];
+          const wmax = j.daily.wind_speed_10m_max?.[i];
+          lines.push(`- ${day}: temp ${tmin}..${tmax}°C | precip ${psum} mm | wind max ${wmax} km/h`);
+        }
+      } else {
+        lines.push('- (no daily data)');
+      }
+
+      lines.push('');
+      lines.push('Recent hourly snapshot (last 24 hours, UTC):');
+      if (j.hourly && j.hourly.time) {
+        const n = j.hourly.time.length;
+        const start = Math.max(0, n - 24);
+        for (let i = start; i < n; i++) {
+          const t = j.hourly.time[i];
+          const temp = j.hourly.temperature_2m?.[i];
+          const pr = j.hourly.precipitation?.[i];
+          const cc = j.hourly.cloud_cover?.[i];
+          const ws = j.hourly.wind_speed_10m?.[i];
+          const wd = j.hourly.wind_direction_10m?.[i];
+          lines.push(`- ${t}: ${temp}°C | precip ${pr} mm | cloud ${cc}% | wind ${ws} km/h @ ${wd}°`);
+        }
+      } else {
+        lines.push('- (no hourly data)');
+      }
+
+      $('wxOut').value = lines.join('\n');
+      diag('Weather stats: OK');
+    } catch (e) {
+      $('wxOut').value = `Weather stats error: ${e?.message || e}\n\nTip: this is separate from radar tiles. Radar history is provider-limited; stats are usually available.`;
+      diag(`Weather stats error: ${e?.message || e}`);
+    }
+  }
+
+  $('btnWxFetch').addEventListener('click', fetchWeatherStats);
+  $('btnWxCopy').addEventListener('click', () => copyText($('wxOut').value || ''));
+
+  // ---------------------------
+  // Link + Street mode
+  // ---------------------------
+  function buildPermalink() {
+    const c = map.getCenter();
+    const z = map.getZoom();
+    const mode = $('mode').value;
+    const date = $('histDate').value || todayUTCDateStr();
+    const lbl = activeLabels === cartoLabels ? 'carto' : (activeLabels === esriRef ? 'esri' : 'off');
+    const radar = radarOn ? '1' : '0';
+    const trail = $('trail').value || '0';
+    const op = $('radOpacity').value || '0.6';
+    const params = new URLSearchParams({
+      z: String(z),
+      lat: String(c.lat),
+      lng: String(c.lng),
+      mode,
+      date,
+      lbl,
+      radar,
+      trail,
+      op
+    });
+    return `${location.origin}${location.pathname}?${params.toString()}`;
+  }
+
+  $('btnCopyLink').addEventListener('click', () => copyText(buildPermalink()));
+
+  $('btnStreet').addEventListener('click', () => {
+    const c = map.getCenter();
+    const url = `https://www.mapillary.com/app/?lat=${encodeURIComponent(c.lat)}&lng=${encodeURIComponent(c.lng)}&z=${encodeURIComponent(map.getZoom())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    diag('Opened Mapillary (street-level community imagery) in new tab.');
+  });
+
+  // ---------------------------
+  // Diagnostics controls
+  // ---------------------------
+  $('btnDiagClear').addEventListener('click', () => $('diag').value = '');
+  $('btnDiagCopy').addEventListener('click', () => copyText($('diag').value || ''));
+  $('btnForceRedraw').addEventListener('click', async () => {
+    diag('Force redraw: base + overlays');
+    if (activeBase && activeBase.redraw) activeBase.redraw();
+    if (activeGibs && activeGibs.redraw) activeGibs.redraw();
+    if (activeLabels && activeLabels.redraw) activeLabels.redraw();
+    if (radarLayer && radarLayer.redraw) radarLayer.redraw();
+    radarTrailLayers.forEach(l => l.redraw && l.redraw());
+    await sleep(50);
+  });
+
+  // Log generic tile errors for visibility
+  [esriSat, cartoLabels, esriRef].forEach(l => {
+    l.on('tileerror', () => diag('Tile error (non-historical). Possibly network or provider throttling.'));
+  });
+
+  // ---------------------------
+  // Minimize panel
+  // ---------------------------
+  let minimized = false;
+  $('btnMin').addEventListener('click', () => {
+    minimized = !minimized;
+    const panel = $('panel');
+    if (minimized) {
+      panel.style.width = '210px';
+      panel.style.maxHeight = '56px';
+      panel.style.overflow = 'hidden';
+      $('btnMin').textContent = 'Restore';
+    } else {
+      panel.style.width = '';
+      panel.style.maxHeight = '';
+      panel.style.overflow = '';
+      $('btnMin').textContent = 'Minimize';
+    }
+  });
+
+  // ---------------------------
+  // Restore state from URL params
+  // ---------------------------
+  function applyFromUrl() {
+    const p = new URLSearchParams(location.search);
+    const lat = parseFloat(p.get('lat'));
+    const lng = parseFloat(p.get('lng'));
+    const z = parseInt(p.get('z'), 10);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(z)) {
+      map.setView([lat, lng], z);
+    }
+
+    const mode = p.get('mode');
+    const date = p.get('date');
+    const lbl = p.get('lbl');
+    const radar = p.get('radar');
+    const trail = p.get('trail');
+    const op = p.get('op');
+
+    if (date) $('histDate').value = date;
+    if (trail) $('trail').value = trail;
+    if (op) $('radOpacity').value = op;
+
+    if (lbl === 'off') setLabels(null);
+    else if (lbl === 'esri') setLabels(esriRef);
+    else setLabels(cartoLabels);
+
+    if (mode) $('mode').value = mode;
+    switchMode($('mode').value);
+
+    if (radar === '1') {
+      radarOnFn();
+    }
+  }
+
+  applyFromUrl();
+
+  // ---------------------------
+  // Service Worker (offline shell)
+  // ---------------------------
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("./earth-cockpit-v4-sw.js",{scope:"./"})
+      .then(() => diag('ServiceWorker registered (offline shell).'))
+      .catch((e) => diag('ServiceWorker register failed: ' + (e?.message || e)));
+  } else {
+    diag('ServiceWorker not supported in this browser.');
+  }
+
+  // Initial mode hint
+  diag('Loaded Earth Cockpit v4.');
+  diag('If historical looks blank: zoom OUT (historical max zoom is lower) and check Diagnostics for tile errors.');
+})();
+</script>
+</body>
+</html>

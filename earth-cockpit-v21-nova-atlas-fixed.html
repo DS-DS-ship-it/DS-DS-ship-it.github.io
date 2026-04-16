@@ -1,0 +1,2790 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Earth Cockpit v26 HyperAtlas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+
+  <!-- Leaflet Heat -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Cesium -->
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <!-- Aladin Lite -->
+  <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.css" />
+  <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
+
+  <!-- OSM -> GeoJSON -->
+  <script src="https://cdn.jsdelivr.net/npm/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#07111a;
+      --panel:#0d1723;
+      --line:rgba(255,255,255,.10);
+      --line2:rgba(255,255,255,.16);
+      --text:#edf6ff;
+      --muted:#95b5d6;
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#f87171;
+      --accent:#6cb8ff;
+      --shadow:0 18px 48px rgba(0,0,0,.42);
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --panelW: 420px;
+      --radius: 14px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:var(--bg);
+      color:var(--text);
+      font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
+
+    #app{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-columns:var(--panelW) 1fr;
+      background:var(--bg);
+    }
+
+    #panel{
+      overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      background:linear-gradient(180deg, rgba(13,23,35,.985), rgba(7,13,20,.995));
+      border-right:1px solid var(--line);
+      padding:10px;
+      z-index:9000;
+      transition:transform .24s ease, opacity .24s ease;
+    }
+
+    #stage{
+      position:relative;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#000;
+    }
+
+    #map2d,#map3d,#astroWrap{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      background:#000;
+    }
+
+    #map3d,#astroWrap{ display:none; }
+
+    .box{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:10px;
+      margin-bottom:10px;
+      box-shadow:var(--shadow);
+    }
+
+    .title{
+      margin:0 0 6px;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+
+    .sub{
+      margin:0 0 8px;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .tiny{ color:var(--muted); font-size:12px; }
+    .mono{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .row{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:6px;
+    }
+    .row:last-child{ margin-bottom:0; }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+
+    button,select,input[type="text"],input[type="date"],input[type="range"]{
+      width:100%;
+      background:#0c1622;
+      color:var(--text);
+      border:1px solid var(--line2);
+      border-radius:10px;
+      padding:8px 9px;
+      font:inherit;
+      outline:none;
+    }
+
+    button{ cursor:pointer; }
+    button.primary{
+      background:#173a5d;
+      border-color:#78b9ff;
+    }
+    button.active{
+      background:#173a5d;
+      border-color:#78b9ff;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+
+    label.check{
+      display:flex;
+      gap:7px;
+      align-items:center;
+      margin-bottom:6px;
+      user-select:none;
+    }
+    label.check input{
+      width:auto;
+      margin:0;
+    }
+
+    .badge{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .badge.ok{
+      color:#dfffea;
+      border-color:rgba(74,222,128,.45);
+      background:rgba(74,222,128,.12);
+    }
+    .badge.warn{
+      color:#fff4d4;
+      border-color:rgba(251,191,36,.45);
+      background:rgba(251,191,36,.12);
+    }
+    .badge.bad{
+      color:#ffe1e1;
+      border-color:rgba(248,113,113,.45);
+      background:rgba(248,113,113,.12);
+    }
+
+    .sep{
+      height:1px;
+      background:rgba(255,255,255,.09);
+      margin:8px 0;
+    }
+
+    #hud,#perf,#timeHUD{
+      position:absolute;
+      z-index:9999;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line2);
+      background:rgba(8,14,22,.78);
+      backdrop-filter:blur(10px);
+      pointer-events:none;
+      box-shadow:var(--shadow);
+    }
+
+    #hud{
+      top:10px;
+      right:10px;
+      max-width:420px;
+    }
+
+    #timeHUD{
+      left:10px;
+      top:10px;
+      max-width:420px;
+    }
+
+    #perf{
+      left:10px;
+      bottom:10px;
+      min-width:280px;
+    }
+
+    #busy{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      z-index:99999;
+      display:none;
+      padding:12px 16px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:rgba(8,14,22,.95);
+      box-shadow:var(--shadow);
+      font-weight:900;
+      pointer-events:none;
+    }
+
+    .menu-toggle{
+      position:fixed;
+      top:calc(12px + var(--safeTop));
+      left:12px;
+      z-index:12000;
+      font-size:20px;
+      background:rgba(10,12,18,.92);
+      border:1px solid rgba(255,255,255,.16);
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      display:none;
+    }
+
+    #panelBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.42);
+      z-index:11000;
+      display:none;
+    }
+
+    #astroCanvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      background:#000;
+    }
+
+    #astroMiniHud{
+      position:absolute;
+      right:10px;
+      bottom:10px;
+      z-index:10001;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+
+    #astroMiniHud button{
+      width:auto;
+      min-width:64px;
+      padding:9px 10px;
+      background:rgba(10,14,22,.84);
+      backdrop-filter:blur(8px);
+    }
+
+    .leaflet-container{ background:#070b10; }
+    .leaflet-control-attribution{
+      background:rgba(8,14,22,.72)!important;
+      color:#dce8f7!important;
+    }
+    .leaflet-control-zoom a{
+      background:#111a24!important;
+      color:#fff!important;
+      border-color:rgba(255,255,255,.14)!important;
+    }
+
+    @media (max-width:980px){
+      #app{ display:block; }
+
+      #panel{
+        position:fixed;
+        left:10px;
+        top:calc(10px + var(--safeTop));
+        bottom:calc(10px + var(--safeBottom));
+        width:min(395px, calc(100vw - 20px));
+        max-width:calc(100vw - 20px);
+        border:1px solid var(--line);
+        border-radius:16px;
+        box-shadow:var(--shadow);
+      }
+
+      #panel.panel-hidden{
+        transform:translateX(calc(-100% - 16px));
+        opacity:0;
+        pointer-events:none;
+      }
+
+      .menu-toggle{ display:block; }
+      #panelBackdrop.show{ display:block; }
+
+      #hud{
+        max-width:min(80vw, 360px);
+        top:calc(10px + var(--safeTop));
+      }
+
+      #timeHUD{
+        top:auto;
+        bottom:calc(86px + var(--safeBottom));
+        max-width:min(82vw, 360px);
+      }
+
+      #perf{
+        bottom:calc(10px + var(--safeBottom));
+      }
+    }
+  </style>
+</head>
+<body>
+  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu">☰</button>
+  <div id="panelBackdrop"></div>
+
+  <div id="app">
+    <aside id="panel">
+      <div class="box">
+        <div class="title">Earth Cockpit v26 HyperAtlas</div>
+        <div class="sub">Fixed mobility overlays • fixed radar close-zoom behavior • real Aladin API astro • 2D + 3D + Astro</div>
+
+        <div class="grid3">
+          <button id="mode2d" class="primary active">2D</button>
+          <button id="mode3d">3D</button>
+          <button id="modeAstro">ASTRO</button>
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <span id="modeBadge" class="badge">Mode: 2D</span>
+          <span id="statusBadge" class="badge warn">Booting</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="grid3">
+          <button id="zoomInBtn">Zoom +</button>
+          <button id="zoomOutBtn">Zoom −</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <button id="refreshBtn">Refresh</button>
+          <button id="healthBtn">Health</button>
+          <button id="copyLogBtn">Copy log</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny">Search Earth or sky</div>
+        <div class="row">
+          <input id="searchBox" type="text" placeholder="Orlando, 28.54,-81.38, M31, Vega, NGC 1300">
+        </div>
+        <div class="grid2">
+          <button id="searchBtn" class="primary">Go</button>
+          <button id="homeBtn">Home</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Base layer</b></div>
+        <div class="row">
+          <select id="baseSelect">
+            <option value="esri">Esri World Imagery</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="hot">OSM Humanitarian</option>
+            <option value="gibs_modis">NASA GIBS MODIS True Color</option>
+            <option value="gibs_viirs">NASA GIBS VIIRS True Color</option>
+            <option value="sentinel_template">Sentinel XYZ Template</option>
+            <option value="gee_template">Earth Engine XYZ Template</option>
+          </select>
+        </div>
+
+        <div class="tiny">NASA date</div>
+        <div class="row">
+          <input id="gibsDate" type="date">
+        </div>
+
+        <label class="check"><input id="labelsChk" type="checkbox" checked> Labels / place names</label>
+        <label class="check"><input id="terrain3dChk" type="checkbox"> 3D terrain when available</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Timeline / replay</b></div>
+        <div class="row">
+          <input id="timeSlider" type="range" min="0" max="0" value="0">
+        </div>
+        <div class="grid3">
+          <button id="timePlayBtn">Play</button>
+          <button id="timeStepBtn">Step</button>
+          <button id="timeNowBtn">Now</button>
+        </div>
+        <div id="timeStamp" class="tiny" style="margin-top:6px;">Timeline idle</div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Weather</b></div>
+        <label class="check"><input id="radarChk" type="checkbox"> Radar / precipitation animation</label>
+        <label class="check"><input id="cloudsChk" type="checkbox"> NASA GIBS clouds</label>
+        <label class="check"><input id="precipChk" type="checkbox"> NASA GIBS precipitation</label>
+        <label class="check"><input id="thermalChk" type="checkbox"> NASA GIBS thermal anomalies</label>
+        <label class="check"><input id="windHeatChk" type="checkbox"> Wind heat endpoint</label>
+        <label class="check"><input id="hurricaneChk" type="checkbox"> Hurricane tracks endpoint</label>
+
+        <div class="grid3">
+          <button id="radarAnimateBtn">Animate</button>
+          <button id="radarStepBtn">Step</button>
+          <button id="radarReloadBtn">Reload</button>
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <select id="radarTrailSelect">
+            <option value="0">Radar trail off</option>
+            <option value="2">2 trail frames</option>
+            <option value="4" selected>4 trail frames</option>
+            <option value="6">6 trail frames</option>
+          </select>
+        </div>
+
+        <div id="radarStamp" class="tiny" style="margin-top:6px;">off</div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Mobility / traffic / travel</b></div>
+        <label class="check"><input id="trafficSpeedChk" type="checkbox"> Traffic roads overlay</label>
+        <label class="check"><input id="trafficIncidentsChk" type="checkbox"> Traffic incidents endpoint</label>
+        <label class="check"><input id="constructionChk" type="checkbox"> Construction overlay</label>
+        <label class="check"><input id="vehicleHeatChk" type="checkbox"> Vehicle density heatmap endpoint</label>
+        <label class="check"><input id="aircraftChk" type="checkbox"> ADS-B aircraft</label>
+        <label class="check"><input id="shipsChk" type="checkbox"> AIS ships endpoint</label>
+        <label class="check"><input id="airspaceChk" type="checkbox"> Restricted airspace endpoint</label>
+
+        <div class="tiny" style="margin-top:8px;">
+          If no traffic-speed or construction endpoint is provided, the code falls back to live OSM road/construction geometry for the current viewport.
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Hazards</b></div>
+        <label class="check"><input id="firesChk" type="checkbox"> Wildfires (NASA EONET)</label>
+        <label class="check"><input id="quakesChk" type="checkbox"> USGS earthquakes</label>
+        <label class="check"><input id="sentinelFootprintsChk" type="checkbox"> Sentinel-2 footprints</label>
+        <label class="check"><input id="sentinelOverlayChk" type="checkbox"> Sentinel imagery overlay</label>
+        <label class="check"><input id="satellitesChk" type="checkbox"> Real-time satellites</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Overlay opacity</b></div>
+        <div class="row">
+          <input id="overlayOpacity" type="range" min="0" max="100" value="72">
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Astronomy / Aladin Lite</b></div>
+        <div class="tiny">Survey</div>
+        <div class="row">
+          <select id="astroSurvey">
+            <option value="P/DSS2/color">DSS2 color</option>
+            <option value="P/2MASS/color">2MASS infrared</option>
+            <option value="P/allWISE/color">AllWISE infrared</option>
+            <option value="P/GALEXGR6/AIS/color">GALEX ultraviolet</option>
+            <option value="P/IRIS/color">IRIS infrared</option>
+            <option value="P/Planck/color">Planck</option>
+            <option value="P/RASS">ROSAT X-ray</option>
+          </select>
+        </div>
+
+        <div class="tiny">Target</div>
+        <div class="row">
+          <input id="astroSearchBox" type="text" placeholder="M31, Vega, NGC 1300">
+        </div>
+
+        <div class="grid3">
+          <button id="astroSearchBtn" class="primary">Find</button>
+          <button id="astroResetBtn">Reset sky</button>
+          <button id="astroReticleBtn">Reticle</button>
+        </div>
+
+        <div class="grid3" style="margin-top:6px;">
+          <button id="astroZoomInBtn">Sky +</button>
+          <button id="astroZoomOutBtn">Sky −</button>
+          <button id="astroFitBtn">Wide</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Optional endpoints / templates</b></div>
+
+        <div class="tiny" style="margin-top:6px;">Proxy prefix</div>
+        <input id="proxyPrefixInput" type="text" placeholder="optional prefix + encoded url">
+
+        <div class="tiny" style="margin-top:6px;">OpenWeather key</div>
+        <input id="owmKey" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Sentinel XYZ template</div>
+        <input id="sentinelTileTemplate" type="text" placeholder="https://.../{z}/{x}/{y}.png">
+
+        <div class="tiny" style="margin-top:6px;">Earth Engine XYZ template</div>
+        <input id="geeTileTemplate" type="text" placeholder="https://.../{z}/{x}/{y}?token=...">
+
+        <div class="sep"></div>
+
+        <div class="tiny" style="margin-top:6px;">Traffic speed GeoJSON endpoint</div>
+        <input id="trafficSpeedEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Traffic incidents GeoJSON endpoint</div>
+        <input id="trafficIncidentsEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Construction GeoJSON endpoint</div>
+        <input id="constructionEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Vehicle heat endpoint</div>
+        <input id="vehicleHeatEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">AIS ships endpoint</div>
+        <input id="aisEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Wind heat endpoint</div>
+        <input id="windHeatEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Hurricane tracks endpoint</div>
+        <input id="hurricaneEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Restricted airspace endpoint</div>
+        <input id="airspaceEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Satellite TLE endpoint</div>
+        <input id="tleEndpoint" type="text" placeholder="optional">
+
+        <div class="tiny" style="margin-top:6px;">Overpass endpoint override</div>
+        <input id="overpassEndpoint" type="text" placeholder="https://overpass-api.de/api/interpreter">
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Diagnostics</b></div>
+        <div id="log" class="mono tiny" style="max-height:340px;overflow:auto;"></div>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <div id="map2d"></div>
+      <div id="map3d"></div>
+      <div id="astroWrap">
+        <div id="astroCanvas"></div>
+        <div id="astroMiniHud">
+          <button id="astroHudMinus">−</button>
+          <button id="astroHudPlus">+</button>
+          <button id="astroHudWide">Wide</button>
+          <button id="astroHudReticle">Reticle</button>
+        </div>
+      </div>
+      <div id="hud" class="mono tiny">Booting…</div>
+      <div id="timeHUD" class="mono tiny">Timeline idle</div>
+      <div id="perf" class="mono tiny">fps: —</div>
+      <div id="busy">Loading…</div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  const CONFIG = {
+    appName: "Earth Cockpit v26 HyperAtlas",
+    home: { lat: 28.538336, lon: -81.379234, zoom2d: 5, height3d: 18000000 },
+
+    proxyPrefix: "",
+    openWeatherApiKey: "",
+    sentinelTileTemplate: "",
+    geeTileTemplate: "",
+    overpassEndpoint: "https://overpass-api.de/api/interpreter",
+
+    trafficSpeedEndpoint: "",
+    trafficIncidentsEndpoint: "",
+    constructionEndpoint: "",
+    vehicleHeatEndpoint: "",
+    aisGeoJsonEndpoint: "",
+    windHeatEndpoint: "",
+    hurricaneEndpoint: "",
+    airspaceEndpoint: "",
+    tleEndpoint: "",
+
+    esri: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    labels: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+
+    nominatim: "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=",
+
+    gibsWms: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
+    gibsCapabilities: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml",
+    gibsModis: "MODIS_Terra_CorrectedReflectance_TrueColor",
+    gibsViirs: "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+
+    rainViewerTimeline: "https://api.rainviewer.com/public/weather-maps.json",
+    openWeatherTileTemplate: "https://maps.openweathermap.org/maps/2.0/weather/PR0/{z}/{x}/{y}?date={date}&opacity=0.85&fill_bound=true&appid={key}",
+
+    usgsQuakesDay: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+    eonetWildfires: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&limit=500",
+    openSkyStatesAll: "https://opensky-network.org/api/states/all",
+    earthSearchSearch: "https://earth-search.aws.element84.com/v1/search",
+    defaultTleSource: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle"
+  };
+
+  const $ = id => document.getElementById(id);
+  const logEl = $("log");
+  const hudEl = $("hud");
+  const timeHUDEl = $("timeHUD");
+  const perfEl = $("perf");
+  const busyEl = $("busy");
+  const panel = $("panel");
+  const menuToggle = $("menuToggle");
+  const panelBackdrop = $("panelBackdrop");
+
+  const state = {
+    mode: "2d",
+    map2d: null,
+    viewer3d: null,
+    astro: {
+      instance: null,
+      survey: "P/DSS2/color",
+      target: "M31",
+      fov: 120,
+      reticle: true
+    },
+
+    base2dKey: "esri",
+    base2dLayer: null,
+    labels2dLayer: null,
+    labels3dLayer: null,
+
+    overlays2d: {},
+    overlays3d: {},
+    sources3d: {},
+    overlayActive: {},
+
+    radar: {
+      frames: [],
+      index: 0,
+      timer: null,
+      sourceKind: "rainviewer",
+      trailLayers2d: [],
+      trailLayers3d: []
+    },
+
+    timeline: {
+      mode: "idle",
+      frames: [],
+      timer: null,
+      stamp: ""
+    },
+
+    gibsCatalog: [],
+    gibsIds: { clouds: null, precip: null, thermal: null },
+
+    refreshHealth: {},
+    loadingDepth: 0,
+    fps: 0,
+    fpsFrames: 0,
+    fpsLast: performance.now(),
+    satelliteJsReady: false,
+    satelliteTimer: null,
+    silentMissingLogged: {}
+  };
+
+  const LIVE_REFRESH = {
+    radar: 180000,
+    trafficSpeed: 300000,
+    trafficIncidents: 300000,
+    construction: 300000,
+    vehicleHeat: 180000,
+    windHeat: 300000,
+    hurricane: 900000,
+    aircraft: 300000,
+    ships: 300000,
+    airspace: 900000,
+    fires: 300000,
+    quakes: 600000,
+    sentinelFootprints: 1200000,
+    sentinelOverlay: 1200000,
+    satellites: 300000
+  };
+
+  [
+    "radar","clouds","precip","thermal","trafficSpeed","trafficIncidents",
+    "construction","vehicleHeat","windHeat","hurricane","aircraft","ships",
+    "airspace","fires","quakes","sentinelFootprints","sentinelOverlay","satellites"
+  ].forEach(k => state.overlayActive[k] = false);
+
+  Object.keys(LIVE_REFRESH).forEach(k => {
+    state.refreshHealth[k] = { fails:0, muted:false, timer:null };
+  });
+
+  function nowStamp(){
+    const d = new Date();
+    return `[${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}]`;
+  }
+
+  function log(msg){
+    const line = `${nowStamp()} ${msg}`;
+    logEl.textContent += line + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+    console.log(line);
+  }
+
+  function setStatus(text, kind=""){
+    const el = $("statusBadge");
+    el.textContent = text;
+    el.className = `badge ${kind}`.trim();
+  }
+
+  function busy(on, text="Loading…"){
+    if (on) {
+      state.loadingDepth++;
+      busyEl.textContent = text;
+      busyEl.style.display = "block";
+    } else {
+      state.loadingDepth = Math.max(0, state.loadingDepth - 1);
+      if (!state.loadingDepth) busyEl.style.display = "none";
+    }
+  }
+
+  function fmt(n,d=4){
+    return Number.isFinite(n) ? n.toFixed(d) : "—";
+  }
+
+  function overlayAlpha(){
+    return (Number($("overlayOpacity").value) || 72) / 100;
+  }
+
+  function isMobile(){
+    return window.matchMedia("(max-width:980px)").matches;
+  }
+
+  function syncPanel(){
+    if (!isMobile()) {
+      panel.classList.remove("panel-hidden");
+      panelBackdrop.classList.remove("show");
+      return;
+    }
+    const hidden = panel.classList.contains("panel-hidden");
+    panelBackdrop.classList.toggle("show", !hidden);
+  }
+
+  function setPanelHidden(hidden){
+    panel.classList.toggle("panel-hidden", !!hidden);
+    syncPanel();
+  }
+
+  function updateModeBadge(){
+    $("modeBadge").textContent = `Mode: ${state.mode.toUpperCase()}`;
+  }
+
+  function setHUD(text){ hudEl.textContent = text; }
+
+  function setTimeHUD(text){
+    timeHUDEl.textContent = text;
+    $("timeStamp").textContent = text.replace(/\n/g, " • ");
+  }
+
+  function escapeHtml(str){
+    return String(str || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[c]));
+  }
+
+  function compact(obj){
+    const out = {};
+    Object.entries(obj).forEach(([k,v]) => {
+      if (v !== undefined && v !== null && v !== "") out[k] = v;
+    });
+    return out;
+  }
+
+  function normalizeSubdomains(subdomains){
+    if (Array.isArray(subdomains) && subdomains.length) return subdomains;
+    if (typeof subdomains === "string" && subdomains.length) return subdomains;
+    return undefined;
+  }
+
+  function proxify(url){
+    return CONFIG.proxyPrefix ? CONFIG.proxyPrefix + encodeURIComponent(url) : url;
+  }
+
+  async function fetchText(url, tryProxy=true, options={}){
+    const urls = [];
+    if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url));
+    urls.push(url);
+
+    let lastErr = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, Object.assign({ cache:"no-store" }, options));
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.text();
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("Fetch failed");
+  }
+
+  async function fetchJson(url, tryProxy=true, options={}){
+    return JSON.parse(await fetchText(url, tryProxy, options));
+  }
+
+  async function fetchPostJson(url, body, tryProxy=true){
+    const urls = [];
+    if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url));
+    urls.push(url);
+
+    let lastErr = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(body),
+          cache:"no-store"
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("POST failed");
+  }
+
+  async function probe(url){
+    try {
+      const r = await fetch(url, { method:"HEAD", cache:"no-store" });
+      return r.ok;
+    } catch {
+      try {
+        const r = await fetch(url, { cache:"no-store" });
+        return r.ok;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function parseXml(text){
+    return new DOMParser().parseFromString(text, "text/xml");
+  }
+
+  function descendantsByLocalName(root, name){
+    return Array.from(root.getElementsByTagName("*")).filter(n => n.localName === name);
+  }
+
+  function childByLocalName(node, name){
+    return Array.from(node.children || []).find(n => n.localName === name) || null;
+  }
+
+  function isoUTC(date){
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth()+1).padStart(2,"0");
+    const d = String(date.getUTCDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function yesterdayUTC(){
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 1);
+    return isoUTC(d);
+  }
+
+  function currentGibsDate(){
+    return $("gibsDate").value || yesterdayUTC();
+  }
+
+  function currentBBox(){
+    if (!state.map2d) return [-180,-85,180,85];
+    const b = state.map2d.getBounds();
+    return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  }
+
+  function maybeLogMissingOnce(key, msg){
+    if (state.silentMissingLogged[key]) return;
+    state.silentMissingLogged[key] = true;
+    log(msg);
+  }
+
+  function gibsBaseUrl(id){
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${currentGibsDate()}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+  }
+
+  function makeTileLayer(url, options={}){
+    return L.tileLayer(url, compact({
+      crossOrigin: true,
+      updateWhenIdle: false,
+      updateWhenZooming: true,
+      keepBuffer: 8,
+      pane: options.pane,
+      subdomains: normalizeSubdomains(options.subdomains),
+      opacity: options.opacity ?? 1,
+      maxZoom: options.maxZoom ?? 19,
+      maxNativeZoom: options.maxNativeZoom,
+      attribution: options.attribution || ""
+    }));
+  }
+
+  function makeCesiumXYZ(url, maxLevel=19, subdomains=undefined){
+    return new Cesium.UrlTemplateImageryProvider(compact({
+      url,
+      maximumLevel: maxLevel,
+      subdomains: normalizeSubdomains(subdomains)
+    }));
+  }
+
+  function installErrorHooks(){
+    window.addEventListener("error", ev => {
+      log(`WINDOW ERROR: ${ev.message} @ ${ev.filename || "?"}:${ev.lineno || 0}`);
+    });
+    window.addEventListener("unhandledrejection", ev => {
+      const reason = ev.reason && ev.reason.message ? ev.reason.message : String(ev.reason);
+      log(`PROMISE ERROR: ${reason}`);
+    });
+  }
+
+  function syncConfigFromInputs(){
+    CONFIG.proxyPrefix = $("proxyPrefixInput").value.trim();
+    CONFIG.openWeatherApiKey = $("owmKey").value.trim();
+    CONFIG.sentinelTileTemplate = $("sentinelTileTemplate").value.trim();
+    CONFIG.geeTileTemplate = $("geeTileTemplate").value.trim();
+    CONFIG.trafficSpeedEndpoint = $("trafficSpeedEndpoint").value.trim();
+    CONFIG.trafficIncidentsEndpoint = $("trafficIncidentsEndpoint").value.trim();
+    CONFIG.constructionEndpoint = $("constructionEndpoint").value.trim();
+    CONFIG.vehicleHeatEndpoint = $("vehicleHeatEndpoint").value.trim();
+    CONFIG.aisGeoJsonEndpoint = $("aisEndpoint").value.trim();
+    CONFIG.windHeatEndpoint = $("windHeatEndpoint").value.trim();
+    CONFIG.hurricaneEndpoint = $("hurricaneEndpoint").value.trim();
+    CONFIG.airspaceEndpoint = $("airspaceEndpoint").value.trim();
+    CONFIG.tleEndpoint = $("tleEndpoint").value.trim();
+    CONFIG.overpassEndpoint = $("overpassEndpoint").value.trim() || CONFIG.overpassEndpoint;
+  }
+
+  function updateHUD(){
+    if (state.mode === "2d" && state.map2d) {
+      const c = state.map2d.getCenter();
+      setHUD(
+        `Mode: 2D\nBase: ${state.base2dKey}\nZoom: ${state.map2d.getZoom()}\nlat ${fmt(c.lat)} lon ${fmt(c.lng)}\nActive overlays: ${Object.values(state.overlayActive).filter(Boolean).length}`
+      );
+      return;
+    }
+
+    if (state.mode === "3d" && state.viewer3d) {
+      const c = state.viewer3d.camera.positionCartographic;
+      setHUD(
+        `Mode: 3D\nBase: ${state.base2dKey}\nHeight: ${Math.round(c.height)} m\nlat ${fmt(Cesium.Math.toDegrees(c.latitude))} lon ${fmt(Cesium.Math.toDegrees(c.longitude))}\nActive overlays: ${Object.values(state.overlayActive).filter(Boolean).length}`
+      );
+      return;
+    }
+
+    if (state.mode === "astro") {
+      setHUD(
+        `Mode: ASTRO\nSurvey: ${state.astro.survey}\nTarget: ${state.astro.target}\nFoV: ${fmt(state.astro.fov, 2)}°\nReticle: ${state.astro.reticle ? "ON" : "OFF"}`
+      );
+    }
+  }
+
+  function updatePerf(){
+    perfEl.textContent =
+      `fps: ${state.fps || "—"}\nmode: ${state.mode.toUpperCase()}\noverlays: ${Object.values(state.overlayActive).filter(Boolean).length}\nradarFrames: ${state.radar.frames.length}\nsatjs: ${state.satelliteJsReady ? "loaded" : "not loaded"}`;
+  }
+
+  function perfTick(){
+    state.fpsFrames++;
+    const now = performance.now();
+    if (now - state.fpsLast >= 1000) {
+      state.fps = state.fpsFrames;
+      state.fpsFrames = 0;
+      state.fpsLast = now;
+      updatePerf();
+    }
+    requestAnimationFrame(perfTick);
+  }
+
+  function init2D(){
+    state.map2d = L.map("map2d", {
+      center:[CONFIG.home.lat, CONFIG.home.lon],
+      zoom:CONFIG.home.zoom2d,
+      worldCopyJump:true,
+      zoomControl:true,
+      zoomAnimation:true,
+      fadeAnimation:false,
+      inertia:true
+    });
+
+    state.map2d.createPane("base");
+    state.map2d.getPane("base").style.zIndex = 200;
+
+    state.map2d.createPane("overlay");
+    state.map2d.getPane("overlay").style.zIndex = 430;
+
+    state.map2d.createPane("weather");
+    state.map2d.getPane("weather").style.zIndex = 500;
+
+    state.map2d.createPane("labels");
+    state.map2d.getPane("labels").style.zIndex = 650;
+
+    state.labels2dLayer = makeTileLayer(CONFIG.labels, {
+      pane:"labels",
+      subdomains:"abcd",
+      maxZoom:20,
+      attribution:"CARTO"
+    });
+
+    state.map2d.on("move zoom zoomend moveend", updateHUD);
+    state.map2d.on("movestart", () => { if (isMobile()) setPanelHidden(true); });
+
+    log("2D initialized");
+  }
+
+  function clear2DBase(){
+    if (state.base2dLayer && state.map2d) {
+      try { state.map2d.removeLayer(state.base2dLayer); } catch {}
+      state.base2dLayer = null;
+    }
+  }
+
+  function setBase2D(key){
+    if (!state.map2d) return;
+    clear2DBase();
+    state.base2dKey = key;
+
+    if (key === "esri") {
+      state.base2dLayer = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "osm") {
+      state.base2dLayer = makeTileLayer(CONFIG.osm, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "hot") {
+      state.base2dLayer = makeTileLayer(CONFIG.hot, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM HOT" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gibs_modis") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsModis), {
+        pane:"base", maxZoom:19, maxNativeZoom:9, attribution:"NASA GIBS"
+      });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gibs_viirs") {
+      state.base2dLayer = makeTileLayer(gibsBaseUrl(CONFIG.gibsViirs), {
+        pane:"base", maxZoom:19, maxNativeZoom:9, attribution:"NASA GIBS"
+      });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "sentinel_template") {
+      const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+      if (!tpl) return setBase2D("esri");
+      state.base2dLayer = makeTileLayer(tpl, { pane:"base", maxZoom:19, attribution:"Sentinel" });
+      state.map2d.setMaxZoom(19);
+    } else if (key === "gee_template") {
+      const tpl = $("geeTileTemplate").value.trim() || CONFIG.geeTileTemplate;
+      if (!tpl) return setBase2D("esri");
+      state.base2dLayer = makeTileLayer(tpl, { pane:"base", maxZoom:19, attribution:"Earth Engine" });
+      state.map2d.setMaxZoom(19);
+    }
+
+    state.base2dLayer.addTo(state.map2d);
+    setLabels($("labelsChk").checked);
+    updateHUD();
+    log(`2D base set: ${key}`);
+  }
+
+  function ensureViewer(){
+    if (state.viewer3d) return;
+
+    state.viewer3d = new Cesium.Viewer("map3d", {
+      animation:false,
+      timeline:false,
+      geocoder:false,
+      homeButton:false,
+      sceneModePicker:false,
+      baseLayerPicker:false,
+      navigationHelpButton:false,
+      infoBox:false,
+      selectionIndicator:false,
+      shouldAnimate:true,
+      requestRenderMode:true,
+      maximumRenderTimeChange:Infinity,
+      terrainProvider: new Cesium.EllipsoidTerrainProvider()
+    });
+
+    state.viewer3d.scene.globe.show = true;
+    state.viewer3d.scene.skyAtmosphere.show = true;
+    state.viewer3d.scene.fog.enabled = true;
+    state.viewer3d.scene.globe.depthTestAgainstTerrain = false;
+
+    const ssc = state.viewer3d.scene.screenSpaceCameraController;
+    ssc.enableZoom = true;
+    ssc.enableRotate = true;
+    ssc.enableTilt = true;
+    ssc.enableTranslate = true;
+    ssc.minimumZoomDistance = 10.0;
+    ssc.maximumZoomDistance = 7.0e7;
+
+    state.viewer3d.camera.moveEnd.addEventListener(updateHUD);
+    state.viewer3d.camera.changed.addEventListener(() => {
+      if (isMobile()) setPanelHidden(true);
+    });
+
+    log("3D initialized");
+  }
+
+  function setTerrain3D(on){
+    if (!state.viewer3d) return;
+    if (on && Cesium.createWorldTerrainAsync) {
+      Cesium.createWorldTerrainAsync().then(tp => {
+        if (!state.viewer3d) return;
+        state.viewer3d.terrainProvider = tp;
+        state.viewer3d.scene.requestRender();
+        log("3D terrain enabled");
+      }).catch(err => {
+        log(`3D terrain unavailable: ${err.message}`);
+      });
+    } else {
+      state.viewer3d.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+      state.viewer3d.scene.requestRender();
+      log("3D terrain disabled");
+    }
+  }
+
+  function clear3DImagery(){
+    if (!state.viewer3d) return;
+    const layers = state.viewer3d.imageryLayers;
+    while (layers.length > 0) layers.remove(layers.get(0), true);
+    state.labels3dLayer = null;
+  }
+
+  function setBase3D(key){
+    ensureViewer();
+    clear3DImagery();
+
+    let provider = null;
+    if (key === "esri") provider = makeCesiumXYZ(CONFIG.esri, 19);
+    else if (key === "osm") provider = makeCesiumXYZ(CONFIG.osm, 19, ["a","b","c"]);
+    else if (key === "hot") provider = makeCesiumXYZ(CONFIG.hot, 19, ["a","b","c"]);
+    else if (key === "gibs_modis") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsModis), 19);
+    else if (key === "gibs_viirs") provider = makeCesiumXYZ(gibsBaseUrl(CONFIG.gibsViirs), 19);
+    else if (key === "sentinel_template") {
+      const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+      if (!tpl) return setBase3D("esri");
+      provider = makeCesiumXYZ(tpl, 19);
+    } else if (key === "gee_template") {
+      const tpl = $("geeTileTemplate").value.trim() || CONFIG.geeTileTemplate;
+      if (!tpl) return setBase3D("esri");
+      provider = makeCesiumXYZ(tpl, 19);
+    }
+
+    state.viewer3d.imageryLayers.addImageryProvider(provider);
+    setLabels($("labelsChk").checked);
+    setTerrain3D($("terrain3dChk").checked);
+
+    state.viewer3d.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d),
+      duration: 0
+    });
+
+    state.viewer3d.resize();
+    state.viewer3d.scene.requestRender();
+    updateHUD();
+    log(`3D base set: ${key}`);
+  }
+
+  function ensureAstro(){
+    if (state.astro.instance) return;
+    state.astro.instance = A.aladin("#astroCanvas", {
+      survey: state.astro.survey,
+      target: state.astro.target,
+      fov: state.astro.fov,
+      cooFrame: "J2000",
+      showReticle: state.astro.reticle,
+      showZoomControl: false,
+      showFullscreenControl: false,
+      showLayersControl: false,
+      showGotoControl: false,
+      reticleColor: "#6cb8ff"
+    });
+    log("Astro initialized");
+  }
+
+  function astroApply(){
+    ensureAstro();
+    try { state.astro.instance.setImageSurvey(state.astro.survey); } catch {}
+    try { state.astro.instance.gotoObject(state.astro.target); } catch {}
+    try { state.astro.instance.setFoV(state.astro.fov); } catch {}
+    try { state.astro.instance.showReticle(state.astro.reticle); } catch {}
+    $("astroHudReticle").textContent = state.astro.reticle ? "Reticle On" : "Reticle Off";
+    $("astroReticleBtn").textContent = state.astro.reticle ? "Reticle On" : "Reticle Off";
+    updateHUD();
+  }
+
+  function astroSearch(){
+    const q = $("astroSearchBox").value.trim();
+    if (!q) return;
+    state.astro.target = q;
+    astroApply();
+    log(`Astro target: ${q}`);
+  }
+
+  function astroZoomIn(){
+    state.astro.fov = Math.max(0.01, state.astro.fov * 0.65);
+    if (state.astro.instance) {
+      try { state.astro.instance.setFoV(state.astro.fov); } catch {}
+    } else astroApply();
+    updateHUD();
+  }
+
+  function astroZoomOut(){
+    state.astro.fov = Math.min(180, state.astro.fov * 1.45);
+    if (state.astro.instance) {
+      try { state.astro.instance.setFoV(state.astro.fov); } catch {}
+    } else astroApply();
+    updateHUD();
+  }
+
+  function astroWide(){
+    state.astro.fov = 120;
+    if (state.astro.instance) {
+      try { state.astro.instance.setFoV(state.astro.fov); } catch {}
+    } else astroApply();
+    updateHUD();
+  }
+
+  async function showMode(mode){
+    state.mode = mode;
+    $("mode2d").classList.toggle("active", mode === "2d");
+    $("mode3d").classList.toggle("active", mode === "3d");
+    $("modeAstro").classList.toggle("active", mode === "astro");
+    updateModeBadge();
+
+    $("map2d").style.display = mode === "2d" ? "block" : "none";
+    $("map3d").style.display = mode === "3d" ? "block" : "none";
+    $("astroWrap").style.display = mode === "astro" ? "block" : "none";
+
+    if (mode === "2d" && state.map2d) {
+      setTimeout(() => state.map2d.invalidateSize(true), 50);
+    }
+    if (mode === "3d") {
+      ensureViewer();
+      setTimeout(() => {
+        state.viewer3d.resize();
+        state.viewer3d.scene.requestRender();
+      }, 70);
+    }
+    if (mode === "astro") {
+      ensureAstro();
+      setTimeout(() => astroApply(), 30);
+    }
+
+    updateHUD();
+    if (isMobile()) setPanelHidden(true);
+  }
+
+  async function discoverGIBS(){
+    try {
+      const xmlText = await fetchText(CONFIG.gibsCapabilities, false);
+      const xml = parseXml(xmlText);
+      const layers = descendantsByLocalName(xml, "Layer");
+      const out = [];
+
+      for (const layer of layers) {
+        const idNode = childByLocalName(layer, "Identifier");
+        if (!idNode) continue;
+        const titleNode = childByLocalName(layer, "Title");
+        out.push({
+          id: idNode.textContent.trim(),
+          title: titleNode ? titleNode.textContent.trim() : idNode.textContent.trim()
+        });
+      }
+
+      state.gibsCatalog = out;
+      state.gibsIds.clouds = pickLayerId(["Cloud", "cloud fraction", "cloud mask", "cloud top"]);
+      state.gibsIds.precip = pickLayerId(["IMERG", "precipitation", "rain rate"]);
+      state.gibsIds.thermal = pickLayerId(["Thermal_Anomalies", "thermal anomalies", "thermal"]);
+      log(`GIBS layers discovered: ${out.length}`);
+    } catch (e) {
+      log(`GIBS discovery failed: ${e.message}`);
+    }
+  }
+
+  function pickLayerId(words){
+    const terms = words.map(x => x.toLowerCase());
+    const found = state.gibsCatalog.find(layer =>
+      terms.some(t => (`${layer.id} ${layer.title}`).toLowerCase().includes(t))
+    );
+    return found ? found.id : null;
+  }
+
+  function remove2DOverlay(key){
+    const layer = state.overlays2d[key];
+    if (!layer || !state.map2d) return;
+    try { state.map2d.removeLayer(layer); } catch {}
+    delete state.overlays2d[key];
+  }
+
+  function remove3DOverlay(key){
+    if (!state.viewer3d) return;
+    if (state.overlays3d[key]) {
+      try { state.viewer3d.imageryLayers.remove(state.overlays3d[key], true); } catch {}
+      delete state.overlays3d[key];
+    }
+    if (state.sources3d[key]) {
+      try { state.viewer3d.dataSources.remove(state.sources3d[key], true); } catch {}
+      delete state.sources3d[key];
+    }
+  }
+
+  function add3DOverlayImageryOnly(key, provider){
+    remove3DOverlay(key);
+    const lyr = state.viewer3d.imageryLayers.addImageryProvider(provider);
+    lyr.alpha = overlayAlpha();
+    state.overlays3d[key] = lyr;
+    if (state.labels3dLayer) state.viewer3d.imageryLayers.raiseToTop(state.labels3dLayer);
+    state.viewer3d.scene.requestRender();
+  }
+
+  function add3DDataSourceOnly(key, ds){
+    remove3DOverlay(key);
+    state.viewer3d.dataSources.add(ds);
+    state.sources3d[key] = ds;
+    state.viewer3d.scene.requestRender();
+  }
+
+  function setLabels(on){
+    if (on) {
+      if (state.map2d && state.labels2dLayer && !state.map2d.hasLayer(state.labels2dLayer)) {
+        state.labels2dLayer.addTo(state.map2d);
+      }
+      if (state.viewer3d && !state.labels3dLayer) {
+        state.labels3dLayer = state.viewer3d.imageryLayers.addImageryProvider(
+          makeCesiumXYZ(CONFIG.labels, 20, ["a","b","c","d"])
+        );
+        state.labels3dLayer.alpha = 0.88;
+        state.viewer3d.scene.requestRender();
+      }
+    } else {
+      if (state.map2d && state.labels2dLayer && state.map2d.hasLayer(state.labels2dLayer)) {
+        state.map2d.removeLayer(state.labels2dLayer);
+      }
+      if (state.viewer3d && state.labels3dLayer) {
+        try { state.viewer3d.imageryLayers.remove(state.labels3dLayer, true); } catch {}
+        state.labels3dLayer = null;
+        state.viewer3d.scene.requestRender();
+      }
+    }
+  }
+
+  function leafletGibsWms(layerId){
+    return L.tileLayer.wms(CONFIG.gibsWms, {
+      layers: layerId,
+      format: "image/png",
+      transparent: true,
+      version: "1.1.1",
+      time: currentGibsDate(),
+      pane: "weather",
+      opacity: overlayAlpha(),
+      attribution: "NASA GIBS"
+    });
+  }
+
+  function cesiumGibsWms(layerId){
+    return new Cesium.WebMapServiceImageryProvider({
+      url: CONFIG.gibsWms,
+      layers: layerId,
+      parameters: {
+        transparent: true,
+        format: "image/png",
+        version: "1.1.1",
+        time: currentGibsDate()
+      }
+    });
+  }
+
+  async function setGibsOverlay(kind, on){
+    state.overlayActive[kind] = !!on;
+    remove2DOverlay(kind);
+    remove3DOverlay(kind);
+
+    if (!on) return log(`${kind} OFF`);
+
+    const layerId = state.gibsIds[kind];
+    if (!layerId) return log(`${kind} GIBS layer not found`);
+
+    try {
+      const layer2d = leafletGibsWms(layerId);
+      state.overlays2d[kind] = layer2d;
+      layer2d.addTo(state.map2d);
+
+      if (state.viewer3d) add3DOverlayImageryOnly(kind, cesiumGibsWms(layerId));
+      log(`${kind} ON (${layerId})`);
+    } catch (e) {
+      log(`${kind} failed: ${e.message}`);
+    }
+  }
+
+  async function preloadRadarTimeline(){
+    try {
+      const j = await fetchJson(CONFIG.rainViewerTimeline, false);
+      const frames = [
+        ...((j.radar && j.radar.past) || []),
+        ...((j.radar && j.radar.nowcast) || [])
+      ].map(x => x.time).filter(Boolean);
+
+      state.radar.frames = frames;
+      state.radar.index = Math.max(0, frames.length - 1);
+      state.timeline.mode = "radar";
+      state.timeline.frames = frames.map(ts => ({
+        value: ts,
+        label: new Date(ts * 1000).toUTCString()
+      }));
+      setupTimelineFromRadar();
+    } catch (e) {
+      log(`Radar preload failed: ${e.message}`);
+    }
+  }
+
+  function setupTimelineFromRadar(){
+    const slider = $("timeSlider");
+    if (!state.timeline.frames.length) {
+      slider.min = 0; slider.max = 0; slider.value = 0;
+      setTimeHUD("Timeline idle");
+      return;
+    }
+    slider.min = 0;
+    slider.max = String(state.timeline.frames.length - 1);
+    slider.value = String(state.radar.index);
+    state.timeline.stamp = state.timeline.frames[state.radar.index]?.label || "Radar timeline";
+    setTimeHUD(`Timeline: radar\nFrame ${state.radar.index+1}/${state.timeline.frames.length}\n${state.timeline.stamp}`);
+  }
+
+  async function loadRadarSource(){
+    const liveOWMKey = $("owmKey").value.trim() || CONFIG.openWeatherApiKey;
+    if (liveOWMKey) {
+      const dateUnix = Math.floor(Date.now()/1000);
+      const url = CONFIG.openWeatherTileTemplate
+        .replace("{z}", "{z}")
+        .replace("{x}", "{x}")
+        .replace("{y}", "{y}")
+        .replace("{date}", String(dateUnix))
+        .replace("{key}", liveOWMKey);
+      state.radar.sourceKind = "owm";
+      return { url, stamp: new Date(dateUnix * 1000).toUTCString() };
+    }
+
+    const j = await fetchJson(CONFIG.rainViewerTimeline, false);
+    const frames = [
+      ...((j.radar && j.radar.past) || []),
+      ...((j.radar && j.radar.nowcast) || [])
+    ].map(x => x.time).filter(Boolean);
+
+    state.radar.frames = frames;
+    if (!frames.length) throw new Error("RainViewer returned no frames");
+
+    if (state.radar.index >= frames.length) state.radar.index = frames.length - 1;
+    if (state.radar.index < 0) state.radar.index = frames.length - 1;
+
+    state.timeline.mode = "radar";
+    state.timeline.frames = frames.map(ts => ({
+      value: ts,
+      label: new Date(ts * 1000).toUTCString()
+    }));
+    setupTimelineFromRadar();
+
+    const ts = frames[state.radar.index];
+    const host = j.host || "https://tilecache.rainviewer.com";
+    const path = (j.radar && j.radar.path) ? j.radar.path : "/v2/radar";
+    state.radar.sourceKind = "rainviewer";
+    return {
+      url: `${host}${path}/${ts}/256/{z}/{x}/{y}/2/1_1.png`,
+      stamp: new Date(ts * 1000).toUTCString()
+    };
+  }
+
+  function clearRadarTrails2D(){
+    for (const l of state.radar.trailLayers2d) {
+      try { state.map2d.removeLayer(l); } catch {}
+    }
+    state.radar.trailLayers2d = [];
+  }
+
+  function clearRadarTrails3D(){
+    if (!state.viewer3d) return;
+    for (const l of state.radar.trailLayers3d) {
+      try { state.viewer3d.imageryLayers.remove(l, true); } catch {}
+    }
+    state.radar.trailLayers3d = [];
+  }
+
+  async function setRadar(on){
+    const key = "radar";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    clearRadarTrails2D();
+    clearRadarTrails3D();
+
+    if (!on) {
+      $("radarStamp").textContent = "off";
+      log("Radar OFF");
+      return;
+    }
+
+    try {
+      const src = await loadRadarSource();
+
+      const layer2d = makeTileLayer(src.url, {
+        pane:"weather",
+        maxZoom:22,
+        maxNativeZoom: state.radar.sourceKind === "rainviewer" ? 7 : 12,
+        opacity:overlayAlpha(),
+        attribution: state.radar.sourceKind === "owm" ? "OpenWeather" : "RainViewer"
+      });
+      state.overlays2d[key] = layer2d;
+      layer2d.addTo(state.map2d);
+
+      if (state.viewer3d) add3DOverlayImageryOnly(key, makeCesiumXYZ(src.url, state.radar.sourceKind === "rainviewer" ? 7 : 12));
+
+      if (state.radar.sourceKind === "rainviewer") {
+        const trailCount = Number($("radarTrailSelect").value) || 0;
+        if (trailCount > 0 && state.radar.frames.length > 1) {
+          for (let back = 1; back <= trailCount; back++) {
+            const idx = state.radar.index - back;
+            if (idx < 0) break;
+            const ts = state.radar.frames[idx];
+            const trailUrl = `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/2/1_1.png`;
+            const op = Math.max(0.12, overlayAlpha() * (0.55 - back * 0.08));
+
+            const trail2d = makeTileLayer(trailUrl, {
+              pane:"weather",
+              maxZoom:22,
+              maxNativeZoom:7,
+              opacity:op,
+              attribution:"RainViewer trail"
+            });
+            trail2d.addTo(state.map2d);
+            state.radar.trailLayers2d.push(trail2d);
+
+            if (state.viewer3d) {
+              const trail3d = state.viewer3d.imageryLayers.addImageryProvider(makeCesiumXYZ(trailUrl, 7));
+              trail3d.alpha = op;
+              state.radar.trailLayers3d.push(trail3d);
+            }
+          }
+        }
+      }
+
+      $("radarStamp").textContent = `${src.stamp}${state.radar.sourceKind === "rainviewer" ? " • stays visible while zoomed in" : ""}`;
+      setTimeHUD(`Timeline: radar\nFrame ${state.radar.index+1}/${state.radar.frames.length}\n${src.stamp}`);
+      log(`Radar ON ${src.stamp}`);
+    } catch (e) {
+      log(`Radar failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  function toggleRadarAnimation(){
+    if (!state.overlayActive.radar) return;
+    if (state.radar.sourceKind === "owm") return log("Animate disabled in OpenWeather single-frame mode");
+
+    if (state.radar.timer) {
+      clearInterval(state.radar.timer);
+      state.radar.timer = null;
+      $("radarAnimateBtn").textContent = "Animate";
+      return;
+    }
+
+    $("radarAnimateBtn").textContent = "Stop";
+    state.radar.timer = setInterval(async () => {
+      if (!state.radar.frames.length) return;
+      state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+      $("timeSlider").value = String(state.radar.index);
+      await setRadar(true);
+    }, 850);
+  }
+
+  async function stepRadar(){
+    if (!state.radar.frames.length) return;
+    state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+    $("timeSlider").value = String(state.radar.index);
+    await setRadar(true);
+  }
+
+  function stopTimeline(){
+    if (state.timeline.timer) {
+      clearInterval(state.timeline.timer);
+      state.timeline.timer = null;
+    }
+    $("timePlayBtn").textContent = "Play";
+  }
+
+  function playTimeline(){
+    if (state.timeline.mode !== "radar" || !state.radar.frames.length) return;
+    if (state.timeline.timer) {
+      stopTimeline();
+      return;
+    }
+    $("timePlayBtn").textContent = "Stop";
+    state.timeline.timer = setInterval(async () => {
+      state.radar.index = (state.radar.index + 1) % state.radar.frames.length;
+      $("timeSlider").value = String(state.radar.index);
+      if ($("radarChk").checked) await setRadar(true);
+    }, 850);
+  }
+
+  async function timelineStep(){
+    if (state.timeline.mode === "radar") await stepRadar();
+  }
+
+  async function timelineNow(){
+    if (state.timeline.mode === "radar" && state.radar.frames.length) {
+      state.radar.index = state.radar.frames.length - 1;
+      $("timeSlider").value = String(state.radar.index);
+      if ($("radarChk").checked) await setRadar(true);
+    }
+  }
+
+  function isGeoJSON(x){
+    return !!x && (x.type === "FeatureCollection" || x.type === "Feature");
+  }
+
+  function genericArrayToGeoJSON(arr){
+    return {
+      type:"FeatureCollection",
+      features: arr.map(x => {
+        if (x?.type === "Feature") return x;
+        if (x?.geometry) return { type:"Feature", geometry:x.geometry, properties:x.properties || x };
+        const lat = Number(x.lat ?? x.latitude);
+        const lon = Number(x.lon ?? x.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        return {
+          type:"Feature",
+          geometry:{ type:"Point", coordinates:[lon, lat] },
+          properties:x
+        };
+      }).filter(Boolean)
+    };
+  }
+
+  async function resolveEndpointToGeoJSON(key, endpoint){
+    const raw = await fetchJson(endpoint, true);
+    if (isGeoJSON(raw)) return raw;
+    if (Array.isArray(raw?.features)) return { type:"FeatureCollection", features: raw.features };
+    if (Array.isArray(raw?.results)) return genericArrayToGeoJSON(raw.results);
+    if (Array.isArray(raw?.data)) return genericArrayToGeoJSON(raw.data);
+    if (Array.isArray(raw)) return genericArrayToGeoJSON(raw);
+
+    if (key === "ships") {
+      const records = raw?.records || raw?.data || raw?.DATA || [];
+      return {
+        type:"FeatureCollection",
+        features: (Array.isArray(records) ? records : []).map(r => {
+          const lat = Number(r.LAT ?? r.lat ?? r.latitude);
+          const lon = Number(r.LON ?? r.lon ?? r.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+          return {
+            type:"Feature",
+            geometry:{ type:"Point", coordinates:[lon, lat] },
+            properties:r
+          };
+        }).filter(Boolean)
+      };
+    }
+
+    throw new Error("Unsupported endpoint format");
+  }
+
+  async function fetchOverpassGeoJSON(query){
+    const txt = await fetchText(CONFIG.overpassEndpoint, true, {
+      method:"POST",
+      headers:{ "Content-Type":"text/plain;charset=UTF-8" },
+      body: query
+    });
+    const osm = JSON.parse(txt);
+    return osmtogeojson(osm);
+  }
+
+  async function fetchRoadFallbackGeoJSON(){
+    const [w,s,e,n] = currentBBox();
+    const q = `
+[out:json][timeout:25];
+(
+  way["highway"]["highway"!~"footway|path|cycleway|steps|track|corridor|bridleway|service|pedestrian"](${s},${w},${n},${e});
+);
+out body geom;
+`;
+    return await fetchOverpassGeoJSON(q);
+  }
+
+  async function fetchConstructionFallbackGeoJSON(){
+    const [w,s,e,n] = currentBBox();
+    const q = `
+[out:json][timeout:25];
+(
+  way["highway"="construction"](${s},${w},${n},${e});
+  way["construction"](${s},${w},${n},${e});
+);
+out body geom;
+`;
+    return await fetchOverpassGeoJSON(q);
+  }
+
+  function trafficColor(props){
+    const hw = String(props.highway || props.road_class || "").toLowerCase();
+    if (hw.includes("motorway") || hw.includes("trunk")) return "#22c55e";
+    if (hw.includes("primary")) return "#f59e0b";
+    if (hw.includes("secondary")) return "#fb923c";
+    return "#ef4444";
+  }
+
+  async function setGeoJsonOverlay(key, on, endpoint, style={}, fallbackFn=null){
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log(`${key} OFF`);
+
+    try {
+      let geojson = null;
+      if (endpoint) geojson = await resolveEndpointToGeoJSON(key, endpoint);
+      else if (fallbackFn) geojson = await fallbackFn();
+      else {
+        maybeLogMissingOnce(key, `${key} endpoint missing`);
+        throw new Error(`${key} endpoint missing`);
+      }
+
+      const geo = L.geoJSON(geojson, {
+        pane:"overlay",
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+          radius: style.radius || 4,
+          color: style.color || "#fff",
+          fillColor: style.fillColor || style.color || "#fff",
+          fillOpacity: style.fillOpacity ?? 0.75,
+          weight: style.weight ?? 1
+        }),
+        style: (f) => {
+          const props = f?.properties || {};
+          let color = style.color || "#ffffff";
+          let weight = style.weight ?? 2;
+
+          if (key === "trafficSpeed") {
+            color = trafficColor(props);
+            weight = 3;
+          }
+          if (key === "construction") {
+            color = "#fbbf24";
+            weight = 3;
+          }
+
+          return {
+            color,
+            weight,
+            opacity: style.opacity ?? 0.86,
+            fillOpacity: style.polyFillOpacity ?? 0.12
+          };
+        },
+        onEachFeature: (f, layer) => {
+          const props = f.properties || {};
+          const lines = Object.entries(props).slice(0, 12).map(([k,v]) =>
+            `<b>${escapeHtml(k)}</b>: ${escapeHtml(String(v))}`
+          );
+          layer.bindPopup(lines.join("<br>") || escapeHtml(key));
+        }
+      });
+
+      state.overlays2d[key] = geo;
+      geo.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = await Cesium.GeoJsonDataSource.load(geojson, {
+          stroke: Cesium.Color.fromCssColorString(style.color || "#ffffff"),
+          fill: Cesium.Color.fromCssColorString(style.color || "#ffffff").withAlpha(0.18),
+          strokeWidth: style.weight ?? 2,
+          clampToGround: true
+        });
+        add3DDataSourceOnly(key, ds);
+      }
+
+      const count = Array.isArray(geojson.features) ? geojson.features.length : 0;
+      log(`${key} ON (${count})${endpoint ? "" : " fallback"}`);
+    } catch (e) {
+      log(`${key} failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  function extractHeatPoints(raw){
+    const arr =
+      Array.isArray(raw) ? raw :
+      Array.isArray(raw?.data) ? raw.data :
+      Array.isArray(raw?.results) ? raw.results :
+      Array.isArray(raw?.features) ? raw.features :
+      [];
+    const pts = [];
+
+    for (const item of arr) {
+      if (item?.type === "Feature" && item.geometry?.type === "Point") {
+        const [lon, lat] = item.geometry.coordinates || [];
+        const w = Number(item.properties?.weight ?? item.properties?.value ?? 0.5);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) pts.push([lat, lon, Math.max(0.05, Math.min(1, w))]);
+        continue;
+      }
+      const lat = Number(item.lat ?? item.latitude);
+      const lon = Number(item.lon ?? item.longitude);
+      const w = Number(item.weight ?? item.value ?? item.intensity ?? 0.5);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) pts.push([lat, lon, Math.max(0.05, Math.min(1, w))]);
+    }
+    return pts;
+  }
+
+  async function setHeatOverlay(key, on, endpoint, options={}){
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log(`${key} OFF`);
+    if (!endpoint) {
+      maybeLogMissingOnce(key, `${key} endpoint missing`);
+      throw new Error(`${key} endpoint missing`);
+    }
+
+    try {
+      const raw = await fetchJson(endpoint, true);
+      const pts = extractHeatPoints(raw);
+      if (!pts.length) throw new Error("No valid heat points");
+
+      const heat = L.heatLayer(pts, {
+        pane:"overlay",
+        radius: options.radius || 20,
+        blur: options.blur || 14,
+        maxZoom: 17,
+        minOpacity: Math.max(0.1, overlayAlpha() * 0.7)
+      });
+      state.overlays2d[key] = heat;
+      heat.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource(key);
+        pts.forEach(p => {
+          ds.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(p[1], p[0], 0),
+            point: {
+              pixelSize: Math.max(4, 14 * p[2]),
+              color: Cesium.Color.fromCssColorString(options.color || "#ff7b00").withAlpha(0.7)
+            }
+          });
+        });
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`${key} heat ON (${pts.length})`);
+    } catch (e) {
+      log(`${key} heat failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  async function setFires(on){
+    const key = "fires";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log("Fires OFF");
+
+    try {
+      const j = await fetchJson(CONFIG.eonetWildfires, true);
+      const markers = [];
+      const pts = [];
+
+      for (const ev of (j.events || [])) {
+        for (const g of (ev.geometry || [])) {
+          const c = g.coordinates;
+          if (!Array.isArray(c) || c.length < 2) continue;
+          const lon = Number(c[0]);
+          const lat = Number(c[1]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+          markers.push(
+            L.circleMarker([lat, lon], {
+              radius:4,
+              color:"#ff776b",
+              fillColor:"#ff3b30",
+              fillOpacity:0.82,
+              weight:1,
+              pane:"overlay"
+            }).bindPopup(`<b>${escapeHtml(ev.title)}</b><br>${escapeHtml(g.date || "")}`)
+          );
+          pts.push({lat, lon});
+        }
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("fires");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+          point: { pixelSize:6, color: Cesium.Color.ORANGERED }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Fires ON (${markers.length})`);
+    } catch (e) {
+      log(`Fires failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  async function setQuakes(on){
+    const key = "quakes";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log("Quakes OFF");
+
+    try {
+      const j = await fetchJson(CONFIG.usgsQuakesDay, false);
+      const markers = [];
+      const pts = [];
+
+      for (const f of (j.features || [])) {
+        const c = f.geometry?.coordinates || [];
+        const lon = Number(c[0]);
+        const lat = Number(c[1]);
+        const mag = Number(f.properties?.mag || 0);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+        const r = Math.max(2, Math.min(12, mag * 2));
+        markers.push(
+          L.circleMarker([lat, lon], {
+            radius:r,
+            color:"#ffd166",
+            fillColor:"#ffb703",
+            fillOpacity:0.8,
+            weight:1,
+            pane:"overlay"
+          }).bindPopup(`<b>${escapeHtml(f.properties?.title || "Earthquake")}</b>`)
+        );
+
+        pts.push({lat, lon, mag});
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("quakes");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+          point: { pixelSize: Math.max(4, p.mag * 3), color: Cesium.Color.GOLD.withAlpha(0.84) }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Quakes ON (${markers.length})`);
+    } catch (e) {
+      log(`Quakes failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  async function setAircraft(on){
+    const key = "aircraft";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log("Aircraft OFF");
+
+    try {
+      const r = await fetch(CONFIG.openSkyStatesAll, { cache:"no-store" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+
+      const markers = [];
+      const pts = [];
+
+      for (const s of (j.states || []).slice(0, 2500)) {
+        const lon = Number(s[5]);
+        const lat = Number(s[6]);
+        const callsign = (s[1] || "").trim();
+        const alt = Number(s[7] || 11000);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+        markers.push(
+          L.circleMarker([lat, lon], {
+            radius:2,
+            color:"#67e8f9",
+            fillColor:"#22d3ee",
+            fillOpacity:0.76,
+            weight:1,
+            pane:"overlay"
+          }).bindPopup(`<b>${escapeHtml(callsign || "Aircraft")}</b><br>Alt: ${escapeHtml(String(Math.round(alt)))} m`)
+        );
+        pts.push({lat, lon, alt});
+      }
+
+      const group = L.layerGroup(markers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("aircraft");
+        pts.forEach(p => ds.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, Math.max(1500, p.alt)),
+          point: { pixelSize:3, color: Cesium.Color.CYAN.withAlpha(0.85) }
+        }));
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Aircraft ON (${markers.length})`);
+    } catch (e) {
+      log(`Aircraft failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  async function setSentinelFootprints(on){
+    const key = "sentinelFootprints";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log("Sentinel footprints OFF");
+
+    try {
+      const b = state.map2d.getBounds();
+      const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+      const end = new Date();
+      const start = new Date();
+      start.setUTCDate(start.getUTCDate() - 10);
+
+      const body = {
+        collections:["sentinel-2-l2a"],
+        bbox,
+        datetime:`${start.toISOString()}/${end.toISOString()}`,
+        limit:20,
+        query:{ "eo:cloud_cover": { lte:20 } }
+      };
+
+      const j = await fetchPostJson(CONFIG.earthSearchSearch, body, false);
+      const layers = [];
+      const pts = [];
+
+      for (const f of (j.features || [])) {
+        const geom = f.geometry;
+        const props = f.properties || {};
+        const title = props["sentinel:product_id"] || f.id || "Sentinel scene";
+        if (!geom) continue;
+
+        const geo = L.geoJSON(geom, {
+          pane:"overlay",
+          style:{ color:"#7dd3fc", weight:2, opacity:0.9, fillOpacity:0.08 }
+        }).bindPopup(escapeHtml(title));
+
+        layers.push(geo);
+        collectCoords(geom).forEach(([lon, lat]) => pts.push({lon, lat}));
+      }
+
+      const group = L.layerGroup(layers);
+      state.overlays2d[key] = group;
+      group.addTo(state.map2d);
+
+      if (state.viewer3d) {
+        const ds = new Cesium.CustomDataSource("sentinelFootprints");
+        for (let i = 0; i < pts.length; i += 10) {
+          const p = pts[i];
+          ds.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+            point: { pixelSize:2, color: Cesium.Color.SKYBLUE.withAlpha(0.8) }
+          });
+        }
+        add3DDataSourceOnly(key, ds);
+      }
+
+      log(`Sentinel footprints ON (${layers.length} scenes)`);
+    } catch (e) {
+      log(`Sentinel footprints failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  function collectCoords(geom){
+    const pts = [];
+    if (geom.type === "Polygon") {
+      for (const ring of geom.coordinates || []) {
+        for (const c of ring || []) {
+          if (Array.isArray(c) && c.length >= 2) pts.push([Number(c[0]), Number(c[1])]);
+        }
+      }
+    } else if (geom.type === "MultiPolygon") {
+      for (const poly of geom.coordinates || []) {
+        for (const ring of poly || []) {
+          for (const c of ring || []) {
+            if (Array.isArray(c) && c.length >= 2) pts.push([Number(c[0]), Number(c[1])]);
+          }
+        }
+      }
+    }
+    return pts.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat));
+  }
+
+  async function setSentinelOverlay(on){
+    const key = "sentinelOverlay";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+
+    if (!on) return log("Sentinel overlay OFF");
+
+    const tpl = $("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate;
+    if (!tpl) {
+      maybeLogMissingOnce(key, "Sentinel imagery template missing");
+      throw new Error("Sentinel imagery template missing");
+    }
+
+    const layer2d = makeTileLayer(tpl, {
+      pane:"overlay",
+      maxZoom:19,
+      opacity:overlayAlpha(),
+      attribution:"Sentinel"
+    });
+    state.overlays2d[key] = layer2d;
+    layer2d.addTo(state.map2d);
+
+    if (state.viewer3d) add3DOverlayImageryOnly(key, makeCesiumXYZ(tpl, 19));
+    log("Sentinel overlay ON");
+  }
+
+  function loadScript(src){
+    return new Promise((resolve, reject) => {
+      if ([...document.scripts].some(s => s.src === src)) return resolve();
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureSatelliteJsLoaded(){
+    if (window.satellite) {
+      state.satelliteJsReady = true;
+      return window.satellite;
+    }
+    busy(true, "Loading satellite.js…");
+    try {
+      await loadScript("https://unpkg.com/satellite.js/dist/satellite.min.js");
+      let tries = 0;
+      while (!window.satellite && tries < 20) {
+        await new Promise(r => setTimeout(r, 100));
+        tries++;
+      }
+      if (!window.satellite) throw new Error("satellite.js global missing");
+      state.satelliteJsReady = true;
+      updatePerf();
+      log("satellite.js loaded");
+      return window.satellite;
+    } finally {
+      busy(false);
+    }
+  }
+
+  async function setSatellites(on){
+    const key = "satellites";
+    state.overlayActive[key] = !!on;
+    remove2DOverlay(key);
+    remove3DOverlay(key);
+    if (state.satelliteTimer) {
+      clearInterval(state.satelliteTimer);
+      state.satelliteTimer = null;
+    }
+
+    if (!on) return log("Satellites OFF");
+
+    try {
+      const sat = await ensureSatelliteJsLoaded();
+      const tleUrl = $("tleEndpoint").value.trim() || CONFIG.tleEndpoint || CONFIG.defaultTleSource;
+      const tleText = await fetchText(tleUrl, true);
+
+      const lines = tleText.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      const recs = [];
+
+      for (let i = 0; i < lines.length - 2; i += 3) {
+        const name = lines[i];
+        const l1 = lines[i+1];
+        const l2 = lines[i+2];
+        if (!l1.startsWith("1 ") || !l2.startsWith("2 ")) continue;
+        try { recs.push({ name, satrec: sat.twoline2satrec(l1, l2) }); } catch {}
+      }
+
+      const build = () => {
+        remove2DOverlay(key);
+        remove3DOverlay(key);
+
+        const now = new Date();
+        const gmst = sat.gstime(now);
+        const markers = [];
+        const ds = state.viewer3d ? new Cesium.CustomDataSource("satellites") : null;
+
+        for (const rec of recs.slice(0, 120)) {
+          const pv = sat.propagate(rec.satrec, now);
+          if (!pv.position) continue;
+          const geo = sat.eciToGeodetic(pv.position, gmst);
+          const lat = geo.latitude * 180 / Math.PI;
+          const lon = geo.longitude * 180 / Math.PI;
+          const altKm = geo.height;
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+          markers.push(
+            L.circleMarker([lat, lon], {
+              radius:3,
+              color:"#c084fc",
+              fillColor:"#a855f7",
+              fillOpacity:0.8,
+              weight:1,
+              pane:"overlay"
+            }).bindPopup(escapeHtml(rec.name))
+          );
+
+          if (ds) {
+            ds.entities.add({
+              position: Cesium.Cartesian3.fromDegrees(lon, lat, Math.max(0, altKm * 1000)),
+              point: { pixelSize:4, color: Cesium.Color.MAGENTA.withAlpha(0.88) }
+            });
+          }
+        }
+
+        const group = L.layerGroup(markers);
+        state.overlays2d[key] = group;
+        group.addTo(state.map2d);
+        if (ds) add3DDataSourceOnly(key, ds);
+      };
+
+      build();
+      state.satelliteTimer = setInterval(build, 20000);
+      log(`Satellites ON (${Math.min(120, recs.length)} tracked)`);
+    } catch (e) {
+      log(`Satellites failed: ${e.message}`);
+      throw e;
+    }
+  }
+
+  function getEndpointForKey(key){
+    const map = {
+      trafficSpeed: CONFIG.trafficSpeedEndpoint,
+      trafficIncidents: CONFIG.trafficIncidentsEndpoint,
+      construction: CONFIG.constructionEndpoint,
+      vehicleHeat: CONFIG.vehicleHeatEndpoint,
+      ships: CONFIG.aisGeoJsonEndpoint,
+      windHeat: CONFIG.windHeatEndpoint,
+      hurricane: CONFIG.hurricaneEndpoint,
+      airspace: CONFIG.airspaceEndpoint
+    };
+    return map[key] || "";
+  }
+
+  function hasConfiguredEndpoint(key){
+    if (key === "sentinelOverlay") return !!($("sentinelTileTemplate").value.trim() || CONFIG.sentinelTileTemplate);
+    return !!getEndpointForKey(key);
+  }
+
+  async function setTrafficSpeed(on){
+    return setGeoJsonOverlay(
+      "trafficSpeed",
+      on,
+      getEndpointForKey("trafficSpeed"),
+      { color:"#22c55e", radius:3, weight:3, polyFillOpacity:0.04 },
+      fetchRoadFallbackGeoJSON
+    );
+  }
+
+  async function setTrafficIncidents(on){
+    return setGeoJsonOverlay(
+      "trafficIncidents",
+      on,
+      getEndpointForKey("trafficIncidents"),
+      { color:"#f97316", fillColor:"#f97316", radius:5, weight:2 },
+      null
+    );
+  }
+
+  async function setConstruction(on){
+    return setGeoJsonOverlay(
+      "construction",
+      on,
+      getEndpointForKey("construction"),
+      { color:"#fbbf24", fillColor:"#fbbf24", radius:4, weight:3 },
+      fetchConstructionFallbackGeoJSON
+    );
+  }
+
+  async function setVehicleHeat(on){
+    return setHeatOverlay("vehicleHeat", on, getEndpointForKey("vehicleHeat"), {
+      color:"#ff6a00", radius:22, blur:15
+    });
+  }
+
+  async function setShips(on){
+    return setGeoJsonOverlay("ships", on, getEndpointForKey("ships"), {
+      color:"#34d399", fillColor:"#10b981", radius:3, weight:1
+    }, null);
+  }
+
+  async function setWindHeat(on){
+    return setHeatOverlay("windHeat", on, getEndpointForKey("windHeat"), {
+      color:"#60a5fa", radius:18, blur:12
+    });
+  }
+
+  async function setHurricane(on){
+    return setGeoJsonOverlay("hurricane", on, getEndpointForKey("hurricane"), {
+      color:"#8b5cf6", fillColor:"#8b5cf6", radius:4, weight:3, polyFillOpacity:0.08
+    }, null);
+  }
+
+  async function setAirspace(on){
+    return setGeoJsonOverlay("airspace", on, getEndpointForKey("airspace"), {
+      color:"#ef4444", fillColor:"#ef4444", radius:4, weight:2, polyFillOpacity:0.07
+    }, null);
+  }
+
+  function applyOverlayOpacity(){
+    const a = overlayAlpha();
+
+    Object.values(state.overlays2d).forEach(layer => {
+      if (layer && layer.setOpacity) layer.setOpacity(a);
+      if (layer && layer.eachLayer) {
+        layer.eachLayer(l => {
+          if (l.setOpacity) l.setOpacity(a);
+          if (l.setStyle) {
+            l.setStyle({
+              fillOpacity: Math.min(0.9, Math.max(0.08, a * 0.3)),
+              opacity: Math.max(0.25, a)
+            });
+          }
+        });
+      }
+    });
+
+    Object.values(state.overlays3d).forEach(layer => {
+      if (layer && typeof layer.alpha === "number") layer.alpha = a;
+    });
+
+    if (state.viewer3d) state.viewer3d.scene.requestRender();
+  }
+
+  function zoomIn(){
+    if (state.mode === "2d" && state.map2d) return state.map2d.zoomIn();
+    if (state.mode === "3d" && state.viewer3d) {
+      const h = state.viewer3d.camera.positionCartographic.height;
+      state.viewer3d.camera.moveForward(Math.max(250, h * 0.25));
+      state.viewer3d.scene.requestRender();
+      return updateHUD();
+    }
+    if (state.mode === "astro") return astroZoomIn();
+  }
+
+  function zoomOut(){
+    if (state.mode === "2d" && state.map2d) return state.map2d.zoomOut();
+    if (state.mode === "3d" && state.viewer3d) {
+      const h = state.viewer3d.camera.positionCartographic.height;
+      state.viewer3d.camera.moveBackward(Math.max(250, h * 0.25));
+      state.viewer3d.scene.requestRender();
+      return updateHUD();
+    }
+    if (state.mode === "astro") return astroZoomOut();
+  }
+
+  function goHome(){
+    if (state.mode === "2d" && state.map2d) {
+      state.map2d.setView([CONFIG.home.lat, CONFIG.home.lon], CONFIG.home.zoom2d, { animate:true });
+      return;
+    }
+    if (state.mode === "3d") {
+      ensureViewer();
+      state.viewer3d.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d),
+        duration:1
+      });
+      return;
+    }
+    if (state.mode === "astro") {
+      state.astro.target = "M31";
+      state.astro.fov = 120;
+      $("astroSearchBox").value = state.astro.target;
+      astroApply();
+    }
+  }
+
+  async function smartSearch(){
+    const q = $("searchBox").value.trim();
+    if (!q) return;
+
+    const m = q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) {
+      const lat = Number(m[1]);
+      const lon = Number(m[3]);
+      jumpToLatLon(lat, lon);
+      if (isMobile()) setPanelHidden(true);
+      return;
+    }
+
+    try {
+      const j = await fetchJson(CONFIG.nominatim + encodeURIComponent(q), false);
+      if (j.length) {
+        const lat = Number(j[0].lat);
+        const lon = Number(j[0].lon);
+        jumpToLatLon(lat, lon);
+        if (isMobile()) setPanelHidden(true);
+        return;
+      }
+    } catch {}
+
+    await showMode("astro");
+    $("astroSearchBox").value = q;
+    astroSearch();
+  }
+
+  function jumpToLatLon(lat, lon){
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    if (state.map2d) state.map2d.setView([lat, lon], Math.max(8, state.map2d.getZoom()), { animate:true });
+    if (state.viewer3d) {
+      state.viewer3d.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1800000),
+        duration:1
+      });
+    }
+
+    log(`Jump: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+  }
+
+  function markRefreshSuccess(key){
+    if (!state.refreshHealth[key]) return;
+    state.refreshHealth[key].fails = 0;
+    state.refreshHealth[key].muted = false;
+  }
+
+  function markRefreshFailure(key, err){
+    if (!state.refreshHealth[key]) return;
+    const entry = state.refreshHealth[key];
+    entry.fails += 1;
+
+    const msg = String(err?.message || err || "");
+    if (msg.includes("429")) {
+      entry.muted = true;
+      log(`${key} auto-refresh paused after rate limit`);
+      setTimeout(() => {
+        entry.muted = false;
+        entry.fails = 0;
+        log(`${key} auto-refresh resumed`);
+      }, 10 * 60 * 1000);
+      return;
+    }
+
+    if (entry.fails >= 4) {
+      entry.muted = true;
+      log(`${key} auto-refresh paused after repeated failures`);
+      setTimeout(() => {
+        entry.muted = false;
+        entry.fails = 0;
+        log(`${key} auto-refresh resumed`);
+      }, 15 * 60 * 1000);
+    }
+  }
+
+  function setLiveTimer(key, fn, ms){
+    if (state.refreshHealth[key]?.timer) clearInterval(state.refreshHealth[key].timer);
+    state.refreshHealth[key].timer = setInterval(async () => {
+      try {
+        if (!state.overlayActive[key]) return;
+        if (!hasConfiguredEndpoint(key) && !["radar","fires","quakes","aircraft","sentinelFootprints","satellites","trafficSpeed","construction"].includes(key)) return;
+        if (state.refreshHealth[key]?.muted) return;
+        await fn();
+        markRefreshSuccess(key);
+      } catch (e) {
+        markRefreshFailure(key, e);
+      }
+    }, ms);
+  }
+
+  function startLiveRefreshLoops(){
+    setLiveTimer("radar", async () => { if (!state.radar.timer) await setRadar(true); }, LIVE_REFRESH.radar);
+    setLiveTimer("trafficSpeed", async () => setTrafficSpeed(true), LIVE_REFRESH.trafficSpeed);
+    setLiveTimer("trafficIncidents", async () => setTrafficIncidents(true), LIVE_REFRESH.trafficIncidents);
+    setLiveTimer("construction", async () => setConstruction(true), LIVE_REFRESH.construction);
+    setLiveTimer("vehicleHeat", async () => setVehicleHeat(true), LIVE_REFRESH.vehicleHeat);
+    setLiveTimer("windHeat", async () => setWindHeat(true), LIVE_REFRESH.windHeat);
+    setLiveTimer("hurricane", async () => setHurricane(true), LIVE_REFRESH.hurricane);
+    setLiveTimer("aircraft", async () => setAircraft(true), LIVE_REFRESH.aircraft);
+    setLiveTimer("ships", async () => setShips(true), LIVE_REFRESH.ships);
+    setLiveTimer("airspace", async () => setAirspace(true), LIVE_REFRESH.airspace);
+    setLiveTimer("fires", async () => setFires(true), LIVE_REFRESH.fires);
+    setLiveTimer("quakes", async () => setQuakes(true), LIVE_REFRESH.quakes);
+    setLiveTimer("sentinelFootprints", async () => setSentinelFootprints(true), LIVE_REFRESH.sentinelFootprints);
+    setLiveTimer("sentinelOverlay", async () => setSentinelOverlay(true), LIVE_REFRESH.sentinelOverlay);
+    setLiveTimer("satellites", async () => setSatellites(true), LIVE_REFRESH.satellites);
+  }
+
+  async function refreshEnabledOverlays(){
+    syncConfigFromInputs();
+
+    if (state.overlayActive.radar) await setRadar(true);
+    if (state.overlayActive.clouds) await setGibsOverlay("clouds", true);
+    if (state.overlayActive.precip) await setGibsOverlay("precip", true);
+    if (state.overlayActive.thermal) await setGibsOverlay("thermal", true);
+    if (state.overlayActive.trafficSpeed) await setTrafficSpeed(true);
+    if (state.overlayActive.trafficIncidents && hasConfiguredEndpoint("trafficIncidents")) await setTrafficIncidents(true);
+    if (state.overlayActive.construction) await setConstruction(true);
+    if (state.overlayActive.vehicleHeat && hasConfiguredEndpoint("vehicleHeat")) await setVehicleHeat(true);
+    if (state.overlayActive.windHeat && hasConfiguredEndpoint("windHeat")) await setWindHeat(true);
+    if (state.overlayActive.hurricane && hasConfiguredEndpoint("hurricane")) await setHurricane(true);
+    if (state.overlayActive.aircraft) await setAircraft(true);
+    if (state.overlayActive.ships && hasConfiguredEndpoint("ships")) await setShips(true);
+    if (state.overlayActive.airspace && hasConfiguredEndpoint("airspace")) await setAirspace(true);
+    if (state.overlayActive.fires) await setFires(true);
+    if (state.overlayActive.quakes) await setQuakes(true);
+    if (state.overlayActive.sentinelFootprints) await setSentinelFootprints(true);
+    if (state.overlayActive.sentinelOverlay && hasConfiguredEndpoint("sentinelOverlay")) await setSentinelOverlay(true);
+    if (state.overlayActive.satellites) await setSatellites(true);
+  }
+
+  async function runHealth(){
+    log("=== HEALTH CHECK ===");
+    const tests = [
+      ["Esri", CONFIG.esri.replace("{z}","2").replace("{y}","1").replace("{x}","1")],
+      ["OSM", CONFIG.osm.replace("{s}","a").replace("{z}","2").replace("{x}","1").replace("{y}","1")],
+      ["NASA GIBS", gibsBaseUrl(CONFIG.gibsModis).replace("{z}","2").replace("{y}","1").replace("{x}","1")],
+      ["RainViewer", CONFIG.rainViewerTimeline],
+      ["USGS quakes", CONFIG.usgsQuakesDay],
+      ["EONET fires", CONFIG.eonetWildfires],
+      ["OpenSky", CONFIG.openSkyStatesAll],
+      ["Earth Search STAC", CONFIG.earthSearchSearch],
+      ["Overpass", CONFIG.overpassEndpoint],
+      ["Traffic speed endpoint", CONFIG.trafficSpeedEndpoint],
+      ["Traffic incidents endpoint", CONFIG.trafficIncidentsEndpoint],
+      ["Construction endpoint", CONFIG.constructionEndpoint],
+      ["AIS", CONFIG.aisGeoJsonEndpoint]
+    ];
+
+    for (const [name, url] of tests) {
+      if (!url) {
+        log(`${name}: SKIPPED (not set)`);
+        continue;
+      }
+      const ok = await probe(url);
+      log(`${name}: ${ok ? "OK" : "FAIL"}${ok ? "" : " " + url}`);
+    }
+    log("=== END HEALTH ===");
+  }
+
+  function wireAstroButtons(){
+    $("astroSearchBtn").onclick = astroSearch;
+    $("astroResetBtn").onclick = () => {
+      state.astro.target = "M31";
+      state.astro.fov = 120;
+      $("astroSearchBox").value = state.astro.target;
+      astroApply();
+    };
+    $("astroReticleBtn").onclick = () => {
+      state.astro.reticle = !state.astro.reticle;
+      astroApply();
+    };
+    $("astroZoomInBtn").onclick = astroZoomIn;
+    $("astroZoomOutBtn").onclick = astroZoomOut;
+    $("astroFitBtn").onclick = astroWide;
+    $("astroSearchBox").addEventListener("keydown", e => {
+      if (e.key === "Enter") astroSearch();
+    });
+
+    $("astroHudPlus").onclick = astroZoomIn;
+    $("astroHudMinus").onclick = astroZoomOut;
+    $("astroHudWide").onclick = astroWide;
+    $("astroHudReticle").onclick = () => {
+      state.astro.reticle = !state.astro.reticle;
+      astroApply();
+    };
+  }
+
+  function wireUI(){
+    menuToggle.onclick = () => {
+      panel.classList.toggle("panel-hidden");
+      syncPanel();
+    };
+    panelBackdrop.onclick = () => setPanelHidden(true);
+
+    if (isMobile()) setPanelHidden(true);
+    syncPanel();
+    window.addEventListener("resize", syncPanel);
+
+    let startX = 0;
+    document.addEventListener("touchstart", e => {
+      if (!e.touches || !e.touches.length) return;
+      startX = e.touches[0].clientX;
+    }, { passive:true });
+
+    document.addEventListener("touchend", e => {
+      if (!e.changedTouches || !e.changedTouches.length) return;
+      const endX = e.changedTouches[0].clientX;
+      if (startX < 32 && endX > 120) setPanelHidden(false);
+      if (startX > 180 && endX < 90 && isMobile()) setPanelHidden(true);
+    }, { passive:true });
+
+    $("mode2d").onclick = () => showMode("2d");
+    $("mode3d").onclick = () => { ensureViewer(); setBase3D($("baseSelect").value); showMode("3d"); };
+    $("modeAstro").onclick = () => showMode("astro");
+
+    $("zoomInBtn").onclick = zoomIn;
+    $("zoomOutBtn").onclick = zoomOut;
+    $("resetBtn").onclick = goHome;
+    $("homeBtn").onclick = goHome;
+
+    $("searchBtn").onclick = () => smartSearch().catch(e => log(`Search failed: ${e.message}`));
+    $("searchBox").addEventListener("keydown", e => {
+      if (e.key === "Enter") smartSearch().catch(err => log(`Search failed: ${err.message}`));
+    });
+
+    $("refreshBtn").onclick = () => refreshEnabledOverlays().catch(e => log(`Refresh failed: ${e.message}`));
+    $("healthBtn").onclick = runHealth;
+    $("copyLogBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(logEl.textContent);
+        log("Copied log to clipboard.");
+      } catch (e) {
+        log(`Copy failed: ${e.message}`);
+      }
+    };
+
+    $("baseSelect").onchange = () => {
+      syncConfigFromInputs();
+      setBase2D($("baseSelect").value);
+      if (state.viewer3d) setBase3D($("baseSelect").value);
+    };
+
+    $("gibsDate").onchange = async () => {
+      if (["gibs_modis","gibs_viirs"].includes($("baseSelect").value)) {
+        setBase2D($("baseSelect").value);
+        if (state.viewer3d) setBase3D($("baseSelect").value);
+      }
+      if (state.overlayActive.clouds) await setGibsOverlay("clouds", true);
+      if (state.overlayActive.precip) await setGibsOverlay("precip", true);
+      if (state.overlayActive.thermal) await setGibsOverlay("thermal", true);
+    };
+
+    $("labelsChk").onchange = () => setLabels($("labelsChk").checked);
+    $("terrain3dChk").onchange = () => setTerrain3D($("terrain3dChk").checked);
+
+    $("timePlayBtn").onclick = playTimeline;
+    $("timeStepBtn").onclick = () => timelineStep().catch(e => log(`Timeline step failed: ${e.message}`));
+    $("timeNowBtn").onclick = () => timelineNow().catch(e => log(`Timeline now failed: ${e.message}`));
+    $("timeSlider").oninput = async () => {
+      if (state.timeline.mode === "radar" && state.radar.frames.length) {
+        stopTimeline();
+        state.radar.index = Number($("timeSlider").value) || 0;
+        if ($("radarChk").checked) await setRadar(true);
+      }
+    };
+
+    $("radarChk").onchange = () => setRadar($("radarChk").checked).catch(()=>{});
+    $("radarAnimateBtn").onclick = toggleRadarAnimation;
+    $("radarStepBtn").onclick = () => stepRadar().catch(e => log(`Radar step failed: ${e.message}`));
+    $("radarReloadBtn").onclick = () => setRadar($("radarChk").checked).catch(e => log(`Radar reload failed: ${e.message}`));
+    $("radarTrailSelect").onchange = () => { if ($("radarChk").checked) setRadar(true).catch(()=>{}); };
+
+    $("cloudsChk").onchange = () => setGibsOverlay("clouds", $("cloudsChk").checked);
+    $("precipChk").onchange = () => setGibsOverlay("precip", $("precipChk").checked);
+    $("thermalChk").onchange = () => setGibsOverlay("thermal", $("thermalChk").checked);
+    $("windHeatChk").onchange = () => setWindHeat($("windHeatChk").checked).catch(()=>{});
+    $("hurricaneChk").onchange = () => setHurricane($("hurricaneChk").checked).catch(()=>{});
+
+    $("trafficSpeedChk").onchange = () => setTrafficSpeed($("trafficSpeedChk").checked).catch(()=>{});
+    $("trafficIncidentsChk").onchange = () => setTrafficIncidents($("trafficIncidentsChk").checked).catch(()=>{});
+    $("constructionChk").onchange = () => setConstruction($("constructionChk").checked).catch(()=>{});
+    $("vehicleHeatChk").onchange = () => setVehicleHeat($("vehicleHeatChk").checked).catch(()=>{});
+    $("aircraftChk").onchange = () => setAircraft($("aircraftChk").checked).catch(()=>{});
+    $("shipsChk").onchange = () => setShips($("shipsChk").checked).catch(()=>{});
+    $("airspaceChk").onchange = () => setAirspace($("airspaceChk").checked).catch(()=>{});
+
+    $("firesChk").onchange = () => setFires($("firesChk").checked).catch(()=>{});
+    $("quakesChk").onchange = () => setQuakes($("quakesChk").checked).catch(()=>{});
+    $("sentinelFootprintsChk").onchange = () => setSentinelFootprints($("sentinelFootprintsChk").checked).catch(()=>{});
+    $("sentinelOverlayChk").onchange = () => setSentinelOverlay($("sentinelOverlayChk").checked).catch(()=>{});
+    $("satellitesChk").onchange = () => setSatellites($("satellitesChk").checked).catch(()=>{});
+
+    $("overlayOpacity").oninput = applyOverlayOpacity;
+
+    [
+      "proxyPrefixInput","owmKey","sentinelTileTemplate","geeTileTemplate","trafficSpeedEndpoint",
+      "trafficIncidentsEndpoint","constructionEndpoint","vehicleHeatEndpoint","aisEndpoint",
+      "windHeatEndpoint","hurricaneEndpoint","airspaceEndpoint","tleEndpoint","overpassEndpoint"
+    ].forEach(id => {
+      $(id).addEventListener("change", () => {
+        syncConfigFromInputs();
+        state.silentMissingLogged = {};
+      });
+      $(id).addEventListener("blur", () => {
+        syncConfigFromInputs();
+        state.silentMissingLogged = {};
+      });
+    });
+
+    wireAstroButtons();
+    log("UI wired");
+  }
+
+  async function boot(){
+    $("gibsDate").value = yesterdayUTC();
+    $("astroSearchBox").value = state.astro.target;
+
+    syncConfigFromInputs();
+    installErrorHooks();
+    updateModeBadge();
+    setStatus("Booting", "warn");
+    setTimeHUD("Timeline idle");
+    log(`Boot: ${CONFIG.appName}`);
+
+    wireUI();
+    init2D();
+    setBase2D("esri");
+    await discoverGIBS();
+    await preloadRadarTimeline();
+    startLiveRefreshLoops();
+    perfTick();
+    updateHUD();
+    await showMode("2d");
+
+    setStatus("Ready", "ok");
+    log("Ready ✅");
+  }
+
+  boot().catch(e => {
+    setStatus("Fatal error", "bad");
+    log(`Fatal boot error: ${e.message}`);
+    console.error(e);
+  });
+})();
+</script>
+</body>
+</html>

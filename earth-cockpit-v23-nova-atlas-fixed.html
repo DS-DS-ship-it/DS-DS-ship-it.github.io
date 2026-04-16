@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Earth Cockpit v28 SpaceNav Atlas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.css" />
+  <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
+
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#07111a;
+      --panel:#0d1723;
+      --line:rgba(255,255,255,.10);
+      --line2:rgba(255,255,255,.16);
+      --text:#edf6ff;
+      --muted:#95b5d6;
+      --ok:#4ade80;
+      --warn:#fbbf24;
+      --bad:#f87171;
+      --accent:#6cb8ff;
+      --shadow:0 18px 48px rgba(0,0,0,.42);
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --panelW: 430px;
+      --radius: 14px;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font:13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    #app{ width:100%; height:100%; display:grid; grid-template-columns:var(--panelW) 1fr; background:var(--bg); }
+    #panel{ overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; background:linear-gradient(180deg, rgba(13,23,35,.985), rgba(7,13,20,.995)); border-right:1px solid var(--line); padding:10px; z-index:9000; transition:transform .24s ease, opacity .24s ease; }
+    #stage{ position:relative; width:100%; height:100%; overflow:hidden; background:#000; }
+    #map2d,#map3d,#astroWrap{ position:absolute; inset:0; width:100%; height:100%; background:#000; }
+    #map3d,#astroWrap{ display:none; }
+    #astroCanvas{ position:absolute; inset:0; width:100%; height:100%; background:#000; }
+    .box{ background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:var(--radius); padding:10px; margin-bottom:10px; box-shadow:var(--shadow); }
+    .title{ margin:0 0 6px; font-size:16px; font-weight:900; letter-spacing:.02em; }
+    .sub{ margin:0 0 8px; color:var(--muted); font-size:12px; }
+    .tiny{ color:var(--muted); font-size:12px; }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
+    .row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+    .row:last-child{ margin-bottom:0; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    button,select,input[type="text"],input[type="number"],input[type="date"],input[type="range"],textarea{
+      width:100%; background:#0c1622; color:var(--text); border:1px solid var(--line2); border-radius:10px; padding:8px 9px; font:inherit; outline:none;
+    }
+    textarea{ resize:vertical; min-height:72px; }
+    button{ cursor:pointer; }
+    button.primary{ background:#173a5d; border-color:#78b9ff; }
+    button.active{ background:#173a5d; border-color:#78b9ff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
+    label.check{ display:flex; gap:7px; align-items:center; margin-bottom:6px; user-select:none; }
+    label.check input{ width:auto; margin:0; }
+    .badge{ display:inline-flex; gap:6px; align-items:center; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--muted); font-size:12px; }
+    .badge.ok{ color:#dfffea; border-color:rgba(74,222,128,.45); background:rgba(74,222,128,.12); }
+    .badge.warn{ color:#fff4d4; border-color:rgba(251,191,36,.45); background:rgba(251,191,36,.12); }
+    .badge.bad{ color:#ffe1e1; border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.12); }
+    .sep{ height:1px; background:rgba(255,255,255,.09); margin:8px 0; }
+    .tinyout{ padding:8px 9px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.03); color:var(--text); min-height:34px; display:flex; align-items:center; }
+    .kv{ display:grid; grid-template-columns:120px 1fr; gap:6px; align-items:center; margin-bottom:6px; }
+    #hud,#perf,#timeHUD,#astroHUD{ position:absolute; z-index:9999; padding:10px 12px; border-radius:14px; border:1px solid var(--line2); background:rgba(8,14,22,.78); backdrop-filter:blur(10px); box-shadow:var(--shadow); }
+    #hud{ top:10px; right:10px; max-width:420px; pointer-events:none; }
+    #timeHUD{ left:10px; top:10px; max-width:420px; pointer-events:none; }
+    #perf{ left:10px; bottom:10px; min-width:280px; pointer-events:none; }
+    #astroHUD{ right:10px; bottom:10px; max-width:460px; min-width:320px; white-space:pre-wrap; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    #busy{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:99999; display:none; padding:12px 16px; border-radius:999px; border:1px solid var(--line2); background:rgba(8,14,22,.95); box-shadow:var(--shadow); font-weight:900; pointer-events:none; }
+    .menu-toggle{ position:fixed; top:calc(12px + var(--safeTop)); left:12px; z-index:12000; font-size:20px; background:rgba(10,12,18,.92); border:1px solid rgba(255,255,255,.16); color:white; padding:10px 14px; border-radius:12px; cursor:pointer; box-shadow:var(--shadow); display:none; }
+    #panelBackdrop{ position:fixed; inset:0; background:rgba(0,0,0,.42); z-index:11000; display:none; }
+    #astroMiniHud{ position:absolute; right:10px; bottom:170px; z-index:10001; display:flex; gap:6px; flex-wrap:wrap; }
+    #astroMiniHud button{ width:auto; min-width:64px; padding:9px 10px; background:rgba(10,14,22,.84); backdrop-filter:blur(8px); }
+    #waypointList{ max-height:220px; overflow:auto; }
+    .waypointItem{ padding:8px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.03); margin-bottom:6px; }
+    .waypointItem b{ display:block; margin-bottom:2px; }
+    .leaflet-container{ background:#070b10; }
+    .leaflet-control-attribution{ background:rgba(8,14,22,.72)!important; color:#dce8f7!important; }
+    .leaflet-control-zoom a{ background:#111a24!important; color:#fff!important; border-color:rgba(255,255,255,.14)!important; }
+    @media (max-width:980px){
+      #app{ display:block; }
+      #panel{ position:fixed; left:10px; top:calc(10px + var(--safeTop)); bottom:calc(10px + var(--safeBottom)); width:min(400px, calc(100vw - 20px)); max-width:calc(100vw - 20px); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
+      #panel.panel-hidden{ transform:translateX(calc(-100% - 16px)); opacity:0; pointer-events:none; }
+      .menu-toggle{ display:block; }
+      #panelBackdrop.show{ display:block; }
+      #hud{ max-width:min(80vw, 360px); top:calc(10px + var(--safeTop)); }
+      #timeHUD{ top:auto; bottom:calc(86px + var(--safeBottom)); max-width:min(82vw, 360px); }
+      #perf{ bottom:calc(10px + var(--safeBottom)); }
+      #astroHUD{ left:10px; right:auto; max-width:min(90vw, 390px); bottom:calc(96px + var(--safeBottom)); }
+      #astroMiniHud{ bottom:calc(250px + var(--safeBottom)); }
+    }
+  </style>
+</head>
+<body>
+  <button id="menuToggle" class="menu-toggle" aria-label="Toggle menu">â°</button>
+  <div id="panelBackdrop"></div>
+  <div id="app">
+    <aside id="panel">
+      <div class="box">
+        <div class="title">Earth Cockpit v28 SpaceNav Atlas</div>
+        <div class="sub">2D + 3D + Astro â¢ Earth-to-sky travel planner â¢ waypoint routing â¢ SVC space coordinates â¢ SCN / SPICE-ready export</div>
+        <div class="grid3">
+          <button id="mode2d" class="primary active">2D</button>
+          <button id="mode3d">3D</button>
+          <button id="modeAstro">ASTRO</button>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <span id="modeBadge" class="badge">Mode: 2D</span>
+          <span id="statusBadge" class="badge warn">Booting</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="grid3">
+          <button id="zoomInBtn">Zoom +</button>
+          <button id="zoomOutBtn">Zoom â</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <button id="refreshBtn">Refresh</button>
+          <button id="copyLogBtn">Copy log</button>
+          <button id="healthBtn">Health</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny">Search Earth or sky</div>
+        <div class="row"><input id="searchBox" type="text" placeholder="Orlando, 28.54,-81.38, M31, Vega, NGC 1300"></div>
+        <div class="grid2">
+          <button id="searchBtn" class="primary">Go</button>
+          <button id="homeBtn">Home</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Base layer</b></div>
+        <div class="row">
+          <select id="baseSelect">
+            <option value="esri">Esri World Imagery</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="hot">OSM Humanitarian</option>
+          </select>
+        </div>
+        <label class="check"><input id="labelsChk" type="checkbox" checked> Labels / place names</label>
+        <label class="check"><input id="terrain3dChk" type="checkbox"> 3D terrain when available</label>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Astronomy / Aladin Lite</b></div>
+        <div class="tiny">Survey</div>
+        <div class="row">
+          <select id="astroSurvey">
+            <option value="P/DSS2/color">DSS2 color</option>
+            <option value="P/2MASS/color">2MASS infrared</option>
+            <option value="P/allWISE/color">AllWISE infrared</option>
+            <option value="P/GALEXGR6/AIS/color">GALEX ultraviolet</option>
+            <option value="P/IRIS/color">IRIS infrared</option>
+            <option value="P/Planck/color">Planck</option>
+            <option value="P/RASS">ROSAT X-ray</option>
+          </select>
+        </div>
+        <div class="tiny">Target</div>
+        <div class="row"><input id="astroSearchBox" type="text" placeholder="M31, Vega, NGC 1300"></div>
+        <div class="grid3">
+          <button id="astroSearchBtn" class="primary">Find</button>
+          <button id="astroResetBtn">Reset sky</button>
+          <button id="astroReticleBtn">Reticle</button>
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <button id="astroZoomInBtn">Sky +</button>
+          <button id="astroZoomOutBtn">Sky â</button>
+          <button id="astroFitBtn">Wide</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Space travel planner</b></div>
+        <div class="tiny">Start node</div>
+        <div class="row"><select id="spaceStartSelect"></select></div>
+        <div class="tiny">Target node</div>
+        <div class="row"><select id="spaceEndSelect"></select></div>
+        <div class="grid3">
+          <button id="spaceBuildBtn" class="primary">Build route</button>
+          <button id="spaceClearBtn">Clear</button>
+          <button id="spaceCenterEarthBtn">Earth</button>
+        </div>
+        <div class="grid2" style="margin-top:6px;">
+          <select id="spaceCatalogSelect">
+            <option value="all">Catalog: All</option>
+            <option value="planets">Planets</option>
+            <option value="stars">Stars</option>
+            <option value="messier">Messier</option>
+          </select>
+          <select id="spaceDistanceUnitSelect">
+            <option value="ly">Distances in ly</option>
+            <option value="au">Distances in AU</option>
+            <option value="km">Distances in km</option>
+          </select>
+        </div>
+        <label class="check" style="margin-top:8px;"><input id="spaceShowCatalogChk" type="checkbox" checked> Show catalog markers</label>
+        <label class="check"><input id="spaceShowLegCirclesChk" type="checkbox" checked> Show leg radius circles</label>
+        <label class="check"><input id="spaceUseSVCChk" type="checkbox" checked> Use SVC coordinates for triangulation math</label>
+
+        <div class="sep"></div>
+        <div class="kv"><div class="tiny">Total route</div><div id="spaceDistanceOut" class="tinyout">â</div></div>
+        <div class="kv"><div class="tiny">Leg count</div><div id="spaceLegCountOut" class="tinyout">â</div></div>
+        <div class="kv"><div class="tiny">Bearing</div><div id="spaceBearingOut" class="tinyout">â</div></div>
+        <div class="kv"><div class="tiny">Triangulation</div><div id="spaceTriangulationOut" class="tinyout">â</div></div>
+        <div class="kv"><div class="tiny">SVC</div><div id="spaceSvcOut" class="tinyout">â</div></div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Add custom waypoint</b></div>
+        <div class="grid2">
+          <input id="customNameInput" type="text" placeholder="Waypoint name">
+          <input id="customClassInput" type="text" placeholder="class: station / star / gate">
+        </div>
+        <div class="grid3" style="margin-top:6px;">
+          <input id="customRaInput" type="number" step="0.000001" placeholder="RA deg">
+          <input id="customDecInput" type="number" step="0.000001" placeholder="Dec deg">
+          <input id="customDistInput" type="number" step="0.000001" placeholder="Distance ly">
+        </div>
+        <div class="grid2" style="margin-top:6px;">
+          <button id="customAddBtn" class="primary">Add waypoint</button>
+          <button id="customFromCenterBtn">Use sky center</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Waypoint list</b></div>
+        <div id="waypointList"></div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Export / import</b></div>
+        <div class="grid4">
+          <button id="exportScnBtn" class="primary">Export SCN</button>
+          <button id="exportSpiceBtn">Export SPICE JSON</button>
+          <button id="importScnBtn">Import SCN</button>
+          <button id="shareRouteBtn">Copy JSON</button>
+        </div>
+        <div class="tiny" style="margin-top:6px;">SCN in this build means <b>Space Course Notation</b>: a compact, editable route format for your Earth-to-sky waypoints.</div>
+        <textarea id="ioText" placeholder="SCN or SPICE-ready JSON appears here"></textarea>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Coordinate system</b></div>
+        <div class="tiny">This build adds <b>SVC</b> (Space Vector Coordinates): [RAÂ°, DecÂ°, range] + derived Cartesian XYZ. Use it for easy triangulation and future SPICE handoff.</div>
+        <div class="sep"></div>
+        <div class="kv"><div class="tiny">Sky center</div><div id="skyCenterOut" class="tinyout">â</div></div>
+        <div class="kv"><div class="tiny">Cursor world</div><div id="cursorWorldOut" class="tinyout">â</div></div>
+      </div>
+
+      <div class="box">
+        <div class="tiny"><b>Diagnostics</b></div>
+        <div id="log" class="mono tiny" style="max-height:320px;overflow:auto;"></div>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <div id="map2d"></div>
+      <div id="map3d"></div>
+      <div id="astroWrap">
+        <div id="astroCanvas"></div>
+        <div id="astroMiniHud">
+          <button id="astroHudMinus">â</button>
+          <button id="astroHudPlus">+</button>
+          <button id="astroHudWide">Wide</button>
+          <button id="astroHudReticle">Reticle</button>
+        </div>
+      </div>
+      <div id="hud" class="mono tiny">Bootingâ¦</div>
+      <div id="timeHUD" class="mono tiny">Timeline idle</div>
+      <div id="perf" class="mono tiny">fps: â</div>
+      <div id="astroHUD" class="mono tiny">Space route idle</div>
+      <div id="busy">Loadingâ¦</div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  Cesium.Ion.defaultAccessToken = undefined;
+
+  const C_AU_KM = 149597870.7;
+  const C_LY_KM = 9.4607304725808e12;
+  const C_PC_LY = 3.26156;
+
+  const CATALOG = [
+    { id:"earth", name:"Earth", class:"planet", catalog:"planets", ra:0, dec:0, distanceLy:0, note:"Reference origin" },
+    { id:"moon", name:"Moon", class:"moon", catalog:"planets", ra:15, dec:2, distanceLy:0.0000000406, note:"Mean Earth-Moon distance" },
+    { id:"sun", name:"Sun", class:"star", catalog:"planets", ra:0, dec:0, distanceLy:0.0000158125, note:"1 AU from Earth" },
+    { id:"mercury", name:"Mercury", class:"planet", catalog:"planets", ra:20, dec:2, distanceLy:0.0000095, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"venus", name:"Venus", class:"planet", catalog:"planets", ra:40, dec:5, distanceLy:0.0000041, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"mars", name:"Mars", class:"planet", catalog:"planets", ra:80, dec:8, distanceLy:0.000024, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"jupiter", name:"Jupiter", class:"planet", catalog:"planets", ra:120, dec:-4, distanceLy:0.000082, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"saturn", name:"Saturn", class:"planet", catalog:"planets", ra:160, dec:-10, distanceLy:0.00015, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"uranus", name:"Uranus", class:"planet", catalog:"planets", ra:200, dec:-8, distanceLy:0.00030, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"neptune", name:"Neptune", class:"planet", catalog:"planets", ra:240, dec:-12, distanceLy:0.00047, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"pluto", name:"Pluto", class:"dwarf planet", catalog:"planets", ra:260, dec:-20, distanceLy:0.00063, note:"Approx mean Earth transfer-scale demo distance" },
+    { id:"iss", name:"ISS", class:"station", catalog:"planets", ra:4, dec:1, distanceLy:0.000000000042, note:"Low-Earth orbit scale waypoint" },
+    { id:"voyager1", name:"Voyager 1", class:"probe", catalog:"planets", ra:258.0, dec:12.0, distanceLy:0.0025, note:"Approx current deep-space scale marker" },
+    { id:"alpha_centauri", name:"Alpha Centauri", class:"star", catalog:"stars", ra:219.9021, dec:-60.8339, distanceLy:4.37, note:"Nearest star system" },
+    { id:"proxima", name:"Proxima Centauri", class:"star", catalog:"stars", ra:217.4292, dec:-62.6795, distanceLy:4.2465, note:"Nearest known star" },
+    { id:"sirius", name:"Sirius", class:"star", catalog:"stars", ra:101.2875, dec:-16.7161, distanceLy:8.6, note:"Bright nearby star" },
+    { id:"vega", name:"Vega", class:"star", catalog:"stars", ra:279.2347, dec:38.7837, distanceLy:25.04, note:"A0V star" },
+    { id:"polaris", name:"Polaris", class:"star", catalog:"stars", ra:37.9546, dec:89.2641, distanceLy:433, note:"North star" },
+    { id:"betelgeuse", name:"Betelgeuse", class:"star", catalog:"stars", ra:88.7929, dec:7.4071, distanceLy:548, note:"Red supergiant" },
+    { id:"rigel", name:"Rigel", class:"star", catalog:"stars", ra:78.6345, dec:-8.2016, distanceLy:860, note:"Blue supergiant" },
+    { id:"m31", name:"M31 Andromeda Galaxy", class:"messier", catalog:"messier", ra:10.6847, dec:41.2687, distanceLy:2537000, note:"Nearest large galaxy" },
+    { id:"m42", name:"M42 Orion Nebula", class:"messier", catalog:"messier", ra:83.8221, dec:-5.3911, distanceLy:1344, note:"Star-forming region" },
+    { id:"m45", name:"M45 Pleiades", class:"messier", catalog:"messier", ra:56.75, dec:24.1167, distanceLy:444, note:"Open cluster" },
+    { id:"m13", name:"M13 Hercules Cluster", class:"messier", catalog:"messier", ra:250.4235, dec:36.4613, distanceLy:22500, note:"Globular cluster" },
+    { id:"m57", name:"M57 Ring Nebula", class:"messier", catalog:"messier", ra:283.3962, dec:33.0292, distanceLy:2300, note:"Planetary nebula" },
+    { id:"m1", name:"M1 Crab Nebula", class:"messier", catalog:"messier", ra:83.6331, dec:22.0145, distanceLy:6500, note:"Supernova remnant" }
+  ];
+
+  const CONFIG = {
+    appName: "Earth Cockpit v28 SpaceNav Atlas",
+    home: { lat: 28.538336, lon: -81.379234, zoom2d: 5, height3d: 18000000 },
+    esri: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    labels: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    nominatim: "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=",
+    proxyPrefix: ""
+  };
+
+  const $ = id => document.getElementById(id);
+  const logEl = $("log");
+  const hudEl = $("hud");
+  const timeHUDEl = $("timeHUD");
+  const perfEl = $("perf");
+  const astroHUDEl = $("astroHUD");
+  const busyEl = $("busy");
+  const panel = $("panel");
+  const menuToggle = $("menuToggle");
+  const panelBackdrop = $("panelBackdrop");
+
+  const state = {
+    mode: "2d",
+    map2d: null,
+    viewer3d: null,
+    base2dKey: "esri",
+    base2dLayer: null,
+    labels2dLayer: null,
+    labels3dLayer: null,
+    fps: 0,
+    fpsFrames: 0,
+    fpsLast: performance.now(),
+    loadingDepth: 0,
+    astro: {
+      instance: null,
+      survey: "P/DSS2/color",
+      target: "M31",
+      fov: 120,
+      reticle: true,
+      catalogLayer: null,
+      routeCatalog: null,
+      overlay: null,
+      route: null,
+      waypoints: [],
+      currentCatalogFilter: "all",
+      selectedObjectId: null,
+      cursorRa: null,
+      cursorDec: null
+    }
+  };
+
+  function nowStamp(){ const d = new Date(); return `[${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}]`; }
+  function log(msg){ const line = `${nowStamp()} ${msg}`; logEl.textContent += line + "\n"; logEl.scrollTop = logEl.scrollHeight; console.log(line); }
+  function setStatus(text, kind=""){ const el = $("statusBadge"); el.textContent = text; el.className = `badge ${kind}`.trim(); }
+  function setHUD(text){ hudEl.textContent = text; }
+  function setTimeHUD(text){ timeHUDEl.textContent = text; }
+  function setAstroHUD(text){ astroHUDEl.textContent = text; }
+  function fmt(n,d=4){ return Number.isFinite(n) ? n.toFixed(d) : "â"; }
+  function escapeHtml(str){ return String(str || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function isMobile(){ return window.matchMedia("(max-width:980px)").matches; }
+  function syncPanel(){ if (!isMobile()) { panel.classList.remove("panel-hidden"); panelBackdrop.classList.remove("show"); return; } panelBackdrop.classList.toggle("show", !panel.classList.contains("panel-hidden")); }
+  function setPanelHidden(hidden){ panel.classList.toggle("panel-hidden", !!hidden); syncPanel(); }
+  function updateModeBadge(){ $("modeBadge").textContent = `Mode: ${state.mode.toUpperCase()}`; }
+  function busy(on, text="Loadingâ¦"){ if (on) { state.loadingDepth++; busyEl.textContent = text; busyEl.style.display = "block"; } else { state.loadingDepth = Math.max(0, state.loadingDepth - 1); if (!state.loadingDepth) busyEl.style.display = "none"; } }
+  function proxify(url){ return CONFIG.proxyPrefix ? CONFIG.proxyPrefix + encodeURIComponent(url) : url; }
+  async function fetchText(url, tryProxy=true, options={}){ const urls=[]; if (tryProxy && CONFIG.proxyPrefix) urls.push(proxify(url)); urls.push(url); let lastErr=null; for (const u of urls){ try{ const r=await fetch(u, Object.assign({cache:"no-store"}, options)); if(!r.ok) throw new Error(`HTTP ${r.status}`); return await r.text(); }catch(e){ lastErr=e; } } throw lastErr || new Error("Fetch failed"); }
+  async function fetchJson(url, tryProxy=true, options={}){ return JSON.parse(await fetchText(url, tryProxy, options)); }
+
+  function perfTick(){
+    state.fpsFrames++;
+    const now = performance.now();
+    if (now - state.fpsLast >= 1000) {
+      state.fps = state.fpsFrames;
+      state.fpsFrames = 0;
+      state.fpsLast = now;
+      perfEl.textContent = `fps: ${state.fps || "â"}\nmode: ${state.mode.toUpperCase()}\nastro-waypoints: ${state.astro.waypoints.length}`;
+    }
+    requestAnimationFrame(perfTick);
+  }
+
+  function makeTileLayer(url, options={}){
+    return L.tileLayer(url, {
+      crossOrigin:true,
+      updateWhenIdle:false,
+      updateWhenZooming:true,
+      keepBuffer:8,
+      pane:options.pane,
+      subdomains:options.subdomains,
+      opacity: options.opacity ?? 1,
+      maxZoom: options.maxZoom ?? 19,
+      attribution: options.attribution || ""
+    });
+  }
+
+  function makeCesiumXYZ(url, maxLevel=19, subdomains=undefined){
+    return new Cesium.UrlTemplateImageryProvider({ url, maximumLevel:maxLevel, subdomains });
+  }
+
+  function init2D(){
+    state.map2d = L.map("map2d", { center:[CONFIG.home.lat, CONFIG.home.lon], zoom:CONFIG.home.zoom2d, worldCopyJump:true, zoomControl:true, zoomAnimation:true, fadeAnimation:false, inertia:true });
+    state.map2d.createPane("base"); state.map2d.getPane("base").style.zIndex = 200;
+    state.map2d.createPane("labels"); state.map2d.getPane("labels").style.zIndex = 650;
+    state.labels2dLayer = makeTileLayer(CONFIG.labels, { pane:"labels", subdomains:"abcd", maxZoom:20, attribution:"CARTO" });
+    state.map2d.on("move zoom zoomend moveend", updateHUD);
+    log("2D initialized");
+  }
+
+  function clear2DBase(){ if (state.base2dLayer && state.map2d) { try{ state.map2d.removeLayer(state.base2dLayer); }catch{} state.base2dLayer = null; } }
+  function setLabels(on){
+    if (on) {
+      if (state.map2d && state.labels2dLayer && !state.map2d.hasLayer(state.labels2dLayer)) state.labels2dLayer.addTo(state.map2d);
+      if (state.viewer3d && !state.labels3dLayer) {
+        state.labels3dLayer = state.viewer3d.imageryLayers.addImageryProvider(makeCesiumXYZ(CONFIG.labels, 20, ["a","b","c","d"]));
+        state.labels3dLayer.alpha = 0.88;
+      }
+    } else {
+      if (state.map2d && state.labels2dLayer && state.map2d.hasLayer(state.labels2dLayer)) state.map2d.removeLayer(state.labels2dLayer);
+      if (state.viewer3d && state.labels3dLayer) { try{ state.viewer3d.imageryLayers.remove(state.labels3dLayer, true); }catch{} state.labels3dLayer=null; }
+    }
+  }
+
+  function setBase2D(key){
+    if (!state.map2d) return;
+    clear2DBase();
+    state.base2dKey = key;
+    if (key === "esri") state.base2dLayer = makeTileLayer(CONFIG.esri, { pane:"base", maxZoom:19, attribution:"Esri" });
+    else if (key === "osm") state.base2dLayer = makeTileLayer(CONFIG.osm, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM" });
+    else state.base2dLayer = makeTileLayer(CONFIG.hot, { pane:"base", subdomains:"abc", maxZoom:19, attribution:"OSM HOT" });
+    state.base2dLayer.addTo(state.map2d);
+    setLabels($("labelsChk").checked);
+    updateHUD();
+    log(`2D base set: ${key}`);
+  }
+
+  function ensureViewer(){
+    if (state.viewer3d) return;
+    state.viewer3d = new Cesium.Viewer("map3d", {
+      animation:false, timeline:false, geocoder:false, homeButton:false, sceneModePicker:false,
+      baseLayerPicker:false, navigationHelpButton:false, infoBox:false, selectionIndicator:false,
+      shouldAnimate:true, requestRenderMode:true, maximumRenderTimeChange:Infinity,
+      terrainProvider:new Cesium.EllipsoidTerrainProvider()
+    });
+    const ssc = state.viewer3d.scene.screenSpaceCameraController;
+    ssc.enableZoom = true; ssc.enableRotate = true; ssc.enableTilt = true; ssc.enableTranslate = true;
+    state.viewer3d.camera.moveEnd.addEventListener(updateHUD);
+    log("3D initialized");
+  }
+
+  function setTerrain3D(on){
+    if (!state.viewer3d) return;
+    if (on && Cesium.createWorldTerrainAsync) {
+      Cesium.createWorldTerrainAsync().then(tp => { if (!state.viewer3d) return; state.viewer3d.terrainProvider = tp; state.viewer3d.scene.requestRender(); log("3D terrain enabled"); }).catch(err => log(`3D terrain unavailable: ${err.message}`));
+    } else {
+      state.viewer3d.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+      state.viewer3d.scene.requestRender();
+      log("3D terrain disabled");
+    }
+  }
+
+  function clear3DImagery(){
+    if (!state.viewer3d) return;
+    const layers = state.viewer3d.imageryLayers;
+    while (layers.length > 0) layers.remove(layers.get(0), true);
+    state.labels3dLayer = null;
+  }
+
+  function setBase3D(key){
+    ensureViewer(); clear3DImagery();
+    let provider = null;
+    if (key === "esri") provider = makeCesiumXYZ(CONFIG.esri, 19);
+    else if (key === "osm") provider = makeCesiumXYZ(CONFIG.osm, 19, ["a","b","c"]);
+    else provider = makeCesiumXYZ(CONFIG.hot, 19, ["a","b","c"]);
+    state.viewer3d.imageryLayers.addImageryProvider(provider);
+    setLabels($("labelsChk").checked);
+    setTerrain3D($("terrain3dChk").checked);
+    state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d), duration:0 });
+    state.viewer3d.resize(); state.viewer3d.scene.requestRender(); updateHUD(); log(`3D base set: ${key}`);
+  }
+
+  function ensureAstro(){
+    if (state.astro.instance) return;
+    state.astro.instance = A.aladin("#astroCanvas", {
+      survey: state.astro.survey,
+      target: state.astro.target,
+      fov: state.astro.fov,
+      cooFrame: "J2000",
+      showReticle: state.astro.reticle,
+      showZoomControl: false,
+      showFullscreenControl: false,
+      showLayersControl: false,
+      showGotoControl: false,
+      reticleColor: "#6cb8ff"
+    });
+    state.astro.catalogLayer = A.catalog({ name:"Space catalog", color:"#6cb8ff", shape:"circle", sourceSize:8, onClick:"showPopup" });
+    state.astro.routeCatalog = A.catalog({ name:"Route nodes", color:"#22c55e", shape:"triangle", sourceSize:10, onClick:"showPopup" });
+    state.astro.overlay = A.graphicOverlay({ color:"#38bdf8", lineWidth:3 });
+    state.astro.instance.addCatalog(state.astro.catalogLayer);
+    state.astro.instance.addCatalog(state.astro.routeCatalog);
+    state.astro.instance.addOverlay(state.astro.overlay);
+
+    const astroEl = $("astroCanvas");
+    astroEl.addEventListener("mousemove", ev => {
+      if (!state.astro.instance || !state.astro.instance.pix2world) return;
+      const rect = astroEl.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+      try {
+        const world = state.astro.instance.pix2world(x, y);
+        if (Array.isArray(world)) {
+          state.astro.cursorRa = world[0];
+          state.astro.cursorDec = world[1];
+          $("cursorWorldOut").textContent = `RA ${fmt(world[0], 4)}Â° â¢ Dec ${fmt(world[1], 4)}Â°`;
+        }
+      } catch {}
+    });
+
+    renderCatalogMarkers();
+    log("Astro initialized");
+  }
+
+  function astroApply(){
+    ensureAstro();
+    state.astro.survey = $("astroSurvey").value || state.astro.survey;
+    try { state.astro.instance.setImageSurvey(state.astro.survey); } catch {}
+    try { state.astro.instance.gotoObject(state.astro.target); } catch {}
+    try { state.astro.instance.setFoV(state.astro.fov); } catch {}
+    try { state.astro.instance.showReticle(state.astro.reticle); } catch {}
+    $("astroHudReticle").textContent = state.astro.reticle ? "Reticle On" : "Reticle Off";
+    $("astroReticleBtn").textContent = state.astro.reticle ? "Reticle On" : "Reticle Off";
+    updateSkyCenterOut();
+    updateHUD();
+  }
+
+  function astroSearch(){ const q = $("astroSearchBox").value.trim(); if (!q) return; state.astro.target = q; astroApply(); log(`Astro target: ${q}`); }
+  function astroZoomIn(){ state.astro.fov = Math.max(0.01, state.astro.fov * 0.65); if (state.astro.instance) { try { state.astro.instance.setFoV(state.astro.fov); } catch {} } else astroApply(); updateSkyCenterOut(); updateHUD(); }
+  function astroZoomOut(){ state.astro.fov = Math.min(180, state.astro.fov * 1.45); if (state.astro.instance) { try { state.astro.instance.setFoV(state.astro.fov); } catch {} } else astroApply(); updateSkyCenterOut(); updateHUD(); }
+  function astroWide(){ state.astro.fov = 120; if (state.astro.instance) { try { state.astro.instance.setFoV(state.astro.fov); } catch {} } else astroApply(); updateSkyCenterOut(); updateHUD(); }
+
+  async function showMode(mode){
+    state.mode = mode;
+    $("mode2d").classList.toggle("active", mode === "2d");
+    $("mode3d").classList.toggle("active", mode === "3d");
+    $("modeAstro").classList.toggle("active", mode === "astro");
+    updateModeBadge();
+    $("map2d").style.display = mode === "2d" ? "block" : "none";
+    $("map3d").style.display = mode === "3d" ? "block" : "none";
+    $("astroWrap").style.display = mode === "astro" ? "block" : "none";
+    if (mode === "2d" && state.map2d) setTimeout(() => state.map2d.invalidateSize(true), 50);
+    if (mode === "3d") { ensureViewer(); setTimeout(() => { state.viewer3d.resize(); state.viewer3d.scene.requestRender(); }, 70); }
+    if (mode === "astro") { ensureAstro(); setTimeout(() => astroApply(), 30); }
+    updateHUD();
+    if (isMobile()) setPanelHidden(true);
+  }
+
+  function updateHUD(){
+    if (state.mode === "2d" && state.map2d) {
+      const c = state.map2d.getCenter();
+      setHUD(`Mode: 2D\nBase: ${state.base2dKey}\nZoom: ${state.map2d.getZoom()}\nlat ${fmt(c.lat)} lon ${fmt(c.lng)}`);
+      return;
+    }
+    if (state.mode === "3d" && state.viewer3d) {
+      const c = state.viewer3d.camera.positionCartographic;
+      setHUD(`Mode: 3D\nBase: ${state.base2dKey}\nHeight: ${Math.round(c.height)} m\nlat ${fmt(Cesium.Math.toDegrees(c.latitude))} lon ${fmt(Cesium.Math.toDegrees(c.longitude))}`);
+      return;
+    }
+    if (state.mode === "astro") {
+      setHUD(`Mode: ASTRO\nSurvey: ${state.astro.survey}\nTarget: ${state.astro.target}\nFoV: ${fmt(state.astro.fov,2)}Â°\nRoute legs: ${state.astro.waypoints.length > 1 ? state.astro.waypoints.length - 1 : 0}`);
+    }
+  }
+
+  function parseSearchTarget(q){
+    const t = String(q || "").trim();
+    if (!t) return null;
+    const m = t.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) return { type:"latlon", lat:Number(m[1]), lon:Number(m[3]) };
+    return { type:"text", value:t };
+  }
+
+  async function smartSearch(){
+    const q = $("searchBox").value.trim();
+    if (!q) return;
+    const parsed = parseSearchTarget(q);
+    if (parsed?.type === "latlon") {
+      if (state.map2d) state.map2d.setView([parsed.lat, parsed.lon], Math.max(8, state.map2d.getZoom()), { animate:true });
+      if (state.viewer3d) state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(parsed.lon, parsed.lat, 1800000), duration:1 });
+      log(`Jump: ${parsed.lat.toFixed(4)}, ${parsed.lon.toFixed(4)}`);
+      return;
+    }
+    try {
+      const j = await fetchJson(CONFIG.nominatim + encodeURIComponent(q), false);
+      if (Array.isArray(j) && j.length) {
+        const lat = Number(j[0].lat), lon = Number(j[0].lon);
+        if (state.map2d) state.map2d.setView([lat, lon], Math.max(8, state.map2d.getZoom()), { animate:true });
+        if (state.viewer3d) state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1800000), duration:1 });
+        log(`Earth search resolved: ${q}`);
+        return;
+      }
+    } catch {}
+    await showMode("astro");
+    $("astroSearchBox").value = q;
+    astroSearch();
+  }
+
+  function goHome(){
+    if (state.mode === "2d" && state.map2d) return state.map2d.setView([CONFIG.home.lat, CONFIG.home.lon], CONFIG.home.zoom2d, { animate:true });
+    if (state.mode === "3d") { ensureViewer(); return state.viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(CONFIG.home.lon, CONFIG.home.lat, CONFIG.home.height3d), duration:1 }); }
+    if (state.mode === "astro") { state.astro.target = "M31"; state.astro.fov = 120; $("astroSearchBox").value = state.astro.target; astroApply(); }
+  }
+
+  function zoomIn(){ if (state.mode === "2d" && state.map2d) return state.map2d.zoomIn(); if (state.mode === "3d" && state.viewer3d) { const h = state.viewer3d.camera.positionCartographic.height; state.viewer3d.camera.moveForward(Math.max(250, h * 0.25)); state.viewer3d.scene.requestRender(); return updateHUD(); } if (state.mode === "astro") return astroZoomIn(); }
+  function zoomOut(){ if (state.mode === "2d" && state.map2d) return state.map2d.zoomOut(); if (state.mode === "3d" && state.viewer3d) { const h = state.viewer3d.camera.positionCartographic.height; state.viewer3d.camera.moveBackward(Math.max(250, h * 0.25)); state.viewer3d.scene.requestRender(); return updateHUD(); } if (state.mode === "astro") return astroZoomOut(); }
+
+  function svcFromRADecDistance(raDeg, decDeg, distanceLy){
+    const ra = raDeg * Math.PI / 180;
+    const dec = decDeg * Math.PI / 180;
+    const r = Number(distanceLy) || 0;
+    return {
+      raDeg, decDeg, distanceLy:r,
+      xLy: r * Math.cos(dec) * Math.cos(ra),
+      yLy: r * Math.cos(dec) * Math.sin(ra),
+      zLy: r * Math.sin(dec)
+    };
+  }
+
+  function distanceLyBetween(a, b){
+    const va = svcFromRADecDistance(a.ra, a.dec, a.distanceLy);
+    const vb = svcFromRADecDistance(b.ra, b.dec, b.distanceLy);
+    return Math.hypot(vb.xLy - va.xLy, vb.yLy - va.yLy, vb.zLy - va.zLy);
+  }
+
+  function bearingString(a, b){
+    const dRa = ((b.ra - a.ra + 540) % 360) - 180;
+    const dDec = b.dec - a.dec;
+    return `ÎRA ${fmt(dRa,3)}Â° â¢ ÎDec ${fmt(dDec,3)}Â°`;
+  }
+
+  function formatDistance(distanceLy){
+    const unit = $("spaceDistanceUnitSelect").value;
+    if (unit === "au") return `${(distanceLy * 63241.077).toFixed(distanceLy < 0.001 ? 3 : 1)} AU`;
+    if (unit === "km") return `${(distanceLy * C_LY_KM).toExponential(3)} km`;
+    return `${distanceLy >= 1000 ? distanceLy.toLocaleString(undefined,{maximumFractionDigits:1}) : distanceLy.toFixed(distanceLy < 1 ? 6 : 3)} ly`;
+  }
+
+  function getCatalogItemById(id){ return CATALOG.find(x => x.id === id) || null; }
+
+  function visibleCatalog(){
+    const filter = state.astro.currentCatalogFilter;
+    if (filter === "all") return CATALOG;
+    return CATALOG.filter(x => x.catalog === filter);
+  }
+
+  function fillSpaceSelectors(){
+    const opts = CATALOG.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+    $("spaceStartSelect").innerHTML = opts;
+    $("spaceEndSelect").innerHTML = opts;
+    $("spaceStartSelect").value = "earth";
+    $("spaceEndSelect").value = "m31";
+  }
+
+  function renderCatalogMarkers(){
+    ensureAstro();
+    if (!state.astro.catalogLayer) return;
+    try { state.astro.catalogLayer.clear(); } catch {}
+    if (!$("spaceShowCatalogChk").checked) return;
+    const srcs = visibleCatalog().map(item => A.source(item.ra, item.dec, {
+      name:item.name,
+      class:item.class,
+      catalog:item.catalog,
+      distance_ly:item.distanceLy,
+      popupTitle:item.name,
+      popupDesc:`Class: ${escapeHtml(item.class)}<br>Catalog: ${escapeHtml(item.catalog)}<br>RA: ${fmt(item.ra,4)}Â°<br>Dec: ${fmt(item.dec,4)}Â°<br>Distance: ${formatDistance(item.distanceLy)}<br>${escapeHtml(item.note || "")}`
+    }));
+    state.astro.catalogLayer.addSources(srcs);
+  }
+
+  function clearAstroRouteGraphics(){
+    ensureAstro();
+    try { state.astro.routeCatalog.clear(); } catch {}
+    try { state.astro.overlay.removeAll(); } catch {}
+  }
+
+  function updateSkyCenterOut(){
+    if (!state.astro.instance || !state.astro.instance.pix2world) return;
+    const el = $("astroCanvas");
+    const cx = el.clientWidth / 2;
+    const cy = el.clientHeight / 2;
+    try {
+      const world = state.astro.instance.pix2world(cx, cy);
+      if (Array.isArray(world)) $("skyCenterOut").textContent = `RA ${fmt(world[0],4)}Â° â¢ Dec ${fmt(world[1],4)}Â°`;
+    } catch {}
+  }
+
+  function renderWaypointList(){
+    const host = $("waypointList");
+    if (!state.astro.waypoints.length) {
+      host.innerHTML = `<div class="tiny">No waypoints loaded.</div>`;
+      return;
+    }
+    host.innerHTML = state.astro.waypoints.map((wp, idx) => `
+      <div class="waypointItem">
+        <b>${idx + 1}. ${escapeHtml(wp.name)}</b>
+        <div class="tiny">${escapeHtml(wp.class)} â¢ ${escapeHtml(wp.catalog || "custom")}</div>
+        <div class="tiny">RA ${fmt(wp.ra,4)}Â° â¢ Dec ${fmt(wp.dec,4)}Â° â¢ ${formatDistance(wp.distanceLy)}</div>
+        <div class="grid3" style="margin-top:6px;">
+          <button data-wp-action="goto" data-wp-index="${idx}">Go</button>
+          <button data-wp-action="insert-end" data-wp-index="${idx}">To End</button>
+          <button data-wp-action="remove" data-wp-index="${idx}">Remove</button>
+        </div>
+      </div>`).join("");
+  }
+
+  function updateSpaceOutputs(route){
+    if (!route || !route.legs.length) {
+      $("spaceDistanceOut").textContent = "â";
+      $("spaceLegCountOut").textContent = "â";
+      $("spaceBearingOut").textContent = "â";
+      $("spaceTriangulationOut").textContent = "â";
+      $("spaceSvcOut").textContent = "â";
+      setAstroHUD("Space route idle");
+      return;
+    }
+    const first = route.legs[0];
+    const last = route.waypoints[route.waypoints.length - 1];
+    const svc = svcFromRADecDistance(last.ra, last.dec, last.distanceLy);
+    $("spaceDistanceOut").textContent = formatDistance(route.totalLy);
+    $("spaceLegCountOut").textContent = String(route.legs.length);
+    $("spaceBearingOut").textContent = bearingString(first.from, first.to);
+    $("spaceTriangulationOut").textContent = `Use SVC XYZ + two known range spheres from Earth and an anchor star.`;
+    $("spaceSvcOut").textContent = `X ${fmt(svc.xLy,4)} â¢ Y ${fmt(svc.yLy,4)} â¢ Z ${fmt(svc.zLy,4)} ly`;
+    setAstroHUD(`Space route: ${route.waypoints[0].name} â ${route.waypoints[route.waypoints.length - 1].name}\nTotal: ${formatDistance(route.totalLy)}\nLegs: ${route.legs.length}\nNext vector: ${bearingString(first.from, first.to)}\nTerminal SVC XYZ: ${fmt(svc.xLy,4)}, ${fmt(svc.yLy,4)}, ${fmt(svc.zLy,4)} ly`);
+  }
+
+  function buildRouteFromWaypoints(waypoints){
+    if (!Array.isArray(waypoints) || waypoints.length < 2) return { waypoints:waypoints || [], legs:[], totalLy:0 };
+    const legs = [];
+    let totalLy = 0;
+    for (let i=0; i<waypoints.length - 1; i++) {
+      const from = waypoints[i], to = waypoints[i+1];
+      const ly = distanceLyBetween(from, to);
+      totalLy += ly;
+      legs.push({ from, to, distanceLy:ly, bearing:bearingString(from, to) });
+    }
+    return { waypoints:[...waypoints], legs, totalLy };
+  }
+
+  function drawAstroRoute(route){
+    ensureAstro();
+    clearAstroRouteGraphics();
+    if (!route || route.waypoints.length < 2) return;
+
+    const routeSources = route.waypoints.map((wp, idx) => A.source(wp.ra, wp.dec, {
+      popupTitle:`${idx + 1}. ${wp.name}`,
+      popupDesc:`RA ${fmt(wp.ra,4)}Â°<br>Dec ${fmt(wp.dec,4)}Â°<br>Distance ${formatDistance(wp.distanceLy)}<br>Class ${escapeHtml(wp.class)}`
+    }));
+    state.astro.routeCatalog.addSources(routeSources);
+
+    const poly = A.polyline(route.waypoints.map(wp => [wp.ra, wp.dec]));
+    state.astro.overlay.add(poly);
+
+    if ($("spaceShowLegCirclesChk").checked) {
+      route.waypoints.forEach((wp, idx) => {
+        if (idx === 0) return;
+        const prev = route.waypoints[idx - 1];
+        const leg = route.legs[idx - 1];
+        const radiusDeg = Math.max(0.15, Math.min(8, leg.distanceLy < 1 ? 0.25 : Math.log10(leg.distanceLy + 1) * 1.3));
+        try { state.astro.overlay.add(A.circle(prev.ra, prev.dec, radiusDeg)); } catch {}
+      });
+    }
+
+    const last = route.waypoints[route.waypoints.length - 1];
+    state.astro.target = last.name;
+    $("astroSearchBox").value = last.name;
+    try { state.astro.instance.gotoRaDec(last.ra, last.dec); } catch { try { state.astro.instance.gotoObject(last.name); } catch {} }
+    updateSpaceOutputs(route);
+    renderWaypointList();
+  }
+
+  function buildSpaceRoute(){
+    const start = getCatalogItemById($("spaceStartSelect").value);
+    const end = getCatalogItemById($("spaceEndSelect").value);
+    if (!start || !end) return;
+    state.astro.waypoints = [structuredClone(start), structuredClone(end)];
+    state.astro.route = buildRouteFromWaypoints(state.astro.waypoints);
+    drawAstroRoute(state.astro.route);
+    log(`Space route built: ${start.name} -> ${end.name}`);
+  }
+
+  function clearSpaceRoute(){
+    state.astro.waypoints = [];
+    state.astro.route = null;
+    clearAstroRouteGraphics();
+    renderWaypointList();
+    updateSpaceOutputs(null);
+    log("Space route cleared");
+  }
+
+  function addCustomWaypoint(){
+    const name = $("customNameInput").value.trim();
+    const cls = $("customClassInput").value.trim() || "custom";
+    const ra = Number($("customRaInput").value);
+    const dec = Number($("customDecInput").value);
+    const dist = Number($("customDistInput").value);
+    if (!name || !Number.isFinite(ra) || !Number.isFinite(dec) || !Number.isFinite(dist)) {
+      log("Custom waypoint requires name, RA, Dec, and distance.");
+      return;
+    }
+    const wp = { id:`custom_${Date.now()}`, name, class:cls, catalog:"custom", ra, dec, distanceLy:dist, note:"User waypoint" };
+    CATALOG.push(wp);
+    fillSpaceSelectors();
+    renderCatalogMarkers();
+    log(`Custom waypoint added: ${name}`);
+  }
+
+  function useSkyCenterForCustom(){
+    updateSkyCenterOut();
+    if (Number.isFinite(state.astro.cursorRa) && Number.isFinite(state.astro.cursorDec)) {
+      $("customRaInput").value = state.astro.cursorRa.toFixed(6);
+      $("customDecInput").value = state.astro.cursorDec.toFixed(6);
+      return;
+    }
+    const el = $("astroCanvas");
+    const cx = el.clientWidth / 2, cy = el.clientHeight / 2;
+    try {
+      const world = state.astro.instance.pix2world(cx, cy);
+      if (Array.isArray(world)) {
+        $("customRaInput").value = world[0].toFixed(6);
+        $("customDecInput").value = world[1].toFixed(6);
+      }
+    } catch {}
+  }
+
+  function exportSCN(){
+    const payload = {
+      version: "SCN-1.0",
+      app: CONFIG.appName,
+      coordSystem: "SVC",
+      units: { angular:"deg", distance:"ly" },
+      route: state.astro.route ? state.astro.route.waypoints.map((wp, idx) => ({
+        order: idx + 1,
+        id: wp.id,
+        name: wp.name,
+        class: wp.class,
+        catalog: wp.catalog,
+        ra_deg: wp.ra,
+        dec_deg: wp.dec,
+        range_ly: wp.distanceLy,
+        svc_xyz_ly: svcFromRADecDistance(wp.ra, wp.dec, wp.distanceLy)
+      })) : []
+    };
+    $("ioText").value = JSON.stringify(payload, null, 2);
+    log("SCN exported to text area");
+  }
+
+  function exportSPICEReady(){
+    const route = state.astro.route || buildRouteFromWaypoints(state.astro.waypoints);
+    const payload = {
+      format: "SPICE-ready-route-json",
+      note: "Placeholder export for later backend conversion into NAIF/SPICE kernels or WebGeocalc requests.",
+      time_system: "ET/TDB",
+      observer: "EARTH",
+      frame: "J2000",
+      coord_representation: "SVC + XYZ",
+      waypoints: route.waypoints.map((wp, idx) => {
+        const svc = svcFromRADecDistance(wp.ra, wp.dec, wp.distanceLy);
+        return {
+          order: idx + 1,
+          target: wp.name,
+          class: wp.class,
+          ra_deg: wp.ra,
+          dec_deg: wp.dec,
+          range_ly: wp.distanceLy,
+          range_km: wp.distanceLy * C_LY_KM,
+          xyz_ly: [svc.xLy, svc.yLy, svc.zLy],
+          frame: "J2000",
+          observer: "EARTH",
+          et: "TBD"
+        };
+      })
+    };
+    $("ioText").value = JSON.stringify(payload, null, 2);
+    log("SPICE-ready JSON exported to text area");
+  }
+
+  function importSCN(){
+    try {
+      const text = $("ioText").value.trim();
+      if (!text) throw new Error("Nothing to import");
+      const obj = JSON.parse(text);
+      const rows = Array.isArray(obj.route) ? obj.route : Array.isArray(obj.waypoints) ? obj.waypoints : [];
+      if (!rows.length) throw new Error("No route/waypoints found");
+      state.astro.waypoints = rows.map((r, idx) => ({
+        id: r.id || `import_${idx}`,
+        name: r.name || r.target || `Waypoint ${idx + 1}`,
+        class: r.class || "imported",
+        catalog: r.catalog || "imported",
+        ra: Number(r.ra_deg ?? r.ra),
+        dec: Number(r.dec_deg ?? r.dec),
+        distanceLy: Number(r.range_ly ?? r.distanceLy ?? r.distance_ly ?? 0),
+        note: "Imported"
+      })).filter(x => Number.isFinite(x.ra) && Number.isFinite(x.dec) && Number.isFinite(x.distanceLy));
+      state.astro.route = buildRouteFromWaypoints(state.astro.waypoints);
+      drawAstroRoute(state.astro.route);
+      log(`Imported ${state.astro.waypoints.length} waypoint(s)`);
+    } catch (e) {
+      log(`Import failed: ${e.message}`);
+    }
+  }
+
+  async function runHealth(){
+    const checks = [
+      ["Esri", CONFIG.esri.replace("{z}","2").replace("{y}","1").replace("{x}","1")],
+      ["OSM", CONFIG.osm.replace("{s}","a").replace("{z}","2").replace("{x}","1").replace("{y}","1")],
+      ["Nominatim", CONFIG.nominatim + encodeURIComponent("Orlando")],
+      ["Aladin API", "https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"]
+    ];
+    log("=== HEALTH CHECK ===");
+    for (const [name, url] of checks) {
+      try { const ok = await fetch(url, { method:"HEAD", cache:"no-store" }).then(r => r.ok).catch(() => false); log(`${name}: ${ok ? "OK" : "FAIL"}`); }
+      catch { log(`${name}: FAIL`); }
+    }
+    log("=== END HEALTH ===");
+  }
+
+  function wireWaypointClicks(){
+    $("waypointList").addEventListener("click", ev => {
+      const btn = ev.target.closest("button[data-wp-action]");
+      if (!btn) return;
+      const idx = Number(btn.dataset.wpIndex);
+      const action = btn.dataset.wpAction;
+      const wp = state.astro.waypoints[idx];
+      if (!wp) return;
+      if (action === "goto") {
+        showMode("astro");
+        state.astro.target = wp.name;
+        $("astroSearchBox").value = wp.name;
+        try { state.astro.instance.gotoRaDec(wp.ra, wp.dec); } catch { astroApply(); }
+      } else if (action === "remove") {
+        state.astro.waypoints.splice(idx, 1);
+        state.astro.route = buildRouteFromWaypoints(state.astro.waypoints);
+        drawAstroRoute(state.astro.route);
+      } else if (action === "insert-end") {
+        $("spaceEndSelect").value = wp.id;
+      }
+    });
+  }
+
+  function wireUI(){
+    menuToggle.onclick = () => { panel.classList.toggle("panel-hidden"); syncPanel(); };
+    panelBackdrop.onclick = () => setPanelHidden(true);
+    if (isMobile()) setPanelHidden(true);
+    syncPanel();
+    window.addEventListener("resize", syncPanel);
+
+    $("mode2d").onclick = () => showMode("2d");
+    $("mode3d").onclick = () => { ensureViewer(); setBase3D($("baseSelect").value); showMode("3d"); };
+    $("modeAstro").onclick = () => showMode("astro");
+    $("zoomInBtn").onclick = zoomIn;
+    $("zoomOutBtn").onclick = zoomOut;
+    $("resetBtn").onclick = goHome;
+    $("homeBtn").onclick = goHome;
+    $("searchBtn").onclick = () => smartSearch().catch(e => log(`Search failed: ${e.message}`));
+    $("searchBox").addEventListener("keydown", e => { if (e.key === "Enter") smartSearch().catch(err => log(`Search failed: ${err.message}`)); });
+    $("refreshBtn").onclick = () => { renderCatalogMarkers(); if (state.astro.route) drawAstroRoute(state.astro.route); updateSkyCenterOut(); log("Refresh complete"); };
+    $("copyLogBtn").onclick = async () => { try { await navigator.clipboard.writeText(logEl.textContent); log("Copied log to clipboard."); } catch (e) { log(`Copy failed: ${e.message}`); } };
+    $("healthBtn").onclick = runHealth;
+    $("baseSelect").onchange = () => { setBase2D($("baseSelect").value); if (state.viewer3d) setBase3D($("baseSelect").value); };
+    $("labelsChk").onchange = () => setLabels($("labelsChk").checked);
+    $("terrain3dChk").onchange = () => setTerrain3D($("terrain3dChk").checked);
+
+    $("astroSurvey").onchange = astroApply;
+    $("astroSearchBtn").onclick = astroSearch;
+    $("astroResetBtn").onclick = () => { state.astro.target = "M31"; state.astro.fov = 120; $("astroSearchBox").value = state.astro.target; astroApply(); };
+    $("astroReticleBtn").onclick = () => { state.astro.reticle = !state.astro.reticle; astroApply(); };
+    $("astroZoomInBtn").onclick = astroZoomIn;
+    $("astroZoomOutBtn").onclick = astroZoomOut;
+    $("astroFitBtn").onclick = astroWide;
+    $("astroSearchBox").addEventListener("keydown", e => { if (e.key === "Enter") astroSearch(); });
+    $("astroHudPlus").onclick = astroZoomIn;
+    $("astroHudMinus").onclick = astroZoomOut;
+    $("astroHudWide").onclick = astroWide;
+    $("astroHudReticle").onclick = () => { state.astro.reticle = !state.astro.reticle; astroApply(); };
+
+    $("spaceCatalogSelect").onchange = () => { state.astro.currentCatalogFilter = $("spaceCatalogSelect").value; renderCatalogMarkers(); };
+    $("spaceShowCatalogChk").onchange = renderCatalogMarkers;
+    $("spaceBuildBtn").onclick = buildSpaceRoute;
+    $("spaceClearBtn").onclick = clearSpaceRoute;
+    $("spaceCenterEarthBtn").onclick = () => { $("spaceStartSelect").value = "earth"; buildSpaceRoute(); };
+    $("spaceDistanceUnitSelect").onchange = () => { if (state.astro.route) updateSpaceOutputs(state.astro.route); renderCatalogMarkers(); renderWaypointList(); };
+    $("customAddBtn").onclick = addCustomWaypoint;
+    $("customFromCenterBtn").onclick = useSkyCenterForCustom;
+    $("exportScnBtn").onclick = exportSCN;
+    $("exportSpiceBtn").onclick = exportSPICEReady;
+    $("importScnBtn").onclick = importSCN;
+    $("shareRouteBtn").onclick = async () => {
+      try { await navigator.clipboard.writeText($("ioText").value || JSON.stringify(state.astro.route || {}, null, 2)); log("Route JSON copied."); } catch (e) { log(`Copy failed: ${e.message}`); }
+    };
+    wireWaypointClicks();
+    log("UI wired");
+  }
+
+  async function boot(){
+    setStatus("Booting", "warn");
+    log(`Boot: ${CONFIG.appName}`);
+    wireUI();
+    fillSpaceSelectors();
+    init2D();
+    setBase2D("esri");
+    perfTick();
+    updateModeBadge();
+    setTimeHUD("Timeline idle\nEarth + Astro ready");
+    updateHUD();
+    updateSpaceOutputs(null);
+    await showMode("2d");
+    setStatus("Ready", "ok");
+    log("Ready â");
+  }
+
+  boot().catch(e => { setStatus("Fatal error", "bad"); log(`Fatal boot error: ${e.message}`); console.error(e); });
+})();
+</script>
+</body>
+</html>
+

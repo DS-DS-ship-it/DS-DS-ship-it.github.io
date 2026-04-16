@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Earth Cockpit v6.1 — 2D/3D + Weather + NASA GIBS + ASTRO HiPS</title>
+
+  <!-- Leaflet (2D) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Cesium (3D) -->
+  <link href="https://unpkg.com/cesium@1.128.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://unpkg.com/cesium@1.128.0/Build/Cesium/Cesium.js"></script>
+
+  <!-- Aladin Lite (ASTRO HiPS) -->
+  <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.min.css" />
+  <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.min.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0c10; color:#e9eef5; font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+    .wrap { display:grid; grid-template-columns: 1fr 420px; gap:12px; padding:12px; }
+    .stage { position:relative; border-radius:14px; overflow:hidden; background:#000; box-shadow: 0 18px 60px rgba(0,0,0,.55); min-height: calc(100vh - 24px); }
+    #map2d, #map3d, #astro { position:absolute; inset:0; }
+    #map3d, #astro { display:none; }
+    .panel {
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      border-radius:14px;
+      padding:12px;
+      min-height: calc(100vh - 24px);
+      overflow:auto;
+    }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .btn {
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:#e9eef5;
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:hover { background: rgba(255,255,255,.10); }
+    .btn.active { background: rgba(0,160,255,.18); border-color: rgba(0,160,255,.55); }
+    .chip { padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); font-size:12px; }
+    .section { margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,.10); }
+    label { display:flex; gap:8px; align-items:center; margin:8px 0; }
+    input[type="checkbox"] { transform: scale(1.1); }
+    select, input[type="range"] {
+      width:100%;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      color:#e9eef5;
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+    }
+    .log {
+      font:12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      white-space:pre-wrap;
+      background: rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      padding:10px;
+      max-height: 310px;
+      overflow:auto;
+    }
+    .small { opacity:.85; font-size:12px; }
+    .warn { color:#ffcc66; }
+    .bad  { color:#ff7a7a; }
+    .ok   { color:#7CFFB2; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="stage">
+    <div id="map2d"></div>
+    <div id="map3d"></div>
+    <div id="astro"></div>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="btn active" id="btn2d">2D</div>
+      <div class="btn" id="btn3d">3D</div>
+      <div class="btn" id="btnAstro">ASTRO</div>
+      <span class="chip" id="statusChip">Booting…</span>
+    </div>
+
+    <div class="section">
+      <div class="small">
+        <b>Proxy requirement (important):</b><br/>
+        3D overlays like <b>Radar</b> need <b>CORS</b> for WebGL textures. Run <b>serve_proxy.py</b> and open this page from:
+        <span class="chip">http://127.0.0.1:8080/earth-cockpit-v6_1.html</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="row" style="justify-content:space-between;">
+        <b>Base Layer</b>
+        <div class="btn" id="btnHealth">Health Check</div>
+      </div>
+      <select id="baseSelect">
+        <option value="esri">Esri World Imagery (fast)</option>
+        <option value="osm">OpenStreetMap (labels)</option>
+        <option value="gibs_truecolor">NASA GIBS — True Color (auto latest)</option>
+      </select>
+      <div class="small warn" id="gibsNote" style="display:none;margin-top:8px;">
+        NASA GIBS True Color is capped at native zoom (Level9). Over-zoom is visual scaling.
+      </div>
+    </div>
+
+    <div class="section">
+      <b>Overlays</b>
+
+      <label><input type="checkbox" id="ovLabels" checked> Labels (Esri Boundaries/Places)</label>
+
+      <label><input type="checkbox" id="ovRadar"> Weather Radar (RainViewer) — 2D + 3D (via proxy)</label>
+      <div class="small">If Radar works in 2D but not 3D, you are not using the proxy server.</div>
+
+      <label><input type="checkbox" id="ovClouds"> Clouds (NASA GIBS) — 2D/3D</label>
+      <label><input type="checkbox" id="ovPrecip"> Precipitation (NASA GIBS IMERG) — 2D/3D</label>
+      <label><input type="checkbox" id="ovThermal"> Thermal Anomalies (NASA GIBS VIIRS) — 2D/3D</label>
+
+      <label><input type="checkbox" id="ovFires"> Fires (NASA EONET) — 2D/3D markers</label>
+
+      <div class="section">
+        <b>Overlay Opacity</b>
+        <input id="opacity" type="range" min="0" max="100" value="65"/>
+        <div class="small">Applies to radar + NASA overlays in both 2D/3D.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <b>ASTRO Mode — HiPS progressive sky tiles</b>
+      <select id="astroSurvey">
+        <option value="dss2">DSS2 (optical) — classic sky</option>
+        <option value="2mass">2MASS (infrared) — full-sky IR</option>
+        <option value="iris">IRIS / IRAS-style (far infrared) — dust</option>
+        <option value="rosat">ROSAT (X-ray) — all-sky</option>
+        <option value="galex">GALEX (ultraviolet) — UV sky</option>
+        <option value="planck">Planck (CMB) — early universe</option>
+      </select>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="btn" id="btnSimbad">SIMBAD objects</div>
+        <div class="btn" id="btnGaia">Gaia DR3 (VizieR sample)</div>
+        <div class="btn" id="btnClearCats">Clear catalogs</div>
+      </div>
+
+      <div class="small" style="margin-top:8px;">
+        HiPS (Hierarchical Progressive Surveys) is the key technology for “Google-Earth-style” astronomy zoom maps.
+      </div>
+    </div>
+
+    <div class="section">
+      <b>Diagnostics</b>
+      <div class="row" style="margin:8px 0;">
+        <div class="btn" id="btnCopyLog">Copy log</div>
+        <div class="btn" id="btnClearLog">Clear</div>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(() => {
+  // =========================
+  // Utilities / logging
+  // =========================
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  const statusChip = $("statusChip");
+
+  const nowStamp = () => {
+    const d = new Date();
+    return d.toLocaleTimeString([], {hour12:true});
+  };
+
+  let tileErrCount = { base:0, labels:0, radar:0, clouds:0, precip:0, thermal:0 };
+  let tileOkCount  = { base:0, labels:0, radar:0, clouds:0, precip:0, thermal:0 };
+  let lastTileErrLogAt = 0;
+
+  function log(msg, cls="") {
+    const line = `[${nowStamp()}] ${msg}\n`;
+    const span = document.createElement("span");
+    if (cls) span.className = cls;
+    span.textContent = line;
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function setStatus(text, cls="") {
+    statusChip.textContent = text;
+    statusChip.className = "chip " + (cls||"");
+  }
+
+  // Detect if we are served through proxy server
+  const isLocalhost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+  const proxyBase = `${location.origin}/proxy?url=`; // served by serve_proxy.py
+
+  function proxify(url) {
+    // Only proxify when local proxy is available
+    if (!isLocalhost) return url;
+    return proxyBase + encodeURIComponent(url);
+  }
+
+  // =========================
+  // Base layer sources
+  // =========================
+  // Esri
+  const ESRI_IMG = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const ESRI_LABELS = "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+
+  // OSM
+  const OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+  // NASA GIBS WMTS REST (EPSG:3857 best)
+  // Template from GIBS: /wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{ext}
+  // We use GoogleMapsCompatible_Level9 and cap maximumLevel/maxNativeZoom to 9 for many layers.
+  const GIBS = {
+    base: {
+      id: "MODIS_Terra_CorrectedReflectance_TrueColor",
+      ext: "jpg",
+      tileMatrixSet: "GoogleMapsCompatible_Level9",
+      maxNativeZoom: 9
+    },
+    clouds: {
+      id: "MODIS_Terra_Cloud_Top_Temperature_Day",
+      ext: "png",
+      tileMatrixSet: "GoogleMapsCompatible_Level9",
+      maxNativeZoom: 9
+    },
+    precip: {
+      id: "IMERG_Precipitation_Rate",
+      ext: "png",
+      tileMatrixSet: "GoogleMapsCompatible_Level9",
+      maxNativeZoom: 9
+    },
+    thermal: {
+      id: "VIIRS_SNPP_Thermal_Anomalies_375m_All",
+      ext: "png",
+      tileMatrixSet: "GoogleMapsCompatible_Level9",
+      maxNativeZoom: 9
+    }
+  };
+
+  function gibsUrl(layerId, dateStr, tileMatrixSet, ext) {
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerId}/default/${dateStr}/${tileMatrixSet}/{z}/{y}/{x}.${ext}`;
+  }
+
+  // Auto-find latest working date for a GIBS layer by testing a known tile.
+  // We use z=2,x=1,y=1 as a cheap probe.
+  async function findLatestGibsDate(layerId, tileMatrixSet, ext, maxBackDays=10) {
+    const base = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layerId}/default/DATE/${tileMatrixSet}/2/1/1.${ext}`;
+    const today = new Date();
+    for (let i=0; i<=maxBackDays; i++) {
+      const d = new Date(today.getTime() - i*24*3600*1000);
+      const ds = d.toISOString().slice(0,10);
+      const url = base.replace("DATE", ds);
+
+      const ok = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url + `?cb=${Date.now()}`;
+      });
+
+      if (ok) return ds;
+    }
+    return null;
+  }
+
+  // =========================
+  // 2D Leaflet
+  // =========================
+  const map2d = L.map("map2d", {
+    worldCopyJump: true,
+    preferCanvas: true
+  }).setView([28.0, -82.0], 5);
+
+  // Base layers (2D)
+  const base2d = {
+    esri: L.tileLayer(ESRI_IMG, { maxZoom: 19, crossOrigin:true }),
+    osm:  L.tileLayer(OSM, { maxZoom: 19, subdomains: "abc", crossOrigin:true }),
+    gibs_truecolor: null // created after date detection
+  };
+
+  // Labels (2D)
+  const labels2d = L.tileLayer(ESRI_LABELS, { maxZoom: 19, opacity: 1.0, crossOrigin:true });
+
+  // Overlays (2D)
+  // Radar (2D): direct URL (Leaflet <img> usage is fine even without CORS headers)
+  // IMPORTANT: RainViewer uses {z}/{x}/{y} in their doc examples; Leaflet is {z}/{x}/{y} too, so we map correctly.
+  function rainviewerTile(ts) {
+    return `https://tilecache.rainviewer.com/v2/radar/${ts}/256/{z}/{x}/{y}/2/1_1.png`;
+  }
+  let radar2d = null;
+
+  let clouds2d = null, precip2d = null, thermal2d = null;
+
+  // Fires (2D) via GeoJSON markers
+  let firesLayer2d = L.layerGroup();
+
+  // Attach initial layers
+  base2d.esri.addTo(map2d);
+  labels2d.addTo(map2d);
+
+  // =========================
+  // 3D Cesium
+  // =========================
+  // Cesium requires CORS-enabled images for WebGL textures.
+  // RainViewer does not reliably provide CORS => use proxy in 3D.
+  const viewer = new Cesium.Viewer("map3d", {
+    animation:false,
+    timeline:false,
+    baseLayerPicker:false,
+    geocoder:false,
+    homeButton:false,
+    sceneModePicker:false,
+    navigationHelpButton:false,
+    fullscreenButton:false,
+    infoBox:false,
+    selectionIndicator:false,
+    shouldAnimate:true
+  });
+
+  viewer.scene.globe.enableLighting = false;
+  viewer.scene.globe.depthTestAgainstTerrain = false;
+  viewer.scene.requestRenderMode = true;     // reduce GPU churn
+  viewer.scene.maximumRenderTimeChange = Infinity;
+
+  // Base imagery layers (3D)
+  const base3d = {
+    esri: viewer.imageryLayers.addImageryProvider(new Cesium.ArcGisMapServerImageryProvider({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+    })),
+    osm: null,
+    gibs_truecolor: null
+  };
+
+  // Labels 3D
+  let labels3d = viewer.imageryLayers.addImageryProvider(new Cesium.ArcGisMapServerImageryProvider({
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer"
+  }));
+  labels3d.alpha = 1.0;
+
+  // Overlays 3D
+  let radar3d = null, clouds3d = null, precip3d = null, thermal3d = null;
+
+  // Fires 3D entities
+  let fires3dEntities = [];
+
+  // Ensure Esri base stays at bottom
+  function setOnlyBase3d(key) {
+    // remove all base providers we created except overlays and labels
+    // easiest: toggle alpha for base layers and keep layering stable
+    const wantEsri = key === "esri";
+    const wantOsm  = key === "osm";
+    const wantGibs = key === "gibs_truecolor";
+
+    if (base3d.esri) base3d.esri.show = wantEsri;
+
+    if (!base3d.osm) {
+      base3d.osm = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        maximumLevel: 19
+      }));
+      base3d.osm.show = false;
+    }
+    base3d.osm.show = wantOsm;
+
+    if (base3d.gibs_truecolor) base3d.gibs_truecolor.show = wantGibs;
+
+    viewer.scene.requestRender();
+  }
+
+  // =========================
+  // ASTRO (Aladin Lite)
+  // =========================
+  let aladin = null;
+  let astroCats = [];
+
+  // HiPS survey URLs (progressive tiles)
+  // These are CDS/Aladin HiPS endpoints (full-sky, tile pyramid, programmatic).
+  const ASTRO_SURVEYS = {
+    dss2:   { name:"DSS2 color", hips:"CDS/P/DSS2/color" },
+    "2mass":{ name:"2MASS color", hips:"https://alasky.cds.unistra.fr/2MASSColor/HiPS" },
+    iris:   { name:"IRISColor (IRAS-like FIR)", hips:"https://alasky.cds.unistra.fr/IRISColor/HiPS" },
+    rosat:  { name:"ROSAT RASS", hips:"https://alasky.cds.unistra.fr/RASS/HiPS" },
+    galex:  { name:"GALEX AIS (UV)", hips:"https://alasky.cds.unistra.fr/GALEXAIS/HiPS" },
+    planck: { name:"Planck CMB", hips:"https://alasky.cds.unistra.fr/Planck/R3.01/COM_CMB_IQU-smica_2048_R3.01_full/HiPS" }
+  };
+
+  function astroInitIfNeeded() {
+    if (aladin) return;
+
+    // Build Aladin viewer
+    aladin = A.aladin("#astro", {
+      survey: ASTRO_SURVEYS.dss2.hips,
+      fov: 60,                  // wide at start
+      target: "0 +0",           // RA/Dec
+      showReticle: true,
+      showZoomControl: true,
+      showFullscreenControl: false,
+      showLayersControl: true
+    });
+
+    log("ASTRO: Aladin Lite initialized OK", "ok");
+  }
+
+  function astroSetSurvey(key) {
+    astroInitIfNeeded();
+    const s = ASTRO_SURVEYS[key] || ASTRO_SURVEYS.dss2;
+    aladin.setImageSurvey(s.hips);
+    log(`ASTRO: Survey = ${s.name}`, "ok");
+  }
+
+  function astroClearCatalogs() {
+    if (!aladin) return;
+    for (const c of astroCats) aladin.removeCatalog(c);
+    astroCats = [];
+    log("ASTRO: catalogs cleared", "ok");
+  }
+
+  function astroAddSimbad() {
+    astroInitIfNeeded();
+    const cat = A.catalogFromSimbad({ onClick: "showTable", limit: 1000 });
+    aladin.addCatalog(cat);
+    astroCats.push(cat);
+    log("ASTRO: SIMBAD catalog ON", "ok");
+  }
+
+  function astroAddGaiaSample() {
+    astroInitIfNeeded();
+    // NOTE: Gaia DR3 full access is huge; this is a VizieR cone-search style sample catalog layer.
+    // Aladin supports VizieR catalogs. Here we add a common Gaia DR3 VizieR identifier example:
+    // If the chosen catalog is unavailable, you can swap it in your own later.
+    try {
+      const cat = A.catalogFromVizieR("I/355/gaiadr3", "0 +0", 1, { onClick: "showTable", limit: 2000 });
+      aladin.addCatalog(cat);
+      astroCats.push(cat);
+      log("ASTRO: VizieR Gaia DR3 sample ON (I/355/gaiadr3)", "ok");
+    } catch (e) {
+      log("ASTRO: Gaia VizieR sample failed (catalog id may differ).", "warn");
+    }
+  }
+
+  // =========================
+  // Radar timeline (RainViewer)
+  // =========================
+  let rain = { ts: null, frames: [] };
+
+  async function fetchRainViewerTimeline() {
+    // Timeline endpoint is usually OK with CORS; if not, proxy it when local.
+    const url = "https://api.rainviewer.com/public/weather-maps.json";
+    const timelineUrl = (isLocalhost ? proxify(url) : url);
+
+    log("Radar: fetching RainViewer timeline…");
+    const r = await fetch(timelineUrl, { cache:"no-store" });
+    if (!r.ok) throw new Error("RainViewer timeline HTTP " + r.status);
+    const j = await r.json();
+
+    const frames = (j?.radar?.past || []).concat(j?.radar?.nowcast || []);
+    if (!frames.length) throw new Error("RainViewer: no frames");
+
+    // Pick newest frame
+    const newest = frames[frames.length - 1];
+    rain.frames = frames;
+    rain.ts = newest.time;
+
+    log(`Radar: frames=${frames.length} ts=${new Date(rain.ts*1000).toUTCString()}`, "ok");
+  }
+
+  // =========================
+  // NASA EONET Fires
+  // =========================
+  async function fetchEonetFires() {
+    // EONET v3 open endpoint
+    const url = "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&limit=200";
+    const r = await fetch(url, { cache:"no-store" });
+    if (!r.ok) throw new Error("EONET HTTP " + r.status);
+    const j = await r.json();
+    const events = j?.events || [];
+    return events;
+  }
+
+  function clearFires2d() {
+    firesLayer2d.clearLayers();
+  }
+  function clearFires3d() {
+    for (const e of fires3dEntities) viewer.entities.remove(e);
+    fires3dEntities = [];
+  }
+
+  function setFiresOpacity(alpha) {
+    // entities are points; we won’t opacity them here (kept bright)
+  }
+
+  async function enableFires(on) {
+    if (!on) {
+      clearFires2d();
+      clearFires3d();
+      log("Fires: OFF");
+      return;
+    }
+    log("Fires: fetching EONET…");
+    let events = [];
+    try {
+      events = await fetchEonetFires();
+    } catch (e) {
+      log("Fires: fetch failed: " + e.message, "bad");
+      return;
+    }
+
+    clearFires2d();
+    clearFires3d();
+
+    let count = 0;
+    for (const ev of events) {
+      // Use first geometry point
+      const g = ev?.geometry?.slice(-1)[0];
+      if (!g) continue;
+      if (g.type !== "Point") continue;
+      const [lon, lat] = g.coordinates;
+
+      // 2D marker
+      const m = L.circleMarker([lat, lon], {
+        radius: 5,
+        color: "#ff7a7a",
+        weight: 1,
+        fillColor: "#ff3b3b",
+        fillOpacity: 0.85
+      }).bindPopup(`<b>${ev.title}</b><br/>${new Date(g.date).toUTCString()}`);
+      firesLayer2d.addLayer(m);
+
+      // 3D marker
+      const ent = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+        point: { pixelSize: 8, color: Cesium.Color.ORANGERED, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
+        label: { text: "", show: false }
+      });
+      fires3dEntities.push(ent);
+
+      count++;
+    }
+
+    firesLayer2d.addTo(map2d);
+    log(`Fires: loaded ${count} markers (EONET open wildfires)`, count ? "ok" : "warn");
+    viewer.scene.requestRender();
+  }
+
+  // =========================
+  // Overlay opacity
+  // =========================
+  function getAlpha() {
+    const v = +$("opacity").value;
+    return Math.max(0, Math.min(1, v/100));
+  }
+
+  function applyOpacity() {
+    const a = getAlpha();
+    if (radar2d) radar2d.setOpacity(a);
+    if (clouds2d) clouds2d.setOpacity(a);
+    if (precip2d) precip2d.setOpacity(a);
+    if (thermal2d) thermal2d.setOpacity(a);
+
+    if (radar3d) radar3d.alpha = a;
+    if (clouds3d) clouds3d.alpha = a;
+    if (precip3d) precip3d.alpha = a;
+    if (thermal3d) thermal3d.alpha = a;
+
+    viewer.scene.requestRender();
+  }
+
+  $("opacity").addEventListener("input", applyOpacity);
+
+  // =========================
+  // Tile error handling (throttle spam)
+  // =========================
+  function onTileError(kind, url) {
+    tileErrCount[kind] = (tileErrCount[kind]||0) + 1;
+    const t = Date.now();
+    if (t - lastTileErrLogAt > 900) {
+      lastTileErrLogAt = t;
+      log(`TILE ERROR [${kind}] ${url}`, "warn");
+    }
+  }
+  function onTileOk(kind) {
+    tileOkCount[kind] = (tileOkCount[kind]||0) + 1;
+  }
+
+  // =========================
+  // Create / remove NASA overlays (2D + 3D)
+  // =========================
+  let gibsDates = {
+    truecolor: null,
+    clouds: null,
+    precip: null,
+    thermal: null
+  };
+
+  async function ensureGibsDate(which) {
+    if (gibsDates[which]) return gibsDates[which];
+
+    let meta = null;
+    if (which === "truecolor") meta = GIBS.base;
+    if (which === "clouds") meta = GIBS.clouds;
+    if (which === "precip") meta = GIBS.precip;
+    if (which === "thermal") meta = GIBS.thermal;
+    if (!meta) return null;
+
+    log(`GIBS: finding latest date for ${meta.id}…`);
+    const ds = await findLatestGibsDate(meta.id, meta.tileMatrixSet, meta.ext, 12);
+    if (!ds) {
+      log(`GIBS: ${meta.id} failed to find a working date (last 12 days).`, "bad");
+      return null;
+    }
+    gibsDates[which] = ds;
+    log(`GIBS: ${meta.id} date=${ds}`, "ok");
+    return ds;
+  }
+
+  async function setBase2d(key) {
+    // remove existing base
+    for (const k of Object.keys(base2d)) {
+      if (base2d[k] && map2d.hasLayer(base2d[k])) map2d.removeLayer(base2d[k]);
+    }
+    $("gibsNote").style.display = "none";
+
+    if (key === "gibs_truecolor") {
+      $("gibsNote").style.display = "block";
+      const ds = await ensureGibsDate("truecolor");
+      if (!ds) {
+        log("Base: GIBS True Color failed; falling back to Esri.", "bad");
+        base2d.esri.addTo(map2d);
+        return;
+      }
+      const url = gibsUrl(GIBS.base.id, ds, GIBS.base.tileMatrixSet, GIBS.base.ext);
+      base2d.gibs_truecolor = L.tileLayer(url, {
+        maxNativeZoom: GIBS.base.maxNativeZoom,
+        maxZoom: 19,
+        crossOrigin: true,
+        attribution: "NASA GIBS"
+      });
+
+      base2d.gibs_truecolor
+        .on("tileload", () => onTileOk("base"))
+        .on("tileerror", (e) => onTileError("base", e?.tile?.src || "gibs tile"))
+        .addTo(map2d);
+
+      log("Base: NASA GIBS True Color", "ok");
+      return;
+    }
+
+    if (!base2d[key]) key = "esri";
+    base2d[key]
+      .on("tileload", () => onTileOk("base"))
+      .on("tileerror", (e) => onTileError("base", e?.tile?.src || "tile"))
+      .addTo(map2d);
+
+    log("Base: " + (key === "esri" ? "Esri" : "OSM"), "ok");
+  }
+
+  async function setBase3d(key) {
+    if (key === "gibs_truecolor") {
+      const ds = await ensureGibsDate("truecolor");
+      if (!ds) {
+        log("3D Base: GIBS failed; keeping Esri.", "bad");
+        setOnlyBase3d("esri");
+        return;
+      }
+      if (!base3d.gibs_truecolor) {
+        base3d.gibs_truecolor = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+          url: gibsUrl(GIBS.base.id, ds, GIBS.base.tileMatrixSet, GIBS.base.ext),
+          maximumLevel: GIBS.base.maxNativeZoom,
+          credit: "NASA GIBS"
+        }));
+      } else {
+        // update URL if date changed
+        const prov = base3d.gibs_truecolor.imageryProvider;
+        // Cesium UrlTemplateImageryProvider does not support changing url directly reliably.
+        // So recreate:
+        viewer.imageryLayers.remove(base3d.gibs_truecolor, false);
+        base3d.gibs_truecolor = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+          url: gibsUrl(GIBS.base.id, ds, GIBS.base.tileMatrixSet, GIBS.base.ext),
+          maximumLevel: GIBS.base.maxNativeZoom,
+          credit: "NASA GIBS"
+        }));
+      }
+      setOnlyBase3d("gibs_truecolor");
+      log("3D Base: NASA GIBS True Color", "ok");
+      return;
+    }
+
+    setOnlyBase3d(key);
+    log("3D Base: " + (key === "esri" ? "Esri" : "OSM"), "ok");
+  }
+
+  // NASA overlays
+  async function setGibsOverlay(which, on) {
+    const alpha = getAlpha();
+
+    // 2D layer references
+    let ref2d = null;
+    let meta = null;
+
+    if (which === "clouds") { ref2d = clouds2d; meta = GIBS.clouds; }
+    if (which === "precip") { ref2d = precip2d; meta = GIBS.precip; }
+    if (which === "thermal"){ ref2d = thermal2d; meta = GIBS.thermal; }
+
+    if (!meta) return;
+
+    if (!on) {
+      if (ref2d && map2d.hasLayer(ref2d)) map2d.removeLayer(ref2d);
+      if (which === "clouds") clouds2d = null;
+      if (which === "precip") precip2d = null;
+      if (which === "thermal") thermal2d = null;
+
+      if (which === "clouds" && clouds3d) { viewer.imageryLayers.remove(clouds3d, false); clouds3d = null; }
+      if (which === "precip" && precip3d) { viewer.imageryLayers.remove(precip3d, false); precip3d = null; }
+      if (which === "thermal" && thermal3d){ viewer.imageryLayers.remove(thermal3d,false); thermal3d = null; }
+
+      log(`${which}: OFF`);
+      viewer.scene.requestRender();
+      return;
+    }
+
+    const ds = await ensureGibsDate(which);
+    if (!ds) {
+      log(`${which}: GIBS date probe failed`, "bad");
+      return;
+    }
+
+    const url = gibsUrl(meta.id, ds, meta.tileMatrixSet, meta.ext);
+
+    // 2D create/add
+    const lyr2d = L.tileLayer(url, {
+      maxNativeZoom: meta.maxNativeZoom,
+      maxZoom: 19,
+      opacity: alpha,
+      crossOrigin: true,
+      attribution: "NASA GIBS"
+    })
+    .on("tileload", () => onTileOk(which))
+    .on("tileerror", (e) => onTileError(which, e?.tile?.src || "gibs tile"));
+
+    lyr2d.addTo(map2d);
+
+    if (which === "clouds") clouds2d = lyr2d;
+    if (which === "precip") precip2d = lyr2d;
+    if (which === "thermal") thermal2d = lyr2d;
+
+    // 3D create/add
+    const lyr3d = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+      url,
+      maximumLevel: meta.maxNativeZoom,
+      credit: "NASA GIBS"
+    }));
+    lyr3d.alpha = alpha;
+
+    if (which === "clouds") clouds3d = lyr3d;
+    if (which === "precip") precip3d = lyr3d;
+    if (which === "thermal") thermal3d = lyr3d;
+
+    log(`${which}: ON (NASA GIBS)`, "ok");
+    viewer.scene.requestRender();
+  }
+
+  // =========================
+  // Radar overlay (2D + 3D)
+  // =========================
+  async function setRadar(on) {
+    if (!on) {
+      if (radar2d && map2d.hasLayer(radar2d)) map2d.removeLayer(radar2d);
+      radar2d = null;
+
+      if (radar3d) { viewer.imageryLayers.remove(radar3d, false); radar3d = null; }
+
+      log("Radar: OFF");
+      viewer.scene.requestRender();
+      return;
+    }
+
+    try {
+      if (!rain.ts) await fetchRainViewerTimeline();
+    } catch (e) {
+      log("Radar: timeline failed: " + e.message, "bad");
+      return;
+    }
+
+    // 2D radar: direct (fast)
+    const url2d = rainviewerTile(rain.ts);
+    radar2d = L.tileLayer(url2d, {
+      opacity: getAlpha(),
+      maxZoom: 12, // rainviewer often best up to ~12
+      crossOrigin: true
+    })
+    .on("tileload", () => onTileOk("radar"))
+    .on("tileerror", (e) => onTileError("radar", e?.tile?.src || "radar tile"));
+
+    radar2d.addTo(map2d);
+
+    // 3D radar: proxied for CORS (WebGL textures)
+    const url3d = proxify(rainviewerTile(rain.ts)).replace("{z}","{z}").replace("{x}","{x}").replace("{y}","{y}");
+    // NOTE: proxify() returns a full URL with ?url=..., so we can’t use Leaflet-style replacement.
+    // We build a Cesium template with {z}{x}{y} baked into the proxied string:
+    const url3dTemplate = proxify(`https://tilecache.rainviewer.com/v2/radar/${rain.ts}/256/{z}/{x}/{y}/2/1_1.png`);
+
+    radar3d = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+      url: url3dTemplate,
+      maximumLevel: 12
+    }));
+    radar3d.alpha = getAlpha();
+
+    log(`Radar: ON ts=${new Date(rain.ts*1000).toUTCString()}`, "ok");
+    viewer.scene.requestRender();
+  }
+
+  // =========================
+  // Mode switching (2D/3D/ASTRO)
+  // =========================
+  const btn2d = $("btn2d");
+  const btn3d = $("btn3d");
+  const btnAstro = $("btnAstro");
+
+  function setActiveBtn(which) {
+    btn2d.classList.toggle("active", which==="2d");
+    btn3d.classList.toggle("active", which==="3d");
+    btnAstro.classList.toggle("active", which==="astro");
+  }
+
+  function showMode(which) {
+    $("map2d").style.display = (which==="2d") ? "block" : "none";
+    $("map3d").style.display = (which==="3d") ? "block" : "none";
+    $("astro").style.display = (which==="astro") ? "block" : "none";
+
+    setActiveBtn(which);
+
+    if (which==="3d") {
+      // sync from 2D -> 3D
+      const c = map2d.getCenter();
+      const z = map2d.getZoom();
+      const height = Math.max(1000, 20000000 / Math.pow(2, z)); // rough mapping
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(c.lng, c.lat, height),
+        duration: 0.6
+      });
+      viewer.resize();
+      viewer.scene.requestRender();
+      log("Mode: 3D", "ok");
+      setStatus("Mode: 3D", "ok");
+    } else if (which==="2d") {
+      // sync from 3D -> 2D
+      const carto = Cesium.Cartographic.fromCartesian(viewer.camera.position);
+      const lat = Cesium.Math.toDegrees(carto.latitude);
+      const lon = Cesium.Math.toDegrees(carto.longitude);
+      map2d.panTo([lat, lon], { animate:true, duration:0.6 });
+      log("Mode: 2D", "ok");
+      setStatus("Mode: 2D", "ok");
+    } else {
+      // ASTRO
+      astroInitIfNeeded();
+      log("Mode: ASTRO", "ok");
+      setStatus("Mode: ASTRO", "ok");
+    }
+  }
+
+  btn2d.onclick = () => showMode("2d");
+  btn3d.onclick = () => showMode("3d");
+  btnAstro.onclick = () => showMode("astro");
+
+  // =========================
+  // UI wiring
+  // =========================
+  $("baseSelect").addEventListener("change", async (e) => {
+    const key = e.target.value;
+
+    await setBase2d(key);
+    await setBase3d(key);
+
+    // Keep labels on top in 3D
+    labels3d.show = $("ovLabels").checked;
+    viewer.scene.requestRender();
+  });
+
+  $("ovLabels").addEventListener("change", (e) => {
+    const on = e.target.checked;
+    if (on) labels2d.addTo(map2d);
+    else if (map2d.hasLayer(labels2d)) map2d.removeLayer(labels2d);
+
+    labels3d.show = on;
+    viewer.scene.requestRender();
+    log(`Labels: ${on ? "ON" : "OFF"}`);
+  });
+
+  $("ovRadar").addEventListener("change", (e) => setRadar(e.target.checked));
+
+  $("ovClouds").addEventListener("change", (e) => setGibsOverlay("clouds", e.target.checked));
+  $("ovPrecip").addEventListener("change", (e) => setGibsOverlay("precip", e.target.checked));
+  $("ovThermal").addEventListener("change", (e) => setGibsOverlay("thermal", e.target.checked));
+
+  $("ovFires").addEventListener("change", (e) => enableFires(e.target.checked));
+
+  $("astroSurvey").addEventListener("change", (e) => astroSetSurvey(e.target.value));
+  $("btnSimbad").onclick = () => astroAddSimbad();
+  $("btnGaia").onclick = () => astroAddGaiaSample();
+  $("btnClearCats").onclick = () => astroClearCatalogs();
+
+  $("btnCopyLog").onclick = async () => {
+    const text = logEl.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      log("Copied log to clipboard.", "ok");
+    } catch {
+      log("Copy failed (clipboard permission).", "warn");
+    }
+  };
+  $("btnClearLog").onclick = () => { logEl.textContent = ""; log("Log cleared.", "ok"); };
+
+  // =========================
+  // Health check
+  // =========================
+  async function healthCheck() {
+    log("=== HEALTH CHECKS ===");
+    // 2D sample tiles:
+    async function probeImage(url) {
+      return await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url + `?cb=${Date.now()}`;
+      });
+    }
+
+    // Esri
+    const esriOk = await probeImage(ESRI_IMG.replace("{z}","2").replace("{y}","1").replace("{x}","1"));
+    log(`Esri base tile: ${esriOk ? "OK" : "FAIL"}`, esriOk ? "ok" : "bad");
+
+    const lblOk = await probeImage(ESRI_LABELS.replace("{z}","2").replace("{y}","1").replace("{x}","1"));
+    log(`Esri labels tile: ${lblOk ? "OK" : "FAIL"}`, lblOk ? "ok" : "bad");
+
+    // GIBS TrueColor sample (auto date)
+    const ds = await ensureGibsDate("truecolor");
+    if (!ds) {
+      log(`NASA GIBS truecolor sample: FAIL (no valid date found)`, "bad");
+    } else {
+      const sample = gibsUrl(GIBS.base.id, ds, GIBS.base.tileMatrixSet, GIBS.base.ext)
+        .replace("{z}","2").replace("{y}","1").replace("{x}","1");
+      const ok = await probeImage(sample);
+      log(`NASA GIBS truecolor sample: ${ok ? "OK" : "FAIL"} (date=${ds})`, ok ? "ok" : "bad");
+      if (!ok) log(`  URL: ${sample}`, "warn");
+    }
+
+    // RainViewer sample (2D, image load)
+    if (!rain.ts) {
+      try { await fetchRainViewerTimeline(); } catch {}
+    }
+    if (rain.ts) {
+      const rSample = rainviewerTile(rain.ts)
+        .replace("{z}","2").replace("{x}","1").replace("{y}","1");
+      const rok = await probeImage(rSample);
+      log(`RainViewer sample tile (2D img): ${rok ? "OK" : "FAIL"} (may be regional)`, rok ? "ok" : "warn");
+      if (!rok) log(`  URL: ${rSample}`, "warn");
+    } else {
+      log("RainViewer timeline: FAIL", "bad");
+    }
+
+    log(`--- counters ---`);
+    log(`Tile OK:  base=${tileOkCount.base} labels=${tileOkCount.labels} clouds=${tileOkCount.clouds} precip=${tileOkCount.precip} radar=${tileOkCount.radar} thermal=${tileOkCount.thermal}`);
+    log(`Tile ERR: base=${tileErrCount.base} labels=${tileErrCount.labels} clouds=${tileErrCount.clouds} precip=${tileErrCount.precip} radar=${tileErrCount.radar} thermal=${tileErrCount.thermal}`);
+    log(`=== END HEALTH ===`);
+  }
+
+  $("btnHealth").onclick = healthCheck;
+
+  // =========================
+  // Boot sequence
+  // =========================
+  async function boot() {
+    log("Boot: Earth Cockpit v6.1 (2D/3D/ASTRO single-file)");
+    // WebGL probe
+    let glOk = false;
+    try {
+      const c = document.createElement("canvas");
+      glOk = !!(c.getContext("webgl") || c.getContext("experimental-webgl"));
+    } catch {}
+    log("WebGL probe: " + (glOk ? "OK" : "FAIL"), glOk ? "ok" : "bad");
+
+    // Prepare Cesium base visibility
+    setOnlyBase3d("esri");
+    log("3D: Cesium initialized OK", "ok");
+
+    // Create fires layer group
+    firesLayer2d = L.layerGroup();
+
+    // Initial base select
+    await setBase2d("esri");
+    await setBase3d("esri");
+
+    // Default opacity apply
+    applyOpacity();
+
+    // If you want radar auto prefetched (kept off by default to avoid spam):
+    // await fetchRainViewerTimeline();
+
+    setStatus("Ready", "ok");
+    log("Ready ✅", "ok");
+  }
+
+  boot();
+
+})();
+</script>
+
+</body>
+</html>

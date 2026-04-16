@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Earth Cockpit v5.5 — 2D + 3D Globe + Astronomy (BLACK GLOBE FIX + REAL ZOOM)</title>
+
+  <!-- Leaflet (2D) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+  <!-- CesiumJS (3D) -->
+  <link href="https://unpkg.com/cesium@1.122.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://unpkg.com/cesium@1.122.0/Build/Cesium/Cesium.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    html, body { height:100%; margin:0; background:#0b0c10; color:#e9eef5; font: 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; overflow:hidden; }
+    #app { height:100%; display:grid; grid-template-columns: 380px 1fr; gap:12px; padding:12px; box-sizing:border-box; }
+    #panel {
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(12,14,18,.75);
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      padding: 10px;
+      overflow:auto;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    #viewWrap {
+      position:relative;
+      border-radius: 14px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:#000;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    #map2d, #globe3d { position:absolute; inset:0; width:100%; height:100%; }
+    #globe3d { display:none; outline:none; }
+    #globe3d canvas { width:100% !important; height:100% !important; display:block; }
+
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+    input, select, button, label {
+      background: rgba(255,255,255,.06);
+      color:#e9eef5;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding: 8px 10px;
+      outline:none;
+    }
+    button { cursor:pointer; }
+    button:hover { border-color: rgba(255,255,255,.25); }
+    .small { font-size: 12px; opacity:.9; }
+    .muted { opacity:.75; }
+    .pill { border-radius:999px; padding:6px 10px; }
+    .title { font-weight:700; letter-spacing:.2px; }
+    .hr { height:1px; background:rgba(255,255,255,.10); margin:10px 0; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .leaflet-control-zoom a { background: rgba(20,22,28,.85) !important; color:#e9eef5 !important; border-color: rgba(255,255,255,.12) !important; }
+    .leaflet-control-attribution { background: rgba(12,14,18,.75) !important; color:#cbd5e1 !important; }
+
+    #diag {
+      white-space: pre-wrap;
+      font-size: 12px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      padding: 8px;
+      max-height: 260px;
+      overflow:auto;
+    }
+
+    #hud {
+      position:absolute; right:10px; top:10px;
+      background: rgba(12,14,18,.55);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      padding: 6px 10px;
+      font-size: 12px;
+      pointer-events:none;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <div class="title">Earth Cockpit v5.5</div>
+    <div class="small muted">Fixes: black 3D globe + restores real Cesium wheel zoom + dblclick zoom (Safari-safe).</div>
+
+    <div class="row">
+      <button id="btn2d" class="pill">2D Map</button>
+      <button id="btn3d" class="pill">3D Globe</button>
+      <button id="btnAstro" class="pill">Astronomy</button>
+      <button id="btnHome" class="pill">Home</button>
+      <button id="btnRecover3D" class="pill">Recover 3D</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title">Search / Jump</div>
+    <div class="row">
+      <input id="q" style="width: 240px" placeholder="Orlando or 28.54,-81.38"/>
+      <button id="btnGo">Go</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title">Base imagery</div>
+    <div class="row">
+      <select id="baseMode">
+        <option value="esri">Satellite (Esri World Imagery)</option>
+        <option value="osm">Map (OpenStreetMap)</option>
+      </select>
+      <button id="btnApplyBase">Apply</button>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title">Labels</div>
+    <div class="row">
+      <label class="small"><input type="checkbox" id="labels2dOn" checked> 2D labels</label>
+      <select id="labelsProvider">
+        <option value="carto">CARTO labels</option>
+        <option value="osm">OSM fallback</option>
+      </select>
+    </div>
+    <div class="row">
+      <label class="small"><input type="checkbox" id="labels3dOn" checked> 3D labels overlay</label>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title">3D / Astronomy</div>
+    <div class="row">
+      <button id="btnZoomIn" class="pill">Zoom +</button>
+      <button id="btnZoomOut" class="pill">Zoom –</button>
+      <button id="btnResetCam" class="pill">Reset camera</button>
+      <button id="btnStatus" class="pill">3D Status</button>
+    </div>
+    <div class="row">
+      <label class="small"><input type="checkbox" id="showEarthInAstro" checked> Show Earth in Astronomy</label>
+    </div>
+    <div class="small muted">
+      Mouse wheel zoom works in 3D/Astro (Cesium-native). Double-click zooms in. Click the 3D view once to focus it.
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="title">Diagnostics</div>
+    <div id="diag" class="mono">(log)</div>
+  </div>
+
+  <div id="viewWrap">
+    <div id="map2d"></div>
+    <div id="globe3d" tabindex="0"></div>
+    <div id="hud" class="mono"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const diagEl = $("diag");
+  const hudEl  = $("hud");
+
+  function log(msg, level="log") {
+    const ts = new Date().toISOString().replace("T"," ").replace("Z","");
+    const line = `[${ts}] ${msg}`;
+    diagEl.textContent = (line + "\n" + diagEl.textContent).slice(0, 20000);
+    (console[level] || console.log)(msg);
+  }
+  function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+  function setHud(t){ hudEl.textContent = t; }
+
+  const state = {
+    mode: "2d",
+    center: { lat: 28.54, lon: -81.38 },
+    zoom2d: 6,
+    labels2d: true,
+    labelsProvider: "carto",
+    labels3d: true,
+    baseMode: "esri",
+    cesium: { viewer:null, layerOSM:null, layerEsri:null, layerLabels:null, handler:null }
+  };
+
+  // ----------------------------
+  // 2D Leaflet
+  // ----------------------------
+  const map = L.map("map2d", { worldCopyJump:true, zoomControl:true, preferCanvas:true, inertia:true })
+    .setView([state.center.lat, state.center.lon], state.zoom2d);
+
+  const layerEsri2D = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Tiles © Esri" }
+  );
+  const layerOSM2D = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19, attribution: "© OpenStreetMap" }
+  );
+
+  const cartoLabels2D = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+    { subdomains:"abcd", maxZoom:20, opacity:0.95, attribution:"© CARTO / OSM" }
+  );
+  const osmLabels2D = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom:19, opacity:0.55, attribution:"© OSM (labels fallback)" }
+  );
+
+  layerEsri2D.addTo(map);
+
+  function apply2DLabels() {
+    map.removeLayer(cartoLabels2D);
+    map.removeLayer(osmLabels2D);
+    if (!state.labels2d) return;
+    (state.labelsProvider === "carto" ? cartoLabels2D : osmLabels2D).addTo(map);
+  }
+  function apply2DBase() {
+    map.removeLayer(layerEsri2D);
+    map.removeLayer(layerOSM2D);
+    (state.baseMode === "esri" ? layerEsri2D : layerOSM2D).addTo(map);
+    apply2DLabels();
+  }
+
+  map.on("moveend zoomend", () => {
+    const c = map.getCenter();
+    state.center = { lat: c.lat, lon: c.lng };
+    state.zoom2d = map.getZoom();
+    if (state.mode === "2d") setHud(`2D • lat ${state.center.lat.toFixed(5)} lon ${state.center.lon.toFixed(5)} • z ${state.zoom2d}`);
+  });
+
+  // ----------------------------
+  // Cesium init (NO requestRenderMode, NO custom skybox)
+  // ----------------------------
+  function initCesiumIfNeeded() {
+    if (state.cesium.viewer) return;
+
+    const viewer = new Cesium.Viewer("globe3d", {
+      animation:false, timeline:false, geocoder:false,
+      baseLayerPicker:false, homeButton:false, sceneModePicker:false,
+      navigationHelpButton:false, fullscreenButton:false,
+      infoBox:false, selectionIndicator:false,
+      shouldAnimate:true,
+      terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+      // IMPORTANT: keep continuous rendering for Safari reliability
+      requestRenderMode: false
+    });
+
+    // imagery
+    viewer.imageryLayers.removeAll();
+
+    const osmProvider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      credit: "© OpenStreetMap"
+    });
+    const esriProvider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      credit: "Tiles © Esri"
+    });
+    const labelsProvider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+      credit: "© CARTO / OSM"
+    });
+
+    const layerOSM  = viewer.imageryLayers.addImageryProvider(osmProvider);
+    const layerEsri = viewer.imageryLayers.addImageryProvider(esriProvider);
+    const layerLab  = viewer.imageryLayers.addImageryProvider(labelsProvider);
+    layerLab.alpha = 0.95;
+
+    // provider diagnostics
+    const hookErrors = (prov, name) => {
+      prov.errorEvent.addEventListener((err) => {
+        log(`Cesium imagery ERROR (${name}): ${err?.message || err}`, "error");
+      });
+    };
+    hookErrors(osmProvider, "OSM");
+    hookErrors(esriProvider, "Esri");
+    hookErrors(labelsProvider, "Labels");
+
+    // loading progress
+    viewer.scene.globe.tileLoadProgressEvent.addEventListener((n) => {
+      // n = tiles left
+      if (state.mode !== "2d") setHud(`${state.mode.toUpperCase()} • tiles loading: ${n}`);
+    });
+
+    // controls
+    const ctrl = viewer.scene.screenSpaceCameraController;
+    ctrl.enableZoom = true;
+    ctrl.enableRotate = true;
+    ctrl.enableTilt = true;
+    ctrl.enableTranslate = true;
+    ctrl.minimumZoomDistance = 20.0;
+    ctrl.maximumZoomDistance = 80000000.0;
+
+    // Page-scroll prevention ONLY (do not override Cesium zoom)
+    const el = $("globe3d");
+    el.addEventListener("pointerdown", () => el.focus());
+    el.addEventListener("wheel", (e) => { e.preventDefault(); }, { passive:false });
+
+    // Double click zoom (Cesium-native)
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(() => {
+      try { viewer.camera.zoomIn(viewer.camera.positionCartographic.height * 0.20); }
+      catch {}
+    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+    state.cesium.viewer = viewer;
+    state.cesium.layerOSM = layerOSM;
+    state.cesium.layerEsri = layerEsri;
+    state.cesium.layerLabels = layerLab;
+    state.cesium.handler = handler;
+
+    log("Cesium initialized (v5.5, continuous render, native zoom).");
+  }
+
+  function forceResize3D() {
+    const v = state.cesium.viewer;
+    if (!v) return;
+    try { v.resize(); } catch {}
+    // Safari sometimes needs a micro-raf chain
+    requestAnimationFrame(() => { try { v.resize(); } catch {} });
+  }
+
+  function apply3DBaseAndLabels() {
+    const v = state.cesium.viewer;
+    if (!v) return;
+    state.cesium.layerEsri.show   = (state.baseMode === "esri");
+    state.cesium.layerOSM.show    = (state.baseMode !== "esri");
+    state.cesium.layerLabels.show = !!state.labels3d;
+  }
+
+  function presetGlobeMode() {
+    const v = state.cesium.viewer;
+    if (!v) return;
+
+    // Earth look
+    v.scene.globe.show = true;
+    v.scene.skyAtmosphere.show = true;
+    v.scene.fog.enabled = true;
+    v.scene.globe.enableLighting = true;
+
+    // Use Cesium's default skybox state (don’t inject custom textures)
+    if (v.scene.skyBox) v.scene.skyBox.show = false;
+
+    v.scene.backgroundColor = Cesium.Color.BLACK;
+    apply3DBaseAndLabels();
+    log("Preset: Globe mode applied.");
+  }
+
+  function presetAstronomyMode() {
+    const v = state.cesium.viewer;
+    if (!v) return;
+
+    const showEarth = $("showEarthInAstro").checked;
+
+    // Space look: allow default skybox (if present), atmosphere off
+    if (v.scene.skyBox) v.scene.skyBox.show = true;
+    v.scene.skyAtmosphere.show = false;
+    v.scene.fog.enabled = false;
+
+    v.scene.globe.show = !!showEarth;
+    v.scene.backgroundColor = Cesium.Color.BLACK;
+
+    apply3DBaseAndLabels();
+    log(`Preset: Astronomy mode applied (globe.show=${showEarth}).`);
+  }
+
+  function show3DContainer() {
+    $("map2d").style.display = "none";
+    $("globe3d").style.display = "block";
+    initCesiumIfNeeded();
+    forceResize3D();
+    setTimeout(forceResize3D, 60);
+    setTimeout(() => $("globe3d").focus(), 10);
+  }
+
+  function syncCesiumToState(heightMeters = null) {
+    const v = state.cesium.viewer;
+    if (!v) return;
+    const h = heightMeters ?? (25000000 / Math.pow(2, clamp(state.zoom2d-2, 0, 12)));
+    v.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(state.center.lon, state.center.lat, clamp(h, 150, 80000000)),
+      duration: 0.7
+    });
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+
+    if (mode === "2d") {
+      $("map2d").style.display = "block";
+      $("globe3d").style.display = "none";
+      map.invalidateSize(true);
+      map.setView([state.center.lat, state.center.lon], state.zoom2d);
+      setHud(`2D • lat ${state.center.lat.toFixed(5)} lon ${state.center.lon.toFixed(5)} • z ${state.zoom2d}`);
+      log("Mode: 2D");
+      return;
+    }
+
+    show3DContainer();
+
+    if (mode === "3d") {
+      presetGlobeMode();
+      syncCesiumToState();
+      setHud(`3D • lat ${state.center.lat.toFixed(5)} lon ${state.center.lon.toFixed(5)}`);
+      log("Mode: 3D Globe");
+      return;
+    }
+
+    if (mode === "astro") {
+      presetAstronomyMode();
+      syncCesiumToState(12420000);
+      setHud(`ASTRO • lat ${state.center.lat.toFixed(5)} lon ${state.center.lon.toFixed(5)}`);
+      log("Mode: Astronomy");
+      return;
+    }
+  }
+
+  function show3DStatus() {
+    initCesiumIfNeeded();
+    const v = state.cesium.viewer;
+    const el = $("globe3d");
+    const rect = el.getBoundingClientRect();
+
+    const layers = v.imageryLayers ? v.imageryLayers.length : 0;
+    log("----- 3D STATUS -----");
+    log(`Canvas box: ${Math.round(rect.width)} x ${Math.round(rect.height)}`);
+    log(`scene.globe.show: ${!!v.scene.globe.show}`);
+    log(`scene.skyBox.show: ${!!(v.scene.skyBox && v.scene.skyBox.show)}`);
+    log(`scene.skyAtmosphere.show: ${!!(v.scene.skyAtmosphere && v.scene.skyAtmosphere.show)}`);
+    log(`imageryLayers.length: ${layers}`);
+    log(`baseMode: ${state.baseMode} • labels3d: ${state.labels3d}`);
+    log("---------------------");
+  }
+
+  // Zoom buttons (Cesium-native)
+  function zoomIn() {
+    const v = state.cesium.viewer; if (!v) return;
+    try { v.camera.zoomIn(v.camera.positionCartographic.height * 0.20); } catch {}
+  }
+  function zoomOut() {
+    const v = state.cesium.viewer; if (!v) return;
+    try { v.camera.zoomOut(v.camera.positionCartographic.height * 0.25); } catch {}
+  }
+
+  // ----------------------------
+  // Geocode
+  // ----------------------------
+  async function goToQuery(q) {
+    q = (q || "").trim();
+    if (!q) return;
+
+    const m = q.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    if (m) {
+      const lat = parseFloat(m[1]), lon = parseFloat(m[3]);
+      if (isFinite(lat) && isFinite(lon)) {
+        state.center = { lat, lon };
+        if (state.mode === "2d") map.setView([lat, lon], clamp(state.zoom2d, 2, 19));
+        else syncCesiumToState();
+        log(`Jumped to coords: ${lat}, ${lon}`);
+        return;
+      }
+    }
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+      const r = await fetch(url, { headers: { "Accept": "application/json" }});
+      const j = await r.json();
+      if (!j || !j.length) { log(`No results: ${q}`); return; }
+      const lat = parseFloat(j[0].lat), lon = parseFloat(j[0].lon);
+      state.center = { lat, lon };
+      if (state.mode === "2d") map.setView([lat, lon], clamp(state.zoom2d, 4, 19));
+      else syncCesiumToState();
+      log(`Geocode OK: ${q} → ${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+    } catch (e) {
+      log(`Geocode failed: ${e}`, "error");
+    }
+  }
+
+  // ----------------------------
+  // UI
+  // ----------------------------
+  $("btn2d").onclick = () => setMode("2d");
+  $("btn3d").onclick = () => setMode("3d");
+  $("btnAstro").onclick = () => setMode("astro");
+
+  $("btnHome").onclick = () => {
+    state.center = { lat: 28.54, lon: -81.38 };
+    state.zoom2d = 6;
+    if (state.mode === "2d") map.setView([state.center.lat, state.center.lon], state.zoom2d);
+    else syncCesiumToState(25000000);
+  };
+
+  $("btnRecover3D").onclick = () => {
+    initCesiumIfNeeded();
+    apply3DBaseAndLabels();
+    forceResize3D();
+    // kick a quick flyTo to force a redraw/tiles
+    syncCesiumToState();
+    log("Recover 3D: resize + flyTo kick.");
+  };
+
+  $("btnStatus").onclick = show3DStatus;
+
+  $("btnGo").onclick = () => goToQuery($("q").value);
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") goToQuery($("q").value); });
+
+  $("btnApplyBase").onclick = () => {
+    state.baseMode = $("baseMode").value;
+    apply2DBase();
+    initCesiumIfNeeded();
+    apply3DBaseAndLabels();
+    if (state.mode === "3d") presetGlobeMode();
+    if (state.mode === "astro") presetAstronomyMode();
+    log(`Base imagery: ${state.baseMode}`);
+  };
+
+  $("labels2dOn").onchange = (e) => { state.labels2d = e.target.checked; apply2DLabels(); };
+  $("labelsProvider").onchange = (e) => { state.labelsProvider = e.target.value; apply2DLabels(); };
+  $("labels3dOn").onchange = (e) => { state.labels3d = e.target.checked; initCesiumIfNeeded(); apply3DBaseAndLabels(); };
+
+  $("showEarthInAstro").onchange = () => { if (state.mode === "astro") presetAstronomyMode(); };
+
+  $("btnZoomIn").onclick  = (e) => { e.preventDefault(); e.stopPropagation(); if (state.mode !== "2d") zoomIn(); };
+  $("btnZoomOut").onclick = (e) => { e.preventDefault(); e.stopPropagation(); if (state.mode !== "2d") zoomOut(); };
+  $("btnResetCam").onclick= (e) => { e.preventDefault(); e.stopPropagation(); if (state.mode !== "2d") syncCesiumToState(25000000); };
+
+  // ----------------------------
+  // Initial
+  // ----------------------------
+  apply2DBase();
+  apply2DLabels();
+  setHud(`2D • lat ${state.center.lat.toFixed(5)} lon ${state.center.lon.toFixed(5)} • z ${state.zoom2d}`);
+  log("Loaded v5.5");
+
+  // SW
+  if (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./earth-cockpit-v5_5-sw.js")
+        .then(() => log("Service Worker registered (v5.5)."))
+        .catch(e => log(`SW register failed: ${e}`, "error"));
+    }
+  }
+})();
+</script>
+</body>
+</html>

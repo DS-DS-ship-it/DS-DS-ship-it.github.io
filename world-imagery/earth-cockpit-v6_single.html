@@ -1,0 +1,1246 @@
+<!doctype html>
+<!--
+Earth Cockpit v6 (SINGLE FILE) — 2D + 3D + ASTRO + Radar + Clouds + Fire (GIBS)
+Fixes:
+✅ Removes Service Worker entirely (no caching weirdness)
+✅ 3D black spinner auto-recovers:
+   - WebGL context lost detector
+   - "no frames rendered" watchdog (forces render -> rebuild if needed)
+   - fallback imagery if main imagery fails
+✅ "Pacific missing" solved by adding NASA GIBS cloud overlay (global)
+✅ Fire layer improved: GIBS Thermal Anomalies (global, date-based)
+
+Local:
+python3 -m http.server 8080
+http://127.0.0.1:8080/world-imagery/earth-cockpit-v6_single.html
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Earth Cockpit v6 (Single File) — 2D + 3D + Astro + Radar</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="anonymous">
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin="anonymous"></script>
+
+  <!-- CesiumJS -->
+  <link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+  <script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+
+  <style>
+    :root{
+      color-scheme: dark;
+      --panelW: 390px;
+      --safeTop: env(safe-area-inset-top, 0px);
+      --safeBottom: env(safe-area-inset-bottom, 0px);
+      --vh: 1vh;
+    }
+    html,body{
+      margin:0; height:100%;
+      background:#0b0c10; color:#e9eef5;
+      font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      overflow:hidden;
+    }
+    body{ height: 100dvh; height: calc(var(--vh) * 100); }
+    body.minimized { --panelW: 0px; }
+
+    #app{
+      height:100%;
+      display:grid;
+      grid-template-columns: var(--panelW) 1fr;
+    }
+
+    #panel{
+      padding:12px;
+      border-right:1px solid rgba(255,255,255,.08);
+      background: rgba(12,14,18,.95);
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      position:relative;
+      z-index: 20;
+      transition: transform .22s ease;
+    }
+    body.minimized #panel{
+      transform: translateX(-110%);
+      pointer-events:none;
+    }
+
+    #viewWrap{
+      position:relative;
+      min-width:0;
+      height:100%;
+      background:#000;
+    }
+    #map, #cesiumContainer{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      background:#000;
+    }
+    #cesiumContainer{ display:none; }
+
+    h1{ font-size:14px; margin:0 0 8px; font-weight:900; letter-spacing:.2px; }
+    .sub{ font-size:12px; opacity:.82; margin:0 0 10px; }
+
+    .box{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      padding:10px;
+      margin:10px 0;
+      background: rgba(15,18,24,.65);
+    }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    label{ font-size:12px; opacity:.85; }
+    input, select, button{
+      background:#0f141c; color:#e9eef5;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+    }
+    input[type="text"], select{ width:100%; }
+    button{ cursor:pointer; }
+    button.primary{ background:#1b2a46; border-color: rgba(120,170,255,.45); }
+    button.warn{ background:#3a1f1f; border-color: rgba(255,120,120,.45); }
+    .smallbtn{ padding:6px 8px; border-radius:9px; font-size:12px; }
+    .tiny{ font-size:12px; opacity:.85; }
+    .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px; }
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      font-size:12px;
+    }
+    .toggle{ display:flex; gap:8px; }
+    .toggle button{ flex:1 1 auto; }
+    .hr{ height:1px; background: rgba(255,255,255,.10); margin:10px 0; }
+    .muted{ opacity:.7; }
+    .grid3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; }
+    .slider{ width:100%; }
+    .stickyTop{
+      position:sticky; top:0; z-index:30;
+      padding-bottom:10px;
+      background: rgba(12,14,18,.95);
+    }
+
+    /* HUD */
+    #hud{
+      position:absolute;
+      right:10px;
+      top: calc(10px + var(--safeTop));
+      background: rgba(12,14,18,.55);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      padding: 6px 10px;
+      font-size: 12px;
+      pointer-events:none;
+      white-space: pre;
+      z-index: 10;
+    }
+
+    /* Floating open panel */
+    #panelFab{
+      position: fixed;
+      left: 12px;
+      bottom: calc(12px + var(--safeBottom));
+      z-index: 999999;
+      display: none;
+      border-radius: 999px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(15,18,24,.72);
+      backdrop-filter: blur(10px);
+      color: #e9eef5;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #panelFab.show{ display:inline-flex; align-items:center; gap:10px; }
+
+    /* Mobile overlay panel */
+    @media (max-width: 720px){
+      #app{ display:block; height:100%; }
+      #viewWrap{ position:fixed; left:0; right:0; top:0; bottom:0; height:100%; }
+      #panel{
+        position:fixed;
+        left:10px;
+        top: calc(10px + var(--safeTop));
+        bottom: calc(10px + var(--safeBottom));
+        width: min(390px, calc(100vw - 20px));
+        z-index: 99999;
+        border-right:none;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:14px;
+        box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      }
+      body.minimized #panel{
+        transform: translateX(-110%);
+        pointer-events:none;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <div class="stickyTop">
+      <div class="row" style="justify-content:space-between; align-items:flex-start;">
+        <div style="min-width:0;">
+          <h1>Earth Cockpit v6 (Single)</h1>
+          <div class="sub">2D + 3D + Astronomy • Radar + Clouds • Fire (Thermal) • Auto-recover 3D</div>
+        </div>
+        <button id="minBtn" class="smallbtn" title="Hide panel">Minimize</button>
+      </div>
+
+      <div class="toggle" style="margin-top:8px;">
+        <button id="btn2D" class="primary">2D Map</button>
+        <button id="btn3D">3D Globe</button>
+        <button id="btnASTRO">Astronomy</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="row">
+        <span class="pill">Mode: <b id="modeLabel">2D</b></span>
+        <span class="pill">Center: <span class="mono" id="centerReadout">—</span></span>
+        <span class="pill">Zoom: <span class="mono" id="zoomReadout">—</span></span>
+      </div>
+      <div class="hr"></div>
+      <label>Search / Jump</label>
+      <div class="row">
+        <input id="q" type="text" placeholder="Try: Orlando, Tokyo, 28.54,-81.38" />
+        <button id="go" class="smallbtn primary">Go</button>
+        <button id="home" class="smallbtn">Home</button>
+      </div>
+      <div class="tiny muted" id="searchMsg"></div>
+    </div>
+
+    <div class="box">
+      <label>Base Imagery</label>
+      <select id="baseMode">
+        <option value="esri" selected>Satellite (Esri World Imagery)</option>
+        <option value="osm">Street (OpenStreetMap)</option>
+        <option value="gibs_modis">Historical (NASA GIBS — MODIS True Color)</option>
+        <option value="gibs_viirs">Historical (NASA GIBS — VIIRS True Color)</option>
+      </select>
+
+      <div class="hr"></div>
+
+      <label>Historical Date (UTC)</label>
+      <div class="grid3">
+        <button id="dayPrev" class="smallbtn">◀ Day</button>
+        <input id="histDate" type="date" />
+        <button id="dayNext" class="smallbtn">Day ▶</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="today" class="smallbtn">Today</button>
+        <button id="fixHist" class="smallbtn">Fix Hist (Clamp Zoom)</button>
+      </div>
+      <div class="tiny muted" style="margin-top:8px;">
+        GIBS has limited zoom levels; app clamps automatically to avoid blank tiles.
+      </div>
+    </div>
+
+    <div class="box">
+      <label>Overlays</label>
+      <div class="row" style="justify-content:space-between;">
+        <button id="labelsToggle" class="smallbtn primary">Labels ON</button>
+        <button id="cloudsToggle" class="smallbtn">Clouds OFF</button>
+        <button id="fireToggle" class="smallbtn">Fire OFF</button>
+      </div>
+      <div class="tiny muted" style="margin-top:6px;">
+        Clouds is the “Pacific coverage” fix (global satellite). Fire uses NASA thermal anomalies.
+      </div>
+    </div>
+
+    <div class="box">
+      <label>Weather — Radar Timelapse (RainViewer)</label>
+      <div class="row">
+        <button id="radarToggle" class="smallbtn">Radar OFF</button>
+        <button id="radarRefresh" class="smallbtn">Refresh</button>
+        <button id="radarOpenSample" class="smallbtn">Open sample tile</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <label>Frame</label>
+      <input id="radarSlider" class="slider" type="range" min="0" max="0" value="0" />
+      <div class="row">
+        <button id="radarBack" class="smallbtn">◀ -15m</button>
+        <button id="radarPlay" class="smallbtn primary">Play</button>
+        <button id="radarFwd" class="smallbtn">+15m ▶</button>
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <label>Opacity</label>
+        <input id="radarOpacity" type="range" min="0" max="100" value="75" class="slider" style="max-width:180px;">
+        <label>Auto-refresh</label>
+        <select id="radarAuto">
+          <option value="off">Off</option>
+          <option value="2">Every 2 min</option>
+          <option value="5" selected>Every 5 min</option>
+          <option value="10">Every 10 min</option>
+        </select>
+      </div>
+
+      <div class="tiny muted" id="radarStatus" style="margin-top:8px;">
+        Note: Radar tiles are transparent where there’s no precipitation (common over open ocean).
+      </div>
+    </div>
+
+    <div class="box">
+      <label>3D Controls</label>
+      <div class="row">
+        <button id="btn3dReset" class="smallbtn">Reset camera</button>
+        <button id="btnRecover3D" class="smallbtn">Recover 3D</button>
+        <button id="btnRebuild3D" class="smallbtn warn">Rebuild 3D</button>
+      </div>
+      <div class="tiny muted" style="margin-top:6px;">
+        If 3D goes black/spinner: Recover. If still stuck: Rebuild.
+      </div>
+    </div>
+
+    <div class="box">
+      <label>Debug Console</label>
+      <div class="row">
+        <button id="dbgCopy" class="smallbtn">Copy</button>
+        <button id="dbgClear" class="smallbtn">Clear</button>
+      </div>
+      <div id="dbgOut" class="tiny mono" style="white-space:pre-wrap; margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div id="viewWrap">
+    <div id="map"></div>
+    <div id="cesiumContainer"></div>
+    <div id="hud" class="mono"></div>
+  </div>
+</div>
+
+<button id="panelFab" aria-label="Open panel">≡ Panel</button>
+
+<script>
+(() => {
+  // -------- iOS/Safari viewport height fix ----------
+  function setVhVar(){
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty("--vh", `${vh}px`);
+  }
+  setVhVar();
+  window.addEventListener("resize", setVhVar, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(setVhVar, 120), {passive:true});
+
+  // -------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const fmt = (n, d=5) => (typeof n === "number" && isFinite(n) ? n.toFixed(d) : "—");
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const hud = $("hud");
+
+  const dbgOut = $("dbgOut");
+  function log(s){
+    const t = new Date().toLocaleTimeString();
+    dbgOut.textContent = `[${t}] ${s}\n` + dbgOut.textContent;
+  }
+
+  function isMobile(){ return window.matchMedia("(max-width: 720px)").matches; }
+
+  // -------- Panel minimize ----------
+  function pokeSize(){
+    try { map.invalidateSize(true); } catch {}
+    try { if (viewer) viewer.resize(); } catch {}
+  }
+  function setMinimized(on){
+    document.body.classList.toggle("minimized", !!on);
+    $("panelFab").classList.toggle("show", !!on);
+    $("minBtn").textContent = on ? "Show" : "Minimize";
+    pokeSize(); setTimeout(pokeSize, 80); setTimeout(pokeSize, 240); setTimeout(pokeSize, 700);
+  }
+  $("minBtn").addEventListener("click", () => setMinimized(!document.body.classList.contains("minimized")));
+  $("panelFab").addEventListener("click", () => setMinimized(false));
+  if (isMobile()) setMinimized(true);
+
+  // Stop map interactions when panel is open on mobile (prevents “touch stealing”)
+  const panel = $("panel");
+  if (panel){
+    panel.addEventListener("touchstart", e => e.stopPropagation(), {passive:true});
+    panel.addEventListener("touchmove",  e => e.stopPropagation(), {passive:true});
+  }
+  const viewWrap = $("viewWrap");
+  if (viewWrap){
+    viewWrap.addEventListener("touchstart", (e) => {
+      if(!isMobile()) return;
+      const t = e.target;
+      const hitUI = (t && t.closest && (t.closest("#panel") || t.closest("#panelFab") || t.closest("#minBtn")));
+      if(hitUI) return;
+      if(!document.body.classList.contains("minimized")) setMinimized(true);
+    }, {passive:true});
+  }
+
+  // -------- State ----------
+  const state = {
+    mode: "2d",
+    base: "esri",
+    histDateISO: null,
+
+    labels: true,
+    clouds: false,
+    fire: false,
+
+    radarOn: false,
+    radarFrames: [],
+    radarIndex: 0,
+    radarTimer: null,
+    radarAutoTimer: null,
+    radarOpacity: 0.75,
+    radarCacheBust: 0,
+
+    tileErrors2D: 0,
+    lastTileURL2D: "",
+    radarTileErrors: 0,
+    lastRadarTileURL: "",
+
+    webglOK: null,
+    webglContextLost: false,
+    cesiumInitCount: 0,
+    cesiumLastError: "",
+    lastRenderTick: 0,
+    noFrameStrikes: 0,
+  };
+
+  const toISODateUTC = (d) => {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,"0");
+    const da = String(d.getUTCDate()).padStart(2,"0");
+    return `${y}-${m}-${da}`;
+  };
+  state.histDateISO = toISODateUTC(new Date());
+
+  // -------- 2D Leaflet ----------
+  const HOME = { lat: 28.538336, lon: -81.379234, z: 6 };
+
+  const map = L.map("map", {
+    zoomControl: false,
+    worldCopyJump: true,
+    preferCanvas: true
+  }).setView([HOME.lat, HOME.lon], HOME.z);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+
+  map.createPane("basePane");   map.getPane("basePane").style.zIndex = 200;
+  map.createPane("radarPane");  map.getPane("radarPane").style.zIndex = 450;
+  map.createPane("overlayPane");map.getPane("overlayPane").style.zIndex = 480;
+  map.createPane("labelsPane"); map.getPane("labelsPane").style.zIndex = 500;
+
+  const esri2D = L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { pane:"basePane", maxZoom: 19, crossOrigin: true, attribution: "Esri" }
+  );
+  const osm2D = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { pane:"basePane", maxZoom: 19, subdomains:["a","b","c"], crossOrigin:true, attribution:"OSM" }
+  );
+  const labels2D = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+    { pane:"labelsPane", subdomains:"abcd", maxZoom: 20, opacity: 1, crossOrigin: true, attribution: "CARTO/OSM" }
+  );
+
+  const GIBS = {
+    modisTrue: "MODIS_Terra_CorrectedReflectance_TrueColor",
+    viirsTrue: "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+    clouds: "MODIS_Terra_Cloud_Top_Temp_Day",              // global clouds/temp (good ocean coverage)
+    fire:   "VIIRS_SNPP_Thermal_Anomalies_375m",           // better active fire thermal anomalies
+  };
+
+  const gibsURL = (layer, dateISO, level="GoogleMapsCompatible_Level9") =>
+    `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${dateISO}/${level}/{z}/{y}/{x}.png`;
+
+  let gibs2D = L.tileLayer(gibsURL(GIBS.modisTrue, state.histDateISO), {
+    pane:"basePane", maxZoom: 9, minZoom: 0, crossOrigin: true, attribution:"NASA GIBS"
+  });
+
+  // Clouds overlay (global)
+  let clouds2D = L.tileLayer(gibsURL(GIBS.clouds, state.histDateISO), {
+    pane:"overlayPane",
+    maxZoom: 7, minZoom: 0,
+    opacity: 0.60,
+    crossOrigin:true,
+    attribution:"NASA GIBS"
+  });
+
+  // Fire overlay (thermal anomalies)
+  let fire2D = L.tileLayer(gibsURL(GIBS.fire, state.histDateISO, "GoogleMapsCompatible_Level8"), {
+    pane:"overlayPane",
+    maxZoom: 8, minZoom: 0,
+    opacity: 0.85,
+    crossOrigin:true,
+    attribution:"NASA GIBS"
+  });
+
+  let radar2D = L.tileLayer("", {
+    pane:"radarPane",
+    opacity: state.radarOpacity,
+    crossOrigin: true,
+    updateWhenIdle: false,
+    updateWhenZooming: true,
+    keepBuffer: 6
+  });
+
+  function hookTileEvents2D(layer){
+    layer.on("tileerror", (e) => {
+      state.tileErrors2D++;
+      if (e && e.tile && e.tile.src) state.lastTileURL2D = e.tile.src;
+    });
+    layer.on("tileload", (e) => {
+      if (e && e.tile && e.tile.src) state.lastTileURL2D = e.tile.src;
+    });
+  }
+  [esri2D, osm2D, labels2D, gibs2D, clouds2D, fire2D].forEach(hookTileEvents2D);
+
+  function hookRadarTileEvents(layer){
+    layer.off("tileerror"); layer.off("tileload");
+    layer.on("tileerror", (e) => {
+      state.radarTileErrors++;
+      if (e && e.tile && e.tile.src) state.lastRadarTileURL = e.tile.src;
+    });
+    layer.on("tileload", (e) => {
+      if (e && e.tile && e.tile.src) state.lastRadarTileURL = e.tile.src;
+    });
+  }
+  hookRadarTileEvents(radar2D);
+
+  esri2D.addTo(map);
+  labels2D.addTo(map);
+
+  function ensure2DOrdering(){
+    try{
+      if (state.radarOn && state.radarFrames.length){
+        if (!map.hasLayer(radar2D)) radar2D.addTo(map);
+        radar2D.bringToFront();
+      }
+      if (state.clouds){
+        if (!map.hasLayer(clouds2D)) clouds2D.addTo(map);
+        clouds2D.bringToFront();
+      }
+      if (state.fire){
+        if (!map.hasLayer(fire2D)) fire2D.addTo(map);
+        fire2D.bringToFront();
+      }
+      if (state.labels){
+        if (!map.hasLayer(labels2D)) labels2D.addTo(map);
+        labels2D.bringToFront();
+      }
+    } catch {}
+  }
+
+  function updateReadouts(){
+    if (state.mode !== "2d") return;
+    const c = map.getCenter();
+    $("centerReadout").textContent = `${fmt(c.lat,5)}, ${fmt(c.lng,5)}`;
+    $("zoomReadout").textContent = String(map.getZoom());
+    hud.textContent =
+`2D • lat ${fmt(c.lat,5)} lon ${fmt(c.lng,5)} • z ${map.getZoom()}
+Radar: ${state.radarOn ? "ON" : "OFF"} • frames ${state.radarFrames.length}
+Clouds: ${state.clouds ? "ON" : "OFF"} • Fire: ${state.fire ? "ON" : "OFF"}`;
+  }
+  map.on("moveend zoomend", () => { updateReadouts(); ensure2DOrdering(); });
+  updateReadouts();
+
+  // -------- Base switching ----------
+  function setHistClamp(kind){
+    if (kind === "gibs"){
+      if (map.getZoom() > 9) map.setZoom(9);
+      map.setMaxZoom(9);
+    } else {
+      map.setMaxZoom(19);
+    }
+  }
+
+  function rebuildGibsLayersForDate(){
+    // rebuild clouds/fire overlays + gibs base so date changes always apply
+    clouds2D = L.tileLayer(gibsURL(GIBS.clouds, state.histDateISO), {
+      pane:"overlayPane", maxZoom:7, minZoom:0, opacity:0.60, crossOrigin:true, attribution:"NASA GIBS"
+    });
+    fire2D = L.tileLayer(gibsURL(GIBS.fire, state.histDateISO, "GoogleMapsCompatible_Level8"), {
+      pane:"overlayPane", maxZoom:8, minZoom:0, opacity:0.85, crossOrigin:true, attribution:"NASA GIBS"
+    });
+    gibs2D = L.tileLayer(gibsURL((state.base==="gibs_viirs")?GIBS.viirsTrue:GIBS.modisTrue, state.histDateISO), {
+      pane:"basePane", maxZoom:9, minZoom:0, crossOrigin:true, attribution:"NASA GIBS"
+    });
+    [gibs2D, clouds2D, fire2D].forEach(hookTileEvents2D);
+
+    // reapply overlay states
+    if (state.clouds && state.mode==="2d") clouds2D.addTo(map);
+    if (state.fire   && state.mode==="2d") fire2D.addTo(map);
+    ensure2DOrdering();
+  }
+
+  function setBase(mode){
+    state.base = mode;
+
+    // remove existing base layers
+    [esri2D, osm2D].forEach(l => { try { if (map.hasLayer(l)) map.removeLayer(l); } catch {} });
+    try { if (map.hasLayer(gibs2D)) map.removeLayer(gibs2D); } catch {}
+
+    if (mode === "esri"){
+      esri2D.addTo(map);
+      setHistClamp("normal");
+    } else if (mode === "osm"){
+      osm2D.addTo(map);
+      setHistClamp("normal");
+    } else {
+      rebuildGibsLayersForDate();
+      gibs2D.addTo(map);
+      setHistClamp("gibs");
+    }
+
+    ensure2DOrdering();
+    pokeSize();
+
+    // mirror base in 3D if active
+    if (viewer) apply3DBaseAndOverlays();
+  }
+
+  function setHistDate(dateISO){
+    state.histDateISO = dateISO;
+    $("histDate").value = state.histDateISO;
+
+    // update GIBS things even if base isn't gibs (clouds/fire can still use date)
+    rebuildGibsLayersForDate();
+
+    // if base is gibs, rebuild base layer too
+    if (state.base.startsWith("gibs")){
+      setBase(state.base);
+    } else {
+      // refresh overlays only (2D)
+      if (state.mode==="2d"){
+        try { if (state.clouds && map.hasLayer(clouds2D)) map.removeLayer(clouds2D); } catch {}
+        try { if (state.fire   && map.hasLayer(fire2D))   map.removeLayer(fire2D); } catch {}
+        if (state.clouds) clouds2D.addTo(map);
+        if (state.fire)   fire2D.addTo(map);
+        ensure2DOrdering();
+      }
+      if (viewer) apply3DBaseAndOverlays();
+    }
+  }
+
+  // -------- Radar (RainViewer) ----------
+  let rainviewer = { host:"https://tilecache.rainviewer.com", path:"/v2/radar" };
+
+  function radarTileURL(ts){
+    const bust = state.radarCacheBust ? `?cb=${state.radarCacheBust}` : "";
+    return `${rainviewer.host}${rainviewer.path}/${ts}/256/{z}/{x}/{y}/2/1_1.png${bust}`;
+  }
+
+  async function fetchRainViewerFrames(){
+    $("radarStatus").textContent = "Loading RainViewer timeline…";
+    try{
+      const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache:"no-store" });
+      const j = await r.json();
+      rainviewer.host = j.host || "https://tilecache.rainviewer.com";
+      rainviewer.path = (j.radar && j.radar.path) ? j.radar.path : "/v2/radar";
+
+      const past = (j.radar && j.radar.past) ? j.radar.past.map(x => x.time) : [];
+      const nowc = (j.radar && j.radar.nowcast) ? j.radar.nowcast.map(x => x.time) : [];
+      const times = [...past, ...nowc].filter(Boolean);
+
+      state.radarFrames = times;
+      state.radarIndex = times.length ? times.length - 1 : 0;
+
+      $("radarSlider").min = 0;
+      $("radarSlider").max = Math.max(0, times.length - 1);
+      $("radarSlider").value = String(state.radarIndex);
+
+      $("radarStatus").textContent =
+        times.length
+          ? `Frames: ${times.length} • Latest: ${new Date(times[times.length-1]*1000).toUTCString()}`
+          : "No radar frames available right now.";
+
+      log(`RainViewer frames loaded: ${times.length}`);
+      if (state.radarOn) updateRadar(true);
+    } catch(e){
+      $("radarStatus").textContent = "RainViewer fetch failed (network/CORS).";
+      log("RainViewer fetch FAILED.");
+    }
+  }
+
+  function setRadarBtn(){
+    const b = $("radarToggle");
+    b.textContent = state.radarOn ? "Radar ON" : "Radar OFF";
+    b.classList.toggle("primary", state.radarOn);
+  }
+
+  function updateRadar(force=false){
+    if (!state.radarOn || !state.radarFrames.length){
+      try { if (map.hasLayer(radar2D)) map.removeLayer(radar2D); } catch {}
+      ensure2DOrdering();
+      if (viewer) apply3DBaseAndOverlays();
+      return;
+    }
+    const idx = clamp(state.radarIndex, 0, state.radarFrames.length-1);
+    const ts = state.radarFrames[idx];
+    if (force) state.radarCacheBust = Date.now();
+
+    radar2D.setUrl(radarTileURL(ts));
+    radar2D.setOpacity(state.radarOpacity);
+    hookRadarTileEvents(radar2D);
+    if (!map.hasLayer(radar2D)) radar2D.addTo(map);
+    ensure2DOrdering();
+
+    $("radarStatus").textContent = `Radar ${idx+1}/${state.radarFrames.length} • ${new Date(ts*1000).toUTCString()} • Opacity ${Math.round(state.radarOpacity*100)}%`;
+
+    if (viewer) apply3DBaseAndOverlays();
+  }
+
+  function radarPlayStart(){
+    if (state.radarTimer) return;
+    state.radarTimer = setInterval(() => {
+      if (!state.radarFrames.length) return;
+      state.radarIndex = (state.radarIndex + 1) % state.radarFrames.length;
+      $("radarSlider").value = String(state.radarIndex);
+      updateRadar(false);
+    }, 700);
+    $("radarPlay").textContent = "Pause";
+  }
+  function radarPlayStop(){
+    if (!state.radarTimer) return;
+    clearInterval(state.radarTimer);
+    state.radarTimer = null;
+    $("radarPlay").textContent = "Play";
+  }
+
+  function openSampleRadarTile(){
+    if (!state.radarFrames.length) { alert("No frames loaded yet. Click Refresh."); return; }
+    const ts = state.radarFrames[state.radarIndex];
+    // sample at z=2 x=1 y=1
+    const sample = `${rainviewer.host}${rainviewer.path}/${ts}/256/2/1/1/2/1_1.png`;
+    window.open(sample, "_blank", "noopener,noreferrer");
+  }
+
+  function setRadarAuto(v){
+    if (state.radarAutoTimer){ clearInterval(state.radarAutoTimer); state.radarAutoTimer = null; }
+    if (v === "off") return;
+    const mins = parseInt(v,10);
+    if (!isFinite(mins) || mins<=0) return;
+    state.radarAutoTimer = setInterval(async () => {
+      state.radarCacheBust = Date.now();
+      await fetchRainViewerFrames();
+      if (state.radarOn) updateRadar(true);
+    }, mins*60*1000);
+  }
+
+  // -------- Search ----------
+  async function geocode(q){
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("q", q);
+    url.searchParams.set("format", "json");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("addressdetails", "0");
+    const r = await fetch(url.toString(), { cache:"no-store" });
+    const j = await r.json();
+    return j && j[0] ? { lat:+j[0].lat, lon:+j[0].lon } : null;
+  }
+
+  async function doGo(){
+    const text = ($("q").value || "").trim();
+    $("searchMsg").textContent = "";
+    if (!text) return;
+    const m = text.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+    let target = null;
+
+    try{
+      if (m) target = { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
+      else {
+        $("searchMsg").textContent = "Searching…";
+        target = await geocode(text);
+      }
+      if (!target || !isFinite(target.lat) || !isFinite(target.lon)){
+        $("searchMsg").textContent = "Not found. Try city/region or lat,lon.";
+        return;
+      }
+
+      if (state.mode === "2d"){
+        map.setView([target.lat, target.lon], Math.max(map.getZoom(), 8), { animate:true });
+        ensure2DOrdering();
+      } else {
+        initCesiumIfNeeded();
+        if (viewer){
+          viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, 1.4e6), duration: 1.0 });
+        }
+      }
+      $("searchMsg").textContent = `Jumped to ${target.lat.toFixed(4)}, ${target.lon.toFixed(4)}.`;
+    } catch {
+      $("searchMsg").textContent = "Search failed (network/CORS).";
+    }
+  }
+
+  function goHome(){
+    if (state.mode === "2d"){
+      map.setView([HOME.lat, HOME.lon], HOME.z, { animate:true });
+      ensure2DOrdering();
+    } else {
+      initCesiumIfNeeded();
+      if (viewer){
+        viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7), duration: 0.8 });
+      }
+    }
+  }
+
+  // -------- 3D / Astro (Cesium) ----------
+  let viewer = null;
+  let cesiumLayers = null;
+  let cesiumBaseLayer = null;
+  let cesiumLabelsLayer = null;
+  let cesiumRadarLayer = null;
+  let cesiumCloudsLayer = null;
+  let cesiumFireLayer = null;
+
+  function webglProbe(){
+    try{
+      const c = document.createElement("canvas");
+      const gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+      return !!gl;
+    } catch { return false; }
+  }
+  state.webglOK = webglProbe();
+
+  function mkXYZ(url, opts={}){
+    return new Cesium.UrlTemplateImageryProvider(Object.assign({
+      url,
+      maximumLevel: opts.maximumLevel ?? 19,
+      subdomains: opts.subdomains,
+      credit: opts.credit || ""
+    }, opts));
+  }
+
+  function initCesiumIfNeeded(){
+    if (viewer) return;
+    try{
+      viewer = new Cesium.Viewer("cesiumContainer", {
+        animation:false, timeline:false, geocoder:false, homeButton:false,
+        sceneModePicker:false, baseLayerPicker:false, navigationHelpButton:false,
+        infoBox:false, selectionIndicator:false,
+        shouldAnimate:true,
+        // IMPORTANT: avoid requestRenderMode "stuck black" edge cases
+        requestRenderMode:false,
+        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+      });
+
+      state.cesiumInitCount++;
+      cesiumLayers = viewer.imageryLayers;
+
+      // Detect WebGL context loss
+      viewer.scene.canvas.addEventListener("webglcontextlost", (e) => {
+        state.webglContextLost = true;
+        log("WebGL context LOST (3D). Auto-rebuild soon.");
+        // prevent browser default
+        try { e.preventDefault(); } catch {}
+        // schedule rebuild
+        setTimeout(() => rebuild3D("contextlost"), 350);
+      }, false);
+
+      viewer.scene.canvas.addEventListener("webglcontextrestored", () => {
+        state.webglContextLost = false;
+        log("WebGL context RESTORED.");
+      }, false);
+
+      // Render tick watchdog
+      viewer.scene.postRender.addEventListener(() => {
+        state.lastRenderTick = performance.now();
+      });
+
+      // Better controller limits
+      const ssc = viewer.scene.screenSpaceCameraController;
+      ssc.minimumZoomDistance = 10.0;
+      ssc.maximumZoomDistance = 9.0e7;
+
+      // Start with empty and build layers ourselves
+      cesiumLayers.removeAll(true);
+
+      // Labels (Carto)
+      cesiumLabelsLayer = cesiumLayers.addImageryProvider(mkXYZ(
+        "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png",
+        { credit:"CARTO/OSM", maximumLevel:20, subdomains:["a","b","c","d"] }
+      ));
+      cesiumLabelsLayer.alpha = state.labels ? 1.0 : 0.0;
+
+      // Set initial camera
+      viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7) });
+
+      // Keep Cesium responsive on resize
+      const ro = new ResizeObserver(() => { try { viewer.resize(); } catch {} });
+      ro.observe($("cesiumContainer"));
+
+      // Apply current base/overlays
+      apply3DBaseAndOverlays();
+
+      log("Cesium initialized.");
+    } catch(e){
+      state.cesiumLastError = String(e);
+      log("Cesium init ERROR: " + state.cesiumLastError);
+    }
+  }
+
+  function destroyCesium(){
+    try { if (viewer) viewer.destroy(); } catch {}
+    viewer = null;
+    cesiumLayers = null;
+    cesiumBaseLayer = null;
+    cesiumLabelsLayer = null;
+    cesiumRadarLayer = null;
+    cesiumCloudsLayer = null;
+    cesiumFireLayer = null;
+  }
+
+  function rebuild3D(reason="manual"){
+    log(`Rebuild 3D (${reason})…`);
+    destroyCesium();
+    // small delay helps Safari/Chrome recover GPU state
+    setTimeout(() => {
+      initCesiumIfNeeded();
+      if (viewer){
+        if (state.mode === "astro") setCesiumPreset("astro");
+        else setCesiumPreset("3d");
+        try { viewer.resize(); } catch {}
+      }
+    }, 120);
+  }
+
+  function setCesiumPreset(mode){
+    initCesiumIfNeeded();
+    if (!viewer) return;
+
+    if (mode === "astro"){
+      viewer.scene.globe.show = false;
+      viewer.scene.skyBox.show = true;
+      viewer.scene.skyAtmosphere.show = false;
+      viewer.scene.fog.enabled = false;
+
+      // pull back
+      const c = viewer.camera.positionCartographic;
+      const lat = Cesium.Math.toDegrees(c.latitude);
+      const lon = Cesium.Math.toDegrees(c.longitude);
+      viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 6.5e7), duration: 0.6 });
+    } else {
+      viewer.scene.globe.show = true;
+      viewer.scene.skyBox.show = false;
+      viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.fog.enabled = true;
+    }
+  }
+
+  function removeLayerSafe(layer){
+    try{ if (layer && cesiumLayers) cesiumLayers.remove(layer, true); } catch {}
+  }
+
+  function buildCesiumBaseProvider(){
+    // Base imagery provider selection (with safe fallback)
+    if (state.base === "osm"){
+      return mkXYZ("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        credit:"OSM", maximumLevel:19, subdomains:["a","b","c"]
+      });
+    }
+    if (state.base === "gibs_modis"){
+      return mkXYZ(gibsURL(GIBS.modisTrue, state.histDateISO), { credit:"NASA GIBS", maximumLevel:9 });
+    }
+    if (state.base === "gibs_viirs"){
+      return mkXYZ(gibsURL(GIBS.viirsTrue, state.histDateISO), { credit:"NASA GIBS", maximumLevel:9 });
+    }
+    // default: Esri satellite
+    return mkXYZ("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      credit:"Esri", maximumLevel:19
+    });
+  }
+
+  function apply3DBaseAndOverlays(){
+    initCesiumIfNeeded();
+    if (!viewer || !cesiumLayers) return;
+
+    // Remove old
+    removeLayerSafe(cesiumBaseLayer);
+    removeLayerSafe(cesiumRadarLayer);
+    removeLayerSafe(cesiumCloudsLayer);
+    removeLayerSafe(cesiumFireLayer);
+
+    // Base
+    try{
+      const baseProvider = buildCesiumBaseProvider();
+      cesiumBaseLayer = cesiumLayers.addImageryProvider(baseProvider, 0);
+
+      // If base fails repeatedly, fallback to OSM (protect against black globe)
+      // (We approximate failure by listening to provider error events if present)
+      if (baseProvider && baseProvider.errorEvent && baseProvider.errorEvent.addEventListener){
+        let errCount = 0;
+        baseProvider.errorEvent.addEventListener(() => {
+          errCount++;
+          if (errCount === 1) log("3D base imagery error (first).");
+          if (errCount >= 3 && state.base === "esri"){
+            log("3D base imagery failing → fallback to OSM.");
+            state.base = "osm";
+            $("baseMode").value = "osm";
+            apply3DBaseAndOverlays();
+          }
+        });
+      }
+    } catch(e){
+      log("3D base apply error: " + String(e));
+    }
+
+    // Radar overlay
+    if (state.radarOn && state.radarFrames.length){
+      const idx = clamp(state.radarIndex, 0, state.radarFrames.length-1);
+      const ts = state.radarFrames[idx];
+      const url = radarTileURL(ts).replace("{z}","{z}").replace("{x}","{x}").replace("{y}","{y}");
+      const provider = mkXYZ(url, { credit:"RainViewer", maximumLevel:12 });
+      cesiumRadarLayer = cesiumLayers.addImageryProvider(provider);
+      cesiumRadarLayer.alpha = state.radarOpacity;
+    }
+
+    // Clouds overlay (global Pacific fix)
+    if (state.clouds){
+      const provider = mkXYZ(gibsURL(GIBS.clouds, state.histDateISO), { credit:"NASA GIBS", maximumLevel:7 });
+      cesiumCloudsLayer = cesiumLayers.addImageryProvider(provider);
+      cesiumCloudsLayer.alpha = 0.60;
+    }
+
+    // Fire overlay
+    if (state.fire){
+      const provider = mkXYZ(gibsURL(GIBS.fire, state.histDateISO, "GoogleMapsCompatible_Level8"), { credit:"NASA GIBS", maximumLevel:8 });
+      cesiumFireLayer = cesiumLayers.addImageryProvider(provider);
+      cesiumFireLayer.alpha = 0.85;
+    }
+
+    // Labels always last
+    if (cesiumLabelsLayer){
+      cesiumLabelsLayer.alpha = state.labels ? 1.0 : 0.0;
+      try { cesiumLayers.raiseToTop(cesiumLabelsLayer); } catch {}
+    }
+  }
+
+  // Watchdog: if Cesium hasn’t rendered frames recently while 3D is visible, recover/rebuild
+  setInterval(() => {
+    if (!viewer) return;
+    if (state.mode === "2d") return;
+    const now = performance.now();
+    const dt = now - (state.lastRenderTick || 0);
+    if (dt > 2500){
+      state.noFrameStrikes++;
+      log(`3D watchdog: no frames for ${Math.round(dt)}ms (strike ${state.noFrameStrikes})`);
+      try { viewer.scene.requestRender(); } catch {}
+      try { viewer.resize(); } catch {}
+      // escalate to rebuild if repeated
+      if (state.noFrameStrikes >= 2){
+        state.noFrameStrikes = 0;
+        rebuild3D("watchdog");
+      }
+    } else {
+      state.noFrameStrikes = 0;
+    }
+  }, 1500);
+
+  // -------- Overlays toggles ----------
+  function setLabels(on){
+    state.labels = !!on;
+    $("labelsToggle").textContent = state.labels ? "Labels ON" : "Labels OFF";
+    $("labelsToggle").classList.toggle("primary", state.labels);
+
+    if (state.mode === "2d"){
+      if (state.labels){ if (!map.hasLayer(labels2D)) labels2D.addTo(map); }
+      else { try { if (map.hasLayer(labels2D)) map.removeLayer(labels2D); } catch {} }
+      ensure2DOrdering();
+    } else {
+      initCesiumIfNeeded();
+      if (cesiumLabelsLayer) cesiumLabelsLayer.alpha = state.labels ? 1.0 : 0.0;
+    }
+  }
+
+  function setClouds(on){
+    state.clouds = !!on;
+    $("cloudsToggle").textContent = state.clouds ? "Clouds ON" : "Clouds OFF";
+    $("cloudsToggle").classList.toggle("primary", state.clouds);
+
+    if (state.mode === "2d"){
+      try { if (map.hasLayer(clouds2D)) map.removeLayer(clouds2D); } catch {}
+      if (state.clouds) clouds2D.addTo(map);
+      ensure2DOrdering();
+    } else {
+      apply3DBaseAndOverlays();
+    }
+  }
+
+  function setFire(on){
+    state.fire = !!on;
+    $("fireToggle").textContent = state.fire ? "Fire ON" : "Fire OFF";
+    $("fireToggle").classList.toggle("primary", state.fire);
+
+    if (state.mode === "2d"){
+      try { if (map.hasLayer(fire2D)) map.removeLayer(fire2D); } catch {}
+      if (state.fire) fire2D.addTo(map);
+      ensure2DOrdering();
+    } else {
+      apply3DBaseAndOverlays();
+    }
+  }
+
+  // -------- Mode switching ----------
+  function setMode(m){
+    state.mode = m;
+    $("modeLabel").textContent = (m==="2d") ? "2D" : (m==="3d") ? "3D" : "ASTRO";
+
+    $("btn2D").classList.toggle("primary", m==="2d");
+    $("btn3D").classList.toggle("primary", m==="3d");
+    $("btnASTRO").classList.toggle("primary", m==="astro");
+
+    $("map").style.display = (m==="2d") ? "block" : "none";
+    $("cesiumContainer").style.display = (m!=="2d") ? "block" : "none";
+
+    if (m==="2d"){
+      setTimeout(() => { map.invalidateSize(true); ensure2DOrdering(); }, 60);
+      updateReadouts();
+      hud.textContent = hud.textContent + "";
+      return;
+    }
+
+    initCesiumIfNeeded();
+    setTimeout(() => {
+      try { viewer.resize(); } catch {}
+      setCesiumPreset(m==="astro" ? "astro" : "3d");
+      apply3DBaseAndOverlays();
+    }, 90);
+  }
+
+  // -------- UI wiring ----------
+  $("btn2D").onclick = () => setMode("2d");
+  $("btn3D").onclick = () => setMode("3d");
+  $("btnASTRO").onclick = () => setMode("astro");
+
+  $("go").onclick = doGo;
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doGo(); });
+  $("home").onclick = goHome;
+
+  $("baseMode").onchange = () => setBase($("baseMode").value);
+
+  $("histDate").value = state.histDateISO;
+  $("histDate").onchange = () => setHistDate($("histDate").value);
+
+  $("today").onclick = () => setHistDate(toISODateUTC(new Date()));
+  $("dayPrev").onclick = () => {
+    const d = new Date(state.histDateISO + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate()-1);
+    setHistDate(toISODateUTC(d));
+  };
+  $("dayNext").onclick = () => {
+    const d = new Date(state.histDateISO + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate()+1);
+    setHistDate(toISODateUTC(d));
+  };
+  $("fixHist").onclick = () => { if (state.base.startsWith("gibs")) setHistClamp("gibs"); };
+
+  $("labelsToggle").onclick = () => setLabels(!state.labels);
+  $("cloudsToggle").onclick = () => setClouds(!state.clouds);
+  $("fireToggle").onclick = () => setFire(!state.fire);
+
+  $("radarToggle").onclick = async () => {
+    state.radarOn = !state.radarOn;
+    setRadarBtn();
+    if (state.radarOn && !state.radarFrames.length) await fetchRainViewerFrames();
+    updateRadar(true);
+  };
+  $("radarRefresh").onclick = async () => {
+    state.radarCacheBust = Date.now();
+    await fetchRainViewerFrames();
+    if (state.radarOn) updateRadar(true);
+  };
+  $("radarOpenSample").onclick = openSampleRadarTile;
+
+  $("radarSlider").oninput = () => {
+    state.radarIndex = parseInt($("radarSlider").value,10) || 0;
+    if (state.radarOn) updateRadar(false);
+  };
+  $("radarOpacity").oninput = () => {
+    state.radarOpacity = (parseInt($("radarOpacity").value,10)||0)/100;
+    radar2D.setOpacity(state.radarOpacity);
+    if (state.radarOn) updateRadar(false);
+  };
+  $("radarBack").onclick = () => {
+    if (!state.radarFrames.length) return;
+    state.radarIndex = clamp(state.radarIndex-1, 0, state.radarFrames.length-1);
+    $("radarSlider").value = String(state.radarIndex);
+    if (state.radarOn) updateRadar(false);
+  };
+  $("radarFwd").onclick = () => {
+    if (!state.radarFrames.length) return;
+    state.radarIndex = clamp(state.radarIndex+1, 0, state.radarFrames.length-1);
+    $("radarSlider").value = String(state.radarIndex);
+    if (state.radarOn) updateRadar(false);
+  };
+  $("radarPlay").onclick = () => {
+    if (!state.radarOn) return;
+    if (state.radarTimer) radarPlayStop();
+    else radarPlayStart();
+  };
+  $("radarAuto").onchange = () => setRadarAuto($("radarAuto").value);
+
+  $("btn3dReset").onclick = () => {
+    initCesiumIfNeeded();
+    if (!viewer) return;
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(HOME.lon, HOME.lat, 2.2e7), duration: 0.8 });
+  };
+  $("btnRecover3D").onclick = () => {
+    if (!viewer) { initCesiumIfNeeded(); return; }
+    log("Recover 3D: resize + reapply layers + requestRender");
+    try { viewer.resize(); } catch {}
+    try { viewer.scene.requestRender(); } catch {}
+    apply3DBaseAndOverlays();
+  };
+  $("btnRebuild3D").onclick = () => rebuild3D("manual");
+
+  $("dbgCopy").onclick = async () => { try { await navigator.clipboard.writeText(dbgOut.textContent || ""); } catch {} };
+  $("dbgClear").onclick = () => { dbgOut.textContent = ""; };
+
+  // -------- Init ----------
+  log(`WebGL probe: ${state.webglOK ? "OK" : "FAIL"}`);
+  setLabels(true);
+  setClouds(false);
+  setFire(false);
+
+  setBase("esri");
+
+  setRadarBtn();
+  fetchRainViewerFrames().catch(()=>{});
+  setRadarAuto($("radarAuto").value);
+
+  pokeSize(); setTimeout(pokeSize, 120); setTimeout(pokeSize, 420);
+
+  // HUD update loop
+  function tick(){
+    if (state.mode === "2d") updateReadouts();
+    else {
+      // 3D HUD info
+      let cam = "—";
+      try{
+        if (viewer){
+          const c = viewer.camera.positionCartographic;
+          cam = `${fmt(Cesium.Math.toDegrees(c.latitude),5)}, ${fmt(Cesium.Math.toDegrees(c.longitude),5)} h=${Math.round(c.height)}m`;
+        }
+      } catch {}
+      hud.textContent =
+`${state.mode==="astro" ? "ASTRO" : "3D"} • cam ${cam}
+Radar: ${state.radarOn ? "ON" : "OFF"} • Clouds: ${state.clouds ? "ON" : "OFF"} • Fire: ${state.fire ? "ON" : "OFF"}
+Cesium init: ${state.cesiumInitCount} • WebGL lost: ${state.webglContextLost ? "YES" : "NO"}`;
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
