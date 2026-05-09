@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GO Game Engine Seed</title>
+<style>
+html,body{margin:0;height:100%;background:#071018;color:#eaffff;font-family:system-ui;overflow:hidden}
+#wrap{display:grid;grid-template-columns:minmax(420px,75vh) 310px;gap:18px;height:100%;padding:18px;box-sizing:border-box}
+#board{width:100%;height:100%;background:#15100a;border:2px solid #00e5ff;box-shadow:0 0 35px #00e5ff55;border-radius:14px}
+#panel{background:#101820;border:1px solid #2ff;border-radius:14px;padding:14px;box-shadow:0 0 25px #0ff3}
+button,select{margin:4px;padding:8px 10px;border-radius:8px;border:1px solid #7ff;background:#081018;color:#eaffff}
+.good{color:#6dff9a}.warn{color:#ffd166}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="board"></canvas>
+<div id="panel">
+<h2>GO / Baduk Engine</h2>
+<div class="good">GAME RUNNING</div>
+<p id="status"></p>
+<button onclick="setSize(9)">9x9</button><button onclick="setSize(13)">13x13</button><button onclick="setSize(19)">19x19</button><br>
+<button onclick="passTurn()">Pass</button><button onclick="undo()">Undo</button><button onclick="reset()">Reset</button>
+<button onclick="aiOn=!aiOn;updateStatus()">Toggle AI</button>
+<p>Controls: click intersections. Black plays first.</p>
+<pre id="log"></pre>
+</div>
+</div>
+<script>
+const canvas=document.getElementById("board"),ctx=canvas.getContext("2d");
+let N=9,board=[],turn=1,caps={1:0,2:0},history=[],prevHash="",last=null,hover=null,aiOn=false,passes=0;
+
+const LEARN_KEY="go_ai_learning_v1";
+let aiBrain=loadBrain();
+let aiMoveMemory=[];
+
+function defaultBrain(){
+ return {games:0,moves:0,weights:{capture:120,liberty:10,groupSize:5,selfAtari:-160,saveGroup:90,connect:30,cut:55,corner:35,side:18,nearMine:8,nearEnemy:10,isolation:-45,danger:-100}};
+}
+function loadBrain(){try{return JSON.parse(localStorage.getItem(LEARN_KEY))||defaultBrain();}catch(e){return defaultBrain();}}
+function saveBrain(){localStorage.setItem(LEARN_KEY,JSON.stringify(aiBrain));}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function learnFeature(name,amount){if(aiBrain.weights[name]===undefined)return;aiBrain.weights[name]=clamp(aiBrain.weights[name]+amount,-500,500);saveBrain();}
+function rememberAIMove(x,y,features,scoreBefore){aiMoveMemory.push({x,y,features,scoreBefore,capsBefore:{...caps},hash:hash(),t:Date.now()});if(aiMoveMemory.length>200)aiMoveMemory.shift();}
+function learnDuringPlay(result){
+ let lastAI=aiMoveMemory[aiMoveMemory.length-1]; if(!lastAI)return;
+ let reward=0;
+ if(caps[2]>lastAI.capsBefore[2])reward+=2;
+ if(caps[1]>lastAI.capsBefore[1])reward-=2;
+ if(result==="capture")reward+=3;
+ if(result==="bad")reward-=2;
+ if(result==="survive")reward+=0.4;
+ for(const k in lastAI.features){learnFeature(k,0.08*reward*lastAI.features[k]);}
+ aiBrain.moves++; saveBrain();
+}
+function learnUnfinishedGame(){
+ let diff=caps[2]-caps[1];
+ let reward=diff>0?1:diff<0?-1:0.15;
+ for(const m of aiMoveMemory.slice(-20)){for(const k in m.features)learnFeature(k,0.015*reward*m.features[k]);}
+ saveBrain();
+}
+setInterval(learnUnfinishedGame,15000);
+function empty(){board=Array.from({length:N},()=>Array(N).fill(0));}
+function copy(b=board){return b.map(r=>r.slice())}
+function hash(b=board){return b.map(r=>r.join("")).join("|")}
+function resize(){const r=canvas.getBoundingClientRect();canvas.width=r.width*devicePixelRatio;canvas.height=r.height*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);draw();}
+window.onresize=resize;
+function setSize(n){N=n;reset();}
+function reset(){empty();turn=1;caps={1:0,2:0};history=[];prevHash="";last=null;passes=0;resize();updateStatus();}
+function adj(x,y){return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b])=>a>=0&&b>=0&&a<N&&b<N)}
+function group(x,y,b=board,seen=new Set()){let c=b[y][x],key=x+","+y;if(!c||seen.has(key))return [];seen.add(key);let g=[[x,y]];for(const [a,d] of adj(x,y))if(b[d][a]===c)g=g.concat(group(a,d,b,seen));return g}
+function libs(g,b=board){let s=new Set();for(const [x,y] of g)for(const [a,d] of adj(x,y))if(b[d][a]===0)s.add(a+","+d);return s.size}
+function legal(x,y,c=turn){
+ if(x<0||y<0||x>=N||y>=N||board[y][x])return false;
+ let b=copy();b[y][x]=c;let opp=c===1?2:1;
+ for(const [a,d] of adj(x,y))if(b[d][a]===opp){let g=group(a,d,b);if(libs(g,b)===0)for(const [gx,gy] of g)b[gy][gx]=0}
+ if(libs(group(x,y,b),b)===0)return false;
+ if(hash(b)===prevHash)return false;
+ return true;
+}
+function play(x,y){
+ if(!legal(x,y))return false;
+ history.push({b:copy(),turn,caps:{...caps},prevHash,last,passes});
+ prevHash=hash();
+ board[y][x]=turn;let opp=turn===1?2:1,killed=0;
+ for(const [a,d] of adj(x,y))if(board[d][a]===opp){let g=group(a,d);if(libs(g)===0){killed+=g.length;for(const [gx,gy] of g)board[gy][gx]=0;}}
+ caps[turn]+=killed;
+ if(killed>0 && turn===2)learnDuringPlay("capture");
+ if(killed>0 && turn===1)learnDuringPlay("bad");
+ last=[x,y];turn=opp;passes=0;draw();updateStatus();
+ if(aiOn&&turn===2)setTimeout(aiMove,180);
+ return true;
+}
+function passTurn(){
+ history.push({b:copy(),turn,caps:{...caps},prevHash,last,passes});
+ prevHash=hash();turn=turn===1?2:1;passes++;
+ if(passes>=2){aiBrain.games++;learnUnfinishedGame();}
+ updateStatus();
+}
+function undo(){let h=history.pop();if(!h)return;board=h.b;turn=h.turn;caps=h.caps;prevHash=h.prevHash;last=h.last;passes=h.passes;draw();updateStatus();}
+function simulateMove(x,y,c){
+ let b=copy(); b[y][x]=c;
+ let opp=c===1?2:1, killed=0;
+ for(const [a,d] of adj(x,y)){
+   if(b[d][a]===opp){
+     let g=group(a,d,b);
+     if(libs(g,b)===0){
+       killed+=g.length;
+       for(const [gx,gy] of g) b[gy][gx]=0;
+     }
+   }
+ }
+ return {b,killed};
+}
+
+function countNear(x,y,color,dist=2){
+ let n=0;
+ for(let yy=Math.max(0,y-dist);yy<=Math.min(N-1,y+dist);yy++)
+ for(let xx=Math.max(0,x-dist);xx<=Math.min(N-1,x+dist);xx++){
+   if(board[yy][xx]===color) n++;
+ }
+ return n;
+}
+
+function wouldBeCapturedSoon(x,y,c){
+ let sim=simulateMove(x,y,c);
+ let b=sim.b, opp=c===1?2:1;
+ let g=group(x,y,b);
+ if(libs(g,b)<=1) return true;
+
+ for(let yy=0;yy<N;yy++){
+   for(let xx=0;xx<N;xx++){
+     if(b[yy][xx]===0){
+       let old=board; board=b;
+       let ok=legal(xx,yy,opp);
+       board=old;
+       if(ok){
+         let sim2=(()=>{let bb=b.map(r=>r.slice());bb[yy][xx]=opp;return bb})();
+         let gg=group(x,y,sim2);
+         if(gg.length && libs(gg,sim2)===0) return true;
+       }
+     }
+   }
+ }
+ return false;
+}
+
+function moveFeatures(x,y,c=2){
+ let opp=c===1?2:1;
+ let sim=simulateMove(x,y,c);
+ let b=sim.b;
+ let myGroup=group(x,y,b);
+ let myLibs=libs(myGroup,b);
+ let features={capture:sim.killed,liberty:myLibs,groupSize:myGroup.length};
+ features.selfAtari=(myLibs<=1 && sim.killed===0)?1:0;
+ let save=0,cut=0,connect=0,nearMine=countNear(x,y,c,2),nearEnemy=countNear(x,y,opp,2);
+ for(const [a,d] of adj(x,y)){
+   if(board[d][a]===opp){
+     let eg=group(a,d), el=libs(eg);
+     if(el===1)features.capture+=eg.length*1.5;
+     if(el===2)features.capture+=0.3;
+     cut++;
+   }
+   if(board[d][a]===c){
+     let mg=group(a,d), ml=libs(mg);
+     if(ml===1)save+=1;
+     if(ml===2)save+=0.25;
+     connect++;
+   }
+ }
+ features.saveGroup=save;
+ features.connect=connect;
+ features.cut=cut>=2?1:0;
+ let cornerDist=Math.min(x+y,x+(N-1-y),(N-1-x)+y,(N-1-x)+(N-1-y));
+ features.corner=cornerDist<=3?1:0;
+ features.side=(x===2||y===2||x===N-3||y===N-3)?1:0;
+ features.nearMine=nearMine;
+ features.nearEnemy=nearEnemy;
+ features.isolation=(nearMine+nearEnemy===0)?1:0;
+ features.danger=(wouldBeCapturedSoon(x,y,c)&&sim.killed===0)?1:0;
+ return features;
+}
+
+function evaluateMove(x,y,c=2){
+ let f=moveFeatures(x,y,c);
+ let w=aiBrain.weights;
+ let score=0;
+ for(const k in f)score+=(w[k]||0)*f[k];
+ score+=Math.random()*4;
+ return score;
+}
+
+function aiMove(){
+ let moves=[];
+ for(let y=0;y<N;y++){
+   for(let x=0;x<N;x++){
+     if(legal(x,y,2)){
+       moves.push([evaluateMove(x,y,2),x,y,moveFeatures(x,y,2)]);
+     }
+   }
+ }
+ moves.sort((a,b)=>b[0]-a[0]);
+ if(moves.length){
+   rememberAIMove(moves[0][1],moves[0][2],moves[0][3],moves[0][0]);
+   play(moves[0][1],moves[0][2]);
+   learnDuringPlay("survive");
+ }else{
+   passTurn();
+ }
+}
+function boardGeom(){let w=canvas.clientWidth,h=canvas.clientHeight,p=36,s=Math.min(w,h)-p*2;return {p,s,cell:s/(N-1),ox:(w-s)/2,oy:(h-s)/2};}
+function draw(){
+ let {s,cell,ox,oy}=boardGeom();ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+ let g=ctx.createLinearGradient(ox,oy,ox+s,oy+s);g.addColorStop(0,"#2b1708");g.addColorStop(1,"#b87932");ctx.fillStyle=g;ctx.fillRect(ox-24,oy-24,s+48,s+48);
+ ctx.strokeStyle="#071018";ctx.lineWidth=1.7;
+ for(let i=0;i<N;i++){ctx.beginPath();ctx.moveTo(ox,oy+i*cell);ctx.lineTo(ox+s,oy+i*cell);ctx.moveTo(ox+i*cell,oy);ctx.lineTo(ox+i*cell,oy+s);ctx.stroke();}
+ let stars=N===19?[3,9,15]:N===13?[3,6,9]:[2,4,6];ctx.fillStyle="#061018";for(const a of stars)for(const b of stars){ctx.beginPath();ctx.arc(ox+a*cell,oy+b*cell,4,0,7);ctx.fill();}
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(board[y][x])stone(x,y,board[y][x]);
+ if(last){ctx.strokeStyle="#ff4";ctx.lineWidth=3;ctx.beginPath();ctx.arc(ox+last[0]*cell,oy+last[1]*cell,cell*.18,0,7);ctx.stroke();}
+ if(hover&&legal(hover[0],hover[1])){ctx.strokeStyle="#0ff";ctx.beginPath();ctx.arc(ox+hover[0]*cell,oy+hover[1]*cell,cell*.32,0,7);ctx.stroke();}
+}
+function stone(x,y,c){let {cell,ox,oy}=boardGeom(),px=ox+x*cell,py=oy+y*cell,r=cell*.42,gr=ctx.createRadialGradient(px-r/3,py-r/3,2,px,py,r);if(c===1){gr.addColorStop(0,"#555");gr.addColorStop(1,"#000")}else{gr.addColorStop(0,"#fff");gr.addColorStop(1,"#aaa")}ctx.fillStyle=gr;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();ctx.strokeStyle=c===1?"#0ff":"#333";ctx.stroke();}
+canvas.onmousemove=e=>{let r=canvas.getBoundingClientRect(),{cell,ox,oy}=boardGeom();let x=Math.round((e.clientX-r.left-ox)/cell),y=Math.round((e.clientY-r.top-oy)/cell);hover=(x>=0&&y>=0&&x<N&&y<N)?[x,y]:null;draw();}
+canvas.onclick=e=>{let r=canvas.getBoundingClientRect(),{cell,ox,oy}=boardGeom();play(Math.round((e.clientX-r.left-ox)/cell),Math.round((e.clientY-r.top-oy)/cell));}
+function updateStatus(){
+ document.getElementById("status").innerHTML=`Turn: <b>${turn===1?"Black":"White"}</b><br>Captures B:${caps[1]} W:${caps[2]}<br>Board:${N}x${N}<br>AI:${aiOn?"ON":"OFF"}<br>AI learned games:${aiBrain.games} moves:${aiBrain.moves}<br><button onclick="localStorage.removeItem(LEARN_KEY);aiBrain=defaultBrain();saveBrain();updateStatus()">Reset AI Learning</button>`;
+}
+reset();
+</script>
+</body>
+</html>
