@@ -30,7 +30,7 @@ button,select{margin:4px;padding:8px 10px;border-radius:8px;border:1px solid #7f
 const canvas=document.getElementById("board"),ctx=canvas.getContext("2d");
 let N=9,board=[],turn=1,caps={1:0,2:0},history=[],prevHash="",last=null,hover=null,aiOn=false,passes=0;
 
-const LEARN_KEY="go_ai_learning_v1";
+const LEARN_KEY="go_ai_learning_v2";
 let aiBrain=loadBrain();
 let aiMoveMemory=[];
 
@@ -182,11 +182,89 @@ function moveFeatures(x,y,c=2){
 }
 
 function evaluateMove(x,y,c=2){
- let f=moveFeatures(x,y,c);
- let w=aiBrain.weights;
+ let opp=c===1?2:1;
  let score=0;
- for(const k in f)score+=(w[k]||0)*f[k];
- score+=Math.random()*4;
+ let sim=simulateMove(x,y,c);
+ let b=sim.b;
+ let myGroup=group(x,y,b);
+ let myLibs=libs(myGroup,b);
+
+ // 1. Captures are extremely valuable
+ score += sim.killed * 500;
+
+ // 2. Never self-atari unless capturing
+ if(myLibs<=1 && sim.killed===0) score -= 10000;
+
+ // 3. Prefer stable groups
+ score += myLibs * 35;
+ score += myGroup.length * 12;
+
+ // 4. Attack enemy groups with low liberties
+ for(const [a,d] of adj(x,y)){
+   if(board[d][a]===opp){
+     let eg=group(a,d);
+     let el=libs(eg);
+     if(el===1) score += 800 + eg.length*120; // capture now
+     if(el===2) score += 220 + eg.length*40;  // threaten capture
+     if(el===3) score += 55;
+   }
+ }
+
+ // 5. Save own weak groups
+ for(const [a,d] of adj(x,y)){
+   if(board[d][a]===c){
+     let mg=group(a,d);
+     let ml=libs(mg);
+     if(ml===1) score += 700 + mg.length*100;
+     if(ml===2) score += 180 + mg.length*35;
+   }
+ }
+
+ // 6. Connect friendly stones
+ let friendlyGroups=new Set();
+ for(const [a,d] of adj(x,y)){
+   if(board[d][a]===c){
+     friendlyGroups.add(group(a,d).map(p=>p.join(",")).join(";"));
+   }
+ }
+ if(friendlyGroups.size>=2) score += 280;
+ if(friendlyGroups.size===1) score += 70;
+
+ // 7. Cut enemy formations
+ let enemyContacts=0;
+ for(const [a,d] of adj(x,y)) if(board[d][a]===opp) enemyContacts++;
+ if(enemyContacts>=2) score += 260;
+ if(enemyContacts===1) score += 40;
+
+ // 8. Opening strategy: corners, then sides, avoid useless center early
+ let stones=0;
+ for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++)if(board[yy][xx])stones++;
+ let cornerDist=Math.min(x+y,x+(N-1-y),(N-1-x)+y,(N-1-x)+(N-1-y));
+ if(stones<20){
+   if(cornerDist<=3) score += 220;
+   if(x===2||y===2||x===N-3||y===N-3) score += 120;
+   let center=Math.abs(x-(N-1)/2)+Math.abs(y-(N-1)/2);
+   if(center<2) score -= 120;
+ }
+
+ // 9. Prefer useful nearby fights, avoid isolated nonsense
+ let nearMine=countNear(x,y,c,2);
+ let nearEnemy=countNear(x,y,opp,2);
+ score += nearMine*35 + nearEnemy*45;
+ if(nearMine+nearEnemy===0 && stones>8) score -= 250;
+
+ // 10. Avoid immediate capture after opponent reply
+ if(wouldBeCapturedSoon(x,y,c) && sim.killed===0) score -= 900;
+
+ // 11. Prefer legal moves that reduce opponent liberties
+ let beforeEnemyLibs=0, afterEnemyLibs=0;
+ for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){
+   if(board[yy][xx]===opp) beforeEnemyLibs += libs(group(xx,yy));
+   if(b[yy][xx]===opp) afterEnemyLibs += libs(group(xx,yy,b));
+ }
+ score += Math.max(0,beforeEnemyLibs-afterEnemyLibs)*4;
+
+ score += Math.random()*2;
  return score;
 }
 
