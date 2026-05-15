@@ -1,0 +1,849 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<title>iPhone Zoom Clarity Lab</title>
+
+<style>
+
+:root{
+
+  --bg:#05070d;--panel:#101827;--text:#f7fbff;--muted:#9fb0c8;
+
+  --blue:#2f7dff;--green:#11a765;--gold:#bd8100;--red:#b52d42;
+
+  --border:rgba(255,255,255,.13);
+
+}
+
+*{box-sizing:border-box}
+
+body{
+
+  margin:0;background:radial-gradient(circle at top,#17233a,#05070d 55%);
+
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+
+}
+
+header{
+
+  padding:18px 14px;background:rgba(8,13,24,.96);border-bottom:1px solid var(--border);
+
+  position:sticky;top:0;z-index:10;
+
+}
+
+h1{font-size:24px;margin:0}
+
+small{color:var(--muted)}
+
+main{padding:12px;max-width:1100px;margin:auto}
+
+.panel{
+
+  background:rgba(16,24,39,.96);border:1px solid var(--border);
+
+  border-radius:18px;padding:13px;margin:12px 0;
+
+}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+button,input{
+
+  font-size:15px;border-radius:13px;border:1px solid var(--border);padding:10px 12px;
+
+}
+
+button{background:var(--blue);color:white;font-weight:800}
+
+button.good{background:var(--green)}
+
+button.warn{background:var(--gold)}
+
+button.bad{background:var(--red)}
+
+button.secondary{background:#263653}
+
+input{background:#070b13;color:white}
+
+canvas{
+
+  width:100%;background:#000;border:1px solid var(--border);
+
+  border-radius:18px;margin-top:10px;
+
+}
+
+pre{
+
+  white-space:pre-wrap;background:#05070d;color:#dce8ff;
+
+  border:1px solid var(--border);border-radius:16px;padding:12px;
+
+  min-height:120px;overflow:auto;
+
+}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+
+.badge{
+
+  display:inline-block;padding:4px 8px;border-radius:999px;background:#22314f;
+
+  color:#cfe0ff;margin:2px;font-size:12px;
+
+}
+
+label{color:#dce8ff;font-size:14px}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+  <h1>iPhone Zoom Clarity Lab</h1>
+
+  <small>Native photo • crop zoom • smart denoise • crystal clear • safe upscale • export</small>
+
+</header>
+
+<main>
+
+<section class="panel">
+
+  <b>1. Capture / Load</b>
+
+  <div class="row" style="margin-top:8px">
+
+    <button onclick="takeNativePhoto()">Take Native Photo</button>
+
+    <button onclick="loadPhotoFile()" class="secondary">Load Existing Photo</button>
+
+    <button onclick="resetImage()" class="warn">Reset Original</button>
+
+    <input id="nativeInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="loadImage(event)">
+
+    <input id="fileInput" type="file" accept="image/*" style="display:none" onchange="loadImage(event)">
+
+  </div>
+
+</section>
+
+<section class="panel">
+
+  <b>2. Crop / Zoom Reconstruction</b>
+
+  <div class="row" style="margin-top:8px">
+
+    <label>Zoom crop:</label>
+
+    <input id="zoom" type="range" min="1" max="20" step="0.1" value="1" oninput="zoomText.textContent=this.value+'x'">
+
+    <span id="zoomText">1x</span>
+
+    <button onclick="cropCenterZoom()">Crop Center</button>
+
+    <button onclick="cropTouchZoom()" class="secondary">Crop Touch Point</button>
+
+  </div>
+
+  <small>Tap the image first, then use Crop Touch Point.</small>
+
+</section>
+
+<section class="panel">
+
+  <b>3. Clarity Pipeline</b>
+
+  <div class="row" style="margin-top:8px">
+
+    <button onclick="crystalClear()" class="good">Crystal Clear</button>
+
+    <button onclick="autoEnhance()" class="good">Auto Enhance</button>
+
+    <button onclick="denoise()">Smart Denoise</button>
+
+    <button onclick="clarity()">Clarity</button>
+
+    <button onclick="sharpen()">Soft Sharpen</button>
+
+    <button onclick="dehaze()" class="warn">Dehaze</button>
+
+    <button onclick="superSample2x()" class="good">Safe Upscale 2x</button>
+
+    <button onclick="superSample4x()" class="good">Safe Upscale 4x</button>
+
+  </div>
+
+</section>
+
+<section class="panel">
+
+  <b>4. Manual Fine-Tuning</b>
+
+  <div class="row" style="margin-top:8px">
+
+    <label>Brightness</label><input id="brightness" type="range" min="-60" max="60" value="4">
+
+    <label>Contrast</label><input id="contrast" type="range" min="70" max="180" value="116">
+
+    <label>Saturation</label><input id="saturation" type="range" min="50" max="180" value="108">
+
+    <button onclick="manualAdjust()">Apply</button>
+
+  </div>
+
+</section>
+
+<section class="panel">
+
+  <b>5. Export</b>
+
+  <div class="row" style="margin-top:8px">
+
+    <button onclick="downloadPNG()" class="good">Export PNG</button>
+
+    <button onclick="downloadJPG()" class="good">Export JPEG</button>
+
+    <button onclick="beforeAfter()" class="secondary">Before / After</button>
+
+  </div>
+
+</section>
+
+<div class="grid">
+
+<section class="panel">
+
+  <b>Working Image</b>
+
+  <canvas id="canvas"></canvas>
+
+</section>
+
+<section class="panel">
+
+  <b>Original Reference</b>
+
+  <canvas id="originalCanvas"></canvas>
+
+</section>
+
+</div>
+
+<section class="panel">
+
+  <b>Status</b>
+
+  <pre id="status">Ready. Best workflow: Take Native Photo → crop → Crystal Clear → Safe Upscale 2x → Export PNG.</pre>
+
+  <span class="badge">Safe canvas memory</span>
+
+  <span class="badge">Noise-aware smoothing</span>
+
+  <span class="badge">Edge clarity</span>
+
+  <span class="badge">No server needed</span>
+
+</section>
+
+</main>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+
+const ctx = canvas.getContext("2d", {willReadFrequently:true});
+
+const originalCanvas = document.getElementById("originalCanvas");
+
+const octx = originalCanvas.getContext("2d", {willReadFrequently:true});
+
+const statusBox = document.getElementById("status");
+
+const zoomSlider = document.getElementById("zoom");
+
+let originalImage = null;
+
+let touchPoint = {x:0.5,y:0.5};
+
+function log(msg){ statusBox.textContent = msg; }
+
+function clamp(v){ return Math.max(0, Math.min(255, v)); }
+
+function takeNativePhoto(){ document.getElementById("nativeInput").click(); }
+
+function loadPhotoFile(){ document.getElementById("fileInput").click(); }
+
+function loadImage(event){
+
+  const file = event.target.files[0];
+
+  if(!file){ log("No image selected."); return; }
+
+  const img = new Image();
+
+  img.onload = () => {
+
+    originalImage = img;
+
+    canvas.width = img.naturalWidth;
+
+    canvas.height = img.naturalHeight;
+
+    originalCanvas.width = img.naturalWidth;
+
+    originalCanvas.height = img.naturalHeight;
+
+    ctx.drawImage(img,0,0);
+
+    octx.drawImage(img,0,0);
+
+    log("Loaded image: " + canvas.width + " x " + canvas.height +
+
+        "\nBest workflow: crop first, Crystal Clear, then Safe Upscale 2x.");
+
+  };
+
+  img.src = URL.createObjectURL(file);
+
+}
+
+canvas.addEventListener("click", e => {
+
+  const r = canvas.getBoundingClientRect();
+
+  touchPoint.x = (e.clientX - r.left) / r.width;
+
+  touchPoint.y = (e.clientY - r.top) / r.height;
+
+  log("Touch point set: " + Math.round(touchPoint.x*100) + "% x, " + Math.round(touchPoint.y*100) + "% y.");
+
+});
+
+function resetImage(){
+
+  if(!originalImage){ log("No original image loaded."); return; }
+
+  canvas.width = originalImage.naturalWidth;
+
+  canvas.height = originalImage.naturalHeight;
+
+  ctx.drawImage(originalImage,0,0);
+
+  log("Reset to original image.");
+
+}
+
+function cropCenterZoom(){ cropZoom(0.5,0.5); }
+
+function cropTouchZoom(){ cropZoom(touchPoint.x,touchPoint.y); }
+
+function cropZoom(cxNorm, cyNorm){
+
+  if(!originalImage){ log("Load or take a photo first."); return; }
+
+  const z = parseFloat(zoomSlider.value);
+
+  const iw = originalImage.naturalWidth;
+
+  const ih = originalImage.naturalHeight;
+
+  const sw = iw / z;
+
+  const sh = ih / z;
+
+  let sx = cxNorm * iw - sw / 2;
+
+  let sy = cyNorm * ih - sh / 2;
+
+  sx = Math.max(0, Math.min(iw - sw, sx));
+
+  sy = Math.max(0, Math.min(ih - sh, sy));
+
+  canvas.width = Math.round(sw * z);
+
+  canvas.height = Math.round(sh * z);
+
+  ctx.imageSmoothingEnabled = true;
+
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(originalImage, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+  log("Zoom crop applied: " + z + "x\nOutput: " + canvas.width + " x " + canvas.height);
+
+}
+
+function manualAdjust(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  const brightness = Number(document.getElementById("brightness").value);
+
+  const contrast = Number(document.getElementById("contrast").value) / 100;
+
+  const saturation = Number(document.getElementById("saturation").value) / 100;
+
+  let img = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  let d = img.data;
+
+  for(let i=0;i<d.length;i+=4){
+
+    let r=d[i], g=d[i+1], b=d[i+2];
+
+    let gray = 0.299*r + 0.587*g + 0.114*b;
+
+    r = gray + (r-gray)*saturation;
+
+    g = gray + (g-gray)*saturation;
+
+    b = gray + (b-gray)*saturation;
+
+    d[i] = clamp((r-128)*contrast + 128 + brightness);
+
+    d[i+1] = clamp((g-128)*contrast + 128 + brightness);
+
+    d[i+2] = clamp((b-128)*contrast + 128 + brightness);
+
+  }
+
+  ctx.putImageData(img,0,0);
+
+  log("Manual adjustment applied.");
+
+}
+
+function crystalClear(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  log("Running Crystal Clear pipeline...");
+
+  smartDenoise();
+
+  localContrast();
+
+  edgeSharpenSoft();
+
+  colorClean();
+
+  edgeSharpenSoft();
+
+  log("Crystal Clear complete: smart denoise + local contrast + soft edge sharpening + color cleanup.");
+
+}
+
+function autoEnhance(){
+
+  crystalClear();
+
+}
+
+function smartDenoise(){
+
+  const src = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  const out = ctx.createImageData(canvas.width,canvas.height);
+
+  const w = canvas.width, h = canvas.height;
+
+  const s = src.data, d = out.data;
+
+  for(let y=0;y<h;y++){
+
+    for(let x=0;x<w;x++){
+
+      const center = (y*w+x)*4;
+
+      let r=s[center], g=s[center+1], b=s[center+2];
+
+      let ar=0, ag=0, ab=0, count=0;
+
+      for(let dy=-1;dy<=1;dy++){
+
+        for(let dx=-1;dx<=1;dx++){
+
+          const xx=Math.max(0,Math.min(w-1,x+dx));
+
+          const yy=Math.max(0,Math.min(h-1,y+dy));
+
+          const i=(yy*w+xx)*4;
+
+          const diff=Math.abs(s[i]-r)+Math.abs(s[i+1]-g)+Math.abs(s[i+2]-b);
+
+          if(diff < 70){
+
+            ar+=s[i]; ag+=s[i+1]; ab+=s[i+2]; count++;
+
+          }
+
+        }
+
+      }
+
+      if(count < 1){ count = 1; ar=r; ag=g; ab=b; }
+
+      d[center]=ar/count;
+
+      d[center+1]=ag/count;
+
+      d[center+2]=ab/count;
+
+      d[center+3]=s[center+3];
+
+    }
+
+  }
+
+  ctx.putImageData(out,0,0);
+
+}
+
+function denoise(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  smartDenoise();
+
+  log("Smart denoise applied.");
+
+}
+
+function localContrast(){
+
+  const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  const d = img.data;
+
+  for(let i=0;i<d.length;i+=4){
+
+    let r=d[i], g=d[i+1], b=d[i+2];
+
+    let lum = 0.299*r + 0.587*g + 0.114*b;
+
+    let contrast = lum < 120 ? 1.10 : 1.18;
+
+    let lift = lum < 80 ? 6 : 1;
+
+    d[i] = clamp((r-128)*contrast + 128 + lift);
+
+    d[i+1] = clamp((g-128)*contrast + 128 + lift);
+
+    d[i+2] = clamp((b-128)*contrast + 128 + lift);
+
+  }
+
+  ctx.putImageData(img,0,0);
+
+}
+
+function clarity(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  localContrast();
+
+  edgeSharpenSoft();
+
+  log("Clarity improved.");
+
+}
+
+function colorClean(){
+
+  const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  const d = img.data;
+
+  for(let i=0;i<d.length;i+=4){
+
+    let r=d[i], g=d[i+1], b=d[i+2];
+
+    let gray = 0.299*r + 0.587*g + 0.114*b;
+
+    const sat = 1.06;
+
+    d[i] = clamp(gray + (r-gray)*sat);
+
+    d[i+1] = clamp(gray + (g-gray)*sat);
+
+    d[i+2] = clamp(gray + (b-gray)*sat);
+
+  }
+
+  ctx.putImageData(img,0,0);
+
+}
+
+function sharpen(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  edgeSharpenSoft();
+
+}
+
+function edgeSharpenSoft(){
+
+  convolve([
+
+     0, -0.55,  0,
+
+    -0.55, 3.2, -0.55,
+
+     0, -0.55,  0
+
+  ], "Soft edge sharpen applied.");
+
+}
+
+function dehaze(){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  manualBoost(1.24,1.12,-2);
+
+  log("Dehaze contrast boost applied.");
+
+}
+
+function manualBoost(contrast, saturation, brightness){
+
+  let img = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  let d = img.data;
+
+  for(let i=0;i<d.length;i+=4){
+
+    let r=d[i], g=d[i+1], b=d[i+2];
+
+    let gray = 0.299*r + 0.587*g + 0.114*b;
+
+    r = gray + (r-gray)*saturation;
+
+    g = gray + (g-gray)*saturation;
+
+    b = gray + (b-gray)*saturation;
+
+    d[i] = clamp((r-128)*contrast + 128 + brightness);
+
+    d[i+1] = clamp((g-128)*contrast + 128 + brightness);
+
+    d[i+2] = clamp((b-128)*contrast + 128 + brightness);
+
+  }
+
+  ctx.putImageData(img,0,0);
+
+}
+
+function convolve(kernel, message){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  const src = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  const out = ctx.createImageData(canvas.width,canvas.height);
+
+  const w = canvas.width, h = canvas.height;
+
+  const s = src.data, d = out.data;
+
+  for(let y=0;y<h;y++){
+
+    for(let x=0;x<w;x++){
+
+      let r=0,g=0,b=0,k=0;
+
+      for(let ky=-1;ky<=1;ky++){
+
+        for(let kx=-1;kx<=1;kx++){
+
+          const xx = Math.max(0,Math.min(w-1,x+kx));
+
+          const yy = Math.max(0,Math.min(h-1,y+ky));
+
+          const i = (yy*w+xx)*4;
+
+          const kv = kernel[k++];
+
+          r += s[i]*kv; g += s[i+1]*kv; b += s[i+2]*kv;
+
+        }
+
+      }
+
+      const j = (y*w+x)*4;
+
+      d[j]=clamp(r); d[j+1]=clamp(g); d[j+2]=clamp(b); d[j+3]=s[j+3];
+
+    }
+
+  }
+
+  ctx.putImageData(out,0,0);
+
+  log(message);
+
+}
+
+function safeUpscale(factor){
+
+  if(!canvas.width){ log("Load an image first."); return; }
+
+  const maxPixels = 18000000;
+
+  let targetW = canvas.width * factor;
+
+  let targetH = canvas.height * factor;
+
+  if(targetW * targetH > maxPixels){
+
+    const scale = Math.sqrt(maxPixels / (targetW * targetH));
+
+    targetW = Math.floor(targetW * scale);
+
+    targetH = Math.floor(targetH * scale);
+
+    log("4x was too large for iPhone memory. Using safe output: " + targetW + " x " + targetH);
+
+  }
+
+  smartDenoise();
+
+  const temp = document.createElement("canvas");
+
+  const tctx = temp.getContext("2d");
+
+  temp.width = canvas.width;
+
+  temp.height = canvas.height;
+
+  tctx.drawImage(canvas,0,0);
+
+  canvas.width = targetW;
+
+  canvas.height = targetH;
+
+  ctx.imageSmoothingEnabled = true;
+
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(temp,0,0,targetW,targetH);
+
+  smartDenoise();
+
+  localContrast();
+
+  edgeSharpenSoft();
+
+  edgeSharpenSoft();
+
+  colorClean();
+
+  log("Safe upscale complete: " + targetW + " x " + targetH);
+
+}
+
+function superSample2x(){ safeUpscale(2); }
+
+function superSample4x(){ safeUpscale(4); }
+
+function beforeAfter(){
+
+  if(!originalImage || !canvas.width){
+
+    log("Load image first.");
+
+    return;
+
+  }
+
+  const w = Math.min(originalImage.naturalWidth, canvas.width);
+
+  const h = Math.min(originalImage.naturalHeight, canvas.height);
+
+  const temp = document.createElement("canvas");
+
+  const tctx = temp.getContext("2d");
+
+  temp.width = w;
+
+  temp.height = h;
+
+  tctx.drawImage(originalImage,0,0,w/2,h,0,0,w/2,h);
+
+  tctx.drawImage(canvas,canvas.width/2,0,canvas.width/2,canvas.height,w/2,0,w/2,h);
+
+  canvas.width = w;
+
+  canvas.height = h;
+
+  ctx.drawImage(temp,0,0);
+
+  ctx.fillStyle = "rgba(0,0,0,.6)";
+
+  ctx.fillRect(12,12,260,46);
+
+  ctx.fillStyle = "white";
+
+  ctx.font = "26px -apple-system,BlinkMacSystemFont,sans-serif";
+
+  ctx.fillText("Before | After",24,44);
+
+  log("Before/after comparison created.");
+
+}
+
+function downloadPNG(){
+
+  if(!canvas.width){ log("Nothing to export."); return; }
+
+  const a = document.createElement("a");
+
+  a.download = "iphone_zoom_clarity.png";
+
+  a.href = canvas.toDataURL("image/png");
+
+  a.click();
+
+  log("PNG export started.");
+
+}
+
+function downloadJPG(){
+
+  if(!canvas.width){ log("Nothing to export."); return; }
+
+  const a = document.createElement("a");
+
+  a.download = "iphone_zoom_clarity.jpg";
+
+  a.href = canvas.toDataURL("image/jpeg",0.94);
+
+  a.click();
+
+  log("JPEG export started.");
+
+}
+
+</script>
+
+</body>
+
+</html>
