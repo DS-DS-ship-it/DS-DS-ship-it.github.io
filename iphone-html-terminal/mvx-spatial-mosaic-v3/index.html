@@ -1,0 +1,1713 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<title>MVX Spatial Mosaic Panorama V3</title>
+
+<style>
+
+:root{
+
+  --bg:#05070d;--panel:#101827;--text:#f7fbff;--muted:#9fb0c8;
+
+  --blue:#2f7dff;--green:#10a765;--gold:#bd8100;--red:#b52d42;
+
+  --cyan:#41d6ff;--border:rgba(255,255,255,.15)
+
+}
+
+*{box-sizing:border-box}
+
+body{
+
+  margin:0;background:radial-gradient(circle at top,#17233a,#05070d 60%);
+
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+
+}
+
+header{
+
+  padding:18px 14px;background:rgba(8,13,24,.96);
+
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20
+
+}
+
+h1{font-size:23px;margin:0}
+
+h2{font-size:18px;margin:0 0 8px}
+
+small{color:var(--muted)}
+
+main{padding:12px;max-width:1200px;margin:auto}
+
+.panel{
+
+  background:rgba(16,24,39,.96);border:1px solid var(--border);
+
+  border-radius:18px;padding:13px;margin:12px 0
+
+}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+button,input,select{
+
+  border-radius:13px;border:1px solid var(--border);padding:10px 12px;font-size:15px
+
+}
+
+button{background:var(--blue);color:white;font-weight:800}
+
+button.good{background:var(--green)}
+
+button.warn{background:var(--gold)}
+
+button.bad{background:var(--red)}
+
+button.secondary{background:#263653}
+
+input,select{background:#070b13;color:white}
+
+canvas,video,img{
+
+  width:100%;background:#000;border:1px solid var(--border);
+
+  border-radius:18px;margin-top:10px
+
+}
+
+pre{
+
+  white-space:pre-wrap;background:#05070d;color:#dce8ff;
+
+  border:1px solid var(--border);border-radius:16px;padding:12px;
+
+  min-height:100px;overflow:auto
+
+}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+@media(min-width:950px){.grid{grid-template-columns:1fr 1fr}}
+
+.metric{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+@media(min-width:900px){.metric{grid-template-columns:repeat(4,1fr)}}
+
+.card{background:#05070d;border:1px solid var(--border);border-radius:14px;padding:10px}
+
+.value{font-size:21px;font-weight:900;color:#dfffe7}
+
+.progressOuter{
+
+  width:100%;height:16px;border-radius:999px;background:#05070d;
+
+  border:1px solid var(--border);overflow:hidden
+
+}
+
+.progressInner{
+
+  height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--cyan),var(--blue))
+
+}
+
+.badge{
+
+  display:inline-block;padding:4px 8px;border-radius:999px;background:#22314f;
+
+  color:#cfe0ff;margin:2px;font-size:12px
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>MVX Spatial Mosaic Panorama V3</h1>
+
+<small>Quality-map blending • smoother seams • crop protection • drift guard • iPhone-safe export</small>
+
+</header>
+
+<main>
+
+<section class="panel">
+
+<h2>1. Capture Controls</h2>
+
+<div class="row">
+
+<button class="good" onclick="app.startCamera()">Start Camera</button>
+
+<button class="good" onclick="app.startMotion()">Start Motion Sensors</button>
+
+<button class="warn" onclick="app.startMosaic()">Start New Mosaic</button>
+
+<button class="good" onclick="app.captureFrame()">Capture Frame</button>
+
+<button class="secondary" onclick="app.toggleAuto()">Auto Capture</button>
+
+<button class="warn" onclick="app.buildFinal()">Build Final Mosaic</button>
+
+<button class="bad" onclick="app.reset()">Reset</button>
+
+</div>
+
+<div style="margin-top:12px"><div class="progressOuter"><div id="progressBar" class="progressInner"></div></div></div>
+
+</section>
+
+<section class="panel">
+
+<h2>2. Improved Mosaic Settings</h2>
+
+<div class="row">
+
+<label>Frame size</label>
+
+<select id="frameSize">
+
+<option value="360">360 safest</option>
+
+<option value="480" selected>480 recommended</option>
+
+<option value="640">640 sharper</option>
+
+<option value="800">800 heavy</option>
+
+</select>
+
+<label>Search</label>
+
+<select id="searchRange">
+
+<option value="70">Fast</option>
+
+<option value="120" selected>Balanced</option>
+
+<option value="180">Deep</option>
+
+</select>
+
+<label>Blend</label>
+
+<select id="blendMode">
+
+<option value="quality" selected>Quality map</option>
+
+<option value="average">Soft average</option>
+
+<option value="top">Layered top</option>
+
+</select>
+
+<label>Auto interval</label>
+
+<select id="autoInterval">
+
+<option value="1000">1.0s</option>
+
+<option value="1500" selected>1.5s</option>
+
+<option value="2200">2.2s</option>
+
+</select>
+
+<label>Max export</label>
+
+<select id="maxPixels">
+
+<option value="6000000">6 MP safest</option>
+
+<option value="9000000" selected>9 MP recommended</option>
+
+<option value="12000000">12 MP</option>
+
+<option value="16000000">16 MP heavy</option>
+
+</select>
+
+</div>
+
+<small>Use 50–70% overlap and move slowly. V3 avoids full-frame blocking by using a quality/weight map during final render.</small>
+
+</section>
+
+<section class="panel">
+
+<h2>Live Metrics</h2>
+
+<div class="metric">
+
+<div class="card"><small>Frames</small><div id="framesVal" class="value">0</div></div>
+
+<div class="card"><small>Mode</small><div id="modeVal" class="value">idle</div></div>
+
+<div class="card"><small>Auto</small><div id="autoVal" class="value">off</div></div>
+
+<div class="card"><small>Placement</small><div id="placeVal" class="value">--</div></div>
+
+<div class="card"><small>Mosaic Size</small><div id="sizeVal" class="value">--</div></div>
+
+<div class="card"><small>Heading</small><div id="headingVal" class="value">--</div></div>
+
+<div class="card"><small>Pitch / Roll</small><div id="pitchVal" class="value">--</div></div>
+
+<div class="card"><small>Confidence</small><div id="confVal" class="value">--</div></div>
+
+</div>
+
+</section>
+
+<div class="grid">
+
+<section class="panel">
+
+<h2>Live Camera HUD</h2>
+
+<video id="video" autoplay playsinline muted></video>
+
+<canvas id="hudCanvas" width="640" height="360"></canvas>
+
+</section>
+
+<section class="panel">
+
+<h2>Latest Captured Frames</h2>
+
+<canvas id="thumbCanvas" width="900" height="520"></canvas>
+
+</section>
+
+</div>
+
+<section class="panel">
+
+<h2>Draft Spatial Mosaic</h2>
+
+<canvas id="previewCanvas" width="1600" height="900"></canvas>
+
+</section>
+
+<section class="panel">
+
+<h2>Final Quality-Blended Export</h2>
+
+<canvas id="finalCanvas" width="1600" height="900"></canvas>
+
+<img id="exportPreview" alt="Export preview appears here">
+
+</section>
+
+<section class="panel">
+
+<h2>Export</h2>
+
+<div class="row">
+
+<button class="good" onclick="app.previewExport()">Preview Export Image</button>
+
+<button class="good" onclick="app.openExportImage()">Open Export Image</button>
+
+<button class="good" onclick="app.exportPNG()">Download PNG</button>
+
+<button class="good" onclick="app.exportJPEG()">Download JPEG</button>
+
+<button class="secondary" onclick="app.exportJSON()">Export JSON</button>
+
+</div>
+
+<small>On iPhone, downloads usually appear in Files → Downloads. To save to Photos, tap Open Export Image, then long-press image.</small>
+
+</section>
+
+<section class="panel">
+
+<h2>Status / Accuracy</h2>
+
+<pre id="status">Ready. Start camera, start new mosaic, capture overlapping frames, then build final mosaic.</pre>
+
+<span class="badge">Quality-map blending</span>
+
+<span class="badge">Rejects weak matches</span>
+
+<span class="badge">Smoother seams</span>
+
+<span class="badge">Auto-crop bounds</span>
+
+<span class="badge">X/Y matching</span>
+
+<span class="badge">No LiDAR claims</span>
+
+</section>
+
+</main>
+
+<script>
+
+class MVXSpatialMosaicV3{
+
+  constructor(){
+
+    this.video=document.getElementById("video");
+
+    this.hud=document.getElementById("hudCanvas");
+
+    this.hctx=this.hud.getContext("2d");
+
+    this.thumb=document.getElementById("thumbCanvas");
+
+    this.thctx=this.thumb.getContext("2d");
+
+    this.preview=document.getElementById("previewCanvas");
+
+    this.pctx=this.preview.getContext("2d");
+
+    this.finalCanvas=document.getElementById("finalCanvas");
+
+    this.fctx=this.finalCanvas.getContext("2d");
+
+    this.exportPreview=document.getElementById("exportPreview");
+
+    this.cameraReady=false;
+
+    this.frames=[];
+
+    this.mode="idle";
+
+    this.auto=false;
+
+    this.autoTimer=null;
+
+    this.isBuilding=false;
+
+    this.heading=0;
+
+    this.pitch=0;
+
+    this.roll=0;
+
+    this.hasMotion=false;
+
+    this.bounds={minX:0,minY:0,maxX:0,maxY:0};
+
+    this.lastPlacement="--";
+
+    this.avgConfidence=0;
+
+    this.drawThumbs();
+
+    this.clearPreview();
+
+    this.loop();
+
+  }
+
+  log(x){document.getElementById("status").textContent=x}
+
+  async startCamera(){
+
+    try{
+
+      const stream=await navigator.mediaDevices.getUserMedia({
+
+        video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},
+
+        audio:false
+
+      });
+
+      this.video.srcObject=stream;
+
+      await this.video.play();
+
+      this.cameraReady=true;
+
+      this.mode="camera";
+
+      this.log("Camera started. Tap Start New Mosaic.");
+
+    }catch(e){
+
+      this.log("Camera error: "+e.message);
+
+    }
+
+  }
+
+  async startMotion(){
+
+    try{
+
+      if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
+
+        const p=await DeviceOrientationEvent.requestPermission();
+
+        if(p!=="granted"){
+
+          this.log("Motion permission denied. Visual matching still works.");
+
+          return;
+
+        }
+
+      }
+
+      window.addEventListener("deviceorientation",e=>{
+
+        let h=null;
+
+        if(typeof e.webkitCompassHeading==="number") h=e.webkitCompassHeading;
+
+        else if(typeof e.alpha==="number") h=(360-e.alpha)%360;
+
+        if(h!==null)this.heading=(h+360)%360;
+
+        this.pitch=e.beta||0;
+
+        this.roll=e.gamma||0;
+
+        this.hasMotion=true;
+
+      },true);
+
+      this.log("Motion sensors started.");
+
+    }catch(e){
+
+      this.log("Motion error: "+e.message);
+
+    }
+
+  }
+
+  startMosaic(){
+
+    if(!this.cameraReady){this.log("Start camera first.");return}
+
+    if(this.auto)this.toggleAuto();
+
+    this.frames=[];
+
+    this.mode="capturing";
+
+    this.isBuilding=false;
+
+    this.bounds={minX:0,minY:0,maxX:0,maxY:0};
+
+    this.lastPlacement="--";
+
+    this.avgConfidence=0;
+
+    this.exportPreview.removeAttribute("src");
+
+    this.clearPreview();
+
+    this.drawThumbs();
+
+    this.log("New mosaic started. Capture slow overlapping frames. Use 50–70% overlap.");
+
+  }
+
+  captureFrame(){
+
+    if(!this.cameraReady){this.log("Start camera first.");return}
+
+    if(this.isBuilding){this.log("Wait until build finishes.");return}
+
+    if(this.mode==="idle"||this.mode==="camera")this.startMosaic();
+
+    const frame=this.makeFrame();
+
+    if(!frame)return;
+
+    if(this.frames.length===0){
+
+      frame.x=0; frame.y=0; frame.confidence=100; frame.match="origin";
+
+      this.frames.push(frame);
+
+    }else{
+
+      const placed=this.placeFrame(frame);
+
+      if(placed.confidence<12 && this.frames.length>2){
+
+        this.log("Weak match rejected. Move back to overlap more, then capture again.");
+
+        return;
+
+      }
+
+      this.frames.push(placed);
+
+    }
+
+    this.updateBounds();
+
+    this.renderPreview();
+
+    this.drawThumbs();
+
+    this.mode=this.auto?"auto":"capturing";
+
+    this.log("Captured frame "+this.frames.length+" placed at x="+Math.round(frame.x)+", y="+Math.round(frame.y)+".");
+
+  }
+
+  makeFrame(){
+
+    const vw=this.video.videoWidth||1280;
+
+    const vh=this.video.videoHeight||720;
+
+    const outW=Number(document.getElementById("frameSize").value)||480;
+
+    const cropX=vw*0.08;
+
+    const cropY=vh*0.08;
+
+    const cropW=vw*0.84;
+
+    const cropH=vh*0.84;
+
+    const outH=Math.round(outW*(cropH/cropW));
+
+    const c=document.createElement("canvas");
+
+    c.width=outW;
+
+    c.height=outH;
+
+    const ctx=c.getContext("2d",{willReadFrequently:true});
+
+    ctx.imageSmoothingEnabled=true;
+
+    ctx.imageSmoothingQuality="high";
+
+    ctx.drawImage(this.video,cropX,cropY,cropW,cropH,0,0,outW,outH);
+
+    this.autoLevel(c);
+
+    const small=this.makeSmall(c,128);
+
+    return {
+
+      canvas:c, small,
+
+      width:c.width, height:c.height,
+
+      time:new Date().toISOString(),
+
+      heading:this.heading, pitch:this.pitch, roll:this.roll,
+
+      x:0,y:0,confidence:0,score:0,quality:this.qualityScore(c),match:""
+
+    };
+
+  }
+
+  autoLevel(c){
+
+    const ctx=c.getContext("2d",{willReadFrequently:true});
+
+    const img=ctx.getImageData(0,0,c.width,c.height);
+
+    const d=img.data;
+
+    let min=255,max=0;
+
+    for(let i=0;i<d.length;i+=16){
+
+      const l=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+
+      if(l<min)min=l;
+
+      if(l>max)max=l;
+
+    }
+
+    const range=Math.max(1,max-min);
+
+    const gain=Math.min(1.18,255/range*0.72);
+
+    const lift=4;
+
+    for(let i=0;i<d.length;i+=4){
+
+      d[i]=Math.max(0,Math.min(255,(d[i]-128)*gain+128+lift));
+
+      d[i+1]=Math.max(0,Math.min(255,(d[i+1]-128)*gain+128+lift));
+
+      d[i+2]=Math.max(0,Math.min(255,(d[i+2]-128)*gain+128+lift));
+
+    }
+
+    ctx.putImageData(img,0,0);
+
+  }
+
+  qualityScore(c){
+
+    const ctx=c.getContext("2d",{willReadFrequently:true});
+
+    const img=ctx.getImageData(0,0,c.width,c.height).data;
+
+    let sum=0,n=0;
+
+    for(let y=2;y<c.height-2;y+=12){
+
+      for(let x=2;x<c.width-2;x+=12){
+
+        const i=(y*c.width+x)*4;
+
+        const r=(y*c.width+x+1)*4;
+
+        const b=((y+1)*c.width+x)*4;
+
+        const l=.299*img[i]+.587*img[i+1]+.114*img[i+2];
+
+        const lr=.299*img[r]+.587*img[r+1]+.114*img[r+2];
+
+        const lb=.299*img[b]+.587*img[b+1]+.114*img[b+2];
+
+        sum+=Math.abs(l-lr)+Math.abs(l-lb);
+
+        n++;
+
+      }
+
+    }
+
+    return Math.max(1,sum/Math.max(1,n));
+
+  }
+
+  makeSmall(c,w){
+
+    const s=document.createElement("canvas");
+
+    s.width=w;
+
+    s.height=Math.round(w*c.height/c.width);
+
+    const x=s.getContext("2d",{willReadFrequently:true});
+
+    x.drawImage(c,0,0,s.width,s.height);
+
+    return s;
+
+  }
+
+  placeFrame(frame){
+
+    const prev=this.frames[this.frames.length-1];
+
+    let best={
+
+      score:Infinity,
+
+      x:prev.x+prev.width*0.52,
+
+      y:prev.y,
+
+      confidence:15,
+
+      match:"fallback"
+
+    };
+
+    const candidates=[prev];
+
+    if(this.frames.length>1)candidates.push(this.frames[this.frames.length-2]);
+
+    if(this.frames.length>3)candidates.push(this.frames[Math.floor(this.frames.length/2)]);
+
+    if(this.frames.length>4)candidates.push(this.frames[0]);
+
+    for(const base of candidates){
+
+      const local=this.findBestOffset(base.small,frame.small);
+
+      const scale=frame.width/frame.small.width;
+
+      const absX=base.x+local.dx*scale;
+
+      const absY=base.y+local.dy*scale;
+
+      if(local.score<best.score){
+
+        best={score:local.score,x:absX,y:absY,confidence:local.confidence,match:"visual"};
+
+      }
+
+    }
+
+    const dxFromPrev=Math.abs(best.x-prev.x);
+
+    const dyFromPrev=Math.abs(best.y-prev.y);
+
+    const maxJump=prev.width*1.15;
+
+    if(dxFromPrev>maxJump || dyFromPrev>maxJump){
+
+      best.x=prev.x+prev.width*0.48;
+
+      best.y=prev.y;
+
+      best.confidence=Math.min(best.confidence,18);
+
+      best.match="drift guard";
+
+    }
+
+    frame.x=best.x;
+
+    frame.y=best.y;
+
+    frame.score=best.score;
+
+    frame.confidence=best.confidence;
+
+    frame.match=best.match;
+
+    this.lastPlacement=Math.round(best.confidence)+"%";
+
+    return frame;
+
+  }
+
+  findBestOffset(a,b){
+
+    const range=Number(document.getElementById("searchRange").value)||120;
+
+    const aw=a.width,ah=a.height,bw=b.width,bh=b.height;
+
+    const ax=a.getContext("2d",{willReadFrequently:true});
+
+    const bx=b.getContext("2d",{willReadFrequently:true});
+
+    const ad=ax.getImageData(0,0,aw,ah).data;
+
+    const bd=bx.getImageData(0,0,bw,bh).data;
+
+    let bestScore=Infinity;
+
+    let bestDx=Math.round(aw*0.50);
+
+    let bestDy=0;
+
+    const step=8;
+
+    const sampleStep=10;
+
+    for(let dy=-Math.floor(range*0.50);dy<=Math.floor(range*0.50);dy+=step){
+
+      for(let dx=-range;dx<=range;dx+=step){
+
+        const score=this.scoreOverlap(ad,bd,aw,ah,bw,bh,dx,dy,sampleStep);
+
+        if(score.count>24 && score.value<bestScore){
+
+          bestScore=score.value;
+
+          bestDx=dx;
+
+          bestDy=dy;
+
+        }
+
+      }
+
+    }
+
+    const confidence=Math.max(5,Math.min(100,Math.round(100-(bestScore/3.1))));
+
+    return {dx:bestDx,dy:bestDy,score:bestScore,confidence};
+
+  }
+
+  scoreOverlap(ad,bd,aw,ah,bw,bh,dx,dy,step){
+
+    let diff=0,count=0;
+
+    const ax0=Math.max(0,dx);
+
+    const ay0=Math.max(0,dy);
+
+    const bx0=Math.max(0,-dx);
+
+    const by0=Math.max(0,-dy);
+
+    const ow=Math.min(aw-ax0,bw-bx0);
+
+    const oh=Math.min(ah-ay0,bh-by0);
+
+    if(ow<32||oh<32)return {value:999999,count:0};
+
+    for(let y=Math.floor(oh*0.12);y<Math.floor(oh*0.88);y+=step){
+
+      for(let x=Math.floor(ow*0.12);x<Math.floor(ow*0.88);x+=step){
+
+        const ai=((ay0+y)*aw+(ax0+x))*4;
+
+        const bi=((by0+y)*bw+(bx0+x))*4;
+
+        const al=.299*ad[ai]+.587*ad[ai+1]+.114*ad[ai+2];
+
+        const bl=.299*bd[bi]+.587*bd[bi+1]+.114*bd[bi+2];
+
+        diff+=Math.abs(al-bl);
+
+        count++;
+
+      }
+
+    }
+
+    return {value:diff/Math.max(1,count),count};
+
+  }
+
+  toggleAuto(){
+
+    if(!this.cameraReady){this.log("Start camera first.");return}
+
+    this.auto=!this.auto;
+
+    if(this.auto){
+
+      if(this.mode==="idle"||this.mode==="camera")this.startMosaic();
+
+      const ms=Number(document.getElementById("autoInterval").value)||1500;
+
+      this.autoTimer=setInterval(()=>this.captureFrame(),ms);
+
+      this.mode="auto";
+
+      this.log("Auto capture ON. Move slowly with heavy overlap.");
+
+    }else{
+
+      clearInterval(this.autoTimer);
+
+      this.autoTimer=null;
+
+      this.mode="capturing";
+
+      this.log("Auto capture OFF.");
+
+    }
+
+  }
+
+  updateBounds(){
+
+    if(!this.frames.length){
+
+      this.bounds={minX:0,minY:0,maxX:0,maxY:0};
+
+      return;
+
+    }
+
+    this.bounds={
+
+      minX:Math.min(...this.frames.map(f=>f.x)),
+
+      minY:Math.min(...this.frames.map(f=>f.y)),
+
+      maxX:Math.max(...this.frames.map(f=>f.x+f.width)),
+
+      maxY:Math.max(...this.frames.map(f=>f.y+f.height))
+
+    };
+
+    this.avgConfidence=Math.round(this.frames.reduce((a,f)=>a+(f.confidence||0),0)/this.frames.length);
+
+  }
+
+  renderPreview(){
+
+    this.updateBounds();
+
+    const W=this.preview.width,H=this.preview.height;
+
+    this.pctx.fillStyle="#02040a";
+
+    this.pctx.fillRect(0,0,W,H);
+
+    if(!this.frames.length){
+
+      this.pctx.fillStyle="#dce8ff";
+
+      this.pctx.font="32px sans-serif";
+
+      this.pctx.fillText("Draft mosaic preview will appear here.",40,H/2);
+
+      return;
+
+    }
+
+    const bw=this.bounds.maxX-this.bounds.minX || 1;
+
+    const bh=this.bounds.maxY-this.bounds.minY || 1;
+
+    const scale=Math.min(W/bw,H/bh)*0.92;
+
+    const ox=(W-bw*scale)/2;
+
+    const oy=(H-bh*scale)/2;
+
+    this.frames.forEach((f,i)=>{
+
+      const x=ox+(f.x-this.bounds.minX)*scale;
+
+      const y=oy+(f.y-this.bounds.minY)*scale;
+
+      const w=f.width*scale;
+
+      const h=f.height*scale;
+
+      this.pctx.globalAlpha=0.68;
+
+      this.pctx.drawImage(f.canvas,x,y,w,h);
+
+      this.pctx.globalAlpha=1;
+
+      this.pctx.strokeStyle=i===this.frames.length-1?"#3ee68f":"rgba(47,125,255,.45)";
+
+      this.pctx.lineWidth=i===this.frames.length-1?4:2;
+
+      this.pctx.strokeRect(x,y,w,h);
+
+    });
+
+    this.pctx.fillStyle="rgba(0,0,0,.62)";
+
+    this.pctx.fillRect(20,20,620,78);
+
+    this.pctx.fillStyle="white";
+
+    this.pctx.font="28px sans-serif";
+
+    this.pctx.fillText("MVX Draft Mosaic Preview",38,54);
+
+    this.pctx.font="16px sans-serif";
+
+    this.pctx.fillText("Frames: "+this.frames.length+" • confidence: "+this.avgConfidence+"% • final build uses quality-map blending",38,80);
+
+  }
+
+  async buildFinal(){
+
+    if(this.isBuilding)return;
+
+    if(this.auto)this.toggleAuto();
+
+    if(!this.frames.length){
+
+      this.log("No frames captured.");
+
+      return;
+
+    }
+
+    this.isBuilding=true;
+
+    this.mode="building";
+
+    this.log("Building quality-blended final mosaic...");
+
+    await new Promise(r=>setTimeout(r,70));
+
+    try{
+
+      this.updateBounds();
+
+      const margin=80;
+
+      const rawW=Math.ceil(this.bounds.maxX-this.bounds.minX+margin*2);
+
+      const rawH=Math.ceil(this.bounds.maxY-this.bounds.minY+margin*2);
+
+      const maxPixels=Number(document.getElementById("maxPixels").value)||9000000;
+
+      let scale=1;
+
+      if(rawW*rawH>maxPixels){
+
+        scale=Math.sqrt(maxPixels/(rawW*rawH));
+
+      }
+
+      this.finalCanvas.width=Math.max(500,Math.floor(rawW*scale));
+
+      this.finalCanvas.height=Math.max(350,Math.floor(rawH*scale));
+
+      const W=this.finalCanvas.width;
+
+      const H=this.finalCanvas.height;
+
+      const accR=new Float32Array(W*H);
+
+      const accG=new Float32Array(W*H);
+
+      const accB=new Float32Array(W*H);
+
+      const accA=new Float32Array(W*H);
+
+      const weight=new Float32Array(W*H);
+
+      const blendMode=document.getElementById("blendMode").value;
+
+      for(let i=0;i<this.frames.length;i++){
+
+        const f=this.frames[i];
+
+        const x=(f.x-this.bounds.minX+margin)*scale;
+
+        const y=(f.y-this.bounds.minY+margin)*scale;
+
+        const w=Math.max(1,Math.floor(f.width*scale));
+
+        const h=Math.max(1,Math.floor(f.height*scale));
+
+        this.accumulateFrame(f,Math.round(x),Math.round(y),w,h,accR,accG,accB,accA,weight,W,H,blendMode);
+
+        if(i%2===0)await new Promise(r=>setTimeout(r,0));
+
+      }
+
+      const out=this.fctx.createImageData(W,H);
+
+      for(let i=0;i<W*H;i++){
+
+        const o=i*4;
+
+        const wt=weight[i];
+
+        if(wt>0){
+
+          out.data[o]=Math.min(255,accR[i]/wt);
+
+          out.data[o+1]=Math.min(255,accG[i]/wt);
+
+          out.data[o+2]=Math.min(255,accB[i]/wt);
+
+          out.data[o+3]=255;
+
+        }else{
+
+          out.data[o]=0; out.data[o+1]=0; out.data[o+2]=0; out.data[o+3]=255;
+
+        }
+
+      }
+
+      this.fctx.putImageData(out,0,0);
+
+      this.cropFinalToContent();
+
+      this.addFinalLabel();
+
+      this.mode="built";
+
+      this.isBuilding=false;
+
+      this.previewExport();
+
+      this.log("Final quality-blended mosaic built: "+this.finalCanvas.width+" × "+this.finalCanvas.height+".");
+
+    }catch(e){
+
+      this.isBuilding=false;
+
+      this.mode="error";
+
+      this.log("Build failed: "+e.message+"\nTry frame size 360/480, fewer frames, or max export 6 MP.");
+
+    }
+
+  }
+
+  accumulateFrame(f,x,y,w,h,accR,accG,accB,accA,weight,W,H,blendMode){
+
+    const temp=document.createElement("canvas");
+
+    temp.width=w;
+
+    temp.height=h;
+
+    const t=temp.getContext("2d",{willReadFrequently:true});
+
+    t.imageSmoothingEnabled=true;
+
+    t.imageSmoothingQuality="high";
+
+    t.drawImage(f.canvas,0,0,w,h);
+
+    const img=t.getImageData(0,0,w,h);
+
+    const d=img.data;
+
+    const qBase=Math.max(0.25,Math.min(2.2,(f.quality||20)/26));
+
+    const cBase=Math.max(0.35,Math.min(1.4,(f.confidence||50)/75));
+
+    for(let yy=0;yy<h;yy++){
+
+      const fy=yy/(h-1 || 1);
+
+      const edgeY=Math.min(fy,1-fy);
+
+      for(let xx=0;xx<w;xx++){
+
+        const fx=xx/(w-1 || 1);
+
+        const edgeX=Math.min(fx,1-fx);
+
+        const feather=Math.min(1,Math.pow(Math.min(edgeX,edgeY)*8,0.75));
+
+        const ii=(yy*w+xx)*4;
+
+        const tx=x+xx;
+
+        const ty=y+yy;
+
+        if(tx<0||ty<0||tx>=W||ty>=H)continue;
+
+        const idx=ty*W+tx;
+
+        const localSharp=this.localSharpness(d,w,h,xx,yy);
+
+        let wt=(0.20+feather*0.80)*qBase*cBase*(0.70+localSharp*0.30);
+
+        if(blendMode==="top") wt=feather*0.8+0.2;
+
+        if(blendMode==="average") wt=0.6+feather*0.4;
+
+        accR[idx]+=d[ii]*wt;
+
+        accG[idx]+=d[ii+1]*wt;
+
+        accB[idx]+=d[ii+2]*wt;
+
+        accA[idx]+=255*wt;
+
+        weight[idx]+=wt;
+
+      }
+
+    }
+
+  }
+
+  localSharpness(d,w,h,x,y){
+
+    const x2=Math.min(w-1,x+1);
+
+    const y2=Math.min(h-1,y+1);
+
+    const i=(y*w+x)*4;
+
+    const r=(y*w+x2)*4;
+
+    const b=(y2*w+x)*4;
+
+    const l=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+
+    const lr=.299*d[r]+.587*d[r+1]+.114*d[r+2];
+
+    const lb=.299*d[b]+.587*d[b+1]+.114*d[b+2];
+
+    return Math.min(1,(Math.abs(l-lr)+Math.abs(l-lb))/90);
+
+  }
+
+  cropFinalToContent(){
+
+    const W=this.finalCanvas.width,H=this.finalCanvas.height;
+
+    const img=this.fctx.getImageData(0,0,W,H);
+
+    const d=img.data;
+
+    let minX=W,minY=H,maxX=0,maxY=0;
+
+    for(let y=0;y<H;y+=2){
+
+      for(let x=0;x<W;x+=2){
+
+        const i=(y*W+x)*4;
+
+        if(d[i]+d[i+1]+d[i+2]>18){
+
+          if(x<minX)minX=x;
+
+          if(y<minY)minY=y;
+
+          if(x>maxX)maxX=x;
+
+          if(y>maxY)maxY=y;
+
+        }
+
+      }
+
+    }
+
+    if(maxX<=minX||maxY<=minY)return;
+
+    minX=Math.max(0,minX-20);
+
+    minY=Math.max(0,minY-20);
+
+    maxX=Math.min(W,maxX+20);
+
+    maxY=Math.min(H,maxY+20);
+
+    const cw=maxX-minX;
+
+    const ch=maxY-minY;
+
+    const cropped=this.fctx.getImageData(minX,minY,cw,ch);
+
+    this.finalCanvas.width=cw;
+
+    this.finalCanvas.height=ch;
+
+    this.fctx.putImageData(cropped,0,0);
+
+  }
+
+  addFinalLabel(){
+
+    const ctx=this.fctx;
+
+    ctx.fillStyle="rgba(0,0,0,.45)";
+
+    ctx.fillRect(16,16,720,82);
+
+    ctx.fillStyle="white";
+
+    ctx.font="28px -apple-system,BlinkMacSystemFont,sans-serif";
+
+    ctx.fillText("MVX Spatial Mosaic Panorama V3",34,50);
+
+    ctx.font="16px -apple-system,BlinkMacSystemFont,sans-serif";
+
+    ctx.fillText("Frames: "+this.frames.length+" • confidence: "+this.avgConfidence+"% • quality-map blended browser geometry",34,78);
+
+  }
+
+  previewExport(){
+
+    if(this.isBuilding){
+
+      this.log("Still building. Wait a moment.");
+
+      return;
+
+    }
+
+    if(this.frames.length && this.mode!=="built"){
+
+      this.log("Build Final Mosaic first, then preview/export.");
+
+      return;
+
+    }
+
+    try{
+
+      this.exportPreview.src=this.finalCanvas.toDataURL("image/jpeg",0.88);
+
+      this.log("Export preview created.");
+
+    }catch(e){
+
+      this.log("Preview failed. Mosaic may be too large. Try fewer frames or smaller frame size.");
+
+    }
+
+  }
+
+  openExportImage(){
+
+    if(this.frames.length && this.mode!=="built"){
+
+      this.log("Build Final Mosaic first.");
+
+      return;
+
+    }
+
+    try{
+
+      const url=this.finalCanvas.toDataURL("image/png");
+
+      const win=window.open();
+
+      if(win){
+
+        win.document.write("<title>MVX Spatial Mosaic Export</title><body style='margin:0;background:#000'><img src='"+url+"' style='width:100%;height:auto'></body>");
+
+      }else{
+
+        this.exportPreview.src=url;
+
+        this.log("Popup blocked. Preview shown below. Long-press image.");
+
+      }
+
+    }catch(e){
+
+      this.log("Open image failed. Try Download JPEG or lower output size.");
+
+    }
+
+  }
+
+  exportPNG(){
+
+    if(this.frames.length && this.mode!=="built"){
+
+      this.log("Build Final Mosaic first.");
+
+      return;
+
+    }
+
+    this.finalCanvas.toBlob(blob=>{
+
+      if(!blob){this.log("PNG failed. Try JPEG or smaller output.");return}
+
+      const url=URL.createObjectURL(blob);
+
+      const a=document.createElement("a");
+
+      a.href=url;
+
+      a.download="mvx_spatial_mosaic_v3.png";
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+
+      this.log("PNG download started. Check Files → Downloads on iPhone.");
+
+    },"image/png");
+
+  }
+
+  exportJPEG(){
+
+    if(this.frames.length && this.mode!=="built"){
+
+      this.log("Build Final Mosaic first.");
+
+      return;
+
+    }
+
+    this.finalCanvas.toBlob(blob=>{
+
+      if(!blob){this.log("JPEG failed. Try smaller output.");return}
+
+      const url=URL.createObjectURL(blob);
+
+      const a=document.createElement("a");
+
+      a.href=url;
+
+      a.download="mvx_spatial_mosaic_v3.jpg";
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+
+      this.log("JPEG download started. Check Files → Downloads on iPhone.");
+
+    },"image/jpeg",0.92);
+
+  }
+
+  exportJSON(){
+
+    const data={
+
+      app:"MVX Spatial Mosaic Panorama V3",
+
+      created:new Date().toISOString(),
+
+      note:"Browser camera-based 2D expanding mosaic. Uses X/Y visual matching, drift guard, quality-map blending, seam feathering, and content crop. Not true LiDAR or metric 3D.",
+
+      frames:this.frames.map((f,i)=>({
+
+        index:i+1,width:f.width,height:f.height,x:f.x,y:f.y,
+
+        confidence:f.confidence,score:f.score,quality:f.quality,
+
+        heading:f.heading,pitch:f.pitch,roll:f.roll,time:f.time,match:f.match
+
+      })),
+
+      bounds:this.bounds,
+
+      output:{width:this.finalCanvas.width,height:this.finalCanvas.height},
+
+      avgConfidence:this.avgConfidence
+
+    };
+
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+
+    const url=URL.createObjectURL(blob);
+
+    const a=document.createElement("a");
+
+    a.href=url;
+
+    a.download="mvx_spatial_mosaic_v3_metadata.json";
+
+    a.click();
+
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+
+  }
+
+  drawThumbs(){
+
+    const w=this.thumb.width,h=this.thumb.height;
+
+    this.thctx.fillStyle="#05070d";
+
+    this.thctx.fillRect(0,0,w,h);
+
+    this.thctx.fillStyle="white";
+
+    this.thctx.font="26px -apple-system,BlinkMacSystemFont,sans-serif";
+
+    this.thctx.fillText("Latest Captured Frames",24,40);
+
+    if(!this.frames.length){
+
+      this.thctx.font="20px sans-serif";
+
+      this.thctx.fillStyle="#9fb0c8";
+
+      this.thctx.fillText("No frames captured yet.",24,78);
+
+      return;
+
+    }
+
+    const cols=4;
+
+    const visible=this.frames.slice(-24);
+
+    const rows=Math.ceil(visible.length/cols);
+
+    const gap=10;
+
+    const cellW=(w-gap*(cols+1))/cols;
+
+    const cellH=Math.min(92,(h-70-gap*(rows+1))/Math.max(1,rows));
+
+    visible.forEach((f,i)=>{
+
+      const globalIndex=this.frames.length-visible.length+i+1;
+
+      const col=i%cols,row=Math.floor(i/cols);
+
+      const x=gap+col*(cellW+gap);
+
+      const y=70+gap+row*(cellH+gap);
+
+      this.thctx.drawImage(f.canvas,x,y,cellW,cellH);
+
+      this.thctx.strokeStyle=f.confidence<20?"#b52d42":"#2f7dff";
+
+      this.thctx.lineWidth=2;
+
+      this.thctx.strokeRect(x,y,cellW,cellH);
+
+      this.thctx.fillStyle="rgba(0,0,0,.65)";
+
+      this.thctx.fillRect(x+6,y+6,98,28);
+
+      this.thctx.fillStyle="white";
+
+      this.thctx.font="16px sans-serif";
+
+      this.thctx.fillText(globalIndex+" • "+Math.round(f.confidence||0)+"%",x+12,y+26);
+
+    });
+
+    this.thctx.fillStyle="#9fb0c8";
+
+    this.thctx.font="16px sans-serif";
+
+    this.thctx.fillText("Showing latest 24 only. Total saved frames: "+this.frames.length,24,h-18);
+
+  }
+
+  clearPreview(){
+
+    this.pctx.fillStyle="#02040a";
+
+    this.pctx.fillRect(0,0,this.preview.width,this.preview.height);
+
+    this.pctx.fillStyle="#dce8ff";
+
+    this.pctx.font="32px sans-serif";
+
+    this.pctx.fillText("Draft mosaic preview will appear here.",40,this.preview.height/2);
+
+    this.fctx.fillStyle="#02040a";
+
+    this.fctx.fillRect(0,0,this.finalCanvas.width,this.finalCanvas.height);
+
+    this.fctx.fillStyle="#dce8ff";
+
+    this.fctx.font="32px sans-serif";
+
+    this.fctx.fillText("Final export will appear here.",40,this.finalCanvas.height/2);
+
+  }
+
+  drawHUD(){
+
+    const w=this.hud.width,h=this.hud.height;
+
+    this.hctx.fillStyle="#000";
+
+    this.hctx.fillRect(0,0,w,h);
+
+    if(this.cameraReady)this.hctx.drawImage(this.video,0,0,w,h);
+
+    this.hctx.strokeStyle="rgba(65,214,255,.9)";
+
+    this.hctx.lineWidth=3;
+
+    this.hctx.strokeRect(w*.08,h*.14,w*.84,h*.66);
+
+    this.hctx.strokeStyle="rgba(62,230,143,.75)";
+
+    this.hctx.beginPath();
+
+    this.hctx.moveTo(w/2,0);this.hctx.lineTo(w/2,h);
+
+    this.hctx.moveTo(0,h/2);this.hctx.lineTo(w,h/2);
+
+    this.hctx.stroke();
+
+    this.hctx.fillStyle="rgba(0,0,0,.68)";
+
+    this.hctx.fillRect(18,18,530,124);
+
+    this.hctx.fillStyle="white";
+
+    this.hctx.font="24px -apple-system,BlinkMacSystemFont,sans-serif";
+
+    this.hctx.fillText("Spatial Mosaic V3 HUD",34,52);
+
+    this.hctx.font="17px sans-serif";
+
+    this.hctx.fillText("Frames: "+this.frames.length,34,82);
+
+    this.hctx.fillText("Mode: "+this.mode,34,108);
+
+    this.hctx.fillText("Heading: "+(this.hasMotion?this.heading.toFixed(1)+"°":"manual/visual"),34,132);
+
+  }
+
+  updateMetrics(){
+
+    document.getElementById("framesVal").textContent=this.frames.length;
+
+    document.getElementById("modeVal").textContent=this.mode;
+
+    document.getElementById("autoVal").textContent=this.auto?"on":"off";
+
+    document.getElementById("placeVal").textContent=this.lastPlacement;
+
+    document.getElementById("sizeVal").textContent=this.finalCanvas.width+"×"+this.finalCanvas.height;
+
+    document.getElementById("headingVal").textContent=this.hasMotion?this.heading.toFixed(1)+"°":"--";
+
+    document.getElementById("pitchVal").textContent=this.hasMotion?Math.round(this.pitch)+" / "+Math.round(this.roll):"--";
+
+    document.getElementById("confVal").textContent=this.frames.length?this.avgConfidence+"%":"--";
+
+    document.getElementById("progressBar").style.width=Math.min(100,this.frames.length/24*100)+"%";
+
+  }
+
+  reset(){
+
+    if(this.auto)this.toggleAuto();
+
+    this.frames=[];
+
+    this.mode=this.cameraReady?"camera":"idle";
+
+    this.isBuilding=false;
+
+    this.lastPlacement="--";
+
+    this.avgConfidence=0;
+
+    this.bounds={minX:0,minY:0,maxX:0,maxY:0};
+
+    this.exportPreview.removeAttribute("src");
+
+    this.drawThumbs();
+
+    this.clearPreview();
+
+    this.log("Reset complete.");
+
+  }
+
+  loop(){
+
+    this.drawHUD();
+
+    this.updateMetrics();
+
+    requestAnimationFrame(()=>this.loop());
+
+  }
+
+}
+
+const app=new MVXSpatialMosaicV3();
+
+</script>
+
+</body>
+
+</html>
