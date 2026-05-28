@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MVX Spatial Mosaic V4 Crystal — Export Fixed</title>
+<style>
+:root{--panel:#101827;--text:#f7fbff;--muted:#9fb0c8;--blue:#2f7dff;--green:#10a765;--gold:#bd8100;--red:#b52d42;--cyan:#41d6ff;--border:rgba(255,255,255,.15)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:radial-gradient(circle at top,#17233a,#05070d 60%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:18px 14px;background:rgba(8,13,24,.96);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+h1{font-size:23px;margin:0} h2{font-size:18px;margin:0 0 8px} small{color:var(--muted)}
+main{padding:12px;max-width:1200px;margin:auto}
+.panel{background:rgba(16,24,39,.96);border:1px solid var(--border);border-radius:18px;padding:13px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,input,select,a.exportLink{border-radius:13px;border:1px solid var(--border);padding:10px 12px;font-size:15px;text-decoration:none;display:inline-block}
+button,a.exportLink{background:var(--blue);color:white;font-weight:800}
+button.good,a.good{background:var(--green)} button.warn{background:var(--gold)} button.bad{background:var(--red)} button.secondary,a.secondary{background:#263653}
+input,select{background:#070b13;color:white}
+canvas,video,img{width:100%;background:#000;border:1px solid var(--border);border-radius:18px;margin-top:10px;display:block}
+pre{white-space:pre-wrap;background:#05070d;color:#dce8ff;border:1px solid var(--border);border-radius:16px;padding:12px;min-height:100px;overflow:auto}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:950px){.grid{grid-template-columns:1fr 1fr}}
+.metric{display:grid;grid-template-columns:1fr 1fr;gap:8px}@media(min-width:900px){.metric{grid-template-columns:repeat(4,1fr)}}
+.card{background:#05070d;border:1px solid var(--border);border-radius:14px;padding:10px}.value{font-size:21px;font-weight:900;color:#dfffe7}
+.progressOuter{width:100%;height:16px;border-radius:999px;background:#05070d;border:1px solid var(--border);overflow:hidden}
+.progressInner{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--cyan),var(--blue))}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#22314f;color:#cfe0ff;margin:2px;font-size:12px}
+.notice{color:#ffe7a8;background:rgba(189,129,0,.16);border:1px solid rgba(255,209,102,.25);padding:10px;border-radius:14px}
+#downloadLinks{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>MVX Spatial Mosaic V4 — Crystal Clear Export Fixed</h1>
+<small>Capture fixed • auto capture fixed • iPhone-safe export/share/open image</small>
+</header>
+
+<main>
+
+<section class="panel">
+<h2>1. Capture Controls</h2>
+<div class="row">
+<button class="good" onclick="window.app.startCamera()">Start Camera</button>
+<button class="good" onclick="window.app.startMotion()">Start Motion Sensors</button>
+<button class="warn" onclick="window.app.startMosaic()">Start New Mosaic</button>
+<button class="good" onclick="window.app.captureFrame()">Capture Sharp Frame</button>
+<button class="secondary" onclick="window.app.toggleAuto()">Auto Capture</button>
+<button class="warn" onclick="window.app.buildFinal()">Build Crystal Mosaic</button>
+<button class="bad" onclick="window.app.reset()">Reset</button>
+</div>
+<div style="margin-top:12px"><div class="progressOuter"><div id="progressBar" class="progressInner"></div></div></div>
+</section>
+
+<section class="panel">
+<h2>2. Settings</h2>
+<div class="row">
+<label>Frame size</label>
+<select id="frameSize"><option value="480">480 safest</option><option value="640" selected>640 sharper</option><option value="800">800 heavy</option></select>
+<label>Search</label>
+<select id="searchRange"><option value="80">Fast</option><option value="140" selected>Balanced</option><option value="220">Deep</option></select>
+<label>Sharpness minimum</label>
+<select id="sharpMin"><option value="0" selected>Accept all</option><option value="8">Loose</option><option value="14">Balanced</option><option value="22">Strict</option></select>
+<label>Auto interval</label>
+<select id="autoInterval"><option value="900">0.9s</option><option value="1400" selected>1.4s</option><option value="2000">2.0s</option></select>
+<label>Max export</label>
+<select id="maxPixels"><option value="6000000">6 MP safest</option><option value="9000000" selected>9 MP</option><option value="12000000">12 MP</option></select>
+</div>
+</section>
+
+<section class="panel">
+<h2>Live Metrics</h2>
+<div class="metric">
+<div class="card"><small>Frames</small><div id="framesVal" class="value">0</div></div>
+<div class="card"><small>Rejected Blur</small><div id="rejectVal" class="value">0</div></div>
+<div class="card"><small>Mode</small><div id="modeVal" class="value">idle</div></div>
+<div class="card"><small>Auto</small><div id="autoVal" class="value">off</div></div>
+<div class="card"><small>Placement</small><div id="placeVal" class="value">--</div></div>
+<div class="card"><small>Mosaic Size</small><div id="sizeVal" class="value">--</div></div>
+<div class="card"><small>Sharpness</small><div id="sharpVal" class="value">--</div></div>
+<div class="card"><small>Confidence</small><div id="confVal" class="value">--</div></div>
+</div>
+</section>
+
+<div class="grid">
+<section class="panel">
+<h2>Live Camera HUD</h2>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="hudCanvas" width="640" height="360"></canvas>
+</section>
+<section class="panel">
+<h2>Latest Captured Frames</h2>
+<canvas id="thumbCanvas" width="900" height="520"></canvas>
+</section>
+</div>
+
+<section class="panel">
+<h2>Draft Crystal Mosaic</h2>
+<canvas id="previewCanvas" width="1600" height="900"></canvas>
+</section>
+
+<section class="panel">
+<h2>Final Crystal Export</h2>
+<canvas id="finalCanvas" width="1600" height="900"></canvas>
+<img id="exportPreview" alt="Export preview appears here">
+</section>
+
+<section class="panel">
+<h2>Export</h2>
+<div class="row">
+<button class="good" onclick="window.app.previewExport()">Preview Export Image</button>
+<button class="good" onclick="window.app.openExportImage()">Open Image Tab</button>
+<button class="good" onclick="window.app.shareImage('png')">Save/Share PNG</button>
+<button class="good" onclick="window.app.shareImage('jpeg')">Save/Share JPEG</button>
+<button class="secondary" onclick="window.app.createDownloadLinks()">Create Download Links</button>
+<button class="secondary" onclick="window.app.exportJSON()">Export JSON</button>
+</div>
+<div id="downloadLinks"></div>
+<small>Best iPhone method: tap Save/Share PNG, then Save Image or Save to Files. If that fails, tap Create Download Links, then long-press/open the created link.</small>
+</section>
+
+<section class="panel">
+<h2>Status</h2>
+<div class="notice">Build the mosaic first, then export. iPhone Safari may block automatic downloads inside previews, so this version uses Share API + visible fallback links.</div>
+<pre id="status">Ready.</pre>
+<span class="badge">iPhone-safe share</span><span class="badge">download fallback links</span><span class="badge">open image fallback</span>
+</section>
+
+</main>
+
+<script>
+class MVXSpatialMosaicV4Fixed{
+constructor(){
+this.video=document.getElementById("video");
+this.hud=document.getElementById("hudCanvas"); this.hctx=this.hud.getContext("2d",{willReadFrequently:true});
+this.thumb=document.getElementById("thumbCanvas"); this.thctx=this.thumb.getContext("2d",{willReadFrequently:true});
+this.preview=document.getElementById("previewCanvas"); this.pctx=this.preview.getContext("2d",{willReadFrequently:true});
+this.finalCanvas=document.getElementById("finalCanvas"); this.fctx=this.finalCanvas.getContext("2d",{willReadFrequently:true});
+this.exportPreview=document.getElementById("exportPreview");
+this.frames=[]; this.cameraReady=false; this.mode="idle"; this.auto=false; this.autoTimer=null; this.isBuilding=false;
+this.rejectedBlur=0; this.lastSharpness=0; this.heading=0; this.pitch=0; this.roll=0; this.hasMotion=false;
+this.bounds={minX:0,minY:0,maxX:0,maxY:0}; this.lastPlacement="--"; this.avgConfidence=0;
+this.drawThumbs(); this.clearPreview(); this.loop();
+}
+log(x){document.getElementById("status").textContent=x}
+async startCamera(){
+try{
+const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
+this.video.srcObject=stream; this.video.setAttribute("playsinline",""); this.video.muted=true;
+await this.video.play(); await this.waitForVideoReady();
+this.cameraReady=true; this.mode="camera";
+this.log("Camera ready: "+this.video.videoWidth+"×"+this.video.videoHeight);
+}catch(e){this.log("Camera error: "+e.message)}
+}
+async waitForVideoReady(){
+const start=performance.now();
+while(performance.now()-start<3000){
+if(this.video.readyState>=2&&this.video.videoWidth>0)return true;
+await new Promise(r=>setTimeout(r,80));
+}
+return false;
+}
+async startMotion(){
+try{
+if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+const p=await DeviceOrientationEvent.requestPermission(); if(p!=="granted"){this.log("Motion denied.");return}
+}
+window.addEventListener("deviceorientation",e=>{
+let h=null;if(typeof e.webkitCompassHeading==="number")h=e.webkitCompassHeading;else if(typeof e.alpha==="number")h=(360-e.alpha)%360;
+if(h!==null)this.heading=(h+360)%360;this.pitch=e.beta||0;this.roll=e.gamma||0;this.hasMotion=true;
+},true);
+this.log("Motion sensors started.");
+}catch(e){this.log("Motion error: "+e.message)}
+}
+startMosaic(){
+if(!this.cameraReady){this.log("Start camera first.");return}
+if(this.auto)this.stopAuto();
+this.frames=[];this.mode="capturing";this.isBuilding=false;this.rejectedBlur=0;this.lastSharpness=0;
+this.bounds={minX:0,minY:0,maxX:0,maxY:0};this.lastPlacement="--";this.avgConfidence=0;
+this.exportPreview.removeAttribute("src");document.getElementById("downloadLinks").innerHTML="";
+this.clearPreview();this.drawThumbs();this.updateMetrics();
+this.log("New mosaic started.");
+}
+async captureFrame(){
+if(!this.cameraReady){this.log("Start camera first.");return}
+if(this.isBuilding){this.log("Wait until build finishes.");return}
+await this.waitForVideoReady();
+if(this.mode==="idle"||this.mode==="camera")this.startMosaic();
+const frame=this.makeFrame(); if(!frame){this.log("Frame capture failed.");return}
+this.lastSharpness=frame.sharpness;
+const sharpMin=Number(document.getElementById("sharpMin").value)||0;
+if(sharpMin>0&&frame.sharpness<sharpMin){this.rejectedBlur++;this.log("Rejected blurry frame: "+frame.sharpness);this.updateMetrics();return}
+if(this.frames.length===0){frame.x=0;frame.y=0;frame.confidence=100;frame.match="origin";this.frames.push(frame)}
+else{const placed=this.placeFrame(frame);this.frames.push(placed)}
+this.updateBounds();this.renderPreview();this.drawThumbs();this.mode=this.auto?"auto":"capturing";this.updateMetrics();
+this.log("Captured frame "+this.frames.length+" • sharpness "+frame.sharpness);
+}
+makeFrame(){
+const vw=this.video.videoWidth,vh=this.video.videoHeight;if(!vw||!vh)return null;
+const outW=Number(document.getElementById("frameSize").value)||640;
+const cropX=vw*.04,cropY=vh*.04,cropW=vw*.92,cropH=vh*.92,outH=Math.round(outW*(cropH/cropW));
+const c=document.createElement("canvas");c.width=outW;c.height=outH;
+const ctx=c.getContext("2d",{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ctx.drawImage(this.video,cropX,cropY,cropW,cropH,0,0,outW,outH);
+this.autoLevel(c);this.sharpenLight(c);
+const small=this.makeSmall(c,128),quality=this.qualityScore(c),sharpness=this.sharpnessScore(c);
+return{canvas:c,small,width:c.width,height:c.height,time:new Date().toISOString(),heading:this.heading,pitch:this.pitch,roll:this.roll,x:0,y:0,confidence:0,score:0,quality,sharpness,match:""};
+}
+autoLevel(c){
+const ctx=c.getContext("2d",{willReadFrequently:true}),img=ctx.getImageData(0,0,c.width,c.height),d=img.data;let min=255,max=0;
+for(let i=0;i<d.length;i+=32){const l=.299*d[i]+.587*d[i+1]+.114*d[i+2];if(l<min)min=l;if(l>max)max=l}
+const gain=Math.min(1.12,255/Math.max(1,max-min)*.66);
+for(let i=0;i<d.length;i+=4){d[i]=Math.max(0,Math.min(255,(d[i]-128)*gain+130));d[i+1]=Math.max(0,Math.min(255,(d[i+1]-128)*gain+130));d[i+2]=Math.max(0,Math.min(255,(d[i+2]-128)*gain+130))}
+ctx.putImageData(img,0,0);
+}
+sharpenLight(c){
+const ctx=c.getContext("2d",{willReadFrequently:true}),img=ctx.getImageData(0,0,c.width,c.height),src=new Uint8ClampedArray(img.data),d=img.data,w=c.width,h=c.height;
+for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;for(let ch=0;ch<3;ch++){const center=src[i+ch]*1.32,blur=(src[i-4+ch]+src[i+4+ch]+src[i-w*4+ch]+src[i+w*4+ch])*.08;d[i+ch]=Math.max(0,Math.min(255,center-blur))}}
+ctx.putImageData(img,0,0);
+}
+sharpnessScore(c){
+const img=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height).data;let total=0,edges=0,n=0;
+for(let y=2;y<c.height-2;y+=8)for(let x=2;x<c.width-2;x+=8){const i=(y*c.width+x)*4,r=(y*c.width+x+1)*4,b=((y+1)*c.width+x)*4;const l=.299*img[i]+.587*img[i+1]+.114*img[i+2],lr=.299*img[r]+.587*img[r+1]+.114*img[r+2],lb=.299*img[b]+.587*img[b+1]+.114*img[b+2];const g=Math.abs(l-lr)+Math.abs(l-lb);total+=g*g;if(g>38)edges++;n++}
+return Math.round(Math.sqrt(total/Math.max(1,n))*.9+edges/Math.max(1,n)*220);
+}
+qualityScore(c){return this.sharpnessScore(c)}
+makeSmall(c,w){const s=document.createElement("canvas");s.width=w;s.height=Math.round(w*c.height/c.width);s.getContext("2d",{willReadFrequently:true}).drawImage(c,0,0,s.width,s.height);return s}
+placeFrame(frame){
+const prev=this.frames[this.frames.length-1];let best={score:Infinity,x:prev.x+prev.width*.48,y:prev.y,confidence:30,match:"fallback"};
+for(const base of [prev,this.frames[this.frames.length-2],this.frames[0]].filter(Boolean)){const local=this.findBestOffset(base.small,frame.small),scale=frame.width/frame.small.width,absX=base.x+local.dx*scale,absY=base.y+local.dy*scale;if(local.score<best.score)best={score:local.score,x:absX,y:absY,confidence:local.confidence,match:"visual"}}
+frame.x=best.x;frame.y=best.y;frame.score=best.score;frame.confidence=best.confidence;frame.match=best.match;this.lastPlacement=Math.round(best.confidence)+"%";return frame;
+}
+findBestOffset(a,b){
+const range=Number(document.getElementById("searchRange").value)||140,aw=a.width,ah=a.height,bw=b.width,bh=b.height;
+const ad=a.getContext("2d",{willReadFrequently:true}).getImageData(0,0,aw,ah).data,bd=b.getContext("2d",{willReadFrequently:true}).getImageData(0,0,bw,bh).data;
+let bestScore=Infinity,bestDx=Math.round(aw*.48),bestDy=0;
+for(let dy=-range*.5;dy<=range*.5;dy+=8)for(let dx=-range;dx<=range;dx+=8){const s=this.scoreOverlap(ad,bd,aw,ah,bw,bh,dx,dy,10);if(s.count>24&&s.value<bestScore){bestScore=s.value;bestDx=dx;bestDy=dy}}
+return{dx:bestDx,dy:bestDy,score:bestScore,confidence:Math.max(8,Math.min(100,Math.round(100-bestScore/3.2)))};
+}
+scoreOverlap(ad,bd,aw,ah,bw,bh,dx,dy,step){
+let diff=0,count=0;const ax0=Math.max(0,dx),ay0=Math.max(0,dy),bx0=Math.max(0,-dx),by0=Math.max(0,-dy),ow=Math.min(aw-ax0,bw-bx0),oh=Math.min(ah-ay0,bh-by0);
+if(ow<32||oh<32)return{value:999999,count:0};
+for(let y=oh*.12;y<oh*.88;y+=step)for(let x=ow*.12;x<ow*.88;x+=step){const ai=((ay0+y|0)*aw+(ax0+x|0))*4,bi=((by0+y|0)*bw+(bx0+x|0))*4;const al=.299*ad[ai]+.587*ad[ai+1]+.114*ad[ai+2],bl=.299*bd[bi]+.587*bd[bi+1]+.114*bd[bi+2];diff+=Math.abs(al-bl);count++}
+return{value:diff/Math.max(1,count),count};
+}
+toggleAuto(){if(!this.cameraReady){this.log("Start camera first.");return} if(this.auto){this.stopAuto();return} if(this.mode==="idle"||this.mode==="camera")this.startMosaic();this.auto=true;this.mode="auto";const ms=Number(document.getElementById("autoInterval").value)||1400;this.captureFrame();this.autoTimer=setInterval(()=>{if(this.auto)this.captureFrame()},ms);this.log("Auto capture ON.");}
+stopAuto(){this.auto=false;clearInterval(this.autoTimer);this.autoTimer=null;this.mode=this.cameraReady?"capturing":"idle";this.log("Auto capture OFF.")}
+updateBounds(){if(!this.frames.length)return;this.bounds={minX:Math.min(...this.frames.map(f=>f.x)),minY:Math.min(...this.frames.map(f=>f.y)),maxX:Math.max(...this.frames.map(f=>f.x+f.width)),maxY:Math.max(...this.frames.map(f=>f.y+f.height))};this.avgConfidence=Math.round(this.frames.reduce((a,f)=>a+(f.confidence||0),0)/this.frames.length)}
+renderPreview(){
+this.updateBounds();const W=this.preview.width,H=this.preview.height;this.pctx.fillStyle="#02040a";this.pctx.fillRect(0,0,W,H);
+if(!this.frames.length)return;
+const bw=this.bounds.maxX-this.bounds.minX||1,bh=this.bounds.maxY-this.bounds.minY||1,scale=Math.min(W/bw,H/bh)*.92,ox=(W-bw*scale)/2,oy=(H-bh*scale)/2;
+this.frames.forEach((f,i)=>{const x=ox+(f.x-this.bounds.minX)*scale,y=oy+(f.y-this.bounds.minY)*scale,w=f.width*scale,h=f.height*scale;this.pctx.drawImage(f.canvas,x,y,w,h);this.pctx.strokeStyle=i===this.frames.length-1?"#3ee68f":"rgba(47,125,255,.45)";this.pctx.strokeRect(x,y,w,h)})
+}
+async buildFinal(){
+if(this.auto)this.stopAuto();if(!this.frames.length){this.log("No frames captured.");return}
+this.isBuilding=true;this.mode="building";this.updateBounds();
+const margin=80,rawW=Math.ceil(this.bounds.maxX-this.bounds.minX+margin*2),rawH=Math.ceil(this.bounds.maxY-this.bounds.minY+margin*2),maxPixels=Number(document.getElementById("maxPixels").value)||9000000;
+let scale=rawW*rawH>maxPixels?Math.sqrt(maxPixels/(rawW*rawH)):1;
+this.finalCanvas.width=Math.max(500,Math.floor(rawW*scale));this.finalCanvas.height=Math.max(350,Math.floor(rawH*scale));
+this.fctx.fillStyle="#000";this.fctx.fillRect(0,0,this.finalCanvas.width,this.finalCanvas.height);
+for(const f of [...this.frames].sort((a,b)=>(a.sharpness||0)-(b.sharpness||0))){const x=Math.round((f.x-this.bounds.minX+margin)*scale),y=Math.round((f.y-this.bounds.minY+margin)*scale),w=Math.round(f.width*scale),h=Math.round(f.height*scale);this.fctx.globalAlpha=1;this.fctx.drawImage(f.canvas,x,y,w,h);this.fctx.globalAlpha=.14;this.fctx.drawImage(f.canvas,x-12,y-12,w+24,h+24)}
+this.fctx.globalAlpha=1;this.cropFinalToContent();this.addFinalLabel();this.mode="built";this.isBuilding=false;this.previewExport();this.log("Crystal mosaic built.");
+}
+cropFinalToContent(){const W=this.finalCanvas.width,H=this.finalCanvas.height,img=this.fctx.getImageData(0,0,W,H),d=img.data;let minX=W,minY=H,maxX=0,maxY=0;for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){const i=(y*W+x)*4;if(d[i]+d[i+1]+d[i+2]>24){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y)}}if(maxX<=minX)return;minX=Math.max(0,minX-20);minY=Math.max(0,minY-20);maxX=Math.min(W,maxX+20);maxY=Math.min(H,maxY+20);const cropped=this.fctx.getImageData(minX,minY,maxX-minX,maxY-minY);this.finalCanvas.width=maxX-minX;this.finalCanvas.height=maxY-minY;this.fctx.putImageData(cropped,0,0)}
+addFinalLabel(){this.fctx.fillStyle="rgba(0,0,0,.45)";this.fctx.fillRect(16,16,760,82);this.fctx.fillStyle="white";this.fctx.font="28px sans-serif";this.fctx.fillText("MVX Spatial Mosaic V4 Crystal Export Fixed",34,50);this.fctx.font="16px sans-serif";this.fctx.fillText("Frames: "+this.frames.length+" • confidence: "+this.avgConfidence+"%",34,78)}
+ensureBuilt(){if(this.frames.length&&this.mode!=="built"){this.log("Build Crystal Mosaic first.");return false}return true}
+previewExport(){if(!this.ensureBuilt())return;this.exportPreview.src=this.finalCanvas.toDataURL("image/jpeg",.9);this.log("Preview created. Long-press the image to save if downloads fail.")}
+canvasToBlob(type="image/png",quality=.92){return new Promise(resolve=>this.finalCanvas.toBlob(resolve,type,quality))}
+async shareImage(kind="png"){
+if(!this.ensureBuilt())return;
+const type=kind==="jpeg"?"image/jpeg":"image/png",ext=kind==="jpeg"?"jpg":"png";
+const blob=await this.canvasToBlob(type,.93);
+if(!blob){this.log("Export failed: blob was empty.");return}
+const file=new File([blob],"mvx_spatial_mosaic_v4."+ext,{type});
+if(navigator.canShare&&navigator.canShare({files:[file]})){
+try{await navigator.share({files:[file],title:"MVX Spatial Mosaic V4"});this.log("Share sheet opened.");return}catch(e){this.log("Share canceled or failed. Creating fallback link.")}
+}
+this.createDownloadFromBlob(blob,"mvx_spatial_mosaic_v4."+ext,type);
+}
+async createDownloadLinks(){
+if(!this.ensureBuilt())return;
+const png=await this.canvasToBlob("image/png");
+const jpg=await this.canvasToBlob("image/jpeg",.93);
+document.getElementById("downloadLinks").innerHTML="";
+if(png)this.createDownloadFromBlob(png,"mvx_spatial_mosaic_v4.png","image/png",false);
+if(jpg)this.createDownloadFromBlob(jpg,"mvx_spatial_mosaic_v4.jpg","image/jpeg",false);
+this.log("Download links created below the buttons.");
+}
+createDownloadFromBlob(blob,name,type,clear=true){
+if(clear)document.getElementById("downloadLinks").innerHTML="";
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");a.className="exportLink good";a.href=url;a.download=name;a.target="_blank";a.rel="noopener";a.textContent="Open / Download "+name;
+document.getElementById("downloadLinks").appendChild(a);
+setTimeout(()=>URL.revokeObjectURL(url),120000);
+}
+openExportImage(){if(!this.ensureBuilt())return;const url=this.finalCanvas.toDataURL("image/png");const win=window.open();if(win){win.document.write("<body style='margin:0;background:#000'><img src='"+url+"' style='width:100%;height:auto'></body>")}else{this.exportPreview.src=url;this.log("Popup blocked. Long-press preview image.")}}
+exportPNG(){this.shareImage("png")}
+exportJPEG(){this.shareImage("jpeg")}
+exportJSON(){const data={app:"MVX Spatial Mosaic V4",created:new Date().toISOString(),frames:this.frames.length,bounds:this.bounds,output:{width:this.finalCanvas.width,height:this.finalCanvas.height},avgConfidence:this.avgConfidence};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});this.createDownloadFromBlob(blob,"mvx_spatial_mosaic_v4_metadata.json","application/json")}
+drawThumbs(){const w=this.thumb.width,h=this.thumb.height;this.thctx.fillStyle="#05070d";this.thctx.fillRect(0,0,w,h);this.thctx.fillStyle="white";this.thctx.font="26px sans-serif";this.thctx.fillText("Latest Captured Frames",24,40);const visible=this.frames.slice(-24),cols=4,gap=10,cellW=(w-gap*(cols+1))/cols,cellH=92;visible.forEach((f,i)=>{const x=gap+(i%cols)*(cellW+gap),y=70+gap+Math.floor(i/cols)*(cellH+gap);this.thctx.drawImage(f.canvas,x,y,cellW,cellH);this.thctx.strokeStyle="#2f7dff";this.thctx.strokeRect(x,y,cellW,cellH)})}
+clearPreview(){this.pctx.fillStyle="#02040a";this.pctx.fillRect(0,0,this.preview.width,this.preview.height);this.fctx.fillStyle="#02040a";this.fctx.fillRect(0,0,this.finalCanvas.width,this.finalCanvas.height)}
+drawHUD(){const w=this.hud.width,h=this.hud.height;this.hctx.fillStyle="#000";this.hctx.fillRect(0,0,w,h);if(this.cameraReady&&this.video.readyState>=2)this.hctx.drawImage(this.video,0,0,w,h);this.hctx.fillStyle="rgba(0,0,0,.65)";this.hctx.fillRect(18,18,570,130);this.hctx.fillStyle="white";this.hctx.font="24px sans-serif";this.hctx.fillText("Spatial Mosaic V4 Export Fixed",34,52);this.hctx.font="17px sans-serif";this.hctx.fillText("Frames: "+this.frames.length+" • Mode: "+this.mode,34,82);this.hctx.fillText("Video: "+(this.video.videoWidth||0)+"×"+(this.video.videoHeight||0),34,108)}
+updateMetrics(){framesVal.textContent=this.frames.length;rejectVal.textContent=this.rejectedBlur;modeVal.textContent=this.mode;autoVal.textContent=this.auto?"on":"off";placeVal.textContent=this.lastPlacement;sizeVal.textContent=this.finalCanvas.width+"×"+this.finalCanvas.height;sharpVal.textContent=this.lastSharpness||"--";confVal.textContent=this.frames.length?this.avgConfidence+"%":"--";progressBar.style.width=Math.min(100,this.frames.length/24*100)+"%"}
+reset(){if(this.auto)this.stopAuto();this.frames=[];this.mode=this.cameraReady?"camera":"idle";this.rejectedBlur=0;this.lastSharpness=0;this.lastPlacement="--";this.avgConfidence=0;this.exportPreview.removeAttribute("src");document.getElementById("downloadLinks").innerHTML="";this.drawThumbs();this.clearPreview();this.log("Reset complete.")}
+loop(){this.drawHUD();this.updateMetrics();requestAnimationFrame(()=>this.loop())}
+}
+window.app=new MVXSpatialMosaicV4Fixed();
+window.app.enableCamera=window.app.startCamera.bind(window.app);
+window.app.startNew=window.app.startMosaic.bind(window.app);
+window.app.capture=window.app.captureFrame.bind(window.app);
+window.app.build=window.app.buildFinal.bind(window.app);
+</script>
+</body>
+</html>
