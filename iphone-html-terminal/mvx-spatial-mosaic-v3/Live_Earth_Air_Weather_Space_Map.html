@@ -1,0 +1,1199 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+
+<title>MVX Earth Cockpit Pro V2</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<link rel="stylesheet" href="https://unpkg.com/cesium@1.121.1/Build/Cesium/Widgets/widgets.css">
+
+<style>
+
+html,body{margin:0;background:#05070d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
+header{padding:14px;background:#08111f;border-bottom:1px solid rgba(255,255,255,.15)}
+
+h1{margin:0;font-size:23px}
+
+small{color:#9fb0c8}
+
+main{padding:12px;max-width:1500px;margin:auto}
+
+.panel{background:#101827;border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:13px;margin:12px 0}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+button,input,select{border-radius:12px;border:1px solid rgba(255,255,255,.15);padding:10px 12px;font-size:15px}
+
+button{background:#2f7dff;color:white;font-weight:800}
+
+button.good{background:#10a765}.warn{background:#bd8100}.bad{background:#b52d42}.secondary{background:#263653}
+
+input,select{background:#070b13;color:white}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+@media(min-width:1050px){.grid{grid-template-columns:1.2fr .8fr}}
+
+#map,#globe{height:650px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.15)}
+
+iframe,canvas{width:100%;background:#000;border:1px solid rgba(255,255,255,.15);border-radius:18px;margin-top:10px}
+
+iframe{height:540px}
+
+pre{white-space:pre-wrap;background:#05070d;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px;overflow:auto}
+
+.metric{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+
+@media(min-width:900px){.metric{grid-template-columns:repeat(4,1fr)}}
+
+.card{background:#05070d;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:10px}
+
+.value{font-size:20px;font-weight:900;color:#dfffe7}
+
+.forecast{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+
+@media(min-width:950px){.forecast{grid-template-columns:repeat(7,1fr)}}
+
+.day{background:#05070d;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:10px}
+
+.day .temp{font-size:22px;font-weight:900;color:#41d6ff}
+
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#22314f;color:#cfe0ff;margin:2px;font-size:12px}
+
+.planeIcon{width:30px;height:30px;filter:drop-shadow(0 0 8px #8b55ff)}
+
+.shipIcon,.quakeIcon,.fireIcon{font-size:24px;filter:drop-shadow(0 0 8px #41d6ff)}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>MVX Earth Cockpit Pro V2</h1>
+
+<small>2D physical map • 3D globe • aircraft • weather • earthquakes • wildfire events • AIS launchers • astronomy cockpit</small>
+
+</header>
+
+<main>
+
+<section class="panel">
+
+<h2>Mission Controls</h2>
+
+<div class="row">
+
+<label>Lat</label><input id="lat" value="28.278379548214232">
+
+<label>Lon</label><input id="lon" value="-81.66085555141042">
+
+<button class="good" onclick="app.setLocation()">Set Location</button>
+
+<button class="good" onclick="app.useGPS()">Use GPS</button>
+
+<button class="good" onclick="app.refreshAll()">Refresh All</button>
+
+<button class="warn" onclick="app.startAuto()">Auto Refresh</button>
+
+<button class="bad" onclick="app.stopAuto()">Stop Auto</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>Live Status</h2>
+
+<div class="metric">
+
+<div class="card"><small>Location</small><div id="locVal" class="value">--</div></div>
+
+<div class="card"><small>Aircraft</small><div id="airVal" class="value">--</div></div>
+
+<div class="card"><small>Weather</small><div id="weatherVal" class="value">--</div></div>
+
+<div class="card"><small>Wind</small><div id="windVal" class="value">--</div></div>
+
+<div class="card"><small>Earthquakes</small><div id="quakeVal" class="value">--</div></div>
+
+<div class="card"><small>Wildfires</small><div id="fireVal" class="value">--</div></div>
+
+<div class="card"><small>Rain Chance</small><div id="rainVal" class="value">--</div></div>
+
+<div class="card"><small>Updated</small><div id="updatedVal" class="value">--</div></div>
+
+</div>
+
+</section>
+
+<div class="grid">
+
+<section class="panel">
+
+<h2>2D Physical Map + Live Layers</h2>
+
+<div id="map"></div>
+
+<div class="row" style="margin-top:10px">
+
+<button class="secondary" onclick="app.toggleLayer('air')">Aircraft</button>
+
+<button class="secondary" onclick="app.toggleLayer('weather')">Weather</button>
+
+<button class="secondary" onclick="app.toggleLayer('quakes')">Earthquakes</button>
+
+<button class="secondary" onclick="app.toggleLayer('fires')">Wildfires</button>
+
+<button class="secondary" onclick="app.toggleLayer('ships')">AIS Ships</button>
+
+<button class="secondary" onclick="app.openADS()">ADS-B</button>
+
+<button class="secondary" onclick="app.openMarine()">MarineTraffic</button>
+
+<button class="secondary" onclick="app.openNOAA()">NOAA</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>Selected Object / Intelligence Card</h2>
+
+<pre id="info">Tap map markers after refresh.</pre>
+
+<h2>Live External Tools</h2>
+
+<div class="row">
+
+<button class="good" onclick="app.openADS()">ADS-B Exchange</button>
+
+<button class="good" onclick="app.openFR24()">Flightradar24</button>
+
+<button class="good" onclick="app.openMarine()">MarineTraffic</button>
+
+<button class="good" onclick="app.openVesselFinder()">VesselFinder</button>
+
+<button class="good" onclick="app.openNOAA()">NOAA</button>
+
+<button class="good" onclick="app.openRadar()">NWS Radar</button>
+
+<button class="good" onclick="app.openWindy()">Windy</button>
+
+<button class="good" onclick="app.openHeavens()">Satellite Passes</button>
+
+</div>
+
+</section>
+
+</div>
+
+<section class="panel">
+
+<h2>3D Globe Airspace / Weather Viewer</h2>
+
+<div id="globe"></div>
+
+<div class="row" style="margin-top:10px">
+
+<button class="secondary" onclick="app.flyHome()">Fly Home</button>
+
+<button class="secondary" onclick="app.refreshAircraft3D()">Refresh 3D Aircraft</button>
+
+<button class="secondary" onclick="app.clear3D()">Clear 3D</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>7-Day Weather Intelligence</h2>
+
+<div id="forecast" class="forecast"></div>
+
+<canvas id="weatherChart" width="1300" height="420"></canvas>
+
+</section>
+
+<section class="panel">
+
+<h2>Real Astronomy / Satellite / Comet Cockpit</h2>
+
+<div class="row">
+
+<button class="good" onclick="app.openHeavens()">Heavens-Above Satellites</button>
+
+<button class="good" onclick="app.openStellarium()">Stellarium Real-Time Sky</button>
+
+<button class="good" onclick="app.openComets()">Comets Live</button>
+
+<button class="good" onclick="app.openMPC()">Minor Planet Center</button>
+
+<button class="good" onclick="app.openJPL()">JPL Small Bodies</button>
+
+<button class="good" onclick="app.openNEO()">NASA NEO</button>
+
+<button class="good" onclick="app.openWebb()">JWST Live</button>
+
+<button class="good" onclick="app.openESASky()">ESA Sky</button>
+
+</div>
+
+<canvas id="sky" width="1300" height="520"></canvas>
+
+</section>
+
+<section class="panel">
+
+<h2>Embedded Online Tool Viewer</h2>
+
+<div class="row">
+
+<select id="embedChoice">
+
+<option value="ads">ADS-B Exchange</option>
+
+<option value="marine">MarineTraffic AIS</option>
+
+<option value="vessel">VesselFinder</option>
+
+<option value="noaa">NOAA Forecast</option>
+
+<option value="radar">NWS Radar</option>
+
+<option value="windy">Windy Radar</option>
+
+<option value="rainviewer">RainViewer</option>
+
+<option value="earthquakes">USGS Earthquakes</option>
+
+<option value="fires">NASA FIRMS Wildfires</option>
+
+<option value="heavens">Heavens-Above</option>
+
+<option value="stellarium">Stellarium</option>
+
+<option value="comets">Comets Live</option>
+
+<option value="webb">JWST Live</option>
+
+<option value="esa">ESA Sky</option>
+
+</select>
+
+<button class="good" onclick="app.loadEmbed()">Try Embed</button>
+
+<button class="secondary" onclick="app.openEmbed()">Open Selected</button>
+
+<button class="bad" onclick="app.clearEmbed()">Clear</button>
+
+</div>
+
+<small>Some sites block iframe embedding. If blank, use Open Selected.</small>
+
+<iframe id="embed"></iframe>
+
+</section>
+
+<section class="panel">
+
+<h2>Diagnostics</h2>
+
+<pre id="log">Ready.</pre>
+
+<span class="badge">Leaflet 2D map</span>
+
+<span class="badge">Cesium 3D globe</span>
+
+<span class="badge">Open-Meteo weather</span>
+
+<span class="badge">OpenSky aircraft where available</span>
+
+<span class="badge">USGS earthquakes</span>
+
+<span class="badge">NASA EONET wildfire events</span>
+
+</section>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/cesium@1.121.1/Build/Cesium/Cesium.js"></script>
+
+<script>
+
+class MVXEarthCockpitProV2{
+
+constructor(){
+
+this.lat=28.278379548214232;
+
+this.lon=-81.66085555141042;
+
+this.aircraft=[];
+
+this.logs=[];
+
+this.autoTimer=null;
+
+this.layersOn={air:true,weather:true,quakes:true,fires:true,ships:true};
+
+this.groups={};
+
+this.viewer=null;
+
+this.weather=null;
+
+this.t=0;
+
+this.initMap();
+
+this.initGlobe();
+
+this.drawSky();
+
+this.refreshAll();
+
+this.loop();
+
+}
+
+log(t){
+
+const line="["+new Date().toLocaleTimeString()+"] "+t;
+
+this.logs.unshift(line);
+
+this.logs=this.logs.slice(0,80);
+
+document.getElementById("log").textContent=this.logs.join("\n");
+
+document.getElementById("updatedVal").textContent=new Date().toLocaleTimeString();
+
+}
+
+initMap(){
+
+this.map=L.map("map").setView([this.lat,this.lon],9);
+
+this.baseOSM=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+
+maxZoom:19,
+
+attribution:"© OpenStreetMap"
+
+}).addTo(this.map);
+
+this.satellite=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
+
+maxZoom:19,
+
+attribution:"Esri"
+
+});
+
+this.groups.air=L.layerGroup().addTo(this.map);
+
+this.groups.weather=L.layerGroup().addTo(this.map);
+
+this.groups.quakes=L.layerGroup().addTo(this.map);
+
+this.groups.fires=L.layerGroup().addTo(this.map);
+
+this.groups.ships=L.layerGroup().addTo(this.map);
+
+L.control.layers({
+
+"OpenStreetMap":this.baseOSM,
+
+"Satellite":this.satellite
+
+},{
+
+"Aircraft":this.groups.air,
+
+"Weather":this.groups.weather,
+
+"Earthquakes":this.groups.quakes,
+
+"Wildfires":this.groups.fires,
+
+"AIS reference":this.groups.ships
+
+}).addTo(this.map);
+
+this.center=L.marker([this.lat,this.lon]).addTo(this.map).bindPopup("MVX Center");
+
+}
+
+initGlobe(){
+
+try{
+
+Cesium.Ion.defaultAccessToken="";
+
+this.viewer=new Cesium.Viewer("globe",{
+
+animation:false,
+
+timeline:false,
+
+geocoder:false,
+
+homeButton:true,
+
+sceneModePicker:true,
+
+baseLayerPicker:false,
+
+navigationHelpButton:false,
+
+imageryProvider:new Cesium.OpenStreetMapImageryProvider({
+
+url:"https://tile.openstreetmap.org/"
+
+})
+
+});
+
+this.viewer.scene.globe.enableLighting=true;
+
+this.flyHome();
+
+this.log("3D globe loaded.");
+
+}catch(e){
+
+this.log("3D globe failed: "+e.message);
+
+document.getElementById("globe").innerHTML="<pre>Cesium globe failed to load. Check internet/CDN access.</pre>";
+
+}
+
+}
+
+setLocation(){
+
+const la=Number(document.getElementById("lat").value);
+
+const lo=Number(document.getElementById("lon").value);
+
+if(!Number.isFinite(la)||!Number.isFinite(lo)){this.log("Invalid location.");return}
+
+this.lat=la;this.lon=lo;
+
+this.center.setLatLng([this.lat,this.lon]);
+
+this.map.setView([this.lat,this.lon],9);
+
+this.flyHome();
+
+this.refreshAll();
+
+}
+
+useGPS(){
+
+navigator.geolocation.getCurrentPosition(p=>{
+
+this.lat=p.coords.latitude;
+
+this.lon=p.coords.longitude;
+
+document.getElementById("lat").value=this.lat;
+
+document.getElementById("lon").value=this.lon;
+
+this.center.setLatLng([this.lat,this.lon]);
+
+this.map.setView([this.lat,this.lon],10);
+
+this.flyHome();
+
+this.refreshAll();
+
+},e=>this.log("GPS error: "+e.message),{enableHighAccuracy:true,timeout:12000});
+
+}
+
+toggleLayer(name){
+
+const g=this.groups[name];
+
+if(!g)return;
+
+this.layersOn[name]=!this.layersOn[name];
+
+if(this.layersOn[name])g.addTo(this.map);
+
+else this.map.removeLayer(g);
+
+this.log(name+" layer "+(this.layersOn[name]?"ON":"OFF"));
+
+}
+
+async refreshAll(){
+
+document.getElementById("locVal").textContent=this.lat.toFixed(4)+", "+this.lon.toFixed(4);
+
+await Promise.allSettled([
+
+this.fetchWeather(),
+
+this.fetchAircraft(),
+
+this.fetchQuakes(),
+
+this.fetchFires()
+
+]);
+
+this.addShipReferences();
+
+this.refreshAircraft3D();
+
+}
+
+async fetchAircraft(){
+
+this.groups.air.clearLayers();
+
+const r=2;
+
+const url=`https://opensky-network.org/api/states/all?lamin=${this.lat-r}&lomin=${this.lon-r}&lamax=${this.lat+r}&lomax=${this.lon+r}`;
+
+try{
+
+this.log("Fetching aircraft...");
+
+const res=await fetch(url,{cache:"no-store"});
+
+if(!res.ok)throw new Error("HTTP "+res.status);
+
+const j=await res.json();
+
+this.aircraft=(j.states||[]).map(s=>({
+
+icao:s[0],call:(s[1]||"").trim()||"NO CALL",country:s[2],
+
+lon:s[5],lat:s[6],alt:s[7]||s[13]||0,ground:s[8],
+
+speed:s[9],heading:s[10]||0,vr:s[11],squawk:s[14]
+
+})).filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lon));
+
+for(const a of this.aircraft){
+
+const icon=L.divIcon({
+
+className:"",
+
+html:`<div class="planeIcon" style="transform:rotate(${a.heading}deg)">
+
+<svg viewBox="0 0 100 100">
+
+<path d="M50 3 L62 42 L96 58 L63 64 L54 97 L46 97 L37 64 L4 58 L38 42 Z" fill="#8b55ff" stroke="#13001f" stroke-width="6"/>
+
+</svg></div>`,
+
+iconSize:[30,30],
+
+iconAnchor:[15,15]
+
+});
+
+const m=L.marker([a.lat,a.lon],{icon}).bindPopup(`${a.call}<br>${Math.round((a.alt||0)*3.28084)} ft<br>${Math.round((a.speed||0)*1.944)} kt`);
+
+m.on("click",()=>this.showAircraft(a));
+
+this.groups.air.addLayer(m);
+
+}
+
+document.getElementById("airVal").textContent=this.aircraft.length;
+
+this.log("Aircraft loaded: "+this.aircraft.length);
+
+}catch(e){
+
+this.aircraft=[];
+
+document.getElementById("airVal").textContent="API limited";
+
+this.log("Aircraft API unavailable/rate-limited. Use ADS-B Exchange link.");
+
+}
+
+}
+
+showAircraft(a){
+
+document.getElementById("info").textContent=
+
+`AIRCRAFT
+
+Callsign: ${a.call}
+
+ICAO: ${a.icao}
+
+Country: ${a.country}
+
+Altitude: ${Math.round((a.alt||0)*3.28084)} ft
+
+Speed: ${Math.round((a.speed||0)*1.944)} kt
+
+Heading: ${Math.round(a.heading||0)}°
+
+Squawk: ${a.squawk||"--"}
+
+Position: ${a.lat.toFixed(5)}, ${a.lon.toFixed(5)}
+
+Open ADS-B Exchange for richer aircraft cards, photos, trails, and coverage.`;
+
+}
+
+async fetchWeather(){
+
+this.groups.weather.clearLayers();
+
+const url=`https://api.open-meteo.com/v1/forecast?latitude=${this.lat}&longitude=${this.lon}&current=temperature_2m,precipitation,cloud_cover,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,wind_gusts_10m,cape&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
+
+try{
+
+const res=await fetch(url);
+
+const j=await res.json();
+
+this.weather=j;
+
+const c=j.current;
+
+document.getElementById("weatherVal").textContent=Math.round(c.temperature_2m)+"°F";
+
+document.getElementById("windVal").textContent=Math.round(c.wind_speed_10m)+" mph";
+
+document.getElementById("rainVal").textContent=(j.daily.precipitation_probability_max?.[0]||0)+"%";
+
+this.renderForecast();
+
+this.drawWeatherChart();
+
+const cloud=(c.cloud_cover||0)/100;
+
+const rain=Math.min(.7,(c.precipitation||0)*5);
+
+const color=rain>.2?"#2f7dff":cloud>.55?"#9fb0c8":"#ffd166";
+
+L.circle([this.lat,this.lon],{
+
+radius:60000,
+
+color,
+
+fillColor:color,
+
+fillOpacity:.12+rain,
+
+weight:2
+
+}).bindPopup(`Weather: ${this.weatherText(c.weather_code)}<br>${Math.round(c.temperature_2m)}°F<br>Wind ${Math.round(c.wind_speed_10m)} mph`).addTo(this.groups.weather);
+
+this.log("Weather loaded.");
+
+}catch(e){this.log("Weather error: "+e.message)}
+
+}
+
+weatherText(code){
+
+const m={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",51:"Drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",80:"Rain showers",81:"Showers",82:"Violent showers",95:"Thunderstorm"};
+
+return m[code]||"Weather "+code;
+
+}
+
+renderForecast(){
+
+const box=document.getElementById("forecast");
+
+box.innerHTML="";
+
+const d=this.weather.daily;
+
+for(let i=0;i<d.time.length;i++){
+
+const day=new Date(d.time[i]+"T12:00:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+
+const el=document.createElement("div");
+
+el.className="day";
+
+el.innerHTML=`<strong>${day}</strong>
+
+<div>${this.weatherText(d.weather_code[i])}</div>
+
+<div class="temp">${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°</div>
+
+<small>Rain ${d.precipitation_probability_max[i]}%</small><br>
+
+<small>Precip ${Number(d.precipitation_sum[i]).toFixed(2)} in</small><br>
+
+<small>Wind ${Math.round(d.wind_speed_10m_max[i])} mph</small>`;
+
+box.appendChild(el);
+
+}
+
+}
+
+drawWeatherChart(){
+
+const c=document.getElementById("weatherChart");
+
+const ctx=c.getContext("2d");
+
+ctx.fillStyle="#05070d";ctx.fillRect(0,0,c.width,c.height);
+
+if(!this.weather)return;
+
+const temps=this.weather.hourly.temperature_2m.slice(0,168);
+
+const pops=this.weather.hourly.precipitation_probability.slice(0,168);
+
+const min=Math.min(...temps)-5,max=Math.max(...temps)+5;
+
+const x=i=>50+i/(temps.length-1)*(c.width-90);
+
+const y=t=>c.height-60-(t-min)/(max-min)*(c.height-110);
+
+ctx.strokeStyle="rgba(255,255,255,.1)";
+
+for(let yy=0;yy<c.height;yy+=50){ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(c.width,yy);ctx.stroke()}
+
+ctx.strokeStyle="#41d6ff";ctx.lineWidth=3;ctx.beginPath();
+
+temps.forEach((t,i)=>{if(i===0)ctx.moveTo(x(i),y(t));else ctx.lineTo(x(i),y(t))});
+
+ctx.stroke();
+
+for(let i=0;i<pops.length;i+=3){
+
+ctx.fillStyle=`rgba(255,209,102,${.18+pops[i]/140})`;
+
+ctx.fillRect(x(i)-3,c.height-60-pops[i]*2.2,6,pops[i]*2.2);
+
+}
+
+ctx.fillStyle="white";ctx.font="26px sans-serif";ctx.fillText("7-Day Weather Track",30,42);
+
+ctx.font="15px sans-serif";ctx.fillText("Cyan = temperature • Gold = rain probability",30,68);
+
+}
+
+async fetchQuakes(){
+
+this.groups.quakes.clearLayers();
+
+try{
+
+const r=await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson");
+
+const j=await r.json();
+
+let count=0;
+
+for(const f of j.features||[]){
+
+const [lon,lat,depth]=f.geometry.coordinates;
+
+const mag=f.properties.mag||0;
+
+if(Math.abs(lat-this.lat)>10||Math.abs(lon-this.lon)>10)continue;
+
+const m=L.circleMarker([lat,lon],{
+
+radius:Math.max(5,mag*3),
+
+color:"#ff4b68",
+
+fillColor:"#ff4b68",
+
+fillOpacity:.55
+
+}).bindPopup(`Earthquake M${mag}<br>${f.properties.place}<br>Depth ${depth} km`);
+
+this.groups.quakes.addLayer(m);
+
+count++;
+
+}
+
+document.getElementById("quakeVal").textContent=count;
+
+this.log("Earthquakes loaded: "+count);
+
+}catch(e){this.log("Earthquake feed error: "+e.message)}
+
+}
+
+async fetchFires(){
+
+this.groups.fires.clearLayers();
+
+try{
+
+const r=await fetch("https://eonet.gsfc.nasa.gov/api/v3/events?category=wildfires&status=open");
+
+const j=await r.json();
+
+let count=0;
+
+for(const ev of j.events||[]){
+
+const geo=ev.geometry?.[ev.geometry.length-1];
+
+if(!geo||!geo.coordinates)continue;
+
+const lon=geo.coordinates[0],lat=geo.coordinates[1];
+
+if(Math.abs(lat-this.lat)>20||Math.abs(lon-this.lon)>20)continue;
+
+const icon=L.divIcon({className:"",html:`<div class="fireIcon">🔥</div>`,iconSize:[28,28],iconAnchor:[14,14]});
+
+const m=L.marker([lat,lon],{icon}).bindPopup(`Wildfire / EONET<br>${ev.title}<br>${geo.date||""}`);
+
+this.groups.fires.addLayer(m);
+
+count++;
+
+}
+
+document.getElementById("fireVal").textContent=count;
+
+this.log("Wildfire events loaded: "+count);
+
+}catch(e){this.log("Wildfire feed error: "+e.message)}
+
+}
+
+addShipReferences(){
+
+this.groups.ships.clearLayers();
+
+const points=[
+
+[this.lat+.32,this.lon+.55,"AIS regional check"],
+
+[this.lat-.46,this.lon+.34,"MarineTraffic lookup"],
+
+[this.lat+.15,this.lon-.72,"VesselFinder lookup"]
+
+];
+
+for(const p of points){
+
+const icon=L.divIcon({className:"",html:`<div class="shipIcon">🚢</div>`,iconSize:[28,28],iconAnchor:[14,14]});
+
+L.marker([p[0],p[1]],{icon}).bindPopup(`${p[2]}<br>Open AIS links for real vessel data.`).addTo(this.groups.ships);
+
+}
+
+}
+
+refreshAircraft3D(){
+
+if(!this.viewer)return;
+
+this.viewer.entities.removeAll();
+
+this.viewer.entities.add({
+
+position:Cesium.Cartesian3.fromDegrees(this.lon,this.lat,0),
+
+point:{pixelSize:10,color:Cesium.Color.CYAN},
+
+label:{text:"MVX CENTER",font:"14px sans-serif",pixelOffset:new Cesium.Cartesian2(0,-22)}
+
+});
+
+for(const a of this.aircraft){
+
+const alt=Math.max(500,a.alt||500);
+
+const pos=Cesium.Cartesian3.fromDegrees(a.lon,a.lat,alt);
+
+this.viewer.entities.add({
+
+position:pos,
+
+billboard:{
+
+image:this.planeSVG(),
+
+width:34,
+
+height:34,
+
+rotation:Cesium.Math.toRadians(a.heading||0),
+
+alignedAxis:Cesium.Cartesian3.UNIT_Z
+
+},
+
+label:{
+
+text:a.call,
+
+font:"13px sans-serif",
+
+pixelOffset:new Cesium.Cartesian2(18,-18),
+
+fillColor:Cesium.Color.WHITE,
+
+outlineColor:Cesium.Color.BLACK,
+
+outlineWidth:2,
+
+style:Cesium.LabelStyle.FILL_AND_OUTLINE
+
+},
+
+polyline:{
+
+positions:[Cesium.Cartesian3.fromDegrees(a.lon,a.lat,0),pos],
+
+width:1,
+
+material:Cesium.Color.CYAN.withAlpha(.45)
+
+}
+
+});
+
+}
+
+this.log("3D aircraft refreshed.");
+
+}
+
+planeSVG(){
+
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 3 L62 42 L96 58 L63 64 L54 97 L46 97 L37 64 L4 58 L38 42 Z" fill="#8b55ff" stroke="#160020" stroke-width="6"/></svg>`;
+
+return "data:image/svg+xml;base64,"+btoa(svg);
+
+}
+
+clear3D(){
+
+if(this.viewer)this.viewer.entities.removeAll();
+
+}
+
+flyHome(){
+
+if(!this.viewer)return;
+
+this.viewer.camera.flyTo({
+
+destination:Cesium.Cartesian3.fromDegrees(this.lon,this.lat,350000),
+
+orientation:{heading:0,pitch:Cesium.Math.toRadians(-60),roll:0}
+
+});
+
+}
+
+drawSky(){
+
+const c=document.getElementById("sky");
+
+const ctx=c.getContext("2d");
+
+ctx.fillStyle="#02040a";ctx.fillRect(0,0,c.width,c.height);
+
+ctx.strokeStyle="rgba(65,214,255,.18)";
+
+for(let r=80;r<280;r+=60){ctx.beginPath();ctx.arc(c.width/2,c.height/2,r,0,Math.PI*2);ctx.stroke()}
+
+ctx.beginPath();ctx.moveTo(c.width/2,40);ctx.lineTo(c.width/2,c.height-40);ctx.moveTo(40,c.height/2);ctx.lineTo(c.width-40,c.height/2);ctx.stroke();
+
+ctx.fillStyle="#fff";
+
+for(let i=0;i<230;i++){
+
+const x=(Math.sin(i*91.17)*.5+.5)*c.width;
+
+const y=(Math.sin(i*47.73)*.5+.5)*c.height;
+
+ctx.globalAlpha=.25+((i*17)%80)/100;
+
+ctx.fillRect(x,y,1+(i%3),1+(i%3));
+
+}
+
+ctx.globalAlpha=1;
+
+const objects=[["Moon","#dfe8ff",.4,180],["Jupiter","#ffd166",1.6,230],["Saturn","#c9b37e",2.7,260],["Comets","#30ff91",4.2,210],["JWST","#ff4b68",5.3,190]];
+
+for(const o of objects){
+
+const x=c.width/2+Math.cos(o[2]+this.t*.001)*o[3];
+
+const y=c.height/2+Math.sin(o[2]+this.t*.001)*o[3]*.6;
+
+ctx.fillStyle=o[1];ctx.shadowColor=o[1];ctx.shadowBlur=18;
+
+ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();
+
+ctx.shadowBlur=0;ctx.fillStyle="white";ctx.font="15px sans-serif";ctx.fillText(o[0],x+14,y+5);
+
+}
+
+ctx.fillStyle="rgba(0,0,0,.62)";ctx.fillRect(18,18,790,80);
+
+ctx.fillStyle="white";ctx.font="26px sans-serif";ctx.fillText("Astronomy Intelligence Map",34,52);
+
+ctx.font="15px sans-serif";ctx.fillText("Canvas overview + live launch tools for satellites, real sky, comets, NEOs, JWST, ESA Sky.",34,78);
+
+}
+
+urlADS(){return `https://globe.adsbexchange.com/?lat=${this.lat}&lon=${this.lon}&zoom=9`}
+
+urlMarine(){return `https://www.marinetraffic.com/en/ais/home/centerx:${this.lon}/centery:${this.lat}/zoom:7`}
+
+urlNOAA(){return `https://forecast.weather.gov/MapClick.php?lat=${this.lat}&lon=${this.lon}`}
+
+urlHeavens(){return `https://heavens-above.com/main.aspx?lat=${this.lat}&lng=${this.lon}&loc=MVX&alt=0&tz=UCT`}
+
+openADS(){window.open(this.urlADS(),"_blank","noopener,noreferrer")}
+
+openFR24(){window.open(`https://www.flightradar24.com/${this.lat},${this.lon}/8`,"_blank","noopener,noreferrer")}
+
+openMarine(){window.open(this.urlMarine(),"_blank","noopener,noreferrer")}
+
+openVesselFinder(){window.open(`https://www.vesselfinder.com/?latitude=${this.lat}&longitude=${this.lon}&zoom=7`,"_blank","noopener,noreferrer")}
+
+openNOAA(){window.open(this.urlNOAA(),"_blank","noopener,noreferrer")}
+
+openRadar(){window.open("https://radar.weather.gov/","_blank","noopener,noreferrer")}
+
+openWindy(){window.open(`https://www.windy.com/${this.lat}/${this.lon}?radar,${this.lat},${this.lon},7`,"_blank","noopener,noreferrer")}
+
+openHeavens(){window.open(this.urlHeavens(),"_blank","noopener,noreferrer")}
+
+openStellarium(){window.open("https://stellarium-web.org/","_blank","noopener,noreferrer")}
+
+openComets(){window.open("https://theskylive.com/comets","_blank","noopener,noreferrer")}
+
+openMPC(){window.open("https://minorplanetcenter.net/","_blank","noopener,noreferrer")}
+
+openJPL(){window.open("https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html","_blank","noopener,noreferrer")}
+
+openNEO(){window.open("https://cneos.jpl.nasa.gov/","_blank","noopener,noreferrer")}
+
+openWebb(){window.open("https://spacetelescopelive.org/webb?obsId=01KRYZQ078VVE0Z7K9WTB0W6WG","_blank","noopener,noreferrer")}
+
+openESASky(){window.open("https://sky.esa.int/","_blank","noopener,noreferrer")}
+
+embedURL(){
+
+const v=document.getElementById("embedChoice").value;
+
+if(v==="ads")return this.urlADS();
+
+if(v==="marine")return this.urlMarine();
+
+if(v==="vessel")return `https://www.vesselfinder.com/?latitude=${this.lat}&longitude=${this.lon}&zoom=7`;
+
+if(v==="noaa")return this.urlNOAA();
+
+if(v==="radar")return "https://radar.weather.gov/";
+
+if(v==="windy")return `https://www.windy.com/${this.lat}/${this.lon}?radar,${this.lat},${this.lon},7`;
+
+if(v==="rainviewer")return "https://www.rainviewer.com/weather-radar-map-live.html";
+
+if(v==="earthquakes")return "https://earthquake.usgs.gov/earthquakes/map/";
+
+if(v==="fires")return "https://firms.modaps.eosdis.nasa.gov/map/";
+
+if(v==="heavens")return this.urlHeavens();
+
+if(v==="stellarium")return "https://stellarium-web.org/";
+
+if(v==="comets")return "https://theskylive.com/comets";
+
+if(v==="webb")return "https://spacetelescopelive.org/webb?obsId=01KRYZQ078VVE0Z7K9WTB0W6WG";
+
+if(v==="esa")return "https://sky.esa.int/";
+
+return this.urlADS();
+
+}
+
+loadEmbed(){
+
+document.getElementById("embed").src=this.embedURL();
+
+this.log("Trying embed. If blank, site blocks iframe embedding.");
+
+}
+
+openEmbed(){window.open(this.embedURL(),"_blank","noopener,noreferrer")}
+
+clearEmbed(){document.getElementById("embed").removeAttribute("src")}
+
+startAuto(){
+
+this.stopAuto();
+
+this.autoTimer=setInterval(()=>this.refreshAll(),30000);
+
+this.log("Auto refresh started.");
+
+}
+
+stopAuto(){
+
+if(this.autoTimer)clearInterval(this.autoTimer);
+
+this.autoTimer=null;
+
+this.log("Auto refresh stopped.");
+
+}
+
+loop(){
+
+this.t++;
+
+this.drawSky();
+
+requestAnimationFrame(()=>this.loop());
+
+}
+
+}
+
+window.app=new MVXEarthCockpitProV2();
+
+</script>
+
+</body>
+
+</html>
