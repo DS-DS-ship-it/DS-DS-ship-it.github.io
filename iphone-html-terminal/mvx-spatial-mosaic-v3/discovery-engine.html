@@ -1,0 +1,825 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+
+<title>MVX Discovery Engine</title>
+
+<style>
+
+:root{
+
+  --bg:#05070d;--panel:#101827;--panel2:#17243b;--text:#f7fbff;
+
+  --muted:#9fb0c8;--blue:#2f7dff;--green:#10a765;--gold:#bd8100;
+
+  --red:#b52d42;--cyan:#41d6ff;--border:rgba(255,255,255,.15)
+
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+body{
+
+  margin:0;background:radial-gradient(circle at top,#17233a,#05070d 65%);
+
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+
+}
+
+header{
+
+  padding:16px 14px;background:rgba(8,13,24,.96);
+
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20
+
+}
+
+h1{margin:0;font-size:24px}
+
+h2{font-size:18px;margin:0 0 8px}
+
+small{color:var(--muted)}
+
+main{padding:12px;max-width:1350px;margin:auto}
+
+.panel{
+
+  background:rgba(16,24,39,.96);border:1px solid var(--border);
+
+  border-radius:18px;padding:13px;margin:12px 0
+
+}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+button,input,select,textarea{
+
+  border-radius:13px;border:1px solid var(--border);padding:10px 12px;font-size:15px
+
+}
+
+button{background:var(--blue);color:white;font-weight:800}
+
+button.good{background:var(--green)}
+
+button.warn{background:var(--gold)}
+
+button.bad{background:var(--red)}
+
+button.secondary{background:#263653}
+
+input,select,textarea{background:#070b13;color:white}
+
+textarea{width:100%;min-height:90px}
+
+pre{
+
+  white-space:pre-wrap;background:#05070d;color:#dce8ff;border:1px solid var(--border);
+
+  border-radius:16px;padding:12px;min-height:100px;overflow:auto
+
+}
+
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+@media(min-width:1000px){.grid{grid-template-columns:1fr 1fr}}
+
+.metric{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+@media(min-width:900px){.metric{grid-template-columns:repeat(4,1fr)}}
+
+.card{background:#05070d;border:1px solid var(--border);border-radius:14px;padding:10px}
+
+.value{font-size:20px;font-weight:900;color:#dfffe7}
+
+.opportunity{
+
+  background:#05070d;border:1px solid var(--border);border-radius:16px;
+
+  padding:12px;margin:10px 0
+
+}
+
+.score{
+
+  float:right;background:#102a1f;border:1px solid rgba(16,167,101,.45);
+
+  color:#8fffc8;border-radius:999px;padding:5px 9px;font-weight:900
+
+}
+
+.tag{
+
+  display:inline-block;padding:4px 8px;border-radius:999px;background:#22314f;
+
+  color:#cfe0ff;margin:2px;font-size:12px
+
+}
+
+a{color:#8fd8ff}
+
+canvas{
+
+  width:100%;height:340px;background:#000;border:1px solid var(--border);
+
+  border-radius:18px;margin-top:10px
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>MVX Discovery Engine</h1>
+
+<small>Personal opportunity radar: jobs, grants, scholarships, tax credits, real estate, benefits, events, education, networking, and investments.</small>
+
+</header>
+
+<main>
+
+<section class="panel">
+
+<h2>Mission Question</h2>
+
+<pre id="answer">Tap “Analyze Today” to answer: What is the most valuable thing I could do today?</pre>
+
+<div class="row">
+
+<button class="good" onclick="app.analyzeToday()">Analyze Today</button>
+
+<button class="good" onclick="app.useLocation()">Use My Location</button>
+
+<button class="secondary" onclick="app.openResearchLinks()">Open Research Links</button>
+
+<button class="secondary" onclick="app.exportJSON()">Export Opportunity Report</button>
+
+<button class="bad" onclick="app.reset()">Reset</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>Your Profile</h2>
+
+<div class="row">
+
+<input id="city" placeholder="City" value="Davenport">
+
+<input id="state" placeholder="State" value="FL">
+
+<input id="skills" placeholder="Skills / interests" value="technology, veterans benefits, real estate, emergency preparedness, apps, AI, aviation, weather">
+
+<input id="budget" placeholder="Budget / capital" value="100">
+
+</div>
+
+<div class="row" style="margin-top:8px">
+
+<select id="goal">
+
+<option value="make money">Make money fastest</option>
+
+<option value="career">Find career/job opportunity</option>
+
+<option value="funding">Find grants/scholarships/benefits</option>
+
+<option value="real estate">Find real estate deals</option>
+
+<option value="education">Find education/certifications</option>
+
+<option value="networking">Find local networking</option>
+
+</select>
+
+<select id="urgency">
+
+<option value="today">Do today</option>
+
+<option value="week">This week</option>
+
+<option value="month">This month</option>
+
+</select>
+
+<button onclick="app.saveProfile()">Save Profile</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>Live Status</h2>
+
+<div class="metric">
+
+<div class="card"><small>Location</small><div id="locVal" class="value">Davenport, FL</div></div>
+
+<div class="card"><small>Best Category</small><div id="catVal" class="value">--</div></div>
+
+<div class="card"><small>Top Score</small><div id="scoreVal" class="value">--</div></div>
+
+<div class="card"><small>Opportunities</small><div id="countVal" class="value">0</div></div>
+
+<div class="card"><small>Urgency</small><div id="urgentVal" class="value">today</div></div>
+
+<div class="card"><small>Budget</small><div id="budgetVal" class="value">$100</div></div>
+
+<div class="card"><small>Updated</small><div id="updatedVal" class="value">--</div></div>
+
+<div class="card"><small>Mode</small><div id="modeVal" class="value">local radar</div></div>
+
+</div>
+
+</section>
+
+<div class="grid">
+
+<section class="panel">
+
+<h2>Opportunity Radar</h2>
+
+<canvas id="radar" width="900" height="520"></canvas>
+
+</section>
+
+<section class="panel">
+
+<h2>Add Manual Opportunity</h2>
+
+<input id="manualTitle" placeholder="Opportunity title">
+
+<div class="row" style="margin-top:8px">
+
+<select id="manualCat">
+
+<option>Job</option><option>Grant</option><option>Scholarship</option><option>Tax Credit</option>
+
+<option>Real Estate</option><option>Business</option><option>Investment</option>
+
+<option>Education</option><option>Government Benefit</option><option>Networking</option>
+
+</select>
+
+<input id="manualValue" placeholder="Estimated value $" inputmode="numeric">
+
+<input id="manualDeadline" placeholder="Deadline / date">
+
+</div>
+
+<textarea id="manualNotes" placeholder="Notes, link, requirements, why it matters"></textarea>
+
+<button class="good" onclick="app.addManual()">Add Opportunity</button>
+
+</section>
+
+</div>
+
+<section class="panel">
+
+<h2>Recommended Opportunities</h2>
+
+<div id="results"></div>
+
+</section>
+
+<section class="panel">
+
+<h2>One-Tap Research Launchers</h2>
+
+<div class="row">
+
+<button onclick="app.search('local grants')">Local Grants</button>
+
+<button onclick="app.search('veteran small business grants')">Veteran Grants</button>
+
+<button onclick="app.search('jobs hiring near me')">Jobs Hiring</button>
+
+<button onclick="app.search('scholarships near me')">Scholarships</button>
+
+<button onclick="app.search('tax credits florida')">Tax Credits</button>
+
+<button onclick="app.search('foreclosures near me')">Real Estate Deals</button>
+
+<button onclick="app.search('business networking events near me')">Networking Events</button>
+
+<button onclick="app.search('free certification programs near me')">Education Programs</button>
+
+<button onclick="app.search('government benefits eligibility')">Benefits</button>
+
+</div>
+
+</section>
+
+<section class="panel">
+
+<h2>Diagnostics / Data</h2>
+
+<pre id="log">Ready.</pre>
+
+<span class="tag">No backend required</span>
+
+<span class="tag">Local profile storage</span>
+
+<span class="tag">Opportunity scoring</span>
+
+<span class="tag">Search launchers</span>
+
+<span class="tag">Manual leads</span>
+
+<span class="tag">Gumroad-ready HTML app</span>
+
+</section>
+
+</main>
+
+<script>
+
+class DiscoveryEngine{
+
+constructor(){
+
+this.opportunities=[];
+
+this.logs=[];
+
+this.lat=null;
+
+this.lon=null;
+
+this.loadProfile();
+
+this.seed();
+
+this.drawRadar();
+
+this.render();
+
+}
+
+log(x){
+
+const line="["+new Date().toLocaleTimeString()+"] "+x;
+
+this.logs.unshift(line);
+
+this.logs=this.logs.slice(0,80);
+
+document.getElementById("log").textContent=this.logs.join("\n");
+
+document.getElementById("updatedVal").textContent=new Date().toLocaleTimeString();
+
+}
+
+loadProfile(){
+
+const p=JSON.parse(localStorage.getItem("mvx_discovery_profile")||"{}");
+
+for(const k of ["city","state","skills","budget","goal","urgency"]){
+
+if(p[k]&&document.getElementById(k))document.getElementById(k).value=p[k];
+
+}
+
+this.updateStatus();
+
+}
+
+saveProfile(){
+
+const p=this.profile();
+
+localStorage.setItem("mvx_discovery_profile",JSON.stringify(p));
+
+this.log("Profile saved.");
+
+this.analyzeToday();
+
+}
+
+profile(){
+
+return{
+
+city:document.getElementById("city").value.trim()||"Davenport",
+
+state:document.getElementById("state").value.trim()||"FL",
+
+skills:document.getElementById("skills").value.toLowerCase(),
+
+budget:Number(document.getElementById("budget").value)||0,
+
+goal:document.getElementById("goal").value,
+
+urgency:document.getElementById("urgency").value
+
+}
+
+}
+
+updateStatus(){
+
+const p=this.profile();
+
+document.getElementById("locVal").textContent=p.city+", "+p.state;
+
+document.getElementById("urgentVal").textContent=p.urgency;
+
+document.getElementById("budgetVal").textContent="$"+p.budget;
+
+}
+
+useLocation(){
+
+if(!navigator.geolocation){this.log("Geolocation unavailable.");return}
+
+navigator.geolocation.getCurrentPosition(pos=>{
+
+this.lat=pos.coords.latitude;
+
+this.lon=pos.coords.longitude;
+
+this.log("GPS location acquired: "+this.lat.toFixed(4)+", "+this.lon.toFixed(4));
+
+},err=>this.log("GPS error: "+err.message),{enableHighAccuracy:true,timeout:12000});
+
+}
+
+seed(){
+
+const saved=JSON.parse(localStorage.getItem("mvx_discovery_opportunities")||"[]");
+
+this.opportunities=saved.length?saved:[
+
+{cat:"Grant",title:"Search for veteran, small-business, and technology grants closing this month",value:5000,urgency:82,fit:91,effort:42,deadline:"This month",notes:"Best first action: check Grants.gov, SBA, state economic development, county grants, and veteran entrepreneur programs."},
+
+{cat:"Job",title:"Scan local and remote job postings matching AI, app development, weather, aviation, emergency management",value:2500,urgency:76,fit:88,effort:35,deadline:"Today",notes:"Look for contract roles, emergency operations, GIS technician, app tester, data labeling, AI prompt engineer, and local IT support."},
+
+{cat:"Real Estate",title:"Check county auctions, tax deeds, foreclosure listings, and underpriced fixer properties",value:10000,urgency:70,fit:80,effort:65,deadline:"Weekly",notes:"Compare asking price to recent sold comps. Watch for burned-out homes, tax-defaulted parcels, and wholesale listings."},
+
+{cat:"Tax Credit",title:"Search federal and Florida energy, EV, solar, home repair, veteran, and business tax credits",value:1200,urgency:64,fit:76,effort:28,deadline:"Before filing",notes:"Tax credits can be high-value if they apply. Verify eligibility before spending money."},
+
+{cat:"Education",title:"Find free certificates in GIS, cybersecurity, emergency management, AI, drone operations, or weather spotting",value:800,urgency:61,fit:84,effort:38,deadline:"Open enrollment",notes:"Certificates improve job and contract eligibility."},
+
+{cat:"Networking",title:"Find local business, chamber, startup, real estate, aviation, weather, and emergency-preparedness events this week",value:600,urgency:88,fit:79,effort:22,deadline:"This week",notes:"Networking events can produce clients, jobs, grants, partnerships, and buyers quickly."},
+
+{cat:"Government Benefit",title:"Review VA, state, county, utility, housing, training, and small-business benefits",value:3000,urgency:72,fit:90,effort:45,deadline:"Ongoing",notes:"Benefits often go unused because people do not know they qualify."},
+
+{cat:"Business",title:"Package one existing HTML app as a $9.99 Gumroad product with screenshots and a short demo",value:500,urgency:94,fit:95,effort:30,deadline:"Today",notes:"This is actionable immediately. Create screenshots, description, ZIP package, and launch."},
+
+{cat:"Investment",title:"Check high-quality short-term cash alternatives and dividend/ETF research before taking risk",value:150,urgency:45,fit:55,effort:30,deadline:"Anytime",notes:"Use caution. This app does not provide financial advice."}
+
+];
+
+}
+
+score(o){
+
+const p=this.profile();
+
+let s=0;
+
+s+=Math.min(40,o.fit*.4);
+
+s+=Math.min(30,o.urgency*.3);
+
+s+=Math.min(20,(100-o.effort)*.2);
+
+s+=Math.min(10,Math.log10((o.value||1)+10)*3);
+
+const g=p.goal;
+
+if(g.includes("money")&&(o.cat==="Business"||o.cat==="Job"||o.cat==="Real Estate"))s+=10;
+
+if(g.includes("career")&&o.cat==="Job")s+=15;
+
+if(g.includes("funding")&&(o.cat==="Grant"||o.cat==="Scholarship"||o.cat==="Government Benefit"))s+=15;
+
+if(g.includes("real estate")&&o.cat==="Real Estate")s+=15;
+
+if(g.includes("education")&&o.cat==="Education")s+=15;
+
+if(g.includes("networking")&&o.cat==="Networking")s+=15;
+
+return Math.round(Math.min(100,s));
+
+}
+
+analyzeToday(){
+
+this.updateStatus();
+
+this.opportunities.forEach(o=>o.score=this.score(o));
+
+this.opportunities.sort((a,b)=>b.score-a.score);
+
+const top=this.opportunities[0];
+
+document.getElementById("catVal").textContent=top.cat;
+
+document.getElementById("scoreVal").textContent=top.score+"/100";
+
+document.getElementById("countVal").textContent=this.opportunities.length;
+
+document.getElementById("answer").textContent=
+
+`Most valuable thing to do today:
+
+${top.title}
+
+Category: ${top.cat}
+
+Estimated value: $${top.value}
+
+Deadline: ${top.deadline}
+
+Score: ${top.score}/100
+
+Why:
+
+${top.notes}
+
+Next step:
+
+Open the matching research links, verify the opportunity, and either apply, contact someone, save the lead, or create a task immediately.`;
+
+this.render();
+
+this.drawRadar();
+
+this.log("Analysis complete. Top opportunity: "+top.title);
+
+}
+
+render(){
+
+const box=document.getElementById("results");
+
+box.innerHTML="";
+
+this.opportunities.forEach((o,i)=>{
+
+const div=document.createElement("div");
+
+div.className="opportunity";
+
+div.innerHTML=`
+
+<span class="score">${this.score(o)}/100</span>
+
+<h3>${i+1}. ${o.title}</h3>
+
+<div>
+
+<span class="tag">${o.cat}</span>
+
+<span class="tag">Value: $${o.value}</span>
+
+<span class="tag">Deadline: ${o.deadline}</span>
+
+<span class="tag">Urgency ${o.urgency}</span>
+
+<span class="tag">Fit ${o.fit}</span>
+
+<span class="tag">Effort ${o.effort}</span>
+
+</div>
+
+<p>${o.notes}</p>
+
+<div class="row">
+
+<button class="secondary" onclick="app.search('${o.cat} ${o.title.replaceAll("'","")}')">Research</button>
+
+<button class="secondary" onclick="app.copyLead(${i})">Copy Lead</button>
+
+<button class="bad" onclick="app.deleteLead(${i})">Delete</button>
+
+</div>
+
+`;
+
+box.appendChild(div);
+
+});
+
+document.getElementById("countVal").textContent=this.opportunities.length;
+
+}
+
+addManual(){
+
+const title=document.getElementById("manualTitle").value.trim();
+
+if(!title){this.log("Add a title first.");return}
+
+const o={
+
+cat:document.getElementById("manualCat").value,
+
+title,
+
+value:Number(document.getElementById("manualValue").value)||500,
+
+deadline:document.getElementById("manualDeadline").value||"Unknown",
+
+notes:document.getElementById("manualNotes").value||"Manual lead.",
+
+urgency:70,fit:70,effort:40
+
+};
+
+this.opportunities.unshift(o);
+
+this.saveOpps();
+
+this.analyzeToday();
+
+document.getElementById("manualTitle").value="";
+
+document.getElementById("manualNotes").value="";
+
+}
+
+deleteLead(i){
+
+this.opportunities.splice(i,1);
+
+this.saveOpps();
+
+this.analyzeToday();
+
+}
+
+copyLead(i){
+
+const o=this.opportunities[i];
+
+const text=`${o.title}\nCategory: ${o.cat}\nValue: $${o.value}\nDeadline: ${o.deadline}\nNotes: ${o.notes}`;
+
+navigator.clipboard?.writeText(text);
+
+this.log("Lead copied.");
+
+}
+
+saveOpps(){
+
+localStorage.setItem("mvx_discovery_opportunities",JSON.stringify(this.opportunities));
+
+}
+
+search(q){
+
+const p=this.profile();
+
+const query=encodeURIComponent(`${q} ${p.city} ${p.state}`);
+
+window.open("https://www.google.com/search?q="+query,"_blank","noopener,noreferrer");
+
+}
+
+openResearchLinks(){
+
+const p=this.profile();
+
+const q=encodeURIComponent(`${p.city} ${p.state}`);
+
+[
+
+`https://www.google.com/search?q=${q}+grants+jobs+scholarships+events+real+estate+deals`,
+
+`https://www.grants.gov/search-grants`,
+
+`https://www.sba.gov/funding-programs/grants`,
+
+`https://www.careeronestop.org/Toolkit/Training/find-scholarships.aspx`,
+
+`https://www.indeed.com/jobs?q=${encodeURIComponent(p.skills)}&l=${q}`,
+
+`https://www.eventbrite.com/d/${encodeURIComponent(p.city+"-"+p.state)}/business/`,
+
+`https://www.benefits.gov/`,
+
+`https://www.usa.gov/benefits`
+
+].forEach((u,i)=>setTimeout(()=>window.open(u,"_blank","noopener,noreferrer"),i*350));
+
+this.log("Opened research links.");
+
+}
+
+exportJSON(){
+
+const data={app:"MVX Discovery Engine",created:new Date().toISOString(),profile:this.profile(),opportunities:this.opportunities};
+
+const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+
+a.href=url;
+
+a.download="mvx_discovery_engine_report.json";
+
+a.click();
+
+setTimeout(()=>URL.revokeObjectURL(url),5000);
+
+}
+
+reset(){
+
+if(confirm("Reset opportunities and profile?")){
+
+localStorage.removeItem("mvx_discovery_opportunities");
+
+localStorage.removeItem("mvx_discovery_profile");
+
+location.reload();
+
+}
+
+}
+
+drawRadar(){
+
+const c=document.getElementById("radar");
+
+const ctx=c.getContext("2d");
+
+const w=c.width,h=c.height;
+
+ctx.clearRect(0,0,w,h);
+
+ctx.fillStyle="#02040a";ctx.fillRect(0,0,w,h);
+
+ctx.strokeStyle="rgba(65,214,255,.16)";
+
+for(let r=60;r<240;r+=45){ctx.beginPath();ctx.arc(w/2,h/2,r,0,Math.PI*2);ctx.stroke()}
+
+for(let i=0;i<12;i++){
+
+const a=i/12*Math.PI*2;
+
+ctx.beginPath();ctx.moveTo(w/2,h/2);ctx.lineTo(w/2+Math.cos(a)*280,h/2+Math.sin(a)*280);ctx.stroke();
+
+}
+
+const cats=[...new Set(this.opportunities.map(o=>o.cat))];
+
+this.opportunities.forEach((o,i)=>{
+
+const s=this.score(o);
+
+const a=(cats.indexOf(o.cat)/Math.max(1,cats.length))*Math.PI*2 + i*.07;
+
+const r=250-(s*1.9);
+
+const x=w/2+Math.cos(a)*r;
+
+const y=h/2+Math.sin(a)*r;
+
+const color=s>80?"#30ff91":s>60?"#ffd166":"#41d6ff";
+
+ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=18;
+
+ctx.beginPath();ctx.arc(x,y,7+s/18,0,Math.PI*2);ctx.fill();
+
+ctx.shadowBlur=0;
+
+ctx.fillStyle="#fff";ctx.font="13px sans-serif";ctx.fillText(o.cat,x+12,y+4);
+
+});
+
+ctx.fillStyle="rgba(0,0,0,.62)";ctx.fillRect(18,18,570,76);
+
+ctx.fillStyle="#fff";ctx.font="26px sans-serif";ctx.fillText("Opportunity Radar",34,52);
+
+ctx.font="15px sans-serif";ctx.fillText("Closer to center = higher value/action score.",34,76);
+
+}
+
+}
+
+window.app=new DiscoveryEngine();
+
+</script>
+
+</body>
+
+</html>
