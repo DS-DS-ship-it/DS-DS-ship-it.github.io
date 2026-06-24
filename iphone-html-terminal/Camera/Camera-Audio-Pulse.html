@@ -1,0 +1,641 @@
+cat > biosignal_focus_lab_v2.html <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>BioSignal Focus Lab v2</title>
+<style>
+:root{
+  --bg:#05070d; --bg2:#0d1320; --panel:#111827; --panel2:#0b1220; --ink:#eef6ff; --muted:#9bb1c9;
+  --line:rgba(255,255,255,.10); --good:#1fc77c; --warn:#e6b422; --bad:#ff5a6a; --blue:#58a6ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:radial-gradient(circle at top,#15213a,#05070d 62%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column}
+header{padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(10,14,24,.86);backdrop-filter:blur(10px);position:sticky;top:0;z-index:50}
+header .title{font-weight:800;letter-spacing:.2px}
+header .sub{font-size:12px;color:var(--muted);margin-top:3px}
+main{display:grid;grid-template-columns:380px 1fr;gap:12px;padding:12px;min-height:0;flex:1}
+@media (max-width:1050px){ main{grid-template-columns:1fr} }
+.card{background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(11,18,32,.96));border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.card h2{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font-size:15px}
+.card .body{padding:12px 14px}
+.stack{display:grid;gap:12px}
+.controls{display:grid;gap:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:680px){ .grid2,.grid3{grid-template-columns:1fr} }
+button,select,input{
+  appearance:none;border:none;border-radius:12px;padding:11px 12px;background:#182335;color:var(--ink);
+  border:1px solid rgba(255,255,255,.09);font:inherit
+}
+button{cursor:pointer;font-weight:700}
+button:hover{filter:brightness(1.06)}
+button.primary{background:linear-gradient(180deg,#2874ff,#165ce2)}
+button.good{background:linear-gradient(180deg,#0fa96a,#0a7c4c)}
+button.warn{background:linear-gradient(180deg,#c28a00,#8f6500)}
+button.bad{background:linear-gradient(180deg,#b53643,#892733)}
+button.ghost{background:#111a29}
+label{font-size:12px;color:var(--muted);display:grid;gap:6px}
+.small{font-size:12px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{padding:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.kpi .v{font-size:24px;font-weight:800;margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:12px}
+.dot{width:8px;height:8px;border-radius:999px;background:var(--muted)}
+.good .dot{background:var(--good)}
+.warn .dot{background:var(--warn)}
+.bad .dot{background:var(--bad)}
+#previewWrap{position:relative;background:#08111d;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+#video{width:100%;display:block;background:#000;aspect-ratio:16/10;object-fit:cover}
+.overlayBox{position:absolute;border:2px solid rgba(88,166,255,.9);box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;border-radius:12px;pointer-events:none}
+.overlayText{position:absolute;left:10px;bottom:10px;padding:7px 10px;border-radius:10px;background:rgba(0,0,0,.55);font-size:12px}
+canvas.spark{width:100%;height:90px;background:#0a1220;border-radius:12px;border:1px solid var(--line)}
+canvas.big{width:100%;height:150px;background:#0a1220;border-radius:12px;border:1px solid var(--line)}
+.log{height:240px;overflow:auto;background:#070d16;border:1px solid var(--line);border-radius:14px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap}
+.list{display:grid;gap:8px}
+.item{padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
+.progress{height:10px;background:#0b1422;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+.progress > div{height:100%;background:linear-gradient(90deg,#276fff,#5db5ff);width:0%}
+.statusline{display:flex;gap:8px;flex-wrap:wrap}
+.footerline{font-size:11px;color:var(--muted);padding-top:8px}
+code.inline{background:#0a1322;padding:2px 6px;border-radius:8px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">BioSignal Focus Lab v2</div>
+  <div class="sub">Camera rPPG • Breath mic/camera fusion • Voice features • Motion module • Multi-stage acquire-lock workflow. Wellness / education / signal exploration only.</div>
+</header>
+
+<main>
+  <section class="stack">
+    <div class="card">
+      <h2>Control Deck</h2>
+      <div class="body controls">
+        <div class="row">
+          <button id="btnBoot" class="primary">Boot / Rewire</button>
+          <button id="btnStart" class="good">Start Sensors</button>
+          <button id="btnStop" class="bad">Stop Sensors</button>
+        </div>
+        <div class="grid2">
+          <label>Mode
+            <select id="focusMode">
+              <option value="person">Person</option>
+              <option value="place">Place</option>
+              <option value="thing">Thing</option>
+            </select>
+          </label>
+          <label>Camera target
+            <select id="targetArea">
+              <option value="face">Face / forehead</option>
+              <option value="center">Center frame</option>
+              <option value="manual">Manual box</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid2">
+          <label>Signal profile
+            <select id="profile">
+              <option value="balanced">Balanced</option>
+              <option value="pulse">Pulse priority</option>
+              <option value="breath">Breath priority</option>
+              <option value="voice">Voice priority</option>
+              <option value="motion">Motion priority</option>
+            </select>
+          </label>
+          <label>Display style
+            <select id="style">
+              <option value="sharp">Sharp radar</option>
+              <option value="smooth">Smooth glass</option>
+              <option value="clinical">Clinical dark</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnAcquire" class="primary">Acquire Baseline</button>
+          <button id="btnLock" class="warn">Attempt Lock</button>
+          <button id="btnRelease" class="ghost">Release Lock</button>
+        </div>
+        <div class="grid2">
+          <button id="btnCopyLog" class="ghost">Copy Log</button>
+          <button id="btnTroubleshoot" class="ghost">Run Diagnostics</button>
+        </div>
+        <div class="small">The app only shows a metric when quality is high enough. If quality is poor, it displays <code class="inline">--</code> or a low-confidence warning instead of inventing a number.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Acquire / Lock</h2>
+      <div class="body">
+        <div class="statusline">
+          <span id="sensorStatus" class="badge bad"><span class="dot"></span> sensors idle</span>
+          <span id="qualityStatus" class="badge warn"><span class="dot"></span> quality unknown</span>
+          <span id="lockStatus" class="badge bad"><span class="dot"></span> unlocked</span>
+        </div>
+        <div style="height:10px"></div>
+        <div class="progress"><div id="acquireBar"></div></div>
+        <div style="height:8px"></div>
+        <div id="acquireText" class="small">No baseline saved yet.</div>
+        <div style="height:12px"></div>
+        <div class="list">
+          <div class="item"><strong>Enrollment logic</strong><div class="small">Requires stable lighting, low motion, and enough pulse / breath / voice / motion evidence depending on selected profile.</div></div>
+          <div class="item"><strong>Reacquire logic</strong><div class="small">If the lock drifts or quality collapses, the app degrades confidence first, then enters reacquire mode instead of pretending it is still locked.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Debug Log</h2>
+      <div class="body">
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="card">
+      <h2>Live View</h2>
+      <div class="body">
+        <div id="previewWrap">
+          <video id="video" playsinline muted></video>
+          <div id="box" class="overlayBox" style="display:none"></div>
+          <div id="videoNote" class="overlayText">Video inactive</div>
+        </div>
+        <div class="footerline">Camera is used for face/skin color variation and motion-based breathing. Microphone is used for breath/voice features. Motion sensors are used when available.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Signal Dashboard</h2>
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi"><div class="small">Pulse BPM</div><div id="bpmVal" class="v">--</div><div id="bpmQual" class="small">quality --</div></div>
+          <div class="kpi"><div class="small">Breath / min</div><div id="rrVal" class="v">--</div><div id="rrQual" class="small">quality --</div></div>
+          <div class="kpi"><div class="small">Lock confidence</div><div id="lockVal" class="v">0%</div><div id="lockReason" class="small">not acquired</div></div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="grid3">
+          <div class="item"><strong>Pulse source</strong><div id="pulseSource" class="small">camera not running</div></div>
+          <div class="item"><strong>Breath source</strong><div id="breathSource" class="small">mic/camera not running</div></div>
+          <div class="item"><strong>Voice / motion</strong><div id="auxSource" class="small">not running</div></div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="grid2">
+          <div>
+            <div class="small">Pulse waveform</div>
+            <canvas id="pulseCanvas" class="spark" width="700" height="180"></canvas>
+          </div>
+          <div>
+            <div class="small">Breath waveform</div>
+            <canvas id="breathCanvas" class="spark" width="700" height="180"></canvas>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="grid2">
+          <div>
+            <div class="small">Voice energy + centroid</div>
+            <canvas id="voiceCanvas" class="big" width="700" height="250"></canvas>
+          </div>
+          <div>
+            <div class="small">Motion stability</div>
+            <canvas id="motionCanvas" class="big" width="700" height="250"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Troubleshooting Panel</h2>
+      <div class="body">
+        <div id="diagList" class="list"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const app = {
+  version:'v2.0.0',
+  safeMode:true,
+  booted:false,
+  videoStream:null,
+  audioStream:null,
+  audioCtx:null,
+  analyser:null,
+  micSource:null,
+  frameReq:null,
+  audioReq:null,
+  faceDetector:null,
+  arrays:{},
+  state:{
+    mode:'person', profile:'balanced', targetArea:'face', style:'sharp',
+    sensorsRunning:false, videoReady:false, audioReady:false, haveMotion:false, haveVideoFrames:false,
+    baseline:null, acquiring:false, acquireStartedAt:0, acquireMs:12000,
+    lockHeld:false, lockConfidence:0, lastFaceBox:null, manualBox:null, signalQuality:0,
+    latest:{bpm:null,bpmQ:0,rr:null,rrQ:0,voiceEnergy:0,voiceCentroid:0,motion:0,motionQ:0,light:0,frameMotion:0,pulseAmp:0}
+  },
+  els:{}
+};
+const $ = id => document.getElementById(id);
+function initEls(){ app.els = {
+  btnBoot:$('btnBoot'), btnStart:$('btnStart'), btnStop:$('btnStop'),
+  btnAcquire:$('btnAcquire'), btnLock:$('btnLock'), btnRelease:$('btnRelease'),
+  btnCopyLog:$('btnCopyLog'), btnTroubleshoot:$('btnTroubleshoot'),
+  focusMode:$('focusMode'), targetArea:$('targetArea'), profile:$('profile'), style:$('style'),
+  sensorStatus:$('sensorStatus'), qualityStatus:$('qualityStatus'), lockStatus:$('lockStatus'),
+  acquireBar:$('acquireBar'), acquireText:$('acquireText'),
+  log:$('log'), video:$('video'), box:$('box'), videoNote:$('videoNote'),
+  bpmVal:$('bpmVal'), bpmQual:$('bpmQual'), rrVal:$('rrVal'), rrQual:$('rrQual'),
+  lockVal:$('lockVal'), lockReason:$('lockReason'),
+  pulseSource:$('pulseSource'), breathSource:$('breathSource'), auxSource:$('auxSource'),
+  pulseCanvas:$('pulseCanvas'), breathCanvas:$('breathCanvas'),
+  voiceCanvas:$('voiceCanvas'), motionCanvas:$('motionCanvas'), diagList:$('diagList')
+};}
+function log(msg){
+  const t = new Date();
+  const s = '['+t.toLocaleTimeString('en-US',{hour12:false})+'] '+msg;
+  app.els.log.textContent += s + '\n';
+  app.els.log.scrollTop = app.els.log.scrollHeight;
+  console.log(s);
+}
+function setBadge(el,tone,text){ el.className='badge '+tone; el.innerHTML='<span class="dot"></span> '+text; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function mean(a){ return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+function stdev(a){ if(a.length<2) return 0; const m=mean(a); return Math.sqrt(mean(a.map(v=>(v-m)*(v-m)))); }
+function movingAverage(arr,n){ if(!arr.length) return []; const out=new Array(arr.length); let sum=0; for(let i=0;i<arr.length;i++){ sum+=arr[i]; if(i>=n) sum-=arr[i-n]; out[i]=sum/Math.min(i+1,n);} return out; }
+function simpleDetrend(arr){ if(arr.length<3) return arr.slice(); const start=arr[0], end=arr[arr.length-1], out=new Array(arr.length); for(let i=0;i<arr.length;i++){ const trend=lerp(start,end,i/(arr.length-1)); out[i]=arr[i]-trend; } return out; }
+function bandish(arr,fast=3,slow=18){ const a=movingAverage(arr,fast), b=movingAverage(arr,slow); return a.map((v,i)=>v-b[i]); }
+function normalize(arr){ const m=mean(arr), sd=stdev(arr)||1; return arr.map(v=>(v-m)/sd); }
+function findPeaks(arr, threshold=0.2, minDistance=8){
+  const peaks=[]; let last=-9999;
+  for(let i=1;i<arr.length-1;i++){
+    if(arr[i]>threshold && arr[i]>arr[i-1] && arr[i]>=arr[i+1] && (i-last)>=minDistance){ peaks.push(i); last=i; }
+  }
+  return peaks;
+}
+function estimateFromPeaks(values, sampleRate, minRate, maxRate){
+  if(values.length<20) return {value:null,q:0,peaks:[]};
+  const detr = normalize(bandish(simpleDetrend(values),3,21));
+  const dyn = Math.max(...detr) - Math.min(...detr);
+  const thresh = Math.max(0.15, Math.min(1.2, mean(detr) + stdev(detr)*0.25));
+  const minDistance = Math.max(2, Math.round(sampleRate * 60 / maxRate));
+  const peaks = findPeaks(detr, thresh, minDistance);
+  if(peaks.length<2) return {value:null,q:dyn>0.5?0.25:0.05,peaks,filtered:detr};
+  const ints=[]; for(let i=1;i<peaks.length;i++) ints.push((peaks[i]-peaks[i-1])/sampleRate);
+  const med=median(ints); if(!med) return {value:null,q:0,peaks,filtered:detr};
+  const rate = 60/med;
+  if(rate<minRate || rate>maxRate) return {value:null,q:0.1,peaks,filtered:detr};
+  const jitter = stdev(ints)/med;
+  const q = clamp((dyn/3)*(1-clamp(jitter,0,1))*clamp(peaks.length/10,0,1),0,1);
+  return {value:rate,q,peaks,filtered:detr};
+}
+function estimateResp(values, sampleRate){
+  if(values.length<25) return {value:null,q:0,filtered:[]};
+  const detr = normalize(bandish(simpleDetrend(values),8,50));
+  const sm = movingAverage(detr,5);
+  const crossings=[]; for(let i=1;i<sm.length;i++) if(sm[i-1]<=0 && sm[i]>0) crossings.push(i);
+  if(crossings.length<2) return {value:null,q:0.1,filtered:sm};
+  const ints=[]; for(let i=1;i<crossings.length;i++) ints.push((crossings[i]-crossings[i-1])/sampleRate);
+  const med=median(ints); const rr=60/med;
+  const q = clamp((1-clamp(stdev(ints)/(med||1),0,1))*clamp(stdev(sm)/1.8,0,1),0,1);
+  if(rr<4 || rr>42) return {value:null,q:0.1,filtered:sm};
+  return {value:rr,q,filtered:sm};
+}
+function rollingPush(arr,v,maxLen){ arr.push(v); if(arr.length>maxLen) arr.splice(0,arr.length-maxLen); }
+function niceNum(v,d=1){ return Number.isFinite(v) ? v.toFixed(d) : '--'; }
+function quantile(arr,q){ if(!arr.length) return 0; const s=[...arr].sort((a,b)=>a-b); const idx=(s.length-1)*q; const lo=Math.floor(idx), hi=Math.ceil(idx); return lo===hi ? s[lo] : s[lo] + (s[hi]-s[lo])*(idx-lo); }
+function drawSeries(canvas, seriesList){
+  const ctx=canvas.getContext('2d'), w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h); ctx.fillStyle='#0a1220'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1;
+  for(let i=1;i<4;i++){ const y=(h/4)*i; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  seriesList.forEach((s,idx) => {
+    const data=s.data||[]; if(data.length<2) return;
+    const lo=s.min ?? quantile(data,.05), hi=s.max ?? quantile(data,.95), rng=(hi-lo)||1;
+    ctx.strokeStyle=s.color || (idx===0?'#58a6ff':idx===1?'#1fc77c':'#ffbe4f'); ctx.lineWidth=s.lineWidth||2;
+    ctx.beginPath();
+    data.forEach((v,i)=>{ const x=i/(data.length-1)*w; const y=h-((v-lo)/rng)*h; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    ctx.stroke();
+  });
+}
+function ensureArrays(){ app.arrays={pulseRaw:[],pulseFiltered:[],breathCam:[],breathMic:[],breathFusion:[],voiceEnergy:[],voiceCentroid:[],motion:[],light:[],frameMotion:[],timestamps:[]}; }
+function updateStyle(){
+  const s=app.els.style.value; app.state.style=s;
+  if(s==='sharp'){ document.documentElement.style.setProperty('--blue','#58a6ff'); document.body.style.filter='none'; log('Visual style set to sharp radar'); }
+  else if(s==='smooth'){ document.documentElement.style.setProperty('--blue','#7bc4ff'); document.body.style.filter='saturate(1.06)'; log('Visual style set to smooth glass'); }
+  else { document.documentElement.style.setProperty('--blue','#7cb4ff'); document.body.style.filter='contrast(1.04) brightness(.95)'; log('Visual style set to clinical dark'); }
+}
+async function boot(){ initEls(); ensureArrays(); wireUI(); updateStyle(); app.booted=true; log('Safe mode: wellness / education / signal exploration'); log('Boot: BioSignal Focus Lab v2'); runDiagnostics(); updateUI(); }
+function wireUI(){
+  const E=app.els;
+  E.btnBoot.onclick=()=>{ log('Boot / rewire requested'); updateStyle(); runDiagnostics(); updateUI(); };
+  E.btnStart.onclick=startSensors; E.btnStop.onclick=stopSensors;
+  E.btnAcquire.onclick=startAcquire; E.btnLock.onclick=attemptLock; E.btnRelease.onclick=releaseLock;
+  E.btnCopyLog.onclick=async()=>{ try{ await navigator.clipboard.writeText(E.log.textContent); log('Copied log to clipboard.'); }catch(e){ log('Copy failed: '+(e&&e.message?e.message:e)); } };
+  E.btnTroubleshoot.onclick=runDiagnostics;
+  E.focusMode.onchange=()=>{ app.state.mode=E.focusMode.value; log('Focus mode: '+app.state.mode); };
+  E.profile.onchange=()=>{ app.state.profile=E.profile.value; log('Signal profile: '+app.state.profile); };
+  E.targetArea.onchange=()=>{ app.state.targetArea=E.targetArea.value; log('Camera target: '+app.state.targetArea); };
+  E.style.onchange=updateStyle;
+  E.video.addEventListener('click', handleVideoTap);
+  window.addEventListener('devicemotion', onDeviceMotion, {passive:true});
+  window.addEventListener('resize', updateOverlayBox);
+}
+function handleVideoTap(ev){
+  if(app.state.targetArea!=='manual') return;
+  const rect=app.els.video.getBoundingClientRect();
+  const x=(ev.clientX-rect.left)/rect.width, y=(ev.clientY-rect.top)/rect.height;
+  app.state.manualBox={x:clamp(x-0.08,0,0.84), y:clamp(y-0.08,0,0.84), w:0.16, h:0.16};
+  log(`Manual target set at ${x.toFixed(2)}, ${y.toFixed(2)}`); updateOverlayBox();
+}
+async function startSensors(){
+  if(app.state.sensorsRunning) return;
+  try{
+    log('Start sensors requested');
+    await startVideo(); await startAudio();
+    app.state.sensorsRunning=true;
+    setBadge(app.els.sensorStatus,'good','sensors active');
+    runVideoLoop(); runAudioLoop(); runDiagnostics(); updateUI();
+  }catch(e){
+    log('Start sensors failed: '+(e&&e.message?e.message:e));
+    setBadge(app.els.sensorStatus,'bad','start failed'); runDiagnostics();
+  }
+}
+async function startVideo(){
+  if(app.videoStream) return;
+  app.videoStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30}},audio:false});
+  app.els.video.srcObject=app.videoStream; await app.els.video.play();
+  app.state.videoReady=true; app.els.videoNote.textContent='Camera active'; log('Camera granted'); trySetupFaceDetector();
+}
+async function startAudio(){
+  if(app.audioStream) return;
+  app.audioStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1},video:false});
+  app.audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate:48000});
+  await app.audioCtx.resume();
+  app.micSource = app.audioCtx.createMediaStreamSource(app.audioStream);
+  app.analyser = app.audioCtx.createAnalyser(); app.analyser.fftSize=2048; app.analyser.smoothingTimeConstant=.35;
+  app.micSource.connect(app.analyser); app.state.audioReady=true; log('Microphone granted'); log('Audio engine started');
+}
+function stopSensors(){
+  if(app.frameReq) cancelAnimationFrame(app.frameReq); if(app.audioReq) cancelAnimationFrame(app.audioReq);
+  app.frameReq=null; app.audioReq=null;
+  if(app.videoStream){ app.videoStream.getTracks().forEach(t=>t.stop()); app.videoStream=null; }
+  if(app.audioStream){ app.audioStream.getTracks().forEach(t=>t.stop()); app.audioStream=null; }
+  if(app.audioCtx){ try{ app.audioCtx.close(); }catch{} app.audioCtx=null; }
+  app.analyser=null; app.micSource=null;
+  app.state.sensorsRunning=false; app.state.videoReady=false; app.state.audioReady=false;
+  app.els.video.srcObject=null; app.els.videoNote.textContent='Video inactive';
+  setBadge(app.els.sensorStatus,'bad','sensors idle'); log('Sensors stopped'); updateUI(); runDiagnostics();
+}
+function trySetupFaceDetector(){
+  if('FaceDetector' in window){ try{ app.faceDetector = new FaceDetector({fastMode:true,maxDetectedFaces:1}); log('Face detector ready'); }catch(e){ app.faceDetector=null; log('Face detector unavailable: '+e.message); } }
+  else { app.faceDetector=null; log('FaceDetector not available; using heuristic target box'); }
+}
+function onDeviceMotion(ev){
+  const acc = ev.accelerationIncludingGravity || ev.acceleration || {};
+  const mag = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2);
+  rollingPush(app.arrays.motion, mag, 600); app.state.haveMotion=true; app.state.latest.motion=mag; app.state.latest.motionQ=1;
+}
+function getHeuristicBox(){
+  const vw=app.els.video.videoWidth||1280, vh=app.els.video.videoHeight||720;
+  if(app.state.targetArea==='manual' && app.state.manualBox) return app.state.manualBox;
+  if(app.state.targetArea==='center') return {x:.35,y:.28,w:.30,h:.28};
+  return vh>vw ? {x:.26,y:.14,w:.48,h:.28} : {x:.34,y:.12,w:.32,h:.26};
+}
+async function detectFaceBox(){
+  if(app.state.targetArea==='manual' && app.state.manualBox) return app.state.manualBox;
+  if(app.state.targetArea==='center') return getHeuristicBox();
+  if(!app.faceDetector) return app.state.lastFaceBox || getHeuristicBox();
+  try{
+    const faces = await app.faceDetector.detect(app.els.video);
+    if(faces && faces[0] && faces[0].boundingBox){
+      const bb=faces[0].boundingBox, vw=app.els.video.videoWidth||1, vh=app.els.video.videoHeight||1;
+      let x=bb.x/vw, y=bb.y/vh, w=bb.width/vw, h=bb.height/vh;
+      const roi={x:clamp(x+w*.18,0,.96), y:clamp(y+h*.10,0,.96), w:clamp(w*.64,.04,.5), h:clamp(h*.22,.04,.3)};
+      app.state.lastFaceBox=roi; return roi;
+    }
+  }catch{}
+  return app.state.lastFaceBox || getHeuristicBox();
+}
+function updateOverlayBox(box){
+  if(box) app.state.lastDrawnBox=box;
+  box = box || app.state.lastDrawnBox;
+  if(!box){ app.els.box.style.display='none'; return; }
+  const rect=app.els.video.getBoundingClientRect(); app.els.box.style.display='block';
+  app.els.box.style.left=(box.x*rect.width)+'px'; app.els.box.style.top=(box.y*rect.height)+'px';
+  app.els.box.style.width=(box.w*rect.width)+'px'; app.els.box.style.height=(box.h*rect.height)+'px';
+}
+
+function createScratchCanvas(){ const c=document.createElement('canvas'); c.width=160; c.height=120; return c; }
+const scratch=createScratchCanvas();
+const sctx=scratch.getContext('2d',{willReadFrequently:true});
+let prevLuma=null;
+
+async function runVideoLoop(){
+  if(!app.state.videoReady) return;
+  const loop = async () => {
+    if(!app.state.sensorsRunning || !app.state.videoReady) return;
+    const v=app.els.video;
+    if(v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
+      app.state.haveVideoFrames=true;
+      sctx.drawImage(v,0,0,scratch.width,scratch.height);
+      const frame=sctx.getImageData(0,0,scratch.width,scratch.height);
+      const box=await detectFaceBox();
+      updateOverlayBox(box);
+      const sample=sampleRegion(frame,box);
+      const ts=performance.now()/1000;
+      rollingPush(app.arrays.timestamps,ts,900);
+      rollingPush(app.arrays.pulseRaw,sample.gNorm,900);
+      rollingPush(app.arrays.light,sample.light,900);
+      rollingPush(app.arrays.breathCam,sample.motion,900);
+      rollingPush(app.arrays.frameMotion,sample.frameMotion,900);
+      app.state.latest.light=sample.light; app.state.latest.frameMotion=sample.frameMotion; app.state.latest.pulseAmp=sample.amp;
+      app.els.videoNote.textContent=`ROI ${Math.round(box.w*100)}×${Math.round(box.h*100)}% • light ${sample.light.toFixed(0)} • motion ${sample.motion.toFixed(3)}`;
+      computeSignals(); updateUI();
+    }
+    app.frameReq=requestAnimationFrame(loop);
+  };
+  app.frameReq=requestAnimationFrame(loop);
+}
+function sampleRegion(frame, box){
+  const {data,width,height}=frame;
+  const x0=Math.floor(box.x*width), y0=Math.floor(box.y*height), x1=Math.floor((box.x+box.w)*width), y1=Math.floor((box.y+box.h)*height);
+  let sumR=0,sumG=0,sumB=0,count=0,luma=0;
+  for(let y=y0;y<y1;y+=2){ for(let x=x0;x<x1;x+=2){ const i=(y*width+x)*4; const r=data[i], g=data[i+1], b=data[i+2]; sumR+=r; sumG+=g; sumB+=b; luma += .299*r + .587*g + .114*b; count++; } }
+  const r=sumR/Math.max(1,count), g=sumG/Math.max(1,count), b=sumB/Math.max(1,count), light=luma/Math.max(1,count);
+  const gNorm = g / Math.max(1,(r+b));
+  let frameMotion=0; if(prevLuma!=null) frameMotion=Math.abs(light-prevLuma)/255; prevLuma=light;
+  const cx0=Math.floor(width*.35), cx1=Math.floor(width*.65), cy0=Math.floor(height*.25), cy1=Math.floor(height*.78);
+  let band=0, bandCount=0;
+  for(let y=cy0;y<cy1;y+=4){ for(let x=cx0;x<cx1;x+=4){ const i=(y*width+x)*4; band += .299*data[i] + .587*data[i+1] + .114*data[i+2]; bandCount++; } }
+  const bandLight=band/Math.max(1,bandCount), motion=(bandLight-light)/255, amp=Math.abs(g-(r+b)/2)/255;
+  return {r,g,b,light,gNorm,motion,frameMotion,amp};
+}
+function runAudioLoop(){
+  if(!app.analyser) return;
+  const timeData=new Float32Array(app.analyser.fftSize);
+  const freqData=new Float32Array(app.analyser.frequencyBinCount);
+  const loop = () => {
+    if(!app.state.sensorsRunning || !app.analyser) return;
+    app.analyser.getFloatTimeDomainData(timeData); app.analyser.getFloatFrequencyData(freqData);
+    let rms=0; for(let i=0;i<timeData.length;i++) rms += timeData[i]*timeData[i]; rms=Math.sqrt(rms/timeData.length);
+    let total=0, weighted=0, breathBand=0;
+    const sr=app.audioCtx.sampleRate, ny=sr/2;
+    for(let i=1;i<freqData.length;i++){
+      const mag=Math.pow(10, freqData[i]/20), freq=(i/freqData.length)*ny;
+      total += mag; weighted += mag*freq; if(freq>=100 && freq<=800) breathBand += mag;
+    }
+    const centroid = total>0 ? weighted/total : 0;
+    rollingPush(app.arrays.voiceEnergy,rms,900);
+    rollingPush(app.arrays.voiceCentroid,centroid,900);
+    rollingPush(app.arrays.breathMic,breathBand,900);
+    app.state.latest.voiceEnergy=rms; app.state.latest.voiceCentroid=centroid;
+    computeSignals(); drawCanvases();
+    app.audioReq=requestAnimationFrame(loop);
+  };
+  app.audioReq=requestAnimationFrame(loop);
+}
+function estimateSampleRate(times){ if(times.length<2) return 0; const dt=[]; for(let i=1;i<times.length;i++) dt.push(times[i]-times[i-1]); const med=median(dt); return med>0 ? 1/med : 0; }
+function computeSignals(){
+  const ts=app.arrays.timestamps; if(ts.length<30) return;
+  const tNow=ts[ts.length-1], p0=Math.max(0, ts.findIndex(t=>t>=tNow-24)), b0=Math.max(0, ts.findIndex(t=>t>=tNow-28));
+  const pulseTimes=ts.slice(p0), breathTimes=ts.slice(b0);
+  const pulseVals=app.arrays.pulseRaw.slice(p0), breathCam=app.arrays.breathCam.slice(b0), breathMic=app.arrays.breathMic.slice(b0);
+  const pulseRate=estimateSampleRate(pulseTimes), breathRate=estimateSampleRate(breathTimes);
+  const lightQ=clamp((mean(app.arrays.light.slice(p0))-40)/80,0,1), motionPenalty=clamp(mean(app.arrays.frameMotion.slice(p0))*18,0,1);
+  let pulse=estimateFromPeaks(pulseVals,pulseRate||30,42,180); pulse.q *= lightQ * (1 - 0.75*motionPenalty); const bpm = pulse.q>=0.32 ? pulse.value : null;
+  const breathMicNorm=normalize(breathMic), breathCamNorm=normalize(breathCam), fusion=[], n=Math.min(breathMicNorm.length, breathCamNorm.length);
+  for(let i=0;i<n;i++) fusion.push((breathMicNorm[i]*0.65)+(breathCamNorm[i]*0.35));
+  const breath=estimateResp(fusion,breathRate||10), rr=breath.q>=0.28 ? breath.value : null;
+  app.arrays.pulseFiltered = pulse.filtered ? pulse.filtered.slice(-400) : [];
+  app.arrays.breathFusion = breath.filtered ? breath.filtered.slice(-500) : fusion.slice(-500);
+  app.state.latest.bpm=bpm; app.state.latest.bpmQ=pulse.q; app.state.latest.rr=rr; app.state.latest.rrQ=breath.q;
+  app.state.signalQuality=computeOverallQuality(); processAcquireAndLock(); drawCanvases();
+}
+function computeOverallQuality(){
+  const L=app.state.latest, qPulse=L.bpmQ||0, qRR=L.rrQ||0, lightQ=clamp((L.light-40)/90,0,1), frameStable=1-clamp(L.frameMotion*18,0,1);
+  const motionVar=app.arrays.motion.slice(-150).length>5 ? stdev(app.arrays.motion.slice(-150)) : 0;
+  const bodyStill=1-clamp(motionVar/1.5,0,1), voiceQ=app.arrays.voiceEnergy.slice(-150).length ? clamp(mean(app.arrays.voiceEnergy.slice(-150))*35,0,1) : 0.25;
+  const profile=app.state.profile;
+  if(profile==='pulse') return clamp(qPulse*.58 + lightQ*.15 + frameStable*.17 + bodyStill*.10,0,1);
+  if(profile==='breath') return clamp(qRR*.55 + voiceQ*.15 + frameStable*.15 + bodyStill*.15,0,1);
+  if(profile==='voice') return clamp(voiceQ*.58 + bodyStill*.17 + frameStable*.10 + qRR*.15,0,1);
+  if(profile==='motion') return clamp(bodyStill*.50 + frameStable*.20 + qPulse*.15 + qRR*.15,0,1);
+  return clamp(qPulse*.34 + qRR*.28 + lightQ*.14 + frameStable*.12 + bodyStill*.07 + voiceQ*.05,0,1);
+}
+
+function startAcquire(){
+  if(!app.state.sensorsRunning){ log('Acquire aborted: sensors are not running'); return; }
+  app.state.acquiring=true; app.state.acquireStartedAt=performance.now(); app.state.lockHeld=false; app.state.lockConfidence=0;
+  setBadge(app.els.lockStatus,'warn','acquiring baseline'); log('Acquire started'); updateUI();
+}
+function processAcquireAndLock(){
+  if(app.state.acquiring){
+    const elapsed=performance.now()-app.state.acquireStartedAt, pct=clamp(elapsed/app.state.acquireMs,0,1), q=app.state.signalQuality, ok=q>0.45;
+    app.els.acquireBar.style.width=(pct*100).toFixed(1)+'%';
+    app.els.acquireText.textContent=`Enrollment ${Math.round(pct*100)}% • quality ${Math.round(q*100)}% • ${ok ? 'stable enough' : 'hold steadier / improve light'}`;
+    if(elapsed>=app.state.acquireMs){
+      if(q>0.42){
+        app.state.baseline=buildBaseline(); app.state.acquiring=false; app.els.acquireBar.style.width='100%'; app.els.acquireText.textContent='Baseline saved.';
+        setBadge(app.els.lockStatus,'warn','baseline ready'); log('Baseline saved');
+      }else{
+        app.state.acquiring=false; app.els.acquireBar.style.width='0%'; app.els.acquireText.textContent='Baseline failed: insufficient quality.';
+        setBadge(app.els.lockStatus,'bad','baseline failed'); log('Acquire failed: insufficient quality');
+      }
+    }
+  }
+  if(app.state.lockHeld && app.state.baseline){
+    const evals=evaluateLockAgainstBaseline(app.state.baseline); app.state.lockConfidence=evals.score;
+    if(evals.score<0.35){ app.state.lockHeld=false; setBadge(app.els.lockStatus,'bad','lock lost, reacquire'); app.els.lockReason.textContent=evals.reason; log('Lock lost: '+evals.reason); }
+  }
+}
+function buildBaseline(){
+  const L=app.state.latest;
+  return {
+    mode:app.state.mode, profile:app.state.profile, bpm:L.bpm, rr:L.rr, bpmQ:L.bpmQ, rrQ:L.rrQ,
+    voiceCentroid:median(app.arrays.voiceCentroid.slice(-250)), voiceEnergy:median(app.arrays.voiceEnergy.slice(-250)),
+    motionMedian:median(app.arrays.motion.slice(-250)), motionSd:stdev(app.arrays.motion.slice(-250)),
+    lightMedian:median(app.arrays.light.slice(-250)), lightSd:stdev(app.arrays.light.slice(-250)),
+    frameMotionMedian:median(app.arrays.frameMotion.slice(-250)), createdAt:Date.now()
+  };
+}
+function attemptLock(){
+  if(!app.state.baseline){ log('Lock attempt rejected: no baseline'); return; }
+  const evals=evaluateLockAgainstBaseline(app.state.baseline); app.state.lockConfidence=evals.score;
+  if(evals.score>=0.55){ app.state.lockHeld=true; setBadge(app.els.lockStatus,'good','locked'); log('Lock acquired'); }
+  else { app.state.lockHeld=false; setBadge(app.els.lockStatus,'bad','lock rejected'); log('Lock rejected: '+evals.reason); }
+  app.els.lockReason.textContent=evals.reason; updateUI();
+}
+function releaseLock(){ app.state.lockHeld=false; app.state.lockConfidence=0; setBadge(app.els.lockStatus,'bad','unlocked'); app.els.lockReason.textContent='released'; log('Lock released'); updateUI(); }
+function evaluateLockAgainstBaseline(b){
+  const L=app.state.latest, profile=b.profile||'balanced';
+  function sim(a,b,tol){ if(a==null || b==null) return 0.4; return clamp(1-Math.abs(a-b)/tol,0,1); }
+  const bpmSim=sim(L.bpm,b.bpm,9), rrSim=sim(L.rr,b.rr,5);
+  const vc=median(app.arrays.voiceCentroid.slice(-120)), ve=median(app.arrays.voiceEnergy.slice(-120)), mot=median(app.arrays.motion.slice(-120));
+  const light=median(app.arrays.light.slice(-120)), frameMot=median(app.arrays.frameMotion.slice(-120));
+  const voiceCentroidSim=sim(vc,b.voiceCentroid,350), voiceEnergySim=sim(ve,b.voiceEnergy,Math.max(.02,b.voiceEnergy*1+.02));
+  const motionSim=sim(mot,b.motionMedian,Math.max(.35,b.motionSd*3+.35)), lightSim=sim(light,b.lightMedian,Math.max(16,b.lightSd*3+16)), frameSim=sim(frameMot,b.frameMotionMedian,.08);
+  let score=0;
+  if(profile==='pulse') score=bpmSim*.50 + L.bpmQ*.20 + lightSim*.15 + frameSim*.10 + motionSim*.05;
+  else if(profile==='breath') score=rrSim*.42 + L.rrQ*.22 + voiceEnergySim*.12 + frameSim*.12 + motionSim*.12;
+  else if(profile==='voice') score=voiceCentroidSim*.34 + voiceEnergySim*.28 + motionSim*.15 + frameSim*.08 + L.rrQ*.15;
+  else if(profile==='motion') score=motionSim*.42 + frameSim*.20 + bpmSim*.15 + rrSim*.15 + lightSim*.08;
+  else score=bpmSim*.22 + rrSim*.18 + voiceCentroidSim*.13 + voiceEnergySim*.10 + motionSim*.12 + lightSim*.12 + frameSim*.13;
+  const reasons=[];
+  if(L.bpmQ<.22 && (profile==='balanced'||profile==='pulse')) reasons.push('pulse quality low');
+  if(L.rrQ<.20 && (profile==='balanced'||profile==='breath')) reasons.push('breath quality low');
+  if(lightSim<.35) reasons.push('lighting drift');
+  if(frameSim<.35) reasons.push('visual instability');
+  if(motionSim<.30) reasons.push('motion mismatch');
+  if(voiceCentroidSim<.25 && profile==='voice') reasons.push('voice signature mismatch');
+  return {score:clamp(score,0,1), reason:reasons.length ? reasons.join(', ') : 'stable match'};
+}
+function updateUI(){
+  const L=app.state.latest, q=app.state.signalQuality||0;
+  app.els.bpmVal.textContent=L.bpm!=null ? Math.round(L.bpm) : '--';
+  app.els.bpmQual.textContent='quality '+Math.round((L.bpmQ||0)*100)+'%';
+  app.els.rrVal.textContent=L.rr!=null ? L.rr.toFixed(1) : '--';
+  app.els.rrQual.textContent='quality '+Math.round((L.rrQ||0)*100)+'%';
+  app.els.lockVal.textContent=Math.round((app.state.lockConfidence||0)*100)+'%';
+  if(q>=.68) setBadge(app.els.qualityStatus,'good','quality high'); else if(q>=.38) setBadge(app.els.qualityStatus,'warn','quality moderate'); else setBadge(app.els.qualityStatus,'bad','quality low');
+  if(!app.state.sensorsRunning) setBadge(app.els.sensorStatus,'bad','sensors idle'); else if(app.state.videoReady && app.state.audioReady) setBadge(app.els.sensorStatus,'good','camera + mic active'); else setBadge(app.els.sensorStatus,'warn','partial sensors');
+  if(app.state.lockHeld) setBadge(app.els.lockStatus,'good','locked'); else if(app.state.acquiring) setBadge(app.els.lockStatus,'warn','acquiring baseline'); else if(app.state.baseline) setBadge(app.els.lockStatus,'warn','baseline ready'); else setBadge(app.els.lockStatus,'bad','unlocked');
+  app.els.pulseSource.textContent = L.bpm!=null ? `Camera rPPG estimate ${Math.round(L.bpm)} BPM, quality ${Math.round((L.bpmQ||0)*100)}%` : `Camera rPPG not reliable yet. Light ${Math.round(L.light)} / motion ${L.frameMotion.toFixed(3)}`;
+  app.els.breathSource.textContent = L.rr!=null ? `Mic/camera fusion ${L.rr.toFixed(1)} breaths/min, quality ${Math.round((L.rrQ||0)*100)}%` : `Breath estimate not reliable yet. Hold steadier and breathe naturally.`;
+  app.els.auxSource.textContent = `Voice energy ${niceNum(L.voiceEnergy,3)} • centroid ${Math.round(L.voiceCentroid)} Hz • motion ${niceNum(L.motion,2)}`;
+  if(app.state.lockHeld) app.els.lockReason.textContent='stable match'; else if(app.state.baseline && !app.els.lockReason.textContent) app.els.lockReason.textContent='baseline ready'; else if(!app.state.baseline) app.els.lockReason.textContent='not acquired';
+}
+function drawCanvases(){
+  drawSeries(app.els.pulseCanvas,[{data:app.arrays.pulseFiltered.slice(-320),color:'#58a6ff'}]);
+  drawSeries(app.els.breathCanvas,[{data:app.arrays.breathFusion.slice(-320),color:'#1fc77c'}]);
+  drawSeries(app.els.voiceCanvas,[{data:app.arrays.voiceEnergy.slice(-220),color:'#58a6ff'},{data:app.arrays.voiceCentroid.slice(-220),color:'#ffbe4f'}]);
+  drawSeries(app.els.motionCanvas,[{data:app.arrays.motion.slice(-220),color:'#58a6ff'},{data:app.arrays.frameMotion.slice(-220),color:'#ff5a6a'}]);
+}
+function runDiagnostics(){
+  const items=[], secureOkay=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+  items.push({ok:secureOkay,title:'Secure context',text:secureOkay?'Browser APIs should be allowed here.':'Use https or localhost for full sensor access.'});
+  const md=navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  items.push({ok:!!md,title:'MediaDevices',text:md?'Camera/microphone APIs present.':'Camera/microphone APIs unavailable.'});
+  items.push({ok:'FaceDetector' in window,title:'Face detector',text:('FaceDetector' in window)?'Native face detector available.':'Using fallback target box.'});
+  items.push({ok:'DeviceMotionEvent' in window,title:'Motion API',text:('DeviceMotionEvent' in window)?'Motion events supported by browser.':'Motion events unavailable; motion module limited.'});
+  const sensorCount=[app.state.videoReady?'camera':null, app.state.audioReady?'mic':null, app.state.haveMotion?'motion':null].filter(Boolean).join(', ') || 'none';
+  items.push({ok:app.state.sensorsRunning,title:'Live sensor state',text:'Active: '+sensorCount});
+  const guidance=[]; if((app.state.latest.light||0)<50) guidance.push('Increase soft front lighting.'); if((app.state.latest.frameMotion||0)>.04) guidance.push('Hold device steadier or brace elbows.'); if((app.state.latest.bpmQ||0)<.25) guidance.push('Keep forehead/face in box for 20+ seconds.'); if((app.state.latest.rrQ||0)<.22) guidance.push('Reduce background noise and breathe normally.'); if(!guidance.length) guidance.push('Signals look workable.');
+  items.push({ok:true,title:'Recommended fixes',text:guidance.join(' ')});
+  app.els.diagList.innerHTML = items.map(item => `<div class="item"><strong>${item.ok?'OK':'Check'} — ${item.title}</strong><div class="small">${item.text}</div></div>`).join('');
+  log('Diagnostics refreshed');
+}
+(function footerHealthNote(){ const note=document.createElement('div'); note.className='small'; note.style.padding='0 12px 14px'; note.textContent='Not a medical device. This app does not diagnose disease, cure DNA damage, replace clinicians, or make treatment decisions.'; document.body.appendChild(note); })();
+boot();
+})();
+</script>
+</body>
+</html>
+EOF
