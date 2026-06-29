@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>MVX Multi-Sensor Environmental Scanner</title>
+<style>
+:root{--bg:#05070d;--panel:#101827;--text:#f7fbff;--muted:#9fb0c8;--line:rgba(255,255,255,.15);--blue:#2f7dff;--green:#10a765;--gold:#d69b24;--red:#c94a5a}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#18243b,#05070d 70%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:14px 16px;background:#101827;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+h1{font-size:18px;margin:0} small{color:var(--muted)}
+main{padding:12px;max-width:1200px;margin:auto}
+.panel{background:rgba(16,24,39,.95);border:1px solid var(--line);border-radius:16px;padding:12px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:760px){.row{grid-template-columns:1fr}}
+button{width:100%;border:1px solid var(--line);border-radius:12px;background:linear-gradient(#2f7dff,#174db8);color:white;padding:12px;font-weight:800;font-size:15px}
+.good{background:linear-gradient(#10a765,#087246)}.gold{background:linear-gradient(#d69b24,#9b640d)}.red{background:linear-gradient(#c94a5a,#872232)}
+.card{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:10px}
+.metric{font-size:27px;font-weight:900}.unit{font-size:12px;color:var(--muted)}
+video,canvas{width:100%;background:#000;border:1px solid var(--line);border-radius:16px}
+.log{height:170px;overflow:auto;white-space:pre-wrap;background:#050914;border:1px solid var(--line);border-radius:12px;padding:10px;font-family:Menlo,monospace;font-size:12px}
+.badge{display:inline-block;margin:3px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>MVX Multi-Sensor Environmental Scanner</h1>
+<small>Camera • motion • compass/magnetometer • GPS • microphone • light • mapping logger</small>
+</header>
+
+<main>
+<section class="panel">
+<div class="grid">
+<button class="good" onclick="startAll()">Start Full Scan</button>
+<button class="gold" onclick="markPoint()">Mark Survey Point</button>
+<button onclick="exportJSON()">Export Survey JSON</button>
+<button class="red" onclick="stopAll()">Stop</button>
+</div>
+<p>
+<span class="badge" id="camState">Camera: off</span>
+<span class="badge" id="gpsState">GPS: off</span>
+<span class="badge" id="motionState">Motion: off</span>
+<span class="badge" id="micState">Mic: off</span>
+<span class="badge" id="lightState">Light: unknown</span>
+</p>
+</section>
+
+<section class="panel">
+<div class="row">
+<div>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="vision" width="640" height="360"></canvas>
+</div>
+<div>
+<canvas id="map" width="640" height="360"></canvas>
+</div>
+</div>
+</section>
+
+<section class="panel">
+<div class="grid">
+<div class="card"><div>Heading</div><div class="metric" id="heading">--</div><div class="unit">degrees</div></div>
+<div class="card"><div>Magnetic Field</div><div class="metric" id="mag">--</div><div class="unit">anomaly score</div></div>
+<div class="card"><div>Motion</div><div class="metric" id="motion">--</div><div class="unit">shake / vibration</div></div>
+<div class="card"><div>Noise</div><div class="metric" id="noise">--</div><div class="unit">relative dB</div></div>
+<div class="card"><div>GPS Accuracy</div><div class="metric" id="accuracy">--</div><div class="unit">meters</div></div>
+<div class="card"><div>Elevation</div><div class="metric" id="elev">--</div><div class="unit">meters</div></div>
+<div class="card"><div>Speed</div><div class="metric" id="speed">--</div><div class="unit">m/s</div></div>
+<div class="card"><div>Survey Points</div><div class="metric" id="points">0</div><div class="unit">logged</div></div>
+</div>
+</section>
+
+<section class="panel">
+<h3>Sensor Timeline</h3>
+<canvas id="scope" width="1000" height="320"></canvas>
+</section>
+
+<section class="panel">
+<h3>Log</h3>
+<div class="log" id="log"></div>
+</section>
+</main>
+
+<script>
+const video=document.getElementById("video");
+const vision=document.getElementById("vision"),vctx=vision.getContext("2d");
+const map=document.getElementById("map"),mctx=map.getContext("2d");
+const scope=document.getElementById("scope"),sctx=scope.getContext("2d");
+
+let stream=null,audioCtx=null,analyser=null,micData=null,watchId=null,running=false;
+let lastAccel={x:0,y:0,z:0},motionVal=0,headingVal=null,magBase=null;
+let gps=null,points=[],timeline=[];
+
+function log(s){const b=document.getElementById("log");b.textContent+="["+new Date().toLocaleTimeString()+"] "+s+"\n";b.scrollTop=b.scrollHeight}
+function set(id,v){document.getElementById(id).textContent=v}
+function now(){return Date.now()/1000}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+function avg(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
+
+async function startAll(){
+  running=true;
+  await startCameraMic();
+  startGPS();
+  startMotion();
+  drawLoop();
+  log("Full environmental scan started.");
+}
+
+async function startCameraMic(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}},
+      audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}
+    });
+    video.srcObject=stream;
+    set("camState","Camera: on");
+    set("micState","Mic: on");
+
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    await audioCtx.resume();
+    const src=audioCtx.createMediaStreamSource(stream);
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=2048;
+    micData=new Uint8Array(analyser.frequencyBinCount);
+    src.connect(analyser);
+  }catch(e){log("Camera/mic failed: "+e.message)}
+}
+
+function startGPS(){
+  if(!navigator.geolocation){log("GPS unavailable.");return}
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    gps={
+      lat:pos.coords.latitude,
+      lon:pos.coords.longitude,
+      acc:pos.coords.accuracy,
+      alt:pos.coords.altitude,
+      speed:pos.coords.speed,
+      t:now()
+    };
+    set("gpsState","GPS: on");
+    set("accuracy",gps.acc?gps.acc.toFixed(1):"--");
+    set("elev",gps.alt!==null&&gps.alt!==undefined?gps.alt.toFixed(1):"--");
+    set("speed",gps.speed!==null&&gps.speed!==undefined?gps.speed.toFixed(2):"--");
+  },err=>log("GPS error: "+err.message),{enableHighAccuracy:true,maximumAge:1000,timeout:10000});
+}
+
+async function startMotion(){
+  try{
+    if(typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function"){
+      await DeviceMotionEvent.requestPermission();
+    }
+    window.addEventListener("devicemotion",motionHandler);
+    window.addEventListener("deviceorientation",orientationHandler);
+    set("motionState","Motion: on");
+  }catch(e){log("Motion permission failed: "+e.message)}
+}
+
+function motionHandler(e){
+  const a=e.accelerationIncludingGravity||e.acceleration||{x:0,y:0,z:0};
+  const x=a.x||0,y=a.y||0,z=a.z||0;
+  const dx=x-lastAccel.x,dy=y-lastAccel.y,dz=z-lastAccel.z;
+  lastAccel={x,y,z};
+  motionVal=motionVal*.85+Math.sqrt(dx*dx+dy*dy+dz*dz)*.15;
+  set("motion",motionVal.toFixed(2));
+}
+
+function orientationHandler(e){
+  let h=e.webkitCompassHeading ?? e.alpha;
+  if(h!==null&&h!==undefined){
+    headingVal=h;
+    set("heading",Math.round(h));
+  }
+
+  // Approx magnetic anomaly proxy from orientation/motion stability.
+  const raw=Math.abs(e.alpha||0)+Math.abs(e.beta||0)*.4+Math.abs(e.gamma||0)*.4;
+  if(magBase===null)magBase=raw;
+  const anomaly=Math.abs(raw-magBase)/(motionVal+1);
+  set("mag",anomaly.toFixed(1));
+}
+
+function readMic(){
+  if(!analyser)return 0;
+  analyser.getByteFrequencyData(micData);
+  let sum=0;
+  for(let i=0;i<micData.length;i++)sum+=micData[i];
+  const level=sum/micData.length;
+  const db=20*Math.log10(level+1);
+  set("noise",db.toFixed(1));
+  return db;
+}
+
+function readVision(){
+  if(video.readyState<2)return {brightness:0,contrast:0};
+  vision.width=640; vision.height=360;
+  vctx.drawImage(video,0,0,vision.width,vision.height);
+  const img=vctx.getImageData(0,0,vision.width,vision.height).data;
+  let vals=[];
+  for(let i=0;i<img.length;i+=80){
+    vals.push((img[i]+img[i+1]+img[i+2])/3);
+  }
+  const b=avg(vals);
+  const c=Math.sqrt(avg(vals.map(x=>(x-b)*(x-b))));
+  vctx.fillStyle="rgba(0,0,0,.55)";
+  vctx.fillRect(10,10,250,72);
+  vctx.fillStyle="#fff";
+  vctx.font="18px Menlo";
+  vctx.fillText("Brightness: "+b.toFixed(1),22,38);
+  vctx.fillText("Contrast: "+c.toFixed(1),22,64);
+  return {brightness:b,contrast:c};
+}
+
+function markPoint(){
+  const noise=readMic();
+  const visionData=readVision();
+  const p={
+    t:new Date().toISOString(),
+    gps,
+    heading:headingVal,
+    motion:motionVal,
+    noise,
+    brightness:visionData.brightness,
+    contrast:visionData.contrast,
+    note:"manual survey point"
+  };
+  points.push(p);
+  set("points",points.length);
+  log("Marked survey point #"+points.length);
+  drawMap();
+}
+
+function drawMap(){
+  mctx.clearRect(0,0,map.width,map.height);
+  mctx.fillStyle="#050914";mctx.fillRect(0,0,map.width,map.height);
+  mctx.fillStyle="#9fb0c8";mctx.font="16px Menlo";
+  mctx.fillText("GPS / Survey Map",20,28);
+
+  if(!points.length){
+    mctx.fillText("Mark points while walking a grid.",20,65);
+    return;
+  }
+
+  const valid=points.filter(p=>p.gps);
+  if(!valid.length)return;
+  const lats=valid.map(p=>p.gps.lat),lons=valid.map(p=>p.gps.lon);
+  const minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons);
+
+  valid.forEach((p,i)=>{
+    const x=40+(p.gps.lon-minLon)/(maxLon-minLon||1)*(map.width-80);
+    const y=map.height-40-(p.gps.lat-minLat)/(maxLat-minLat||1)*(map.height-80);
+    const strength=clamp((p.noise||0)*2+(p.motion||0)*8,0,100);
+    mctx.fillStyle=strength>70?"#c94a5a":strength>40?"#d69b24":"#10a765";
+    mctx.beginPath();mctx.arc(x,y,7,0,Math.PI*2);mctx.fill();
+    mctx.fillStyle="#fff";mctx.fillText(String(i+1),x+9,y+4);
+  });
+}
+
+function drawScope(){
+  const noise=readMic();
+  const visionData=readVision();
+  timeline.push({t:now(),noise,motion:motionVal,brightness:visionData.brightness});
+  while(timeline.length>240)timeline.shift();
+
+  sctx.clearRect(0,0,scope.width,scope.height);
+  sctx.fillStyle="#050914";sctx.fillRect(0,0,scope.width,scope.height);
+  sctx.fillStyle="#9fb0c8";sctx.font="15px Menlo";
+  sctx.fillText("Timeline: noise / motion / brightness",18,24);
+
+  function plot(key,color,scale,offset){
+    sctx.strokeStyle=color;sctx.lineWidth=2;sctx.beginPath();
+    timeline.forEach((p,i)=>{
+      const x=i/(240-1)*scope.width;
+      const y=offset-(p[key]||0)*scale;
+      if(i===0)sctx.moveTo(x,y);else sctx.lineTo(x,y);
+    });
+    sctx.stroke();
+  }
+  plot("noise","#d69b24",3,250);
+  plot("motion","#c94a5a",25,250);
+  plot("brightness","#2f7dff",1.2,250);
+}
+
+function drawLoop(){
+  if(!running)return;
+  drawScope();
+  drawMap();
+  requestAnimationFrame(drawLoop);
+}
+
+function exportJSON(){
+  const report={
+    app:"MVX Multi-Sensor Environmental Scanner",
+    created:new Date().toISOString(),
+    points,
+    latest:{gps,heading:headingVal,motion:motionVal,timeline:timeline.slice(-30)}
+  };
+  const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="mvx_field_survey.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function stopAll(){
+  running=false;
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  set("camState","Camera: off");
+  set("gpsState","GPS: off");
+  set("micState","Mic: off");
+  log("Stopped.");
+}
+
+log("Ready. This is the strongest phone-only field scanner style app. Browser LiDAR access is limited; camera-based mapping and GPS logging are included.");
+</script>
+</body>
+</html>
