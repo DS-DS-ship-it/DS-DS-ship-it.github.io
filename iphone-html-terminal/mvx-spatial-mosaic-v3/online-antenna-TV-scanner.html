@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📡 Online Antenna TV</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+body {
+  background: black;
+  color: #00ffcc;
+  font-family: monospace;
+  text-align: center;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+#video {
+  width: 80%;
+  max-width: 900px;
+  border: 3px solid #00ffcc;
+  margin-top: 20px;
+}
+
+button {
+  padding: 10px;
+  margin: 10px;
+  background: black;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+  cursor: pointer;
+}
+
+#status {
+  margin-top: 10px;
+}
+
+#channels {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channel {
+  cursor: pointer;
+  padding: 5px;
+}
+
+.channel:hover {
+  background: #003333;
+}
+</style>
+</head>
+<body>
+
+<h1>📡 Online Antenna TV Scanner</h1>
+
+<button onclick="scanChannels()">Scan Free Channels</button>
+
+<div id="status"></div>
+<div id="channels"></div>
+
+<video id="video" controls autoplay></video>
+
+<script>
+const video = document.getElementById('video');
+const statusDiv = document.getElementById('status');
+const channelsDiv = document.getElementById('channels');
+
+let hls;
+
+// Public LEGAL IPTV playlist (community maintained free streams)
+const PLAYLIST_URL = "https://iptv-org.github.io/iptv/index.m3u";
+
+async function scanChannels() {
+  statusDiv.innerHTML = "📡 Fetching channel list...";
+  channelsDiv.innerHTML = "";
+
+  try {
+    const res = await fetch(PLAYLIST_URL);
+    const text = await res.text();
+
+    const channels = parseM3U(text);
+
+    statusDiv.innerHTML = `Found ${channels.length} channels. Testing...`;
+
+    let workingChannels = [];
+
+    // Test first 30 channels (avoid overload)
+    for (let i = 0; i < Math.min(channels.length, 200); i++) {
+      let ch = channels[i];
+
+      let works = await testStream(ch.url);
+
+      if (works) {
+        workingChannels.push(ch);
+        addChannelToUI(ch);
+      }
+
+      statusDiv.innerHTML = `Scanning... ${i+1}/30`;
+    }
+
+    statusDiv.innerHTML = `✅ Found ${workingChannels.length} working channels`;
+
+  } catch (err) {
+    statusDiv.innerHTML = "Error loading playlist";
+    console.error(err);
+  }
+}
+
+// Parse M3U playlist
+function parseM3U(text) {
+  const lines = text.split("\n");
+  let channels = [];
+  let current = null;
+
+  for (let line of lines) {
+    line = line.trim();
+
+    if (line.startsWith("#EXTINF")) {
+      const nameMatch = line.split(",")[1];
+      current = { name: nameMatch };
+    } else if (line.startsWith("http")) {
+      if (current) {
+        current.url = line;
+        channels.push(current);
+        current = null;
+      }
+    }
+  }
+
+  return channels;
+}
+
+// Test if stream loads
+function testStream(url) {
+  return new Promise(resolve => {
+    const videoTest = document.createElement('video');
+
+    let timeout = setTimeout(() => {
+      resolve(false);
+    }, 4000);
+
+    videoTest.src = url;
+
+    videoTest.onloadeddata = () => {
+      clearTimeout(timeout);
+      resolve(true);
+    };
+
+    videoTest.onerror = () => {
+      clearTimeout(timeout);
+      resolve(false);
+    };
+  });
+}
+
+// Add channel to UI
+function addChannelToUI(ch) {
+  const div = document.createElement('div');
+  div.className = "channel";
+  div.textContent = ch.name;
+
+  div.onclick = () => playChannel(ch.url);
+
+  channelsDiv.appendChild(div);
+}
+
+// Play channel
+function playChannel(url) {
+  if (hls) hls.destroy();
+
+  if (Hls.isSupported()) {
+    hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;
+  } else {
+    alert("Streaming not supported");
+  }
+}
+</script>
+
+</body>
+</html>
