@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📡 Smart Antenna TV Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  background: black;
+  color: #00ffcc;
+  font-family: monospace;
+  text-align: center;
+}
+
+#video {
+  width: 95%;
+  max-width: 900px;
+  border: 2px solid #00ffcc;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  background: black;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+}
+
+input {
+  padding: 8px;
+  width: 80%;
+}
+
+#channels {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channel {
+  padding: 8px;
+  border-bottom: 1px solid #003333;
+  display: flex;
+  justify-content: space-between;
+}
+
+.star {
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📡 Smart Antenna TV Pro</h2>
+
+<button onclick="scanChannels()">🔍 Scan Channels</button>
+<button onclick="nextPage()">➡️ Next</button>
+<button onclick="showPlaylist()">⭐ My Playlist</button>
+
+<br>
+<input id="search" placeholder="Search channels..." oninput="filterChannels()">
+
+<div id="status"></div>
+<div id="channels"></div>
+
+<video id="video" controls autoplay></video>
+
+<script>
+const video = document.getElementById('video');
+const channelsDiv = document.getElementById('channels');
+const statusDiv = document.getElementById('status');
+
+let hls;
+let allChannels = [];
+let filteredChannels = [];
+let pageIndex = 0;
+const PAGE_SIZE = 200;
+
+const PLAYLISTS = [
+  "https://iptv-org.github.io/iptv/index.m3u"
+];
+
+// LOAD SAVED PLAYLIST
+let saved = JSON.parse(localStorage.getItem("myChannels") || "[]");
+
+// SCAN CHANNELS
+async function scanChannels() {
+  statusDiv.innerHTML = "📡 Scanning...";
+  allChannels = [];
+
+  for (let url of PLAYLISTS) {
+    let res = await fetch(url);
+    let text = await res.text();
+    allChannels.push(...parseM3U(text));
+  }
+
+  // remove duplicates
+  let map = {};
+  allChannels.forEach(c => map[c.url] = c);
+  allChannels = Object.values(map);
+
+  filteredChannels = [...allChannels];
+  pageIndex = 0;
+
+  showPage();
+}
+
+// PARSER
+function parseM3U(text) {
+  let lines = text.split("\n");
+  let out = [];
+  let current = null;
+
+  for (let l of lines) {
+    l = l.trim();
+
+    if (l.startsWith("#EXTINF")) {
+      current = { name: l.split(",")[1] || "Unknown" };
+    } else if (l.startsWith("http")) {
+      if (current) {
+        current.url = l;
+        out.push(current);
+        current = null;
+      }
+    }
+  }
+
+  return out;
+}
+
+// SHOW PAGE
+function showPage() {
+  channelsDiv.innerHTML = "";
+
+  let start = pageIndex * PAGE_SIZE;
+  let end = start + PAGE_SIZE;
+
+  let page = filteredChannels.slice(start, end);
+
+  page.forEach(ch => {
+    let div = document.createElement("div");
+    div.className = "channel";
+
+    let name = document.createElement("span");
+    name.textContent = ch.name;
+    name.onclick = () => play(ch.url);
+
+    let star = document.createElement("span");
+    star.textContent = saved.find(s => s.url === ch.url) ? "⭐" : "☆";
+    star.className = "star";
+
+    star.onclick = () => toggleSave(ch);
+
+    div.appendChild(name);
+    div.appendChild(star);
+
+    channelsDiv.appendChild(div);
+  });
+
+  statusDiv.innerHTML = `Showing ${start} - ${end} of ${filteredChannels.length}`;
+}
+
+// NEXT PAGE
+function nextPage() {
+  pageIndex++;
+
+  if (pageIndex * PAGE_SIZE >= filteredChannels.length) {
+    pageIndex = 0;
+  }
+
+  showPage();
+}
+
+// SEARCH
+function filterChannels() {
+  let term = document.getElementById("search").value.toLowerCase();
+
+  filteredChannels = allChannels.filter(c =>
+    c.name.toLowerCase().includes(term)
+  );
+
+  pageIndex = 0;
+  showPage();
+}
+
+// PLAY
+function play(url) {
+  if (hls) hls.destroy();
+
+  if (Hls.isSupported() && url.includes(".m3u8")) {
+    hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+  } else {
+    video.src = url;
+  }
+}
+
+// SAVE / UNSAVE
+function toggleSave(ch) {
+  let index = saved.findIndex(s => s.url === ch.url);
+
+  if (index > -1) {
+    saved.splice(index, 1);
+  } else {
+    saved.push(ch);
+  }
+
+  localStorage.setItem("myChannels", JSON.stringify(saved));
+  showPage();
+}
+
+// SHOW PLAYLIST
+function showPlaylist() {
+  filteredChannels = [...saved];
+  pageIndex = 0;
+  showPage();
+}
+</script>
+
+</body>
+</html>
