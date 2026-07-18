@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📡 Smart Online Antenna TV</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  background: black;
+  color: #00ffcc;
+  font-family: monospace;
+  text-align: center;
+}
+
+h1 {
+  margin: 10px;
+}
+
+#video {
+  width: 95%;
+  max-width: 900px;
+  border: 2px solid #00ffcc;
+  margin-top: 10px;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+  background: black;
+  color: #00ffcc;
+  border: 1px solid #00ffcc;
+  cursor: pointer;
+}
+
+input {
+  padding: 8px;
+  margin: 5px;
+  width: 80%;
+}
+
+#status {
+  margin-top: 10px;
+}
+
+#channels {
+  margin-top: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channel {
+  padding: 8px;
+  border-bottom: 1px solid #003333;
+  cursor: pointer;
+}
+
+.channel:hover {
+  background: #003333;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📡 Smart Antenna TV Scanner</h1>
+
+<button onclick="scanChannels()">🔍 Scan Channels</button>
+<input id="search" placeholder="Search channels..." oninput="filterChannels()">
+
+<div id="status"></div>
+<div id="channels"></div>
+
+<video id="video" controls autoplay></video>
+
+<script>
+const video = document.getElementById('video');
+const statusDiv = document.getElementById('status');
+const channelsDiv = document.getElementById('channels');
+const searchInput = document.getElementById('search');
+
+let hls;
+let allChannels = [];
+
+// MULTIPLE PUBLIC PLAYLISTS (LEGAL FREE STREAMS)
+const PLAYLISTS = [
+  "https://iptv-org.github.io/iptv/index.m3u",
+  "https://iptv-org.github.io/iptv/categories/news.m3u",
+  "https://iptv-org.github.io/iptv/categories/movies.m3u",
+  "https://iptv-org.github.io/iptv/categories/sports.m3u"
+];
+
+async function scanChannels() {
+  statusDiv.innerHTML = "📡 Scanning global channels...";
+  channelsDiv.innerHTML = "";
+  allChannels = [];
+
+  try {
+    for (let url of PLAYLISTS) {
+      let res = await fetch(url);
+      let text = await res.text();
+      let parsed = parseM3U(text);
+      allChannels.push(...parsed);
+    }
+
+    // REMOVE DUPLICATES
+    let unique = {};
+    allChannels.forEach(ch => {
+      unique[ch.url] = ch;
+    });
+
+    allChannels = Object.values(unique);
+
+    statusDiv.innerHTML = `Found ${allChannels.length} channels`;
+
+    displayChannels(allChannels);
+
+  } catch (err) {
+    statusDiv.innerHTML = "❌ Error loading playlists";
+    console.error(err);
+  }
+}
+
+// PARSE PLAYLIST
+function parseM3U(text) {
+  const lines = text.split("\n");
+  let channels = [];
+  let current = null;
+
+  for (let line of lines) {
+    line = line.trim();
+
+    if (line.startsWith("#EXTINF")) {
+      let name = line.split(",")[1] || "Unknown";
+      current = { name };
+    } else if (line.startsWith("http")) {
+      if (current) {
+        current.url = line;
+        channels.push(current);
+        current = null;
+      }
+    }
+  }
+
+  return channels;
+}
+
+// DISPLAY CHANNELS
+function displayChannels(list) {
+  channelsDiv.innerHTML = "";
+
+  list.slice(0, 500).forEach(ch => { // show first 500 for performance
+    const div = document.createElement('div');
+    div.className = "channel";
+    div.textContent = ch.name;
+
+    div.onclick = () => playChannel(ch.url);
+
+    channelsDiv.appendChild(div);
+  });
+}
+
+// SEARCH FILTER
+function filterChannels() {
+  let term = searchInput.value.toLowerCase();
+
+  let filtered = allChannels.filter(ch =>
+    ch.name.toLowerCase().includes(term)
+  );
+
+  displayChannels(filtered);
+}
+
+// PLAY CHANNEL
+function playChannel(url) {
+  if (hls) hls.destroy();
+
+  if (Hls.isSupported() && url.includes(".m3u8")) {
+    hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+  } else {
+    video.src = url;
+  }
+
+  statusDiv.innerHTML = "📺 Playing...";
+}
+
+</script>
+
+</body>
+</html>
