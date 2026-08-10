@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📡 Smart Antenna TV Pro - Direct 4K Stream Station</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg-color: #090d16;
+  --card-bg: #111827;
+  --card-border: #1f293d;
+  --primary: #00ffcc;
+  --primary-glow: rgba(0, 255, 204, 0.3);
+  --accent: #7000ff;
+  --fav-color: #ff007f;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
+  padding: 15px;
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 15px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  margin-bottom: 20px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+.logo-section h1 {
+  color: var(--primary);
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-section p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 3px;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 15px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+}
+
+.stats-bar span strong {
+  color: var(--primary);
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button, select.quality-select {
+  background: var(--card-bg);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+button:hover, select.quality-select:hover {
+  background: var(--primary);
+  color: #000;
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+button.active {
+  background: var(--primary);
+  color: #000;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 992px) {
+  .main-layout {
+    grid-template-columns: 440px 1fr;
+  }
+}
+
+/* Video Player Container */
+.player-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 15px;
+  position: sticky;
+  top: 15px;
+  height: fit-content;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  outline: none;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  transform: translateZ(0);
+}
+
+.player-info {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.now-playing-title {
+  font-size: 1rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.now-playing-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.codec-badge {
+  font-size: 0.75rem;
+  color: var(--primary);
+  background: rgba(0, 255, 204, 0.1);
+  border: 1px solid rgba(0, 255, 204, 0.25);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-live { background: rgba(0, 255, 204, 0.15); color: var(--primary); border: 1px solid var(--primary); }
+.status-connecting { background: rgba(255, 200, 0, 0.15); color: #ffca28; border: 1px solid #ffca28; }
+.status-error { background: rgba(255, 0, 80, 0.15); color: #ff0050; border: 1px solid #ff0050; }
+
+.player-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Category Navigation Bar */
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.cat-tab {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cat-tab:hover, .cat-tab.active {
+  color: #000;
+  background: var(--primary);
+  border-color: var(--primary);
+  font-weight: bold;
+}
+
+/* Subcategory Cards Grid */
+.subcategories-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.subcat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.subcat-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.subcat-card.active {
+  border-color: var(--primary);
+  background: rgba(0, 255, 204, 0.05);
+  box-shadow: 0 0 10px rgba(0,255,204,0.2);
+}
+
+.subcat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.subcat-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.subcat-count {
+  font-size: 0.75rem;
+  background: var(--card-border);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.subcat-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* Controls & Filter Panel */
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+}
+
+input[type="text"], select {
+  background: #000;
+  color: var(--text-main);
+  border: 1px solid var(--card-border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+input[type="text"]:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+#search {
+  flex-grow: 1;
+  min-width: 180px;
+}
+
+/* Channels Display */
+.channels-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 520px;
+  overflow-y: auto;
+  padding-right: 8px;
+  padding-bottom: 30px;
+  box-sizing: border-box;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.channels-grid.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.channel-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.channel-card:hover {
+  border-color: var(--primary);
+  background: rgba(0, 255, 204, 0.05);
+}
+
+.channel-card.playing {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 10px rgba(0,255,204,0.3);
+}
+
+.channel-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: #000;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.channel-info {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.channel-name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-main);
+}
+
+.channel-cat-tag {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.star-btn {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.star-btn.fav {
+  color: var(--fav-color);
+}
+
+/* Custom Source Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--card-bg);
+  border: 1px solid var(--primary);
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.modal h3 {
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+
+.modal input {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* Pagination Bar */
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  font-size: 0.85rem;
+  position: relative;
+  z-index: 10;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo-section">
+    <h1>📡 Smart Antenna TV Pro</h1>
+    <p>Global Online Channels & Categorized Live Stream Explorer</p>
+  </div>
+
+  <div class="stats-bar">
+    <span>Channels: <strong id="stat-total">0</strong></span>
+    <span>Active View: <strong id="stat-showing">0</strong></span>
+    <span>Favorites: <strong id="stat-favs">0</strong></span>
+  </div>
+
+  <div class="action-buttons">
+    <button onclick="scanAllChannels()">🔍 Scan Channels</button>
+    <button onclick="playRandomChannel()">🎲 Surprise Me!</button>
+    <button onclick="openModal()">➕ Add M3U URL</button>
+    <button onclick="toggleFavoritesView()" id="fav-tab-btn">⭐ My Playlist</button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- LEFT: Sticky Video Player Panel -->
+  <div class="player-container">
+    <div class="video-wrapper">
+      <video id="video" controls autoplay playsinline x-webkit-airplay="allow" airplay="allow"></video>
+    </div>
+    
+    <div class="player-info">
+      <div>
+        <div id="playing-title" class="now-playing-title">Select a channel to begin</div>
+        <div id="playing-meta" class="now-playing-meta">Ready to stream</div>
+        <div class="badges-container">
+          <div id="codec-info" class="codec-badge" style="display:none;">Resolution: Auto</div>
+        </div>
+      </div>
+      <div id="stream-status" class="status-badge status-live" style="display:none;">LIVE</div>
+    </div>
+
+    <!-- PLAYER CONTROLS -->
+    <div class="player-controls">
+      <button onclick="unmuteVideo()" id="unmute-btn" style="display:none; background:#ff007f; color:#fff; border:none; width:100%;">🔊 Click to Unmute Audio</button>
+
+      <!-- Resolution / Quality Switcher -->
+      <select id="quality-select" class="quality-select" onchange="onQualityChange()" title="Stream Resolution Quality">
+        <option value="max">🏆 4K / Max Quality</option>
+        <option value="auto">⚡ Auto (Adaptive)</option>
+      </select>
+
+      <button onclick="toggleCaptions()" id="cc-btn">💬 CC: OFF</button>
+      <button onclick="reconnectCurrentStream(true)">🔄 Re-Sync Stream</button>
+      <button onclick="tryNextStream()" style="flex:1;">⏭️ Next Stream</button>
+      <button onclick="togglePIP()">📺 PiP</button>
+      <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Explorer & Channel Browser Panel -->
+  <div>
+
+    <!-- Main Categories Bar -->
+    <div class="category-tabs">
+      <div class="cat-tab active" onclick="selectMainCategory('all', this)">🌐 All Channels</div>
+      <div class="cat-tab" onclick="selectMainCategory('scripted', this)">🎭 Scripted Entertainment</div>
+      <div class="cat-tab" onclick="selectMainCategory('unscripted', this)">💡 Unscripted & Factual</div>
+      <div class="cat-tab" onclick="selectMainCategory('special_interest', this)">🌟 Special Interest</div>
+      <div class="cat-tab" onclick="selectMainCategory('other', this)">📻 General & Other</div>
+    </div>
+
+    <!-- Subcategory Cards Grid -->
+    <div id="subcategories-grid" class="subcategories-container"></div>
+
+    <!-- Search and Display Controls Bar -->
+    <div class="filter-panel">
+      <input id="search" placeholder="🔍 Search channels by name or tag..." oninput="onSearchInput()">
+      
+      <select id="country-filter" onchange="applyFilters()">
+        <option value="all">🌍 All Countries</option>
+      </select>
+
+      <button onclick="toggleViewMode()" id="view-mode-btn">🔲 Grid View</button>
+    </div>
+
+    <!-- Channel List View -->
+    <div id="status-message" style="margin-bottom:10px; font-size:0.85rem; color: var(--primary);"></div>
+    <div id="channels" class="channels-grid"></div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar">
+      <button onclick="prevPage()">⬅️ Previous</button>
+      <span id="page-info">Page 1</span>
+      <button onclick="nextPage()">Next ➡️</button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Custom Source Modal -->
+<div class="modal-overlay" id="custom-modal">
+  <div class="modal">
+    <h3>➕ Add Custom M3U Playlist</h3>
+    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Paste a public M3U / M3U8 IPTV URL below:</p>
+    <input type="text" id="custom-m3u-input" placeholder="https://example.com/playlist.m3u">
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button onclick="closeModal()">Cancel</button>
+      <button onclick="addCustomPlaylist()" style="background:var(--primary); color:#000;">Add & Scan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Taxonomy classification system
+const TAXONOMY = [
+  {
+    id: "scripted",
+    title: "Scripted Entertainment",
+    subcategories: [
+      {
+        id: "dramas",
+        name: "Dramas",
+        desc: "Serious fictional stories with emotional themes, character struggles, and ongoing plots.",
+        keywords: ["drama", "series", "novela", "telenovela", "cinema", "movie", "film", "hallmark", "cine", "theatre", "thriller", "mystery", "crime", "action"]
+      },
+      {
+        id: "sitcoms",
+        name: "Sitcoms (Situation Comedies)",
+        desc: "Funny shows featuring recurring characters in everyday, amusing situations.",
+        keywords: ["sitcom", "sit-com", "comedy", "comedia", "humor", "funny", "laugh", "standup"]
+      },
+      {
+        id: "soaps",
+        name: "Soap Operas",
+        desc: "Continuous melodramatic serials focusing on the daily personal lives and relationships of characters.",
+        keywords: ["soap opera", "soap", "serial drama", "melodrama", "telenovela"]
+      },
+      {
+        id: "animation",
+        name: "Cartoons & Animation",
+        desc: "Programs using hand-drawn, computer-generated, or stop-motion animated characters.",
+        keywords: ["cartoon", "animation", "anime", "animated", "toon", "disney", "nick", "boomerang", "pixar", "manga"]
+      },
+      {
+        id: "scifi",
+        name: "Sci-Fi & Fantasy",
+        desc: "Fictional stories built around futuristic science, space exploration, magic, or supernatural worlds.",
+        keywords: ["sci-fi", "scifi", "fantasy", "science fiction", "syfy", "supernatural", "space", "alien", "magic"]
+      }
+    ]
+  },
+  {
+    id: "unscripted",
+    title: "Unscripted and Factual",
+    subcategories: [
+      {
+        id: "news",
+        name: "News & Current Affairs",
+        desc: "Reports covering daily local, national, and world events as they happen.",
+        keywords: ["news", "noticias", "aktuel", "info", "weather", "business", "bloomberg", "cnn", "bbc", "al jazeera", "euronews", "headline", "current affairs", "cnbc", "fox news", "msnbc"]
+      },
+      {
+        id: "docs",
+        name: "Documentaries",
+        desc: "Non-fiction films or series that educate or record real-life events, history, or science.",
+        keywords: ["doc", "documentary", "documental", "history", "historia", "discovery", "nat geo", "geographic", "science", "ciencia", "nature", "wildlife", "investigation", "archaeology"]
+      },
+      {
+        id: "reality",
+        name: "Reality TV",
+        desc: "Shows filming ordinary people or celebrities in unscripted or competitive everyday situations.",
+        keywords: ["reality", "realidad", "bravo", "tlc", "e!", "big brother", "survivor", "unscripted", "mtv"]
+      },
+      {
+        id: "gameshows",
+        name: "Game Shows",
+        desc: "Competitive programs where contestants play quizzes or games to win cash and prizes.",
+        keywords: ["game show", "quiz", "gameshow", "trivia", "wheel of fortune", "jeopardy", "family feud"]
+      },
+      {
+        id: "talkshows",
+        name: "Talk Shows",
+        desc: "Discussion-based programs where a host interviews guests or public figures.",
+        keywords: ["talk show", "talk", "interview", "discussion", "chat", "podcast", "late night"]
+      }
+    ]
+  },
+  {
+    id: "special_interest",
+    title: "Special Interest",
+    subcategories: [
+      {
+        id: "sports",
+        name: "Sports Programs",
+        desc: "Live or recorded coverage of athletic events and competitions.",
+        keywords: ["sport", "deporte", "espn", "football", "soccer", "nba", "nfl", "f1", "racing", "golf", "tennis", "mma", "ufc", "stadium", "arena", "auto", "outdoor", "cricket", "rugby", "boxing", "hockey", "eurosport"]
+      },
+      {
+        id: "lifestyle",
+        name: "Lifestyle & Cookery",
+        desc: "Instructional programs focused on food, home improvement, fashion, or travel.",
+        keywords: ["cook", "cooking", "food", "kitchen", "lifestyle", "cocina", "travel", "gourmet", "chef", "home", "fashion", "garden", "design", "style", "living", "diy"]
+      },
+      {
+        id: "kids",
+        name: "Children's TV",
+        desc: "Educational or entertaining shows specifically designed and produced for kids.",
+        keywords: ["kids", "child", "junior", "ninos", "infantil", "baby", "pbs kids", "nickelodeon", "cartoon network", "disney channel", "toddler", "family"]
+      }
+    ]
+  }
+];
+
+const DEFAULT_PLAYLISTS = [
+  "https://iptv-org.github.io/iptv/index.category.m3u",
+  "https://iptv-org.github.io/iptv/index.m3u",
+  "https://iptv-org.github.io/iptv/index.language.m3u",
+  "https://iptv-org.github.io/iptv/categories/news.m3u",
+  "https://iptv-org.github.io/iptv/categories/movies.m3u",
+  "https://iptv-org.github.io/iptv/categories/animation.m3u",
+  "https://iptv-org.github.io/iptv/categories/sports.m3u",
+  "https://iptv-org.github.io/iptv/categories/documentary.m3u"
+];
+
+const CORS_PROXIES = [
+  u => u, // Direct fetch first
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+];
+
+// Global State
+let allChannels = [];
+let filteredChannels = [];
+let favorites = JSON.parse(localStorage.getItem("smart_tv_favs") || "[]");
+let customPlaylists = JSON.parse(localStorage.getItem("smart_tv_sources") || "[]");
+
+let currentMainCategory = "all";
+let currentSubCategory = "all";
+let currentPage = 0;
+const PAGE_SIZE = 60;
+let isFavOnlyView = false;
+let isGridView = false;
+let hls = null;
+let currentPlayingChannel = null;
+
+// Closed Captions & Stream State
+let captionsEnabled = false;
+
+const video = document.getElementById('video');
+const channelsDiv = document.getElementById('channels');
+const statusMsg = document.getElementById('status-message');
+const streamStatusBadge = document.getElementById('stream-status');
+const codecBadge = document.getElementById('codec-info');
+const unmuteBtn = document.getElementById('unmute-btn');
+const ccBtn = document.getElementById('cc-btn');
+const qualitySelect = document.getElementById('quality-select');
+
+// INITIALIZATION
+window.onload = () => {
+  renderSubcategories();
+  scanAllChannels();
+  setupVideoDiagnostics();
+};
+
+function setupVideoDiagnostics() {
+  const updateResBadge = () => {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w && h) {
+      codecBadge.style.display = "inline-block";
+      if (h >= 2160) {
+        codecBadge.textContent = `✨ 4K Ultra HD (${w}x${h})`;
+      } else if (h >= 1080) {
+        codecBadge.textContent = `🌟 1080p Full HD (${w}x${h})`;
+      } else if (h >= 720) {
+        codecBadge.textContent = `📺 720p HD (${w}x${h})`;
+      } else {
+        codecBadge.textContent = `📺 SD (${w}x${h})`;
+      }
+    }
+  };
+
+  video.addEventListener('loadedmetadata', () => {
+    updateResBadge();
+    applyCaptionSettings();
+  });
+
+  video.addEventListener('resize', updateResBadge);
+
+  video.addEventListener('volumechange', () => {
+    unmuteBtn.style.display = video.muted ? 'inline-flex' : 'none';
+  });
+
+  // Seamless auto-resync when an episode concludes
+  video.addEventListener('ended', () => {
+    if (currentPlayingChannel) {
+      console.log("Episode transition detected. Auto-refreshing live stream...");
+      setTimeout(() => {
+        reconnectCurrentStream(true);
+      }, 1000);
+    }
+  });
+
+  if (video.textTracks) {
+    video.textTracks.addEventListener('addtrack', (e) => {
+      e.track.mode = captionsEnabled ? 'showing' : 'disabled';
+    });
+  }
+}
+
+// AIRPLAY & STREAM CAPTION DISABLER
+function applyCaptionSettings() {
+  if (video.textTracks) {
+    for (let i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = captionsEnabled ? 'showing' : 'disabled';
+    }
+  }
+  if (hls) {
+    hls.subtitleTrack = captionsEnabled ? 0 : -1;
+    if (hls.subtitleDisplay !== undefined) {
+      hls.subtitleDisplay = captionsEnabled;
+    }
+  }
+  ccBtn.textContent = captionsEnabled ? "💬 CC: ON" : "💬 CC: OFF";
+  ccBtn.classList.toggle("active", captionsEnabled);
+}
+
+function toggleCaptions() {
+  captionsEnabled = !captionsEnabled;
+  applyCaptionSettings();
+}
+
+function reconnectCurrentStream(silent = false) {
+  if (currentPlayingChannel) {
+    if (!silent) updateStreamStatus("connecting", "🔄 RE-SYNCING...");
+    play(currentPlayingChannel.url, currentPlayingChannel.name, currentPlayingChannel.category);
+  }
+}
+
+// SCAN & FETCH ALL CHANNELS
+async function scanAllChannels() {
+  statusMsg.innerHTML = "📡 Fetching streams from global online channels...";
+  allChannels = [];
+
+  const sourcesToFetch = [...DEFAULT_PLAYLISTS, ...customPlaylists];
+  
+  const fetchPromises = sourcesToFetch.map(url => 
+    fetchWithFallback(url)
+      .then(text => parseM3U(text))
+      .catch(() => [])
+  );
+
+  const results = await Promise.all(fetchPromises);
+  let aggregated = [];
+  results.forEach(list => aggregated.push(...list));
+
+  let urlMap = {};
+  aggregated.forEach(c => {
+    if (c.url && !urlMap[c.url]) {
+      categorizeChannel(c);
+      urlMap[c.url] = c;
+    }
+  });
+
+  allChannels = Object.values(urlMap);
+
+  populateCountryFilter();
+  updateStats();
+  applyFilters();
+  
+  statusMsg.innerHTML = `✅ Scan complete! Synced <strong>${allChannels.length.toLocaleString()}</strong> live online channels.`;
+}
+
+async function fetchWithFallback(url) {
+  for (let proxyFn of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxyFn(url));
+      if (res.ok) return await res.text();
+    } catch (e) {
+      // Retry next
+    }
+  }
+  return "";
+}
+
+// PARSER
+function parseM3U(text) {
+  const lines = text.split("\n");
+  const out = [];
+  let current = null;
+
+  for (let l of lines) {
+    l = l.trim();
+    if (!l) continue;
+
+    if (l.startsWith("#EXTINF:")) {
+      const commaIdx = l.lastIndexOf(",");
+      let name = commaIdx !== -1 ? l.substring(commaIdx + 1).trim() : "Unknown Channel";
+
+      const logoMatch = l.match(/tvg-logo="([^"]*)"/i);
+      const groupMatch = l.match(/group-title="([^"]*)"/i);
+      const countryMatch = l.match(/tvg-country="([^"]*)"/i);
+
+      current = {
+        name: name,
+        logo: logoMatch ? logoMatch[1] : "",
+        group: groupMatch ? groupMatch[1] : "",
+        country: countryMatch ? countryMatch[1] : "Global"
+      };
+    } else if (l.startsWith("http://") || l.startsWith("https://")) {
+      if (current) {
+        current.url = l;
+        out.push(current);
+        current = null;
+      }
+    }
+  }
+  return out;
+}
+
+// CATEGORIZATION ENGINE
+function categorizeChannel(ch) {
+  const searchStr = `${ch.name} ${ch.group} ${ch.country}`.toLowerCase();
+
+  for (const mainCat of TAXONOMY) {
+    for (const sub of mainCat.subcategories) {
+      for (const kw of sub.keywords) {
+        if (searchStr.includes(kw)) {
+          ch.mainCat = mainCat.id;
+          ch.subCat = sub.id;
+          ch.subName = sub.name;
+          return;
+        }
+      }
+    }
+  }
+
+  ch.mainCat = "other";
+  ch.subCat = "general";
+  ch.subName = "General Broadcasting";
+}
+
+// SUBCATEGORY CARDS
+function renderSubcategories() {
+  const container = document.getElementById("subcategories-grid");
+  container.innerHTML = "";
+
+  let activeSubcats = [];
+  if (currentMainCategory === "all") {
+    TAXONOMY.forEach(m => activeSubcats.push(...m.subcategories));
+  } else {
+    const found = TAXONOMY.find(m => m.id === currentMainCategory);
+    if (found) activeSubcats = found.subcategories;
+  }
+
+  activeSubcats.forEach(sub => {
+    const count = allChannels.filter(c => c.subCat === sub.id).length;
+    
+    const card = document.createElement("div");
+    card.className = `subcat-card ${currentSubCategory === sub.id ? 'active' : ''}`;
+    card.onclick = () => selectSubCategory(sub.id, card);
+
+    card.innerHTML = `
+      <div class="subcat-header">
+        <span class="subcat-title">${sub.name}</span>
+        <span class="subcat-count">${count.toLocaleString()}</span>
+      </div>
+      <div class="subcat-desc">${sub.desc}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// FILTER & PAGINATION
+function applyFilters() {
+  let list = isFavOnlyView ? [...favorites] : [...allChannels];
+
+  if (currentMainCategory !== "all" && !isFavOnlyView) {
+    list = list.filter(c => c.mainCat === currentMainCategory);
+  }
+
+  if (currentSubCategory !== "all" && !isFavOnlyView) {
+    list = list.filter(c => c.subCat === currentSubCategory);
+  }
+
+  const countryVal = document.getElementById("country-filter").value;
+  if (countryVal !== "all") {
+    list = list.filter(c => c.country === countryVal);
+  }
+
+  const searchTerm = document.getElementById("search").value.toLowerCase().trim();
+  if (searchTerm) {
+    list = list.filter(c => 
+      c.name.toLowerCase().includes(searchTerm) || 
+      (c.subName && c.subName.toLowerCase().includes(searchTerm)) ||
+      (c.group && c.group.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  filteredChannels = list;
+  currentPage = 0;
+  showPage();
+  updateStats();
+}
+
+function showPage() {
+  channelsDiv.innerHTML = "";
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, filteredChannels.length);
+  const pageItems = filteredChannels.slice(start, end);
+
+  if (pageItems.length === 0) {
+    channelsDiv.innerHTML = `<div style="padding: 20px; color: var(--text-muted);">No channels found matching your selection. Try selecting another category or searching.</div>`;
+    document.getElementById("page-info").textContent = "0 of 0";
+    return;
+  }
+
+  pageItems.forEach(ch => {
+    const isFav = favorites.some(f => f.url === ch.url);
+    const isPlaying = currentPlayingChannel && currentPlayingChannel.url === ch.url;
+
+    const card = document.createElement("div");
+    card.className = `channel-card ${isPlaying ? 'playing' : ''}`;
+    
+    const logoContent = ch.logo 
+      ? `<img class="channel-logo" src="${ch.logo}" onerror="this.outerHTML='<div class=\\'channel-logo\\'>📺</div>'">`
+      : `<div class="channel-logo">📺</div>`;
+
+    card.innerHTML = `
+      ${logoContent}
+      <div class="channel-info" onclick="play('${ch.url}', '${escapeHtml(ch.name)}', '${ch.subName || ''}')">
+        <div class="channel-name">${ch.name}</div>
+        <div class="channel-cat-tag">${ch.subName || 'General'} ${ch.country ? '• ' + ch.country : ''}</div>
+      </div>
+      <span class="star-btn ${isFav ? 'fav' : ''}" onclick="toggleSave(event, '${ch.url}')">★</span>
+    `;
+
+    channelsDiv.appendChild(card);
+  });
+
+  document.getElementById("page-info").textContent = `${start + 1}-${end} of ${filteredChannels.length.toLocaleString()}`;
+}
+
+// HIGH-PERFORMANCE DIRECT MEDIA PLAYER ENGINE
+function play(url, name, category, proxyIndex = 0) {
+  currentPlayingChannel = { url, name, category };
+
+  document.getElementById("playing-title").textContent = name;
+  document.getElementById("playing-meta").textContent = category ? `Category: ${category}` : url;
+  
+  updateStreamStatus("connecting", "🟡 CONNECTING...");
+
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+
+  const targetUrl = proxyIndex < CORS_PROXIES.length ? CORS_PROXIES[proxyIndex](url) : url;
+
+  const startPlayback = () => {
+    applyCaptionSettings();
+    video.play().then(() => {
+      updateStreamStatus("live", "🟢 LIVE");
+      unmuteBtn.style.display = 'none';
+    }).catch(() => {
+      video.muted = true;
+      unmuteBtn.style.display = 'inline-flex';
+      video.play().then(() => {
+        updateStreamStatus("live", "🟢 LIVE (MUTED)");
+      }).catch(() => {
+        updateStreamStatus("error", "🔴 CLICK PLAY");
+      });
+    });
+  };
+
+  // Check Safari native AVFoundation HLS support first (Mac/iOS/AirPlay)
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = targetUrl;
+    video.addEventListener('loadedmetadata', startPlayback, { once: true });
+  } else if (Hls.isSupported()) {
+    // HLS.js configuration for Chrome / Firefox
+    hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      maxBufferLength: 30, // Optimal buffer length for commercial transitions
+      maxMaxBufferLength: 60,
+      maxBufferSize: 60 * 1024 * 1024,
+      maxBufferHole: 0.1,
+      capLevelToPlayerSize: false,
+      highBufferWatchdogPeriod: 3,
+      nudgeMaxRetry: 3,
+      fragLoadingMaxRetry: 6,
+      manifestLoadingMaxRetry: 6,
+      levelLoadingMaxRetry: 6,
+      xhrSetup: function(xhr, url) {
+        xhr.withCredentials = false;
+      }
+    });
+
+    hls.loadSource(targetUrl);
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+      populateQualityDropdown(data.levels);
+      forceMaxQualityLevel();
+      startPlayback();
+    });
+
+    hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      if (hls.levels && hls.levels[data.level]) {
+        const lvl = hls.levels[data.level];
+        const resStr = lvl.height ? `${lvl.width}x${lvl.height}` : 'HD Stream';
+        const mbpsStr = lvl.bitrate ? ` @ ${(lvl.bitrate / 1000000).toFixed(1)} Mbps` : '';
+        codecBadge.style.display = "inline-block";
+        if (lvl.height >= 2160) {
+          codecBadge.textContent = `✨ 4K Ultra HD (${resStr}${mbpsStr})`;
+        } else if (lvl.height >= 1080) {
+          codecBadge.textContent = `🌟 1080p Full HD (${resStr}${mbpsStr})`;
+        } else if (lvl.height >= 720) {
+          codecBadge.textContent = `📺 720p HD (${resStr}${mbpsStr})`;
+        } else {
+          codecBadge.textContent = `📺 SD (${resStr}${mbpsStr})`;
+        }
+      }
+    });
+
+    hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+      applyCaptionSettings();
+    });
+
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            hls.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            hls.recoverMediaError();
+            break;
+          default:
+            if (proxyIndex + 1 < CORS_PROXIES.length) {
+              play(url, name, category, proxyIndex + 1);
+            } else {
+              updateStreamStatus("error", "🔴 STREAM OFFLINE");
+            }
+            break;
+        }
+      }
+    });
+  } else {
+    video.src = targetUrl;
+    startPlayback();
+  }
+
+  showPage();
+}
+
+// QUALITY ENGINE CONTROLS
+function populateQualityDropdown(levels) {
+  qualitySelect.innerHTML = "";
+
+  if (!levels || levels.length === 0) {
+    qualitySelect.innerHTML = `<option value="auto">⚡ Auto Quality</option>`;
+    return;
+  }
+
+  const maxOpt = document.createElement("option");
+  maxOpt.value = "max";
+  maxOpt.textContent = "🏆 4K / Max Quality";
+  qualitySelect.appendChild(maxOpt);
+
+  const autoOpt = document.createElement("option");
+  autoOpt.value = "auto";
+  autoOpt.textContent = "⚡ Auto (Adaptive)";
+  qualitySelect.appendChild(autoOpt);
+
+  const sorted = levels.map((lvl, idx) => ({ ...lvl, origIdx: idx }))
+                        .sort((a,b) => (b.height || 0) - (a.height || 0));
+
+  sorted.forEach(lvl => {
+    const opt = document.createElement("option");
+    opt.value = lvl.origIdx;
+    const label = lvl.height ? `${lvl.height}p (${Math.round((lvl.bitrate || 0)/1000)} kbps)` : `Level ${lvl.origIdx + 1}`;
+    opt.textContent = `📺 ${label}`;
+    qualitySelect.appendChild(opt);
+  });
+
+  qualitySelect.value = "max";
+}
+
+function forceMaxQualityLevel() {
+  if (!hls || !hls.levels || hls.levels.length === 0) return;
+  let maxIdx = 0;
+  let maxRes = 0;
+  hls.levels.forEach((lvl, idx) => {
+    let res = (lvl.width || 0) * (lvl.height || 0) || lvl.bitrate || 0;
+    if (res > maxRes) {
+      maxRes = res;
+      maxIdx = idx;
+    }
+  });
+  hls.currentLevel = maxIdx;
+}
+
+function onQualityChange() {
+  const val = qualitySelect.value;
+  if (!hls) return;
+
+  if (val === "max") {
+    forceMaxQualityLevel();
+  } else if (val === "auto") {
+    hls.currentLevel = -1;
+  } else {
+    hls.currentLevel = parseInt(val, 10);
+  }
+}
+
+function unmuteVideo() {
+  video.muted = false;
+  unmuteBtn.style.display = 'none';
+}
+
+function updateStreamStatus(type, label) {
+  streamStatusBadge.style.display = "inline-block";
+  streamStatusBadge.className = `status-badge status-${type}`;
+  streamStatusBadge.textContent = label;
+}
+
+// PLAYER ACTIONS
+function tryNextStream() {
+  if (filteredChannels.length === 0) return;
+  const randomIndex = Math.floor(Math.random() * filteredChannels.length);
+  const ch = filteredChannels[randomIndex];
+  play(ch.url, ch.name, ch.subName);
+}
+
+function playRandomChannel() {
+  tryNextStream();
+}
+
+function togglePIP() {
+  if (document.pictureInPictureElement) {
+    document.exitPictureInPicture();
+  } else if (video.requestPictureInPicture) {
+    video.requestPictureInPicture();
+  }
+}
+
+function toggleFullscreen() {
+  if (video.requestFullscreen) video.requestFullscreen();
+}
+
+// NAVIGATION
+function selectMainCategory(mainId, el) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  currentMainCategory = mainId;
+  currentSubCategory = "all";
+  isFavOnlyView = false;
+  
+  renderSubcategories();
+  applyFilters();
+}
+
+function selectSubCategory(subId, cardEl) {
+  currentSubCategory = (currentSubCategory === subId) ? "all" : subId;
+  renderSubcategories();
+  applyFilters();
+}
+
+function onSearchInput() { applyFilters(); }
+
+function prevPage() {
+  if (currentPage > 0) {
+    currentPage--;
+    showPage();
+  }
+}
+
+function nextPage() {
+  if ((currentPage + 1) * PAGE_SIZE < filteredChannels.length) {
+    currentPage++;
+    showPage();
+  }
+}
+
+// FAVORITES
+function toggleSave(e, url) {
+  e.stopPropagation();
+  const ch = allChannels.find(c => c.url === url) || favorites.find(c => c.url === url);
+  if (!ch) return;
+
+  const idx = favorites.findIndex(f => f.url === url);
+  if (idx > -1) {
+    favorites.splice(idx, 1);
+  } else {
+    favorites.push(ch);
+  }
+
+  localStorage.setItem("smart_tv_favs", JSON.stringify(favorites));
+  updateStats();
+  applyFilters();
+}
+
+function toggleFavoritesView() {
+  isFavOnlyView = !isFavOnlyView;
+  const btn = document.getElementById("fav-tab-btn");
+  btn.classList.toggle("active", isFavOnlyView);
+  btn.textContent = isFavOnlyView ? "📺 Back to All" : "⭐ My Playlist";
+  applyFilters();
+}
+
+function toggleViewMode() {
+  isGridView = !isGridView;
+  channelsDiv.className = isGridView ? "channels-grid grid-view" : "channels-grid";
+  document.getElementById("view-mode-btn").textContent = isGridView ? "📄 Compact List" : "🔲 Grid View";
+}
+
+// MODAL
+function openModal() { document.getElementById("custom-modal").style.display = "flex"; }
+function closeModal() { document.getElementById("custom-modal").style.display = "none"; }
+
+function addCustomPlaylist() {
+  const url = document.getElementById("custom-m3u-input").value.trim();
+  if (url && !customPlaylists.includes(url)) {
+    customPlaylists.push(url);
+    localStorage.setItem("smart_tv_sources", JSON.stringify(customPlaylists));
+    closeModal();
+    scanAllChannels();
+  }
+}
+
+// UTILS
+function populateCountryFilter() {
+  const select = document.getElementById("country-filter");
+  const countries = [...new Set(allChannels.map(c => c.country).filter(Boolean))].sort();
+  
+  select.innerHTML = `<option value="all">🌍 All Countries (${countries.length})</option>`;
+  countries.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    select.appendChild(opt);
+  });
+}
+
+function updateStats() {
+  document.getElementById("stat-total").textContent = allChannels.length.toLocaleString();
+  document.getElementById("stat-showing").textContent = filteredChannels.length.toLocaleString();
+  document.getElementById("stat-favs").textContent = favorites.length.toLocaleString();
+}
+
+function escapeHtml(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+</script>
+
+</body>
+</html>
