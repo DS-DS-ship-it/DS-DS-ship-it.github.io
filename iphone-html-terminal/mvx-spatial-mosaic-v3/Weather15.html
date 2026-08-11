@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Global High-Precision Weather Radar & Optics Engine</title>
+    
+    <!-- Leaflet 2D Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --img-invert: 0%;
+            --img-contrast: 100%;
+            --img-bright: 100%;
+            --img-hue: 0deg;
+            --img-saturate: 100%;
+            --safe-top: env(safe-area-inset-top, 10px);
+            --safe-bottom: env(safe-area-inset-bottom, 12px);
+            --safe-left: env(safe-area-inset-left, 10px);
+            --safe-right: env(safe-area-inset-right, 10px);
+        }
+
+        * { 
+            box-sizing: border-box; margin: 0; padding: 0; 
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        body, html { 
+            height: 100%; width: 100%; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            overflow: hidden; background: #050811; color: #fff; 
+        }
+        
+        #viewWrap { position: relative; height: 100%; width: 100%; overflow: hidden; }
+        #map2d, #map3d, #astroMap { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        #map3d, #astroMap { display: none; }
+
+        /* Hardware-Accelerated Dynamic Filter Pipeline */
+        .leaflet-tile-container img,
+        #map3d canvas,
+        #astroMap canvas,
+        #astroMap .aladin-imageCanvas {
+            filter: invert(var(--img-invert)) 
+                    contrast(var(--img-contrast)) 
+                    brightness(var(--img-bright)) 
+                    hue-rotate(var(--img-hue)) 
+                    saturate(var(--img-saturate));
+            transition: opacity 0.18s ease-out, filter 0.15s ease-out;
+            transform: translate3d(0,0,0);
+            backface-visibility: hidden;
+            will-change: opacity, filter;
+        }
+
+        /* Radar Sweep Effect */
+        .radar-sweep {
+            position: absolute; inset: 0; pointer-events: none; z-index: 400; display: block;
+            background: conic-gradient(from 0deg at 50% 50%, rgba(56, 189, 248, 0.12) 0deg, rgba(56, 189, 248, 0) 60deg, transparent 360deg);
+            animation: sweep 6s linear infinite;
+        }
+        @keyframes sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* UI Overlay Structure */
+        .ui-overlay { position: absolute; z-index: 1000; pointer-events: none; }
+        .ui-overlay * { pointer-events: auto; }
+
+        /* Top Header Bar */
+        .header-bar {
+            position: absolute;
+            top: var(--safe-top); left: var(--safe-left); right: var(--safe-right);
+            display: flex; flex-direction: column; gap: 6px; z-index: 1100;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .header-bar * { pointer-events: auto; }
+
+        .header-bar.header-hidden {
+            transform: translateY(-130%);
+            opacity: 0;
+            pointer-events: none !important;
+        }
+
+        .header-main-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+            background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(16px);
+            padding: 6px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+
+        .header-sub-row {
+            display: flex; align-items: center; justify-content: flex-start; gap: 6px; flex-wrap: wrap;
+            background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(14px);
+            padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+        }
+        .header-sub-row.collapsed { display: none; }
+
+        .controls-group { display: flex; gap: 6px; align-items: center; }
+
+        input[type="text"], select {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+            color: #fff; padding: 6px 10px; border-radius: 8px; outline: none; font-size: 13px; height: 38px;
+        }
+        select option { background: #0f172a; color: #fff; }
+
+        .btn {
+            background: #007aff; color: #fff; border: none; padding: 6px 12px; height: 38px;
+            border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; user-select: none;
+            touch-action: manipulation;
+        }
+        .btn:hover, .btn:active { background: #0056b3; }
+        .btn.active { background: #34c759; color: #000; font-weight: 800; }
+        .btn-sm { padding: 4px 10px; height: 32px; font-size: 12px; }
+
+        .show-header-btn {
+            position: absolute; top: var(--safe-top); right: var(--safe-right); z-index: 9999 !important;
+            pointer-events: auto !important; display: none;
+            background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(18px);
+            border: 1px solid rgba(56, 189, 248, 0.6); color: #38bdf8; font-weight: bold;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8); padding: 8px 14px; border-radius: 20px;
+        }
+
+        .icrs-badge {
+            background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8; font-family: monospace; font-size: 11px; font-weight: bold;
+            padding: 4px 8px; border-radius: 6px; display: none; align-items: center; gap: 6px;
+        }
+
+        /* Mobile Touch-Friendly Floating Windows */
+        .window-panel {
+            position: absolute; z-index: 1000;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(18px);
+            color: #fff; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+            border: 1px solid rgba(255,255,255,0.2); width: min(340px, calc(100vw - 20px));
+            max-height: calc(100% - 170px); display: flex; flex-direction: column; overflow: hidden;
+            touch-action: none;
+        }
+
+        .window-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.08); cursor: move; user-select: none;
+            touch-action: none;
+        }
+        .window-header h3 { font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; }
+        .window-body { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; touch-action: pan-y; }
+
+        .temp-clickable { cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .temp { font-size: 32px; font-weight: 800; }
+        .unit-pill { background: rgba(0, 122, 255, 0.35); border: 1px solid #007aff; color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+
+        .sci-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 8px; font-size: 11px; color: #cbd5e1; }
+        .sci-card .sci-title { font-weight: 700; color: #38bdf8; text-transform: uppercase; font-size: 10px; margin-bottom: 2px; }
+
+        .motion-card { background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(0, 122, 255, 0.25)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 8px; }
+        .motion-card .title { font-size: 10px; font-weight: 700; color: #38bdf8; text-transform: uppercase; }
+        .motion-card .vector-text { font-size: 12px; font-weight: 700; margin-top: 2px; }
+
+        .weather-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; }
+        .stat-item { background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 6px; }
+        .stat-label { color: #94a3b8; display: block; font-size: 9px; text-transform: uppercase; }
+        .stat-val { font-weight: 600; color: #f8fafc; }
+
+        /* Range Sliders Touch Optimization */
+        .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 11px; gap: 8px; }
+        .slider-row label { width: 85px; color: #cbd5e1; font-weight: 600; }
+        .slider-row input[type=range] { flex: 1; accent-color: #38bdf8; cursor: pointer; height: 28px; touch-action: pan-x; }
+        .slider-row .val { width: 36px; text-align: right; font-family: monospace; color: #38bdf8; font-weight: bold; }
+
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+        .btn-preset { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #f1f5f9; font-size: 11px; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        /* Floating Zoom Buttons */
+        .zoom-controls {
+            bottom: calc(110px + var(--safe-bottom)); right: var(--safe-right);
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .zoom-btn {
+            background: rgba(15, 23, 42, 0.92); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+            width: 44px; height: 44px; border-radius: 12px; font-size: 22px; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); touch-action: manipulation;
+        }
+
+        /* Responsive Mobile Bottom Radar Player */
+        .radar-bar-container {
+            bottom: var(--safe-bottom); left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 6px;
+            background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(18px);
+            color: #fff; padding: 10px 14px; border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.22);
+            width: min(780px, calc(100vw - 16px)); z-index: 1050;
+            transition: all 0.25s ease;
+        }
+
+        .radar-bar-container.collapsed { width: auto; padding: 6px 14px; border-radius: 20px; }
+        .radar-bar-container.collapsed .radar-details-block { display: none; }
+
+        .radar-controls-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+        .player-btns { display: flex; align-items: center; gap: 6px; }
+
+        .scrubber-row { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 2px; }
+        .scrubber-row input[type=range] { flex: 1; accent-color: #38bdf8; cursor: pointer; height: 32px; touch-action: pan-x; }
+
+        .time-display { font-size: 12px; font-weight: 700; color: #38bdf8; font-family: monospace; white-space: nowrap; }
+        .frame-type-tag { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        .tag-past { background: rgba(52, 199, 89, 0.25); color: #34c759; border: 1px solid #34c759; }
+        .tag-forecast { background: rgba(255, 149, 0, 0.25); color: #ff9500; border: 1px solid #ff9500; }
+        .tag-ir { background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; }
+        .tag-fallback { background: rgba(239, 68, 68, 0.25); color: #ef4444; border: 1px solid #ef4444; }
+
+        /* Status Badge */
+        .status-badge {
+            top: calc(120px + var(--safe-top)); left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.90); color: #34c759;
+            padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+            border: 1px solid rgba(52, 199, 89, 0.35); display: flex; align-items: center; gap: 6px;
+            white-space: nowrap; transition: all 0.3s ease;
+        }
+        .status-badge.fallback { color: #f59e0b; border-color: rgba(245, 158, 11, 0.5); }
+        .status-badge.fallback .status-dot { background: #f59e0b; }
+        .status-dot { width: 7px; height: 7px; background: #34c759; border-radius: 50%; }
+
+        @media (max-width: 600px) {
+            .status-badge { display: none; }
+            .window-panel { left: 10px !important; right: 10px !important; width: calc(100vw - 20px) !important; }
+            input[type="text"] { width: 100px !important; }
+            .header-main-row { padding: 4px 8px; }
+            .btn { height: 34px; font-size: 12px; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="viewWrap">
+        <!-- Header Restore Button -->
+        <button class="btn btn-sm show-header-btn" id="btnShowHeader" onclick="toggleHeaderCollapse(event)">👁️ Controls</button>
+
+        <!-- Radar Sweep Animation -->
+        <div class="radar-sweep" id="radarSweep"></div>
+
+        <!-- Top Header Controls -->
+        <div class="header-bar" id="topHeader">
+            <div class="header-main-row">
+                <div class="controls-group">
+                    <input type="text" id="citySearch" placeholder="City or Lat, Lon..." onkeypress="if(event.key==='Enter') handleSearch()" style="width: 120px;" />
+                    <button class="btn btn-sm" onclick="handleSearch()">Search</button>
+                </div>
+
+                <div class="icrs-badge" id="icrsBadge">
+                    <span>📡 ICRS:</span>
+                    <span id="icrsCoords">RA --h | DEC --°</span>
+                </div>
+
+                <div class="controls-group">
+                    <button class="btn btn-sm active" id="btnMode2D" onclick="switchMode('2d')">2D</button>
+                    <button class="btn btn-sm" id="btnMode3D" onclick="switchMode('3d')">3D</button>
+                    <button class="btn btn-sm" id="btnModeAstro" onclick="switchMode('astro')">Astro</button>
+                    <button class="btn btn-sm" onclick="toggleSubBar()" style="background:rgba(255,255,255,0.15);">⚙️</button>
+                    <button class="btn btn-sm" onclick="toggleHeaderCollapse(event)" style="background:rgba(255,255,255,0.15);">⬆️</button>
+                </div>
+            </div>
+
+            <!-- Sub Toolbar -->
+            <div class="header-sub-row" id="headerSubRow">
+                <div class="controls-group" id="grpSciFilter">
+                    <select id="selSciFilter" onchange="applyScientificFilter(this.value)">
+                        <option value="standard">Standard Broadcast Radar</option>
+                        <option value="realistic">🎨 Photorealistic 3D Radar</option>
+                        <option value="tds">🔬 Dual-Pol TDS Hail Core</option>
+                        <option value="declutter">🔬 GOES-R De-Clutter Filter</option>
+                        <option value="zr">🔬 MRMS Rain Depth Mode</option>
+                        <option value="infrared_top">🛰️ Global Convective IR Satellite</option>
+                    </select>
+                </div>
+
+                <div class="controls-group" id="grpBaseMap">
+                    <select id="selBaseMap" onchange="changeBaseMap(this.value)">
+                        <option value="sat">Satellite (Esri)</option>
+                        <option value="osm">Standard Map</option>
+                        <option value="dark">Dark Canvas</option>
+                        <option value="topo">Topographic</option>
+                    </select>
+                </div>
+
+                <div class="controls-group" id="grpAstroSurvey" style="display: none;">
+                    <select id="selAstroSurvey" onchange="changeAstroSurvey(this.value)">
+                        <option value="P/DSS2/color">🌌 DSS2 Optical Color</option>
+                        <option value="P/Planck/HFI/color">⚛️ Planck CMB Relic</option>
+                        <option value="P/2MASS/color">🛰️ 2MASS Infrared</option>
+                    </select>
+                </div>
+
+                <div class="controls-group">
+                    <button class="btn btn-sm" onclick="toggleWindow('weatherWindow')">📊 Weather HUD</button>
+                    <button class="btn btn-sm" onclick="toggleWindow('discoveryWindow')">🔬 Optics</button>
+                    <button class="btn btn-sm" onclick="forceRadarReload()" style="background:rgba(52, 199, 89, 0.3);">🔄 Sync</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather HUD Floating Window -->
+        <div class="window-panel ui-overlay" id="weatherWindow" style="top: 110px; left: 10px; display: none;">
+            <div class="window-header" id="weatherHeader">
+                <h3 id="locName">Target Location</h3>
+                <div class="window-controls">
+                    <button class="btn btn-sm" onclick="toggleWindow('weatherWindow')">✕</button>
+                </div>
+            </div>
+            <div class="window-body">
+                <div class="coords" id="locCoords" style="font-size:11px; color:#38bdf8; font-family:monospace;">Click map to select target</div>
+                
+                <div class="temp-clickable" onclick="toggleTempUnit()">
+                    <div class="temp" id="tempVal">--°C</div>
+                    <span class="unit-pill" id="unitPill">°C ⇄ °F</span>
+                </div>
+                <div id="weatherDesc" style="font-size:12px; color:#cbd5e1; font-weight:600;">Awaiting coordinates...</div>
+
+                <div class="sci-card">
+                    <div class="sci-title" id="sciTitleText">Scientific Filter Active</div>
+                    <div id="sciDescText">Standard reflectivity mode.</div>
+                </div>
+
+                <div class="motion-card">
+                    <div class="title">🌩️ Storm Motion Vector</div>
+                    <div class="vector-text" id="motionText">Calculating vector...</div>
+                </div>
+
+                <div class="weather-stats">
+                    <div class="stat-item"><span class="stat-label">Rain Rate</span><span class="stat-val" id="rainRateVal">0.0 mm/h</span></div>
+                    <div class="stat-item"><span class="stat-label">Flight Rules</span><span class="stat-val" id="flightCatVal">VFR</span></div>
+                    <div class="stat-item"><span class="stat-label">Barometer</span><span class="stat-val" id="pressureVal">-- hPa</span></div>
+                    <div class="stat-item"><span class="stat-label">Pressure Trend</span><span class="stat-val" id="pressureTrendVal">Steady</span></div>
+                    <div class="stat-item"><span class="stat-label">Wind Velocity</span><span class="stat-val" id="windVal">-- km/h</span></div>
+                    <div class="stat-item"><span class="stat-label">Wind Heading</span><span class="stat-val" id="windDirVal">--°</span></div>
+                    <div class="stat-item"><span class="stat-label">Feels Like</span><span class="stat-val" id="feelsLikeVal">--°C</span></div>
+                    <div class="stat-item"><span class="stat-label">Humidity</span><span class="stat-val" id="humidityVal">--%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optics Filters Floating Window -->
+        <div class="window-panel ui-overlay" id="discoveryWindow" style="top: 110px; right: 10px; display: none;">
+            <div class="window-header" id="discoveryHeader">
+                <h3>🔬 Optics Toolkit</h3>
+                <div class="window-controls">
+                    <button class="btn btn-sm" onclick="toggleWindow('discoveryWindow')">✕</button>
+                </div>
+            </div>
+            <div class="window-body">
+                <div class="slider-row">
+                    <label>Invert</label>
+                    <input type="range" id="sldInvert" min="0" max="100" value="0" oninput="updateImageFilters()">
+                    <span class="val" id="valInvert">0%</span>
+                </div>
+                <div class="slider-row">
+                    <label>Contrast</label>
+                    <input type="range" id="sldContrast" min="50" max="300" value="100" oninput="updateImageFilters()">
+                    <span class="val" id="valContrast">100%</span>
+                </div>
+                <div class="slider-row">
+                    <label>Brightness</label>
+                    <input type="range" id="sldBright" min="50" max="200" value="100" oninput="updateImageFilters()">
+                    <span class="val" id="valBright">100%</span>
+                </div>
+                <div class="slider-row">
+                    <label>Hue Shift</label>
+                    <input type="range" id="sldHue" min="0" max="360" value="0" oninput="updateImageFilters()">
+                    <span class="val" id="valHue">0°</span>
+                </div>
+                <div class="slider-row">
+                    <label>Saturation</label>
+                    <input type="range" id="sldSaturate" min="0" max="400" value="100" oninput="updateImageFilters()">
+                    <span class="val" id="valSaturate">100%</span>
+                </div>
+
+                <div class="preset-grid">
+                    <button class="btn-preset" onclick="setFilterPreset('standard')">Standard</button>
+                    <button class="btn-preset" onclick="setFilterPreset('invert_negative')">🔄 Negative</button>
+                    <button class="btn-preset" onclick="setFilterPreset('edge_detect')">⚡ Contrast</button>
+                    <button class="btn-preset" onclick="setFilterPreset('thermal_anomaly')">🔥 Thermal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls ui-overlay" id="zoomControls">
+            <button class="zoom-btn" onclick="handleZoom(1)">+</button>
+            <button class="zoom-btn" onclick="handleZoom(-1)">−</button>
+        </div>
+
+        <!-- Mobile Timeline Player Bar -->
+        <div class="radar-bar-container ui-overlay" id="radarToolbar">
+            <div class="radar-controls-row">
+                <div class="player-btns">
+                    <button class="btn btn-sm" onclick="stepFrame(-1)">⏮</button>
+                    <button class="btn btn-sm" id="playBtn" onclick="toggleRadarAnimation()" style="width:38px;">▶</button>
+                    <button class="btn btn-sm" onclick="stepFrame(1)">⏭</button>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="frame-type-tag tag-past" id="frameTag">LIVE</span>
+                    <div class="time-display" id="radarTime">Connecting...</div>
+                </div>
+
+                <div class="player-btns">
+                    <button class="btn btn-sm" id="btnCollapseScrubber" onclick="toggleScrubberDock()" style="background:rgba(255,255,255,0.15);">▼</button>
+                </div>
+            </div>
+
+            <div class="radar-details-block" id="radarDetailsBlock" style="width: 100%;">
+                <div class="scrubber-row">
+                    <input type="range" id="radarScrubber" min="0" max="0" value="0" oninput="onScrubberSlide(this.value)">
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:4px;">
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#94a3b8;">
+                        <span>Speed</span>
+                        <select id="selAnimSpeed" onchange="changeAnimSpeed(this.value)" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:4px; font-size:10px; height:26px;">
+                            <option value="1200">0.5x</option>
+                            <option value="500" selected>1.0x</option>
+                            <option value="200">2.0x</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#94a3b8;">
+                        <span>Opacity</span>
+                        <input type="range" id="opacitySlider" min="0.1" max="1" step="0.05" value="0.75" oninput="updateOpacity(this.value)" style="accent-color:#007aff; width:70px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Indicator -->
+        <div class="status-badge ui-overlay" id="statusBadge">
+            <span class="status-dot"></span>
+            <span id="statusText">Connecting Radar...</span>
+        </div>
+
+        <!-- Map Containers -->
+        <div id="map2d"></div>
+        <div id="map3d"></div>
+        <div id="astroMap"></div>
+    </div>
+
+    <script>
+        // Global Application State
+        const state = {
+            mode: '2d',
+            lat: 49.3511,
+            lon: -102.1235,
+            zoom: 5,
+            opacity: 0.75,
+            radarPalette: '2',
+            sciFilterMode: 'standard',
+            tempUnit: 'C',
+            rawTempC: null,
+            rawFeelsC: null,
+            baseMap: 'sat',
+            radarSource: 'RainViewer',
+            radarHost: 'https://tilecache.rainviewer.com',
+            radarFrames: [],
+            satFrames: [],
+            
+            // Mobile-Safe Memory-Managed Dual-Buffer Layer Engine
+            radarLayerA: null,
+            radarLayerB: null,
+            lastLoadedUrlA: '',
+            lastLoadedUrlB: '',
+            activeBuffer: 'A',
+            
+            nwsAlertsLayer: null,
+            trajectoryLayer: null,
+            currentFrameIdx: 0,
+            isPlaying: false,
+            animTimer: null,
+            animSpeedMs: 500,
+            marker: null,
+            lastPressure: null,
+            isZooming: false,
+            zoomDebounceTimer: null,
+            db: null,
+            isScrubberCollapsed: false,
+            isHeaderHidden: false,
+            cesiumLoaded: false,
+            astroLoaded: false
+        };
+
+        // Helper: Network Fetch with Timeout Guard
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res;
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
+        }
+
+        // Dynamic Script Loader
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) return resolve();
+                const s = document.createElement('script');
+                s.src = src; s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        function loadCSS(href) {
+            if (document.querySelector(`link[href="${href}"]`)) return;
+            const link = document.createElement('link');
+            link.rel = 'stylesheet'; link.href = href;
+            document.head.appendChild(link);
+        }
+
+        // --- 1. IndexedDB Radar Local Archive Engine ---
+        function initIndexedDB() {
+            return new Promise((resolve) => {
+                try {
+                    const req = indexedDB.open('GlobalResilientRadarDB_v2', 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('frames')) db.createObjectStore('frames', { keyPath: 'time' });
+                    };
+                    req.onsuccess = (e) => { state.db = e.target.result; resolve(state.db); };
+                    req.onerror = () => resolve(null);
+                } catch(e) { resolve(null); }
+            });
+        }
+
+        async function saveFramesToArchive(frames) {
+            if (!state.db) return;
+            try {
+                const tx = state.db.transaction('frames', 'readwrite');
+                const store = tx.objectStore('frames');
+                frames.forEach(f => store.put({ time: f.time, path: f.path, type: f.type || 'past' }));
+            } catch (e) {}
+        }
+
+        async function loadArchivedFrames() {
+            if (!state.db) return [];
+            return new Promise((resolve) => {
+                try {
+                    const tx = state.db.transaction('frames', 'readonly');
+                    const store = tx.objectStore('frames');
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => resolve([]);
+                } catch(e) { resolve([]); }
+            });
+        }
+
+        // --- 2. Leaflet 2D Map Engine ---
+        const map2d = L.map('map2d', {
+            zoomControl: false,
+            worldCopyJump: false,
+            wheelDebounceTime: 40,
+            preferCanvas: true
+        }).setView([state.lat, state.lon], state.zoom);
+
+        // Touch Propagation Inhibitors
+        function stopTouchPropagation(el) {
+            if (!el) return;
+            L.DomEvent.disableClickPropagation(el);
+            L.DomEvent.disableScrollPropagation(el);
+            ['touchstart', 'touchmove', 'touchend', 'pointerdown'].forEach(evt => {
+                el.addEventListener(evt, (e) => e.stopPropagation(), { passive: true });
+            });
+        }
+
+        ['topHeader', 'btnShowHeader', 'weatherWindow', 'discoveryWindow', 'radarToolbar', 'zoomControls', 'statusBadge'].forEach(id => {
+            stopTouchPropagation(document.getElementById(id));
+        });
+
+        const baseLayers = {
+            sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 18, maxZoom: 19, attribution: '© Esri' }),
+            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxNativeZoom: 18, maxZoom: 19, attribution: '© OSM' }),
+            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxNativeZoom: 18, maxZoom: 19, attribution: '© CartoDB' }),
+            topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxNativeZoom: 17, maxZoom: 19, attribution: '© OpenTopoMap' })
+        };
+        baseLayers.sat.addTo(map2d);
+
+        L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19, zIndex: 500
+        }).addTo(map2d);
+
+        // Mobile-Safe Dual-Buffer Layer Manager
+        const radarTileOptions = { 
+            opacity: 0, 
+            maxNativeZoom: 7, 
+            maxZoom: 19, 
+            tileSize: 256, 
+            updateWhenIdle: false,
+            updateWhenZooming: false, 
+            keepBuffer: 8, 
+            zIndex: 200 
+        };
+
+        state.radarLayerA = L.tileLayer('', radarTileOptions).addTo(map2d);
+        state.radarLayerB = L.tileLayer('', radarTileOptions).addTo(map2d);
+
+        state.radarLayerA.on('tileerror', (e) => { e.tile.style.display = 'none'; });
+        state.radarLayerB.on('tileerror', (e) => { e.tile.style.display = 'none'; });
+
+        function changeBaseMap(key) {
+            state.baseMap = key;
+            Object.keys(baseLayers).forEach(k => {
+                if (k === key) baseLayers[k].addTo(map2d);
+                else map2d.removeLayer(baseLayers[k]);
+            });
+        }
+
+        // --- 3. Dynamic Filter Pipeline ---
+        function updateImageFilters() {
+            const inv = document.getElementById('sldInvert').value;
+            const con = document.getElementById('sldContrast').value;
+            const brt = document.getElementById('sldBright').value;
+            const hue = document.getElementById('sldHue').value;
+            const sat = document.getElementById('sldSaturate').value;
+
+            document.getElementById('valInvert').innerText = `${inv}%`;
+            document.getElementById('valContrast').innerText = `${con}%`;
+            document.getElementById('valBright').innerText = `${brt}%`;
+            document.getElementById('valHue').innerText = `${hue}°`;
+            document.getElementById('valSaturate').innerText = `${sat}%`;
+
+            const root = document.documentElement;
+            root.style.setProperty('--img-invert', `${inv}%`);
+            root.style.setProperty('--img-contrast', `${con}%`);
+            root.style.setProperty('--img-bright', `${brt}%`);
+            root.style.setProperty('--img-hue', `${hue}deg`);
+            root.style.setProperty('--img-saturate', `${sat}%`);
+        }
+
+        function setFilterPreset(presetKey) {
+            const setVals = (inv, con, brt, hue, sat) => {
+                document.getElementById('sldInvert').value = inv;
+                document.getElementById('sldContrast').value = con;
+                document.getElementById('sldBright').value = brt;
+                document.getElementById('sldHue').value = hue;
+                document.getElementById('sldSaturate').value = sat;
+                updateImageFilters();
+            };
+
+            if (presetKey === 'invert_negative') setVals(100, 180, 110, 180, 160);
+            else if (presetKey === 'edge_detect') setVals(100, 300, 140, 0, 0);
+            else if (presetKey === 'thermal_anomaly') setVals(100, 220, 100, 240, 300);
+            else setVals(0, 100, 100, 0, 100);
+        }
+
+        // --- 4. Lazy 3D & Astro Engines ---
+        let viewer3d = null;
+        async function init3DEngine() {
+            if (viewer3d) return true;
+            try {
+                if (!state.cesiumLoaded) {
+                    window.CESIUM_BASE_URL = "https://unpkg.com/cesium@1.119.0/Build/Cesium/";
+                    loadCSS("https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css");
+                    await loadScript("https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js");
+                    state.cesiumLoaded = true;
+                }
+                viewer3d = new Cesium.Viewer('map3d', {
+                    animation: false, timeline: false, geocoder: false, homeButton: false,
+                    sceneModePicker: false, baseLayerPicker: false, navigationHelpButton: false,
+                    infoBox: false, selectionIndicator: false, requestRenderMode: false,
+                    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+                });
+                viewer3d.imageryLayers.removeAll();
+                viewer3d.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+                    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    maximumLevel: 19
+                }));
+                return true;
+            } catch (err) { alert("3D View not supported on this device."); return false; }
+        }
+
+        let aladinInstance = null;
+        async function initAstroEngine() {
+            if (aladinInstance) return true;
+            try {
+                if (!state.astroLoaded) {
+                    await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
+                    loadCSS("https://aladin.cds.unistra.fr/AladinLite/api/v2/latest/aladin.min.css");
+                    await loadScript("https://aladin.cds.unistra.fr/AladinLite/api/v2/latest/aladin.min.js");
+                    state.astroLoaded = true;
+                }
+                aladinInstance = A.aladin('#astroMap', { survey: "P/DSS2/color", fov: 60, target: "0 0", showReticle: true, showZoomControl: false });
+                return true;
+            } catch (err) { alert("Astro View loading failed."); return false; }
+        }
+
+        function changeAstroSurvey(s) { if (aladinInstance) aladinInstance.setImageSurvey(s); }
+
+        async function switchMode(newMode) {
+            state.mode = newMode;
+            document.querySelectorAll('#btnMode2D, #btnMode3D, #btnModeAstro').forEach(b => b.classList.remove('active'));
+
+            const m2d = document.getElementById('map2d'), m3d = document.getElementById('map3d'), mAstro = document.getElementById('astroMap');
+            const toolbar = document.getElementById('radarToolbar'), sweep = document.getElementById('radarSweep');
+
+            m2d.style.display = 'none'; m3d.style.display = 'none'; mAstro.style.display = 'none'; sweep.style.display = 'none';
+
+            if (newMode === '2d') {
+                document.getElementById('btnMode2D').classList.add('active');
+                m2d.style.display = 'block'; toolbar.style.display = 'flex'; sweep.style.display = 'block';
+                document.getElementById('grpBaseMap').style.display = 'flex'; document.getElementById('grpSciFilter').style.display = 'flex';
+                document.getElementById('grpAstroSurvey').style.display = 'none';
+                map2d.invalidateSize(); map2d.setView([state.lat, state.lon], state.zoom);
+            } else if (newMode === '3d') {
+                document.getElementById('btnMode3D').classList.add('active');
+                m3d.style.display = 'block'; toolbar.style.display = 'flex';
+                document.getElementById('grpBaseMap').style.display = 'flex'; document.getElementById('grpSciFilter').style.display = 'flex';
+                document.getElementById('grpAstroSurvey').style.display = 'none';
+                const ok = await init3DEngine();
+                if (ok && viewer3d) viewer3d.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, 40000000 / Math.pow(2, state.zoom)), duration: 1.0 });
+            } else if (newMode === 'astro') {
+                document.getElementById('btnModeAstro').classList.add('active');
+                mAstro.style.display = 'block'; toolbar.style.display = 'none';
+                document.getElementById('grpBaseMap').style.display = 'none'; document.getElementById('grpSciFilter').style.display = 'none';
+                document.getElementById('grpAstroSurvey').style.display = 'flex';
+                await initAstroEngine();
+            }
+        }
+
+        // --- 5. Extended 30+ Frame Timeline Engine (High-Resolution Weather Motion) ---
+        async function initRadar() {
+            await initIndexedDB();
+
+            try {
+                updateStatus("RainViewer & Global Sat API", false);
+                const res = await fetchWithTimeout('https://api.rainviewer.com/public/weather-maps.json', {}, 3500);
+                const data = await res.json();
+                state.radarHost = data.host || 'https://tilecache.rainviewer.com';
+
+                // Extract Past (Historical) and Future Nowcast Radar Frames
+                const pastRadar = (data.radar?.past || []).map(f => ({ ...f, type: 'past', isSat: false }));
+                const forecastRadar = (data.radar?.nowcast || []).map(f => ({ ...f, type: 'forecast', isSat: false }));
+
+                // Global Infrared Satellite Frames
+                state.satFrames = (data.satellite?.infrared || []).map(f => ({ ...f, type: 'past', isSat: true }));
+
+                await saveFramesToArchive(pastRadar);
+                const archived = await loadArchivedFrames();
+
+                // Concatenate into a Extended High-Density Timeline (Up to 30+ frames)
+                const timeMap = new Map();
+                archived.forEach(f => timeMap.set(f.time, { ...f, isSat: false }));
+                pastRadar.forEach(f => timeMap.set(f.time, f));
+                forecastRadar.forEach(f => timeMap.set(f.time, f));
+
+                state.radarFrames = Array.from(timeMap.values()).sort((a, b) => a.time - b.time);
+                state.radarSource = "RainViewer";
+
+                const targetFrames = state.sciFilterMode === 'infrared_top' ? state.satFrames : state.radarFrames;
+                const scrubber = document.getElementById('radarScrubber');
+                scrubber.max = Math.max(0, targetFrames.length - 1);
+
+                state.currentFrameIdx = Math.max(0, targetFrames.length - 1);
+                scrubber.value = state.currentFrameIdx;
+
+                showRadarFrame(state.currentFrameIdx);
+                startRadarAnimation();
+                fetchNWSAlerts();
+                return;
+            } catch (err) {
+                console.warn("RainViewer failed. Falling back to IEM NEXRAD...", err);
+            }
+
+            // Fallback Tier 2: IEM NEXRAD Stream
+            try {
+                state.radarSource = "IEM_NEXRAD";
+                updateStatus("IEM NEXRAD Stream", true);
+                
+                state.radarLayerA.options.maxNativeZoom = 12;
+                state.radarLayerB.options.maxNativeZoom = 12;
+
+                const iemUrl = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png';
+                state.radarLayerA.setUrl(iemUrl);
+                state.radarLayerA.setOpacity(state.opacity);
+                state.radarLayerB.setOpacity(0);
+
+                document.getElementById('radarTime').innerText = "Live NEXRAD Radar";
+                document.getElementById('frameTag').innerText = "NEXRAD";
+                document.getElementById('frameTag').className = "frame-type-tag tag-fallback";
+                document.getElementById('playBtn').disabled = true;
+                return;
+            } catch (err) {}
+
+            activateOfflineCacheMode();
+        }
+
+        async function activateOfflineCacheMode() {
+            state.radarSource = "Cached";
+            updateStatus("Offline Mode (Cache)", true);
+            const archived = await loadArchivedFrames();
+
+            if (archived && archived.length > 0) {
+                state.radarFrames = archived.sort((a, b) => a.time - b.time);
+                const scrubber = document.getElementById('radarScrubber');
+                scrubber.max = Math.max(0, state.radarFrames.length - 1);
+                state.currentFrameIdx = state.radarFrames.length - 1;
+                scrubber.value = state.currentFrameIdx;
+                showRadarFrame(state.currentFrameIdx);
+                startRadarAnimation();
+            } else {
+                document.getElementById('radarTime').innerText = "Offline - No Cache";
+            }
+        }
+
+        // Memory-Safe Seamless Frame Renderer (Never Crashes Mobile Zoom)
+        function showRadarFrame(index) {
+            if (state.isZooming) return;
+
+            const activeDataset = state.sciFilterMode === 'infrared_top' ? state.satFrames : state.radarFrames;
+            if (!activeDataset || activeDataset.length === 0 || state.radarSource === "IEM_NEXRAD") return;
+
+            if (index < 0) index = 0;
+            if (index >= activeDataset.length) index = activeDataset.length - 1;
+
+            const frame = activeDataset[index];
+            if (frame) {
+                let tileUrl = "";
+                const isSat = frame.isSat;
+                const maxNative = isSat ? 6 : 7;
+
+                if (frame.isSat) {
+                    tileUrl = `${state.radarHost}${frame.path}/256/{z}/{x}/{y}/0/0_0.png`;
+                } else {
+                    tileUrl = `${state.radarHost}${frame.path}/256/{z}/{x}/{y}/${state.radarPalette}/1_1.png`;
+                }
+                
+                // Smart Buffer Swap (Pre-loads tile before opacity fade)
+                const incomingLayer = state.activeBuffer === 'A' ? state.radarLayerB : state.radarLayerA;
+                const outgoingLayer = state.activeBuffer === 'A' ? state.radarLayerA : state.radarLayerB;
+                const lastLoadedKey = state.activeBuffer === 'A' ? 'lastLoadedUrlB' : 'lastLoadedUrlA';
+
+                if (state[lastLoadedKey] !== tileUrl) {
+                    incomingLayer.options.maxNativeZoom = maxNative;
+                    incomingLayer.setUrl(tileUrl, false);
+                    state[lastLoadedKey] = tileUrl;
+                }
+
+                incomingLayer.setOpacity(state.opacity);
+                outgoingLayer.setOpacity(0);
+                state.activeBuffer = state.activeBuffer === 'A' ? 'B' : 'A';
+
+                const date = new Date(frame.time * 1000);
+                document.getElementById('radarTime').innerText = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                
+                const tag = document.getElementById('frameTag');
+                if (frame.isSat) {
+                    tag.innerText = 'GLOBAL IR';
+                    tag.className = 'frame-type-tag tag-ir';
+                } else if (frame.type === 'forecast') {
+                    tag.innerText = 'FORECAST';
+                    tag.className = 'frame-type-tag tag-forecast';
+                } else {
+                    tag.innerText = 'LIVE RADAR';
+                    tag.className = 'frame-type-tag tag-past';
+                }
+
+                document.getElementById('radarScrubber').value = index;
+            }
+            state.currentFrameIdx = index;
+        }
+
+        function startRadarAnimation() {
+            if (state.animTimer) clearInterval(state.animTimer);
+            const activeDataset = state.sciFilterMode === 'infrared_top' ? state.satFrames : state.radarFrames;
+            if (activeDataset.length <= 1) return;
+            
+            state.isPlaying = true;
+            document.getElementById('playBtn').innerText = "⏸";
+            state.animTimer = setInterval(() => {
+                if (!state.isZooming) {
+                    let nextIdx = (state.currentFrameIdx + 1) % activeDataset.length;
+                    showRadarFrame(nextIdx);
+                }
+            }, state.animSpeedMs);
+        }
+
+        function toggleRadarAnimation() {
+            if (state.radarSource === "IEM_NEXRAD") return;
+            if (state.isPlaying) {
+                clearInterval(state.animTimer);
+                state.isPlaying = false;
+                document.getElementById('playBtn').innerText = "▶";
+            } else {
+                startRadarAnimation();
+            }
+        }
+
+        function stepFrame(delta) {
+            if (state.isPlaying) toggleRadarAnimation();
+            const activeDataset = state.sciFilterMode === 'infrared_top' ? state.satFrames : state.radarFrames;
+            let newIdx = state.currentFrameIdx + delta;
+            if (newIdx < 0) newIdx = activeDataset.length - 1;
+            if (newIdx >= activeDataset.length) newIdx = 0;
+            showRadarFrame(newIdx);
+        }
+
+        function onScrubberSlide(val) {
+            if (state.isPlaying) toggleRadarAnimation();
+            showRadarFrame(parseInt(val));
+        }
+
+        function changeAnimSpeed(speedMs) {
+            state.animSpeedMs = parseInt(speedMs);
+            if (state.isPlaying) startRadarAnimation();
+        }
+
+        function updateOpacity(val) {
+            state.opacity = parseFloat(val);
+            if (state.activeBuffer === 'A') state.radarLayerA.setOpacity(state.opacity);
+            else state.radarLayerB.setOpacity(state.opacity);
+        }
+
+        function toggleScrubberDock() {
+            state.isScrubberCollapsed = !state.isScrubberCollapsed;
+            document.getElementById('radarToolbar').classList.toggle('collapsed', state.isScrubberCollapsed);
+            document.getElementById('btnCollapseScrubber').innerText = state.isScrubberCollapsed ? '▲' : '▼';
+        }
+
+        function toggleSubBar() {
+            document.getElementById('headerSubRow').classList.toggle('collapsed');
+        }
+
+        function toggleHeaderCollapse(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            state.isHeaderHidden = !state.isHeaderHidden;
+            document.getElementById('topHeader').classList.toggle('header-hidden', state.isHeaderHidden);
+            document.getElementById('btnShowHeader').style.display = state.isHeaderHidden ? 'inline-flex' : 'none';
+        }
+
+        function forceRadarReload() { initRadar(); }
+
+        // --- 6. Active NWS Alerts ---
+        async function fetchNWSAlerts() {
+            try {
+                const res = await fetchWithTimeout('https://api.weather.gov/alerts/active?status=actual', {}, 3000);
+                const data = await res.json();
+                if (state.nwsAlertsLayer) map2d.removeLayer(state.nwsAlertsLayer);
+
+                state.nwsAlertsLayer = L.geoJSON(data, {
+                    style: (feature) => {
+                        const event = feature.properties.event || '';
+                        let color = '#f59e0b';
+                        if (event.includes('Tornado') || event.includes('Extreme')) color = '#ef4444';
+                        else if (event.includes('Thunderstorm')) color = '#eab308';
+                        return { color: color, weight: 2, opacity: 0.8, fillColor: color, fillOpacity: 0.25 };
+                    }
+                }).addTo(map2d);
+            } catch (err) {}
+        }
+
+        // --- 7. Scientific Filters & Modes ---
+        function applyScientificFilter(modeKey) {
+            state.sciFilterMode = modeKey;
+            let palette = '2', titleText = "Scientific Filter Active", descText = "Standard reflectivity rendering.";
+
+            if (modeKey === 'standard') {
+                palette = '2'; titleText = "Standard Reflectivity"; descText = "Universal dBZ radar reflectivity.";
+                setFilterPreset('standard');
+            } else if (modeKey === 'realistic') {
+                palette = '2'; titleText = "Photorealistic 3D Radar"; descText = "Enhanced 3D volumetric reflectivity.";
+                document.getElementById('sldContrast').value = 140;
+                document.getElementById('sldSaturate').value = 180;
+                updateImageFilters();
+            } else if (modeKey === 'tds') {
+                palette = '6'; titleText = "Dual-Pol TDS Hail Core"; descText = "Dual-Pol debris signature & severe hail core threshold (>55 dBZ).";
+                document.getElementById('sldContrast').value = 260;
+                document.getElementById('sldSaturate').value = 350;
+                updateImageFilters();
+            } else if (modeKey === 'declutter') {
+                palette = '0'; titleText = "GOES-R De-Clutter Filter"; descText = "High-pass clutter suppression filter removing ground clutter & sea spray.";
+                document.getElementById('sldInvert').value = 100;
+                document.getElementById('sldContrast').value = 280;
+                updateImageFilters();
+            } else if (modeKey === 'zr') {
+                palette = '3'; titleText = "MRMS Hydrological Rain Depth"; descText = "Z-R precipitation accumulation rate (TITAN depth scale).";
+                document.getElementById('sldContrast').value = 160;
+                document.getElementById('sldSaturate').value = 220;
+                updateImageFilters();
+            } else if (modeKey === 'infrared_top') {
+                palette = '0'; titleText = "Global Thermal IR Satellite"; descText = "100% Worldwide cloud-top thermal temperature mapping (GOES/Meteosat/Himawari).";
+                setFilterPreset('standard');
+            }
+
+            document.getElementById('sciTitleText').innerText = titleText;
+            document.getElementById('sciDescText').innerText = descText;
+
+            state.radarPalette = palette;
+            const targetFrames = modeKey === 'infrared_top' ? state.satFrames : state.radarFrames;
+            
+            const scrubber = document.getElementById('radarScrubber');
+            scrubber.max = Math.max(0, targetFrames.length - 1);
+            showRadarFrame(state.currentFrameIdx % Math.max(1, targetFrames.length));
+        }
+
+        // --- 8. Open-Meteo High-Resolution Global Weather Engine ---
+        async function fetchMicroWeather(lat, lon, label = null) {
+            document.getElementById('locName').innerText = label || `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+            document.getElementById('locCoords').innerText = `Lat: ${lat.toFixed(4)}°, Lon: ${lon.toFixed(4)}°`;
+
+            try {
+                const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,surface_pressure,cloudcover,windspeed_10m,winddirection_10m,visibility`;
+                const res = await fetchWithTimeout(omUrl, {}, 4000);
+                const data = await res.json();
+                const cur = data.current_weather;
+                const hourly = data.hourly || {};
+
+                state.rawTempC = cur.temperature;
+                state.rawFeelsC = hourly.apparent_temperature?.[0] ?? cur.temperature;
+                renderTemperatures();
+
+                document.getElementById('weatherDesc').innerText = parseWMOCode(cur.weathercode);
+                document.getElementById('windVal').innerText = `${cur.windspeed} km/h`;
+                document.getElementById('windDirVal').innerText = `${cur.winddirection}°`;
+                document.getElementById('humidityVal').innerText = `${hourly.relative_humidity_2m?.[0] ?? '--'}%`;
+                
+                const rainRate = hourly.precipitation?.[0] ?? hourly.rain?.[0] ?? 0;
+                document.getElementById('rainRateVal').innerText = `${rainRate.toFixed(1)} mm/h`;
+
+                const cloud = hourly.cloudcover?.[0] ?? 0;
+                const vis = hourly.visibility?.[0] ?? 10000;
+                let flightCat = "VFR 🟢";
+                if (vis < 1500 || cloud > 90) flightCat = "LIFR 🔴";
+                else if (vis < 5000 || cloud > 75) flightCat = "IFR 🟠";
+                else if (vis < 8000 || cloud > 50) flightCat = "MVFR 🟡";
+                document.getElementById('flightCatVal').innerText = flightCat;
+
+                const pressure = Math.round(hourly.surface_pressure?.[0] ?? 1013);
+                document.getElementById('pressureVal').innerText = `${pressure} hPa`;
+                
+                if (state.lastPressure !== null) {
+                    const diff = pressure - state.lastPressure;
+                    if (diff < -1.5) document.getElementById('pressureTrendVal').innerText = "📉 Rapid Drop (Storm)";
+                    else if (diff > 1.5) document.getElementById('pressureTrendVal').innerText = "📈 Rising";
+                    else document.getElementById('pressureTrendVal').innerText = "Steady";
+                }
+                state.lastPressure = pressure;
+
+                computeStormMotion(lat, lon, cur.windspeed, cur.winddirection);
+            } catch (err) {}
+        }
+
+        function computeStormMotion(lat, lon, windSpeedKmh, windDirDeg) {
+            const travelDir = (windDirDeg + 180) % 360;
+            document.getElementById('motionText').innerText = `Vector ${travelDir}° at ${windSpeedKmh} km/h`;
+
+            const distKm = windSpeedKmh * 0.5;
+            const rad = (travelDir * Math.PI) / 180;
+            const targetLat = lat + (distKm / 111) * Math.cos(rad);
+            const targetLon = lon + (distKm / (111 * Math.cos(lat * Math.PI / 180))) * Math.sin(rad);
+
+            if (state.trajectoryLayer) map2d.removeLayer(state.trajectoryLayer);
+            state.trajectoryLayer = L.layerGroup([
+                L.polyline([[lat, lon], [targetLat, targetLon]], { color: '#38bdf8', weight: 4, opacity: 0.85, dashArray: '8, 8' }),
+                L.circleMarker([targetLat, targetLon], { radius: 6, fillColor: '#007aff', color: '#fff', weight: 2, fillOpacity: 1 })
+            ]).addTo(map2d);
+        }
+
+        function parseWMOCode(code) {
+            const table = { 0: "Clear Sky ☀️", 1: "Mainly Clear 🌤️", 2: "Partly Cloudy ⛅", 3: "Overcast ☁️", 61: "Slight Rain 🌧️", 65: "Heavy Rain ⛈️", 95: "Severe Thunderstorm 🌩️" };
+            return table[code] || "Moderate Weather 🌡️";
+        }
+
+        function toggleTempUnit() {
+            state.tempUnit = state.tempUnit === 'C' ? 'F' : 'C';
+            renderTemperatures();
+        }
+
+        function renderTemperatures() {
+            if (state.rawTempC === null) return;
+            const isF = state.tempUnit === 'F';
+            const tempVal = isF ? (state.rawTempC * 9/5) + 32 : state.rawTempC;
+            const feelsVal = isF ? (state.rawFeelsC * 9/5) + 32 : state.rawFeelsC;
+            document.getElementById('tempVal').innerText = `${Math.round(tempVal)}°${state.tempUnit}`;
+            document.getElementById('feelsLikeVal').innerText = `${Math.round(feelsVal)}°${state.tempUnit}`;
+        }
+
+        function updateStatus(sourceName, isFallback) {
+            const badge = document.getElementById('statusBadge');
+            document.getElementById('statusText').innerText = "Radar: " + sourceName;
+            badge.className = "status-badge ui-overlay" + (isFallback ? " fallback" : "");
+        }
+
+        function handleZoom(delta) {
+            if (state.mode === '2d') map2d.setZoom(map2d.getZoom() + delta);
+            else if (state.mode === '3d' && viewer3d) {
+                const height = viewer3d.camera.positionCartographic.height;
+                viewer3d.camera.moveForward(height * 0.35 * (delta > 0 ? 1 : -1));
+            }
+        }
+
+        // Touch Drag Attach
+        function attachMobileTouchDrag(headerId, panelId) {
+            const header = document.getElementById(headerId);
+            const panel = document.getElementById(panelId);
+            if (!header || !panel) return;
+
+            let isDragging = false, startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+            function onTouchStart(e) {
+                isDragging = true;
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX; startY = touch.clientY;
+                initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
+            }
+
+            function onTouchMove(e) {
+                if (!isDragging) return;
+                const touch = e.touches ? e.touches[0] : e;
+                const dx = touch.clientX - startX, dy = touch.clientY - startY;
+
+                const newLeft = Math.max(10, Math.min(window.innerWidth - panel.offsetWidth - 10, initialLeft + dx));
+                const newTop = Math.max(10, Math.min(window.innerHeight - panel.offsetHeight - 10, initialTop + dy));
+
+                panel.style.left = `${newLeft}px`; panel.style.top = `${newTop}px`; panel.style.right = 'auto';
+            }
+
+            function onTouchEnd() { isDragging = false; }
+
+            header.addEventListener('touchstart', onTouchStart, { passive: true });
+            header.addEventListener('touchmove', onTouchMove, { passive: true });
+            header.addEventListener('touchend', onTouchEnd, { passive: true });
+
+            header.addEventListener('mousedown', onTouchStart);
+            window.addEventListener('mousemove', onTouchMove);
+            window.addEventListener('mouseup', onTouchEnd);
+        }
+
+        attachMobileTouchDrag('weatherHeader', 'weatherWindow');
+        attachMobileTouchDrag('discoveryHeader', 'discoveryWindow');
+
+        function toggleWindow(id) {
+            const win = document.getElementById(id);
+            if (win) win.style.display = win.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // --- Mobile-Safe Zoom Listeners ---
+        map2d.on('zoomstart', () => {
+            state.isZooming = true;
+            // Freeze inactive layer during active pinch-zoom to save mobile RAM
+            if (state.activeBuffer === 'A') state.radarLayerB.setOpacity(0);
+            else state.radarLayerA.setOpacity(0);
+        });
+
+        map2d.on('zoomend', () => {
+            if (state.zoomDebounceTimer) clearTimeout(state.zoomDebounceTimer);
+            state.zoomDebounceTimer = setTimeout(() => {
+                state.isZooming = false;
+                showRadarFrame(state.currentFrameIdx);
+            }, 200);
+        });
+
+        // Map Click Marker
+        map2d.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            state.lat = lat; state.lon = lng;
+            if (state.marker) map2d.removeLayer(state.marker);
+            state.marker = L.marker([lat, lng]).addTo(map2d);
+            fetchMicroWeather(lat, lng);
+        });
+
+        // Search Engine
+        async function handleSearch() {
+            const q = document.getElementById('citySearch').value.trim();
+            if (!q) return;
+
+            const coordMatch = q.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
+            if (coordMatch) {
+                state.lat = parseFloat(coordMatch[1]);
+                state.lon = parseFloat(coordMatch[2]);
+                jumpToLocation(state.lat, state.lon, "Direct Coords");
+                return;
+            }
+
+            try {
+                const res = await fetchWithTimeout(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`, {}, 3500);
+                const results = await res.json();
+                if (results.length === 0) return alert("Location not found");
+
+                const loc = results[0];
+                state.lat = parseFloat(loc.lat); state.lon = parseFloat(loc.lon);
+                jumpToLocation(state.lat, state.lon, loc.display_name.split(',')[0]);
+            } catch (err) {
+                alert("Type direct coordinates e.g., 40.71, -74.00");
+            }
+        }
+
+        function jumpToLocation(lat, lon, label) {
+            if (state.mode === '2d') {
+                map2d.flyTo([lat, lon], 9);
+                if (state.marker) map2d.removeLayer(state.marker);
+                state.marker = L.marker([lat, lon]).addTo(map2d);
+            }
+            fetchMicroWeather(lat, lon, label);
+        }
+
+        // Launch Application
+        initRadar();
+        fetchMicroWeather(state.lat, state.lon, "Selected Target");
+    </script>
+</body>
+</html>
