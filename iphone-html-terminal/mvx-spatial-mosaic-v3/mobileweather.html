@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mobile Precision Weather Radar</title>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 12px);
+            --safe-bottom: env(safe-area-inset-bottom, 14px);
+            --safe-left: env(safe-area-inset-left, 12px);
+            --safe-right: env(safe-area-inset-right, 12px);
+            --brand-blue: #38bdf8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background: #080c14;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+        }
+
+        #map {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Glassmorphism UI Containers */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            pointer-events: auto !important;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        /* Mobile Header Controls */
+        .mobile-header {
+            top: var(--safe-top);
+            left: var(--safe-left);
+            right: var(--safe-right);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px 12px;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .search-input {
+            flex: 1;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            padding: 0 12px;
+            font-size: 14px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .btn {
+            height: 40px;
+            padding: 0 14px;
+            background: #007aff;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            white-space: nowrap;
+        }
+        .btn:active { opacity: 0.75; }
+        .btn-icon { width: 40px; padding: 0; font-size: 16px; }
+
+        select.btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            outline: none;
+        }
+        select.btn option { background: #0f172a; color: #fff; }
+
+        /* Bottom Player Bar */
+        .mobile-player {
+            bottom: var(--safe-bottom);
+            left: var(--safe-left);
+            right: var(--safe-right);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .time-badge {
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--brand-blue);
+        }
+
+        .status-tag {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            background: rgba(52, 199, 89, 0.25);
+            color: #34c759;
+            border: 1px solid #34c759;
+        }
+
+        .scrubber {
+            width: 100%;
+            height: 32px;
+            accent-color: var(--brand-blue);
+            touch-action: pan-x;
+        }
+
+        /* Pull-Up Weather Drawer */
+        .weather-drawer {
+            position: absolute;
+            bottom: calc(115px + var(--safe-bottom));
+            left: var(--safe-left);
+            right: var(--safe-right);
+            padding: 12px 16px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        .weather-drawer.active { display: flex; }
+
+        .drawer-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--brand-blue);
+            text-transform: uppercase;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .stat-box {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+        .stat-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; display: block; }
+        .stat-value { font-size: 13px; font-weight: 700; color: #f8fafc; }
+
+        /* Hardware Accelerated Smooth Tile Layering */
+        .leaflet-tile-container img {
+            image-rendering: -webkit-optimize-contrast;
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+        .leaflet-tile-error { opacity: 0 !important; visibility: hidden !important; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <!-- Top Controls Header -->
+    <div class="mobile-header glass-panel ui-overlay">
+        <div class="header-row">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search City or Lat, Lon..." onkeypress="if(event.key==='Enter') handleSearch()">
+            <button class="btn btn-icon" onclick="handleSearch()">🔍</button>
+            <button class="btn btn-icon" onclick="locateUser()">📍</button>
+        </div>
+        <div class="header-row">
+            <select id="schemeSelect" class="btn" style="flex:1;" onchange="changeColorScheme(this.value)">
+                <option value="2">Universal Broadcast Radar</option>
+                <option value="6">Dual-Pol Hail Core (TDS)</option>
+                <option value="3">MRMS Rain Accumulation</option>
+                <option value="0">Black & White High Contrast</option>
+            </select>
+            <button class="btn" onclick="forceReload()" style="background: rgba(52, 199, 89, 0.3); color:#34c759;">🔄 Sync</button>
+        </div>
+    </div>
+
+    <!-- Pull-Up Target Weather HUD -->
+    <div class="weather-drawer glass-panel ui-overlay" id="weatherDrawer">
+        <div class="drawer-title">
+            <span id="drawerLoc">Target Sector</span>
+            <button class="btn btn-icon" style="height:24px; width:24px; font-size:12px; background:transparent;" onclick="closeDrawer()">✕</button>
+        </div>
+        <div style="font-size:22px; font-weight:800;" id="drawerTemp">--°C</div>
+        <div style="font-size:12px; color:#cbd5e1;" id="drawerCondition">Select location on map...</div>
+        
+        <div class="stats-grid">
+            <div class="stat-box"><span class="stat-label">Wind Speed</span><span class="stat-value" id="drawerWind">-- km/h</span></div>
+            <div class="stat-box"><span class="stat-label">Rain Rate</span><span class="stat-value" id="drawerPrecip">0.0 mm/h</span></div>
+            <div class="stat-box"><span class="stat-label">Humidity</span><span class="stat-value" id="drawerHumidity">--%</span></div>
+            <div class="stat-box"><span class="stat-label">Pressure</span><span class="stat-value" id="drawerPressure">-- hPa</span></div>
+        </div>
+    </div>
+
+    <!-- Bottom Timeline Player Dock -->
+    <div class="mobile-player glass-panel ui-overlay">
+        <div class="player-row">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="status-tag" id="sourceTag">LIVE</span>
+                <span class="time-badge" id="timeReadout">Connecting...</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn btn-icon" style="height:34px; width:34px;" onclick="stepFrame(-1)">⏮</button>
+                <button class="btn btn-icon" style="height:34px; width:34px; background:#34c759; color:#000;" id="playBtn" onclick="togglePlay()">▶</button>
+                <button class="btn btn-icon" style="height:34px; width:34px;" onclick="stepFrame(1)">⏭</button>
+            </div>
+        </div>
+
+        <input type="range" id="scrubber" class="scrubber" min="0" max="0" value="0" oninput="onScrubberSlide(this.value)">
+        
+        <div class="player-row" style="font-size:11px; color:#94a3b8;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span>Speed</span>
+                <select id="speedSelect" onchange="changeSpeed(this.value)" style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; height:24px; font-size:10px;">
+                    <option value="1000">0.5x</option>
+                    <option value="500" selected>1.0x</option>
+                    <option value="200">2.0x</option>
+                </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span>Opacity</span>
+                <input type="range" id="opacitySlider" min="0.2" max="1" step="0.05" value="0.85" oninput="updateOpacity(this.value)" style="accent-color:#007aff; width:80px;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let map = null;
+        let radarFrameLayers = []; // Preloaded Leaflet tile layers
+        let frameTimestamps = [];
+        let currentFrameIndex = 0;
+        let isPlaying = false;
+        let animationTimer = null;
+        let animationSpeed = 500;
+        let currentOpacity = 0.85;
+        let currentScheme = '2';
+        let radarHost = 'https://tilecache.rainviewer.com';
+        let targetMarker = null;
+
+        // Prevent UI touches from bubbling to the Leaflet map
+        function stopTouchBubbling(el) {
+            if (!el) return;
+            L.DomEvent.disableClickPropagation(el);
+            L.DomEvent.disableScrollPropagation(el);
+            ['touchstart', 'touchmove', 'touchend', 'pointerdown'].forEach(evt => {
+                el.addEventListener(evt, (e) => e.stopPropagation(), { passive: true });
+            });
+        }
+
+        // Initialize App
+        function initApp() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false,
+                preferCanvas: true,
+                bounceAtZoomLimits: false,
+                tap: false // Disable legacy tap handler for modern mobile touch
+            }).setView([39.8283, -98.5795], 4);
+
+            // Satellite Base Map
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Esri'
+            }).addTo(map);
+
+            // Reference Boundaries
+            L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                zIndex: 500
+            }).addTo(map);
+
+            // Inhibit touch propagation on UI elements
+            document.querySelectorAll('.ui-overlay').forEach(stopTouchBubbling);
+
+            // Fix container height on mobile layout
+            setTimeout(() => { map.invalidateSize(); }, 300);
+
+            // Map Tap Selection
+            map.on('click', (e) => {
+                selectLocation(e.latlng.lat, e.latlng.lng);
+            });
+
+            // Auto-Locate
+            locateUser();
+
+            // Fetch Radar Stream
+            loadRadarData();
+        }
+
+        // Fetch Live RainViewer Radar
+        async function loadRadarData() {
+            document.getElementById('timeReadout').innerText = "Loading...";
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 7000);
+                
+                const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!res.ok) throw new Error("HTTP Error");
+                const data = await res.json();
+
+                radarHost = data.host || 'https://tilecache.rainviewer.com';
+                const pastFrames = data.radar?.past || [];
+
+                if (pastFrames.length === 0) throw new Error("No past frames");
+
+                clearRadarLayers();
+                frameTimestamps = pastFrames;
+                const total = pastFrames.length;
+                currentFrameIndex = total - 1;
+
+                // Pre-load all radar frames into memory (prevents missing tiles on mobile zoom)
+                pastFrames.forEach((frame, idx) => {
+                    const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/${currentScheme}/1_1.png`;
+                    const layer = L.tileLayer(tileUrl, {
+                        opacity: idx === currentFrameIndex ? currentOpacity : 0,
+                        tileSize: 256,
+                        maxNativeZoom: 7, // RainViewer native zoom
+                        maxZoom: 19,
+                        zIndex: 200 + idx
+                    });
+                    layer.addTo(map);
+                    radarFrameLayers.push(layer);
+                });
+
+                document.getElementById('scrubber').max = total - 1;
+                document.getElementById('scrubber').value = currentFrameIndex;
+                document.getElementById('sourceTag').innerText = "LIVE RADAR";
+                document.getElementById('sourceTag').className = "status-tag tag-past";
+
+                displayFrame(currentFrameIndex);
+                startAnimation();
+
+            } catch (err) {
+                console.warn("RainViewer unavailable. Activating IEM NEXRAD fallback...", err);
+                activateIEMFallback();
+            }
+        }
+
+        // Fallback Tier: IEM NEXRAD Stream
+        function activateIEMFallback() {
+            clearRadarLayers();
+            document.getElementById('sourceTag').innerText = "IEM NEXRAD";
+            document.getElementById('sourceTag').className = "status-tag tag-fallback";
+            document.getElementById('timeReadout').innerText = "LIVE NEXRAD";
+
+            const iemLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q/{z}/{x}/{y}.png', {
+                opacity: currentOpacity,
+                tileSize: 256,
+                maxNativeZoom: 12,
+                maxZoom: 19,
+                zIndex: 200
+            }).addTo(map);
+
+            radarFrameLayers = [iemLayer];
+            document.getElementById('scrubber').disabled = true;
+            document.getElementById('playBtn').disabled = true;
+        }
+
+        function clearRadarLayers() {
+            if (animationTimer) clearInterval(animationTimer);
+            isPlaying = false;
+            document.getElementById('playBtn').innerText = "▶";
+            radarFrameLayers.forEach(l => map.removeLayer(l));
+            radarFrameLayers = [];
+        }
+
+        // Display Active Frame via Fast Hardware Opacity Swap
+        function displayFrame(index) {
+            if (radarFrameLayers.length === 0) return;
+
+            if (index < 0) index = 0;
+            if (index >= radarFrameLayers.length) index = radarFrameLayers.length - 1;
+
+            radarFrameLayers.forEach((layer, idx) => {
+                if (idx === index) {
+                    layer.setOpacity(currentOpacity);
+                } else {
+                    layer.setOpacity(0);
+                }
+            });
+
+            currentFrameIndex = index;
+            document.getElementById('scrubber').value = index;
+
+            if (frameTimestamps[index]) {
+                const date = new Date(frameTimestamps[index].time * 1000);
+                document.getElementById('timeReadout').innerText = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+        }
+
+        function startAnimation() {
+            if (animationTimer) clearInterval(animationTimer);
+            if (radarFrameLayers.length <= 1) return;
+
+            isPlaying = true;
+            document.getElementById('playBtn').innerText = "⏸";
+
+            animationTimer = setInterval(() => {
+                let nextIdx = (currentFrameIndex + 1) % radarFrameLayers.length;
+                displayFrame(nextIdx);
+            }, animationSpeed);
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                clearInterval(animationTimer);
+                isPlaying = false;
+                document.getElementById('playBtn').innerText = "▶";
+            } else {
+                startAnimation();
+            }
+        }
+
+        function stepFrame(delta) {
+            if (isPlaying) togglePlay();
+            let newIdx = currentFrameIndex + delta;
+            if (newIdx < 0) newIdx = radarFrameLayers.length - 1;
+            if (newIdx >= radarFrameLayers.length) newIdx = 0;
+            displayFrame(newIdx);
+        }
+
+        function onScrubberSlide(val) {
+            if (isPlaying) togglePlay();
+            displayFrame(parseInt(val));
+        }
+
+        function changeSpeed(ms) {
+            animationSpeed = parseInt(ms);
+            if (isPlaying) startAnimation();
+        }
+
+        function updateOpacity(val) {
+            currentOpacity = parseFloat(val);
+            if (radarFrameLayers[currentFrameIndex]) {
+                radarFrameLayers[currentFrameIndex].setOpacity(currentOpacity);
+            }
+        }
+
+        function changeColorScheme(scheme) {
+            currentScheme = scheme;
+            loadRadarData();
+        }
+
+        function forceReload() {
+            loadRadarData();
+        }
+
+        // Open-Meteo Weather Feed
+        async function selectLocation(lat, lon, label = null) {
+            if (targetMarker) map.removeLayer(targetMarker);
+            targetMarker = L.marker([lat, lon]).addTo(map);
+
+            document.getElementById('weatherDrawer').classList.add('active');
+            document.getElementById('drawerLoc').innerText = label || `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+            document.getElementById('drawerTemp').innerText = "Loading...";
+
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relative_humidity_2m,precipitation,surface_pressure`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const cur = data.current_weather;
+                const hourly = data.hourly || {};
+
+                const tempC = cur.temperature;
+                const tempF = Math.round((tempC * 9/5) + 32);
+                document.getElementById('drawerTemp').innerText = `${Math.round(tempC)}°C / ${tempF}°F`;
+                document.getElementById('drawerWind').innerText = `${cur.windspeed} km/h (${cur.winddirection}°)`;
+                document.getElementById('drawerPrecip').innerText = `${(hourly.precipitation?.[0] || 0).toFixed(1)} mm/h`;
+                document.getElementById('drawerHumidity').innerText = `${hourly.relative_humidity_2m?.[0] || '--'}%`;
+                document.getElementById('drawerPressure').innerText = `${Math.round(hourly.surface_pressure?.[0] || 1013)} hPa`;
+                document.getElementById('drawerCondition').innerText = parseWMO(cur.weathercode);
+            } catch (err) {
+                document.getElementById('drawerTemp').innerText = "Unavailable";
+            }
+        }
+
+        function closeDrawer() {
+            document.getElementById('weatherDrawer').classList.remove('active');
+        }
+
+        function parseWMO(code) {
+            const table = { 0: "Clear Sky ☀️", 1: "Mainly Clear 🌤️", 2: "Partly Cloudy ⛅", 3: "Overcast ☁️", 61: "Slight Rain 🌧️", 65: "Heavy Rain ⛈️", 95: "Thunderstorm 🌩️" };
+            return table[code] || "Moderate Conditions 🌡️";
+        }
+
+        function locateUser() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                map.flyTo([lat, lon], 8);
+                selectLocation(lat, lon, "GPS Position");
+            }, (err) => {
+                console.log("GPS locate skipped");
+            });
+        }
+
+        async function handleSearch() {
+            const q = document.getElementById('searchInput').value.trim();
+            if (!q) return;
+
+            const coordMatch = q.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
+            if (coordMatch) {
+                const lat = parseFloat(coordMatch[1]);
+                const lon = parseFloat(coordMatch[2]);
+                map.flyTo([lat, lon], 8);
+                selectLocation(lat, lon, "Coordinates");
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+                const results = await res.json();
+                if (results.length === 0) return alert("Location not found");
+
+                const loc = results[0];
+                const lat = parseFloat(loc.lat);
+                const lon = parseFloat(loc.lon);
+                map.flyTo([lat, lon], 8);
+                selectLocation(lat, lon, loc.display_name.split(',')[0]);
+            } catch (err) {
+                alert("Type coordinates e.g. 40.71, -74.00");
+            }
+        }
+
+        // Initialize on DOM Ready
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
