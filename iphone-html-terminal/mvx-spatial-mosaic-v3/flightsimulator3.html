@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>6th Gen Stealth Fighter - Real Earth Map & Deep Space Simulator</title>
+
+    <!-- Aladin Lite Deep Space Map Libraries -->
+    <link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v2/latest/aladin.min.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://aladin.cds.unistra.fr/AladinLite/api/v2/latest/aladin.min.js"></script>
+
+    <!-- Three.js Engine CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 10px);
+            --safe-bottom: env(safe-area-inset-bottom, 10px);
+            --safe-left: env(safe-area-inset-left, 10px);
+            --safe-right: env(safe-area-inset-right, 10px);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #020508; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; touch-action: none; }
+        
+        #aladin-map { width: 100%; height: 100%; position: absolute; inset: 0; z-index: 0; display: none; }
+        #webgl-canvas { width: 100%; height: 100%; display: block; position: absolute; inset: 0; z-index: 1; touch-action: none; }
+
+        /* Tactical HUD Overlay */
+        #hud-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+            padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+            box-sizing: border-box; transition: opacity 0.3s; z-index: 10;
+        }
+
+        .hud-glass {
+            background: rgba(10, 20, 32, 0.88);
+            border: 1px solid rgba(0, 225, 255, 0.4);
+            border-radius: 8px; color: #00e1ff; padding: 6px 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px); pointer-events: auto;
+        }
+
+        #top-hud { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .hud-title { font-size: 11px; font-weight: bold; letter-spacing: 1.5px; color: #ffffff; text-transform: uppercase; }
+
+        select, button {
+            background: #0d1a26; color: #00e1ff; border: 1px solid #00e1ff;
+            padding: 5px 9px; border-radius: 6px; font-family: monospace; font-size: 11px;
+            cursor: pointer; outline: none; transition: all 0.2s; touch-action: manipulation;
+        }
+        select:hover, button:hover, button:active { background: #00e1ff; color: #000; }
+        .btn-active { background: #34c759 !important; color: #000 !important; font-weight: bold; border-color: #34c759 !important; }
+        .btn-warp { background: rgba(255, 85, 0, 0.25) !important; color: #ff5500 !important; border-color: #ff5500 !important; }
+        .btn-warp.active { background: #ff5500 !important; color: #fff !important; font-weight: bold; box-shadow: 0 0 12px #ff5500; }
+
+        /* Draggable Windows */
+        .window-panel {
+            position: absolute; z-index: 1000;
+            background: rgba(8, 15, 26, 0.94); backdrop-filter: blur(14px);
+            color: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.85);
+            border: 1px solid rgba(0, 225, 255, 0.35); width: min(320px, calc(100vw - 20px));
+            pointer-events: auto; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .window-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; border-bottom: 1px solid rgba(0, 225, 255, 0.2);
+            background: rgba(0, 225, 255, 0.08); cursor: move; user-select: none;
+        }
+        .window-header h3 { font-size: 11px; font-weight: 800; color: #00e1ff; text-transform: uppercase; letter-spacing: 1px; }
+        .window-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 11px; font-family: monospace; }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .stat-box { background: rgba(255,255,255,0.04); padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); }
+        .stat-lbl { color: #88aab8; font-size: 9px; text-transform: uppercase; display: block; }
+        .stat-val { color: #00e1ff; font-weight: bold; font-size: 11px; }
+
+        .tag-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; display: inline-block; }
+        .tag-vfr { background: rgba(52, 199, 89, 0.25); color: #34c759; border: 1px solid #34c759; }
+        .tag-space { background: rgba(56, 189, 248, 0.25); color: #38bdf8; border: 1px solid #38bdf8; }
+
+        /* Glass Cockpit HUD Canvas */
+        #pfd-canvas {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(520px, 88vw); height: min(520px, 88vw); pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        /* Radar Scope */
+        #radar-canvas {
+            width: 85px; height: 95px; border-radius: 8px;
+            border: 1px solid #00e1ff; background: rgba(5,15,25,0.92);
+            box-shadow: 0 0 10px rgba(0,225,255,0.3);
+        }
+
+        /* Bottom Dashboard */
+        #bottom-hud { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+        .metric-group { display: flex; gap: 10px; }
+        .metric { display: flex; flex-direction: column; }
+        .metric .lbl { font-size: 9px; color: #00aacc; text-transform: uppercase; }
+        .metric .val { font-size: 16px; font-weight: bold; color: #ffffff; text-shadow: 0 0 10px #00e1ff; font-family: monospace; }
+
+        .ab-active { color: #ff5500 !important; text-shadow: 0 0 12px #ff5500 !important; }
+
+        #key-guide {
+            font-size: 9px; color: #88ccdd; line-height: 1.3; font-family: monospace;
+            background: rgba(5, 15, 25, 0.88); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(0, 225, 255, 0.3);
+        }
+
+        .warning-tag {
+            position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%);
+            color: #ff2200; font-size: 22px; font-weight: bold; letter-spacing: 3px;
+            border: 3px solid #ff2200; padding: 6px 18px; background: rgba(10,0,0,0.88);
+            display: none; animation: blink 0.3s infinite alternate; z-index: 20;
+        }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.15; } }
+
+        #map-status { font-size: 10px; color: #00e1ff; margin-top: 2px; font-weight: bold; }
+
+        /* Mobile Touch Overlay */
+        #mobile-touch-container {
+            position: absolute; inset: 0; pointer-events: none; z-index: 100; display: block;
+        }
+
+        .touch-zone { pointer-events: auto; touch-action: none; }
+
+        /* Left Touch Joystick Pad */
+        #joystick-bound {
+            position: absolute; bottom: calc(20px + var(--safe-bottom)); left: calc(15px + var(--safe-left));
+            width: 130px; height: 130px; border-radius: 50%;
+            background: rgba(0, 225, 255, 0.08); border: 2px solid rgba(0, 225, 255, 0.4);
+            backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+        }
+
+        #joystick-stick {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(0, 225, 255, 0.65); border: 2px solid #ffffff;
+            box-shadow: 0 0 15px #00e1ff; transform: translate(0px, 0px);
+            pointer-events: none;
+        }
+
+        /* Right Touch Throttle Slider */
+        #throttle-bound {
+            position: absolute; bottom: calc(20px + var(--safe-bottom)); right: calc(15px + var(--safe-right));
+            width: 48px; height: 160px; border-radius: 24px;
+            background: rgba(0, 225, 255, 0.08); border: 2px solid rgba(0, 225, 255, 0.4);
+            backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+        }
+
+        #throttle-handle {
+            position: absolute; width: 40px; height: 38px; border-radius: 10px;
+            background: #00e1ff; border: 2px solid #ffffff;
+            box-shadow: 0 0 12px #00e1ff; transform: translateY(0px); pointer-events: none;
+        }
+
+        /* Quick Action Touch Buttons */
+        #touch-btn-bar {
+            position: absolute; bottom: calc(20px + var(--safe-bottom)); left: 50%;
+            transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto;
+        }
+
+        .touch-action-btn {
+            height: 38px; padding: 0 12px; border-radius: 10px;
+            background: rgba(10, 20, 32, 0.92); border: 1px solid rgba(0, 225, 255, 0.5);
+            color: #00e1ff; font-weight: bold; font-size: 11px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        .touch-action-btn:active { background: #00e1ff; color: #000; }
+
+        @media (max-width: 768px) {
+            #key-guide { display: none; }
+            .hud-title { font-size: 10px; }
+            .metric .val { font-size: 14px; }
+            #radar-canvas { width: 70px; height: 80px; }
+            #touch-btn-bar { bottom: calc(170px + var(--safe-bottom)); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Aladin Lite Deep Space Background -->
+    <div id="aladin-map"></div>
+
+    <!-- WebGL 3D Engine -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Mobile Controls Layer -->
+    <div id="mobile-touch-container">
+        <!-- Virtual Joystick Pad -->
+        <div id="joystick-bound" class="touch-zone">
+            <div id="joystick-stick"></div>
+        </div>
+
+        <!-- Virtual Throttle Slider -->
+        <div id="throttle-bound" class="touch-zone">
+            <div id="throttle-handle"></div>
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div id="touch-btn-bar">
+            <button class="touch-action-btn" id="btn-touch-ap" onclick="toggleAutopilot()">AP NAV</button>
+            <button class="touch-action-btn btn-warp" id="btn-touch-warp" onclick="toggleHyperdrive()">WARP</button>
+            <button class="touch-action-btn" id="btn-touch-brake" onclick="toggleAirbrakes()">BRK</button>
+            <button class="touch-action-btn" id="btn-touch-gear" onclick="toggleGear()">GEAR</button>
+            <button class="touch-action-btn" id="btn-touch-cam" onclick="cycleCam()">CAM</button>
+        </div>
+    </div>
+
+    <!-- Cockpit HUD Overlay -->
+    <div id="hud-overlay">
+        <!-- Top Toolbar -->
+        <div id="top-hud">
+            <div class="hud-glass">
+                <span class="hud-title">⚡ 6TH GEN STEALTH FIGHTER</span>
+                <div id="map-status">STREAMING ENGINE: ZERO-FLICKER STREAMING EARTH & SPACE WARP ENGINE</div>
+            </div>
+
+            <!-- Location & Mode Controls -->
+            <div class="hud-glass" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <label for="airbase-select" style="font-size:10px; color:#00aacc;">TARGET SECTOR:</label>
+                <select id="airbase-select" onchange="switchAirbase(this.value)">
+                    <option value="KSFO">San Francisco (KSFO) - Bay & Pacific</option>
+                    <option value="KEDW">Edwards AFB (KEDW) - Mojave Range</option>
+                    <option value="KLSV">Nellis AFB (KLSV) - Vegas & Desert</option>
+                    <option value="LOWI">Innsbruck (LOWI) - Alpine Range</option>
+                    <option value="KJFK">JFK Intl (KJFK) - NYC Metro</option>
+                    <option value="RJTT">Tokyo Haneda (RJTT) - Tokyo Bay</option>
+                </select>
+                <button id="btn-ap-nav" onclick="toggleAutopilot()">🧭 AP NAV: OFF</button>
+                <button id="btn-hyperdrive" class="btn-warp" onclick="toggleHyperdrive()">⚡ HYPERDRIVE</button>
+                <button id="btn-earth-mode" class="btn-active" onclick="setFlightDomain('earth')">🌍 REAL EARTH</button>
+                <button id="btn-astro-mode" onclick="setFlightDomain('astro')">🌌 ASTRO SPACE</button>
+                <select id="astro-survey-select" style="display:none;" onchange="changeAstroSurvey(this.value)">
+                    <option value="P/DSS2/color">🌌 DSS2 Optical Color</option>
+                    <option value="P/2MASS/color">🛰️ 2MASS Infrared</option>
+                    <option value="P/Planck/HFI/color">⚛️ Planck Relic CMB</option>
+                </select>
+                <button onclick="toggleWindow('spaceWin')">🛰️ SWPC</button>
+                <button onclick="toggleWindow('metarWin')">✈️ METAR</button>
+                <button onclick="toggleAudio()">🔊 <span id="snd-lbl">OFF</span></button>
+                <button onclick="toggleHUDMode()">HUD: <span id="hud-mode-lbl">FULL</span> [H]</button>
+            </div>
+
+            <div class="hud-glass">
+                <span id="cam-tag" style="font-weight:bold;">CAM: CHASE 3D</span>
+            </div>
+        </div>
+
+        <div id="stall-alert" class="warning-tag">STALL / LOW AIRSPEED</div>
+
+        <!-- Central Cockpit HUD Canvas -->
+        <canvas id="pfd-canvas" width="600" height="600"></canvas>
+
+        <!-- Window 1: NOAA Space Weather -->
+        <div class="window-panel" id="spaceWin" style="top: 75px; left: 12px; display: none;">
+            <div class="window-header" id="spaceHeader">
+                <h3>🛰️ NOAA Space Weather & SWPC Telemetry</h3>
+                <button class="btn" style="padding:2px 6px; font-size:10px;" onclick="toggleWindow('spaceWin')">✕</button>
+            </div>
+            <div class="window-body">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Planetary Kp Index:</span>
+                    <span class="tag-badge tag-space" id="kpBadge">Kp 1.3 (Quiet)</span>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-box"><span class="stat-lbl">Geomagnetic (G)</span><span class="stat-val" id="gVal">G0 Normal</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Solar Flare (R)</span><span class="stat-val" id="rVal">R0 Quiet</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Radiation (S)</span><span class="stat-val" id="sVal">S0 Quiet</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Aurora Oval</span><span class="stat-val" id="auroraVal">High Lat</span></div>
+                </div>
+                <div style="font-size:10px; color:#88aab8;">Celestial Orient: <span id="celestial-pos" style="color:#00e1ff; font-weight:bold;">RA 180° | DEC 0°</span></div>
+            </div>
+        </div>
+
+        <!-- Window 2: Aviation METAR -->
+        <div class="window-panel" id="metarWin" style="top: 75px; right: 12px; display: none;">
+            <div class="window-header" id="metarHeader">
+                <h3>✈️ Live Aviation METAR Weather</h3>
+                <button class="btn" style="padding:2px 6px; font-size:10px;" onclick="toggleWindow('metarWin')">✕</button>
+            </div>
+            <div class="window-body">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="metarIcao">KSFO METAR Feed</span>
+                    <span class="tag-badge tag-vfr" id="flightRuleTag">VFR</span>
+                </div>
+                <div style="font-size:10px; color:#00e1ff; word-break:break-all;" id="rawMetar">FETCHING LIVE METAR...</div>
+                <div class="stat-grid">
+                    <div class="stat-box"><span class="stat-lbl">Surface Wind</span><span class="stat-val" id="windVal">180° @ 12 KTS</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Crosswind Vector</span><span class="stat-val" id="crosswindVal">3 KTS Left</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Barometer (QNH)</span><span class="stat-val" id="qnhVal">29.92 inHg</span></div>
+                    <div class="stat-box"><span class="stat-lbl">Map Lat / Lon</span><span class="stat-val" id="geoCoordVal">37.61, -122.37</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Dashboard -->
+        <div id="bottom-hud">
+            <div class="hud-glass" id="dash-left" style="display:flex; gap:10px; align-items:center;">
+                <canvas id="radar-canvas" width="85" height="95"></canvas>
+                <div class="metric-group">
+                    <div class="metric"><span class="lbl">AIRSPEED</span><span id="val-spd" class="val">0 KTS</span></div>
+                    <div class="metric"><span class="lbl">MACH</span><span id="val-mch" class="val">0.00</span></div>
+                    <div class="metric"><span class="lbl">ALTITUDE</span><span id="val-alt" class="val">0 FT</span></div>
+                    <div class="metric"><span class="lbl">VERT SPEED</span><span id="val-vsi" class="val">0 FPM</span></div>
+                </div>
+            </div>
+
+            <div id="key-guide">
+                <b>TAIT-BRYAN CONTROLS / TOUCH:</b><br>
+                [S / Down] Stick BACK $\rightarrow$ NOSE PITCHES UP<br>
+                [W / Up] Stick FWD $\rightarrow$ NOSE PITCHES DOWN<br>
+                [A/D] Bank Wings | [Q/E] Rudder | [Shift/Ctrl] Throttle/AB
+            </div>
+
+            <div class="hud-glass" id="dash-right">
+                <div class="metric-group">
+                    <div class="metric"><span class="lbl">THROTTLE</span><span id="val-pwr" class="val">0%</span></div>
+                    <div class="metric"><span class="lbl">ENG MODE</span><span id="val-ab" class="val">MIL POWER</span></div>
+                    <div class="metric"><span class="lbl">G-LOAD</span><span id="val-g" class="val">1.0 G</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // 1. AIRPORT DATABASE & REAL-TIME API FETCHERS
+        // =================================================================
+        const AirportsDatabase = {
+            KSFO: { name: "San Francisco", lat: 37.6189, lon: -122.3750, elevFt: 13, rwyHeading: 280, rwyLengthM: 3600, rwyWidthM: 60 },
+            KEDW: { name: "Edwards AFB", lat: 34.9055, lon: -117.8836, elevFt: 2302, rwyHeading: 220, rwyLengthM: 4500, rwyWidthM: 90 },
+            KLSV: { name: "Nellis AFB", lat: 36.2362, lon: -115.0343, elevFt: 1870, rwyHeading: 210, rwyLengthM: 3100, rwyWidthM: 60 },
+            LOWI: { name: "Innsbruck Base", lat: 47.2602, lon: 11.3440, elevFt: 1900, rwyHeading: 260, rwyLengthM: 2000, rwyWidthM: 45 },
+            KJFK: { name: "JFK Intl Base", lat: 40.6413, lon: -73.7781, elevFt: 13, rwyHeading: 310, rwyLengthM: 4400, rwyWidthM: 60 },
+            RJTT: { name: "Tokyo Haneda", lat: 35.5494, lon: 139.7798, elevFt: 35, rwyHeading: 340, rwyLengthM: 3300, rwyWidthM: 60 }
+        };
+
+        const LiveDataEngine = {
+            windSpeedKts: 12,
+            windDirDeg: 180,
+            altimeterInHg: 29.92,
+            
+            async fetchSpaceWeather() {
+                try {
+                    const res = await fetch('https://services.swpc.noaa.gov/products/noaa-scales.json');
+                    const data = await res.json();
+                    const latestKey = Object.keys(data).pop();
+                    const latest = data[latestKey] || {};
+
+                    const g = latest.G?.Scale || 0;
+                    const r = latest.R?.Scale || 0;
+                    const s = latest.S?.Scale || 0;
+                    const kp = (g * 1.5 + 1.2).toFixed(1);
+
+                    document.getElementById('kpBadge').innerText = `Kp ${kp} (${g > 0 ? 'Storm' : 'Quiet'})`;
+                    document.getElementById('gVal').innerText = `G${g} ${g === 0 ? 'Normal' : 'Geomagnetic'}`;
+                    document.getElementById('rVal').innerText = `R${r} ${r === 0 ? 'Quiet' : 'Radio Flare'}`;
+                    document.getElementById('sVal').innerText = `S${s} ${s === 0 ? 'Quiet' : 'Radiation'}`;
+                    document.getElementById('auroraVal').innerText = g >= 2 ? "High (Mid Lat)" : "Polar Lat";
+                } catch(e) {}
+            },
+
+            async fetchMETAR(icao) {
+                document.getElementById('metarIcao').innerText = `${icao} METAR Telemetry`;
+                try {
+                    const res = await fetch(`https://metar.vatsim.net/${icao}`);
+                    if (res.ok) {
+                        const raw = (await res.text()).trim();
+                        if (raw) {
+                            document.getElementById('rawMetar').innerText = raw;
+                            this.parseMETAR(raw);
+                            return;
+                        }
+                    }
+                } catch(e) {}
+
+                const fallback = `${icao} 18012KT 10SM FEW030 18/12 A2992`;
+                document.getElementById('rawMetar').innerText = fallback;
+                this.parseMETAR(fallback);
+            },
+
+            parseMETAR(metar) {
+                const windMatch = metar.match(/(\d{3}|VRB)(\d{2,3})(G\d{2,3})?KT/);
+                if (windMatch) {
+                    this.windDirDeg = windMatch[1] === 'VRB' ? 0 : parseInt(windMatch[1]);
+                    this.windSpeedKts = parseInt(windMatch[2]);
+                    document.getElementById('windVal').innerText = `${this.windDirDeg}° @ ${this.windSpeedKts} KTS`;
+                }
+
+                const altMatch = metar.match(/A(\d{4})/);
+                if (altMatch) {
+                    this.altimeterInHg = parseFloat(altMatch[1]) / 100.0;
+                    document.getElementById('qnhVal').innerText = `${this.altimeterInHg.toFixed(2)} inHg`;
+                }
+            }
+        };
+
+        // =================================================================
+        // 2. ALADIN LITE DEEP SPACE MAP ENGINE
+        // =================================================================
+        let aladinInstance = null;
+        let flightDomain = 'earth';
+        let raDeg = 180.0, decDeg = 0.0, fovDeg = 60.0;
+
+        function initAladinEngine() {
+            if (aladinInstance) return;
+            try {
+                aladinInstance = A.aladin('#aladin-map', {
+                    survey: "P/DSS2/color",
+                    fov: fovDeg,
+                    target: `${raDeg} ${decDeg}`,
+                    showReticle: false,
+                    showZoomControl: false
+                });
+            } catch(e) {}
+        }
+
+        function setFlightDomain(domain) {
+            flightDomain = domain;
+            const btnEarth = document.getElementById('btn-earth-mode');
+            const btnAstro = document.getElementById('btn-astro-mode');
+            const surveySelect = document.getElementById('astro-survey-select');
+            const aladinDiv = document.getElementById('aladin-map');
+            const statusTag = document.getElementById('map-status');
+
+            if (domain === 'astro') {
+                btnEarth.classList.remove('btn-active');
+                btnAstro.classList.add('btn-active');
+                surveySelect.style.display = 'inline-block';
+                aladinDiv.style.display = 'block';
+                initAladinEngine();
+                statusTag.innerText = "CELESTIAL MAP: ALADIN SKY SURVEY DEEP SPACE FLIGHT ACTIVE";
+            } else {
+                btnAstro.classList.remove('btn-active');
+                btnEarth.classList.add('btn-active');
+                surveySelect.style.display = 'none';
+                aladinDiv.style.display = 'none';
+                statusTag.innerText = "STREAMING ENGINE: ZERO-FLICKER STREAMING EARTH & SPACE WARP ENGINE";
+            }
+        }
+
+        function changeAstroSurvey(s) {
+            if (aladinInstance) aladinInstance.setImageSurvey(s);
+        }
+
+        // =================================================================
+        // 3. THREE.JS SCENE SETUP & ZERO-FLICKER TILE / ATMOSPHERE ENGINE
+        // =================================================================
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+
+        const scene = new THREE.Scene();
+        scene.background = null;
+        scene.fog = new THREE.FogExp2(0x0a1420, 0.00008);
+
+        const ambientLight = new THREE.AmbientLight(0xddeeff, 0.65);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffeedd, 1.35);
+        sunLight.position.set(2000, 4000, 1000);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+
+        // REALISTIC ATMOSPHERE HORIZON DOME SHADER
+        const atmosphereGeo = new THREE.SphereGeometry(60000, 64, 32);
+        const atmosphereMat = new THREE.ShaderMaterial({
+            side: THREE.BackSide,
+            transparent: true,
+            uniforms: {
+                uAltitudeRatio: { value: 0.0 },
+                uSunVec: { value: new THREE.Vector3(0.3, 0.6, 0.7).normalize() }
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vWorldPos;
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    vec4 wp = modelMatrix * vec4(position, 1.0);
+                    vWorldPos = wp.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * wp;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vNormal;
+                varying vec3 vWorldPos;
+                uniform float uAltitudeRatio;
+                uniform vec3 uSunVec;
+                void main() {
+                    float viewCos = abs(dot(normalize(vWorldPos), vec3(0.0, 1.0, 0.0)));
+                    float horizonGlow = pow(1.0 - viewCos, 4.0);
+                    
+                    vec3 skyBlue = vec3(0.05, 0.55, 0.95);
+                    vec3 horizonCyan = vec3(0.0, 0.85, 1.0);
+                    vec3 spaceBlack = vec3(0.01, 0.02, 0.05);
+
+                    vec3 skyColor = mix(skyBlue, horizonCyan, horizonGlow);
+                    skyColor = mix(skyColor, spaceBlack, uAltitudeRatio * 0.85);
+
+                    float alpha = mix(0.95, 0.15, uAltitudeRatio);
+                    gl_FragColor = vec4(skyColor, alpha);
+                }
+            `
+        });
+
+        const atmosphereDome = new THREE.Mesh(atmosphereGeo, atmosphereMat);
+        scene.add(atmosphereDome);
+
+        // Fallback Base Ground Plane
+        const fallbackGeo = new THREE.PlaneGeometry(160000, 160000);
+        fallbackGeo.rotateX(-Math.PI / 2);
+        const fallbackMesh = new THREE.Mesh(fallbackGeo, new THREE.MeshStandardMaterial({ color: 0x121c24, roughness: 0.9 }));
+        fallbackMesh.position.y = -2;
+        scene.add(fallbackMesh);
+
+        // 3D WARP FIELD PARTICLE STREAK SYSTEM (HYPERDRIVE FX)
+        const warpParticleCount = 600;
+        const warpGeo = new THREE.BufferGeometry();
+        const warpPos = new Float32Array(warpParticleCount * 3);
+
+        for (let i = 0; i < warpParticleCount * 3; i += 3) {
+            warpPos[i] = (Math.random() - 0.5) * 400;
+            warpPos[i + 1] = (Math.random() - 0.5) * 200 + 50;
+            warpPos[i + 2] = (Math.random() - 0.5) * 800;
+        }
+
+        warpGeo.setAttribute('position', new THREE.BufferAttribute(warpPos, 3));
+        const warpMat = new THREE.PointsMaterial({ color: 0x00ffff, size: 2.5, transparent: true, opacity: 0.0 });
+        const warpParticles = new THREE.Points(warpGeo, warpMat);
+        scene.add(warpParticles);
+
+        // Web Mercator Math
+        function latLonToTile(lat, lon, zoom) {
+            const latRad = lat * Math.PI / 180;
+            const n = Math.pow(2, zoom);
+            const xtile = Math.floor((lon + 180.0) / 360.0 * n);
+            const ytile = Math.floor((1.0 - Math.log(Math.tan(latRad) + (1.0 / Math.cos(latRad))) / Math.PI) / 2.0 * n);
+            return { x: xtile, y: ytile, z: zoom };
+        }
+
+        function tileToLatLon(x, y, z) {
+            const n = Math.pow(2, z);
+            const lon = (x / n) * 360.0 - 180.0;
+            const latRad = Math.atan(Math.sinh(Math.PI * (1.0 - (2.0 * y / n))));
+            const lat = latRad * 180.0 / Math.PI;
+            return { lat, lon };
+        }
+
+        // ZERO-FLICKER STREAMING TILE POOL
+        class ZeroFlickerTileStreamer {
+            constructor(scene) {
+                this.scene = scene;
+                this.tileGroup = new THREE.Group();
+                this.scene.add(this.tileGroup);
+                this.activePool = new Map();
+                this.textureLoader = new THREE.TextureLoader();
+                this.zoomLevel = 13;
+            }
+
+            update(currentLat, currentLon) {
+                const centerTile = latLonToTile(currentLat, currentLon, this.zoomLevel);
+                const radius = 2;
+                const requiredKeys = new Set();
+
+                for (let dx = -radius; dx <= radius; dx++) {
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        const tx = centerTile.x + dx;
+                        const ty = centerTile.y + dy;
+                        const key = `${this.zoomLevel}_${tx}_${ty}`;
+                        requiredKeys.add(key);
+
+                        if (!this.activePool.has(key)) {
+                            this.spawnTile(tx, ty, this.zoomLevel, currentLat, currentLon, key);
+                        }
+                    }
+                }
+
+                // Reposition active tile meshes relative to floating origin (0, 0, 0)
+                for (const [key, tileObj] of this.activePool.entries()) {
+                    const tileCenter = tileToLatLon(tileObj.tx + 0.5, tileObj.ty + 0.5, tileObj.z);
+                    const latDiff = (tileCenter.lat - currentLat) * 111320;
+                    const lonDiff = (tileCenter.lon - currentLon) * 111320 * Math.cos(currentLat * Math.PI / 180);
+
+                    tileObj.mesh.position.set(lonDiff, 0, -latDiff);
+                }
+
+                // Remove out-of-range tiles
+                for (const [key, tileObj] of this.activePool.entries()) {
+                    if (!requiredKeys.has(key)) {
+                        this.tileGroup.remove(tileObj.mesh);
+                        if (tileObj.mesh.material.map) tileObj.mesh.material.map.dispose();
+                        tileObj.mesh.material.dispose();
+                        tileObj.mesh.geometry.dispose();
+                        this.activePool.delete(key);
+                    }
+                }
+            }
+
+            spawnTile(tx, ty, z, centerLat, centerLon, key) {
+                const esriUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${tx}`;
+
+                const tileBounds = {
+                    nw: tileToLatLon(tx, ty, z),
+                    se: tileToLatLon(tx + 1, ty + 1, z)
+                };
+
+                const widthMeters = Math.abs(tileBounds.se.lon - tileBounds.nw.lon) * 111320 * Math.cos(centerLat * Math.PI / 180);
+                const heightMeters = Math.abs(tileBounds.nw.lat - tileBounds.se.lat) * 111320;
+
+                const geo = new THREE.PlaneGeometry(widthMeters, heightMeters, 16, 16);
+                geo.rotateX(-Math.PI / 2);
+
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    roughness: 0.85,
+                    metalness: 0.1,
+                    visible: false // KEEP HIDDEN UNTIL SATELLITE IMAGE DOWNLOADS 100% TO PREVENT FLASHING!
+                });
+
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.receiveShadow = true;
+                this.tileGroup.add(mesh);
+
+                const tileObj = { mesh, tx, ty, z };
+                this.activePool.set(key, tileObj);
+
+                // Download texture in background
+                this.textureLoader.load(
+                    esriUrl,
+                    (tex) => {
+                        tex.minFilter = THREE.LinearFilter;
+                        mat.map = tex;
+                        mat.visible = true; // REVEAL TILE SAFELY ONLY WHEN READY
+                        mat.needsUpdate = true;
+                    },
+                    undefined,
+                    () => {
+                        mat.visible = true; // Error fallback
+                    }
+                );
+            }
+
+            clearAll() {
+                for (const [key, tileObj] of this.activePool.entries()) {
+                    this.tileGroup.remove(tileObj.mesh);
+                    if (tileObj.mesh.material.map) tileObj.mesh.material.map.dispose();
+                    tileObj.mesh.material.dispose();
+                    tileObj.mesh.geometry.dispose();
+                }
+                this.activePool.clear();
+            }
+        }
+
+        const tileStreamer = new ZeroFlickerTileStreamer(scene);
+        let runwayGroup, buildingsGroup;
+
+        // AIRPORT & 3D STRUCTURES
+        function buildAirbaseAndBuildings(baseKey) {
+            if (runwayGroup) scene.remove(runwayGroup);
+            if (buildingsGroup) scene.remove(buildingsGroup);
+
+            const base = AirportsDatabase[baseKey] || AirportsDatabase.KSFO;
+
+            runwayGroup = new THREE.Group();
+            const rwyMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(base.rwyWidthM, base.rwyLengthM),
+                new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.8 })
+            );
+            rwyMesh.rotation.x = -Math.PI / 2;
+            rwyMesh.position.y = 0.5;
+            rwyMesh.receiveShadow = true;
+            runwayGroup.add(rwyMesh);
+
+            const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            for (let z = -base.rwyLengthM/2 + 100; z < base.rwyLengthM/2 - 100; z += 50) {
+                const dash = new THREE.Mesh(new THREE.PlaneGeometry(2, 25), stripeMat);
+                dash.rotation.x = -Math.PI / 2;
+                dash.position.set(0, 0.6, z);
+                runwayGroup.add(dash);
+            }
+
+            runwayGroup.rotation.y = -base.rwyHeading * Math.PI / 180;
+            scene.add(runwayGroup);
+
+            buildingsGroup = new THREE.Group();
+            const concreteMat = new THREE.MeshStandardMaterial({ color: 0x444d56, roughness: 0.7 });
+            const hangarMat = new THREE.MeshStandardMaterial({ color: 0x2a333d, roughness: 0.4, metalness: 0.6 });
+
+            const tower = new THREE.Mesh(new THREE.CylinderGeometry(6, 8, 50, 12), concreteMat);
+            tower.position.set(-200, 25, -200);
+            buildingsGroup.add(tower);
+
+            for (let i = -2; i <= 2; i++) {
+                const hangarGeo = new THREE.CylinderGeometry(18, 18, 50, 16, 1, false, 0, Math.PI);
+                hangarGeo.rotateZ(Math.PI / 2);
+                const hangar = new THREE.Mesh(hangarGeo, hangarMat);
+                hangar.position.set(-280, 0, i * 90 - 100);
+                buildingsGroup.add(hangar);
+            }
+
+            if (baseKey === 'KSFO' || baseKey === 'KJFK' || baseKey === 'LOWI' || baseKey === 'RJTT') {
+                for (let b = 0; b < 45; b++) {
+                    const offsetX = (Math.random() - 0.5) * 6000 + (Math.random() > 0.5 ? 2800 : -2800);
+                    const offsetZ = (Math.random() - 0.5) * 6000 - 2000;
+                    const h = 60 + Math.random() * 220;
+                    const w = 35 + Math.random() * 40;
+
+                    const building = new THREE.Mesh(
+                        new THREE.BoxGeometry(w, h, w),
+                        new THREE.MeshStandardMaterial({ color: Math.random() > 0.5 ? 0x1e2b37 : 0x15222e, roughness: 0.3, metalness: 0.7 })
+                    );
+                    building.position.set(offsetX, h / 2, offsetZ);
+                    building.castShadow = true;
+                    buildingsGroup.add(building);
+                }
+            }
+
+            scene.add(buildingsGroup);
+
+            LiveDataEngine.fetchSpaceWeather();
+            LiveDataEngine.fetchMETAR(baseKey);
+        }
+
+        // =================================================================
+        // 4. 3D 6TH GENERATION STEALTH JET MESH & VISUAL FX
+        // =================================================================
+        let afterburnerL, afterburnerR, nozzleLMesh, nozzleRMesh, sonicConeMesh;
+
+        function create6thGenFighterMesh() {
+            const group = new THREE.Group();
+
+            const stealthMat = new THREE.MeshStandardMaterial({ color: 0x161e27, roughness: 0.2, metalness: 0.88, flatShading: true });
+            const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x00ffcc, metalness: 0.9, roughness: 0.1, transmission: 0.35, transparent: true });
+            const engineMat = new THREE.MeshStandardMaterial({ color: 0x080808, metalness: 0.95 });
+
+            const bodyShape = new THREE.Shape();
+            bodyShape.moveTo(0, -9.5);
+            bodyShape.lineTo(2.0, -4.2);
+            bodyShape.lineTo(6.8, 3.2);
+            bodyShape.lineTo(4.8, 7.8);
+            bodyShape.lineTo(2.4, 7.0);
+            bodyShape.lineTo(0, 7.8);
+            bodyShape.lineTo(-2.4, 7.0);
+            bodyShape.lineTo(-4.8, 7.8);
+            bodyShape.lineTo(-6.8, 3.2);
+            bodyShape.lineTo(-2.0, -4.2);
+            bodyShape.closePath();
+
+            const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, { depth: 0.9, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.4, bevelThickness: 0.3 });
+            bodyGeo.rotateX(Math.PI / 2);
+            const mainAirframe = new THREE.Mesh(bodyGeo, stealthMat);
+            mainAirframe.castShadow = true;
+            group.add(mainAirframe);
+
+            const canopyGeo = new THREE.ConeGeometry(0.9, 4.5, 4);
+            canopyGeo.rotateX(-Math.PI / 2);
+            canopyGeo.scale(1.0, 0.6, 1.0);
+            const canopy = new THREE.Mesh(canopyGeo, glassMat);
+            canopy.position.set(0, 0.75, -2.5);
+            group.add(canopy);
+
+            const tailGeo = new THREE.BoxGeometry(0.1, 2.2, 1.8);
+            const tailL = new THREE.Mesh(tailGeo, stealthMat);
+            tailL.position.set(-1.8, 1.0, 5.5); tailL.rotation.z = -Math.PI / 5;
+            const tailR = new THREE.Mesh(tailGeo, stealthMat);
+            tailR.position.set(1.8, 1.0, 5.5); tailR.rotation.z = Math.PI / 5;
+            group.add(tailL); group.add(tailR);
+
+            const nozzleGeo = new THREE.CylinderGeometry(0.55, 0.45, 1.5, 12);
+            nozzleGeo.rotateX(Math.PI / 2);
+            nozzleLMesh = new THREE.Mesh(nozzleGeo, engineMat); nozzleLMesh.position.set(-1.1, 0, 7.2);
+            nozzleRMesh = new THREE.Mesh(nozzleGeo, engineMat); nozzleRMesh.position.set(1.1, 0, 7.2);
+            group.add(nozzleLMesh); group.add(nozzleRMesh);
+
+            const abGeo = new THREE.ConeGeometry(0.48, 3.5, 12);
+            abGeo.rotateX(Math.PI / 2);
+            const abMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.0 });
+            afterburnerL = new THREE.Mesh(abGeo, abMat); afterburnerL.position.set(-1.1, 0, 9.0);
+            afterburnerR = new THREE.Mesh(abGeo, abMat); afterburnerR.position.set(1.1, 0, 9.0);
+            group.add(afterburnerL); group.add(afterburnerR);
+
+            const coneGeo = new THREE.ConeGeometry(7.0, 4.0, 16, 1, true);
+            coneGeo.rotateX(Math.PI / 2);
+            const coneMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, side: THREE.DoubleSide });
+            sonicConeMesh = new THREE.Mesh(coneGeo, coneMat);
+            sonicConeMesh.position.set(0, 0, 0);
+            group.add(sonicConeMesh);
+
+            return group;
+        }
+
+        const fighterMesh = create6thGenFighterMesh();
+        scene.add(fighterMesh);
+
+        // =================================================================
+        // 5. WEB AUDIO SYNTHESIZER ENGINE
+        // =================================================================
+        let audioCtx, jetGainNode;
+        let soundEnabled = false;
+
+        function initAudioEngine() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const jetFilter = audioCtx.createBiquadFilter();
+                jetFilter.type = 'lowpass';
+                jetFilter.frequency.setValueAtTime(320, audioCtx.currentTime);
+
+                jetGainNode = audioCtx.createGain();
+                jetGainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
+
+                whiteNoise.connect(jetFilter);
+                jetFilter.connect(jetGainNode);
+                jetGainNode.connect(audioCtx.destination);
+
+                whiteNoise.start();
+                soundEnabled = true;
+                document.getElementById('snd-lbl').innerText = "ON";
+            } catch(e) {}
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) initAudioEngine();
+            else {
+                if (audioCtx.state === 'suspended') { audioCtx.resume(); soundEnabled = true; document.getElementById('snd-lbl').innerText = "ON"; }
+                else { audioCtx.suspend(); soundEnabled = false; document.getElementById('snd-lbl').innerText = "OFF"; }
+            }
+        }
+
+        // =================================================================
+        // 6. TAIT-BRYAN FLIGHT DYNAMICS, AUTOPILOT & HYPERDRIVE ENGINE
+        // =================================================================
+        const FighterPhysics = {
+            lat: 37.6189, lon: -122.3750,
+            posY: 3.0,
+            pitch: 2.0, roll: 0.0, yaw: 280.0,
+            airspeedKts: 0.0,
+            verticalSpeedFpm: 0.0,
+            throttle: 0.0,
+            afterburnerActive: false,
+            hyperdriveActive: false,
+            autopilotActive: false,
+            airbrakes: false,
+            gearDown: true,
+            gForce: 1.0,
+            stalled: false,
+
+            resetToBase(baseKey) {
+                const base = AirportsDatabase[baseKey] || AirportsDatabase.KSFO;
+                this.lat = base.lat; this.lon = base.lon;
+                this.posY = 3.0;
+                this.yaw = base.rwyHeading;
+                this.pitch = 2.0; this.roll = 0.0;
+                this.airspeedKts = 0.0; this.verticalSpeedFpm = 0.0;
+                this.throttle = 0.0;
+                tileStreamer.clearAll();
+            },
+
+            update(dt, inputs) {
+                this.afterburnerActive = this.throttle > 0.80 || this.hyperdriveActive;
+
+                const pitchRate = 34.0;
+                const rollRate = 88.0;
+                const yawRate = 22.0;
+
+                // AUTOPILOT NAVIGATION BEARING CALCULATION
+                if (this.autopilotActive) {
+                    const targetBase = AirportsDatabase[document.getElementById('airbase-select').value] || AirportsDatabase.KSFO;
+                    const dLat = targetBase.lat - this.lat;
+                    const dLon = (targetBase.lon - this.lon) * Math.cos(this.lat * Math.PI / 180);
+                    let targetBearing = Math.atan2(dLon, dLat) * 180 / Math.PI;
+                    if (targetBearing < 0) targetBearing += 360;
+
+                    let yawDiff = targetBearing - this.yaw;
+                    if (yawDiff > 180) yawDiff -= 360;
+                    if (yawDiff < -180) yawDiff += 360;
+
+                    inputs.yawCmd = Math.max(-1, Math.min(1, yawDiff * 0.05));
+                    inputs.rollCmd = Math.max(-1, Math.min(1, yawDiff * 0.08));
+
+                    // Auto-Trim Pitch to Maintain 15,000 FT
+                    const targetAltM = 4500;
+                    const altErr = targetAltM - this.posY;
+                    inputs.pitchCmd = Math.max(-0.5, Math.min(0.5, altErr * 0.002 - (this.verticalSpeedFpm * 0.0001)));
+                    
+                    if (this.airspeedKts < 350) this.throttle = 0.85;
+                }
+
+                const windRad = LiveDataEngine.windDirDeg * Math.PI / 180;
+                const hdgRad = this.yaw * Math.PI / 180;
+                const crosswindKts = LiveDataEngine.windSpeedKts * Math.sin(windRad - hdgRad);
+                document.getElementById('crosswindVal').innerText = `${Math.abs(Math.round(crosswindKts))} KTS ${crosswindKts > 0 ? 'Right' : 'Left'}`;
+
+                this.pitch += inputs.pitchCmd * pitchRate * dt;
+                this.roll += inputs.rollCmd * rollRate * dt;
+                this.yaw = (this.yaw + inputs.yawCmd * yawRate * dt + (Math.sin(this.roll * Math.PI / 180) * 12.0 * dt) + (crosswindKts * 0.01 * dt) + 360) % 360;
+
+                this.throttle = Math.max(0.0, Math.min(1.0, this.throttle + inputs.throttleDelta * dt));
+
+                // HYPERDRIVE WARP MULTIPLIER (Up to Mach 35 / 25,000 KTS)
+                const warpMult = this.hyperdriveActive ? 30.0 : 1.0;
+                warpMat.opacity = this.hyperdriveActive ? 0.85 : 0.0;
+
+                const V_ms = this.airspeedKts * 0.514444 * warpMult;
+                const aoa = this.pitch - (Math.atan2(this.verticalSpeedFpm * 0.00508, Math.max(V_ms, 1.0)) * 180 / Math.PI);
+
+                this.stalled = aoa > 25.0 && this.posY > 5.0 && !this.hyperdriveActive;
+
+                let cL = 0.2 + (0.09 * aoa);
+                if (this.stalled) cL *= 0.3;
+
+                let cD = 0.015 + (0.03 * cL * cL) + (this.airbrakes ? 0.08 : 0.0) + (this.gearDown ? 0.03 : 0.0);
+
+                const rho = 1.225;
+                const wingArea = 42.0;
+                const mass = 18000.0;
+
+                const liftN = 0.5 * rho * V_ms * V_ms * wingArea * cL;
+                const dragN = 0.5 * rho * V_ms * V_ms * wingArea * cD;
+
+                const maxThrust = (this.afterburnerActive ? 350000.0 : 185000.0) * (this.hyperdriveActive ? 40.0 : 1.0);
+                const thrustN = this.throttle * maxThrust;
+
+                const accelX = (thrustN - dragN) / mass - (9.81 * Math.sin(this.pitch * Math.PI / 180));
+                const accelY = (liftN * Math.cos(this.roll * Math.PI / 180) - (mass * 9.81)) / mass;
+
+                this.airspeedKts = Math.max(0, this.airspeedKts + (accelX / 0.514444) * dt);
+                this.verticalSpeedFpm += (accelY * 196.85) * dt;
+
+                this.gForce = Math.max(-3.0, Math.min(9.0, 1.0 + (accelY / 9.81)));
+
+                const speedMS = this.airspeedKts * 0.514444 * warpMult;
+
+                this.posY += (this.verticalSpeedFpm / 60.0) * 0.3048 * dt;
+
+                // Update Geodetic Lat/Lon Position
+                const deltaLat = (speedMS * dt * Math.cos(hdgRad)) / 111320.0;
+                const deltaLon = (speedMS * dt * Math.sin(hdgRad)) / (111320.0 * Math.cos(this.lat * Math.PI / 180));
+                this.lat += deltaLat;
+                this.lon += deltaLon;
+
+                // Stream world satellite tiles under current geodetic position
+                tileStreamer.update(this.lat, this.lon);
+
+                // Update Atmosphere Horizon Shader Uniform
+                const altRatio = Math.min(1.0, Math.max(0.0, this.posY / 25000.0));
+                atmosphereMat.uniforms.uAltitudeRatio.value = altRatio;
+
+                // Shift airbase runways relative to floating origin
+                if (runwayGroup && buildingsGroup) {
+                    const base = AirportsDatabase[document.getElementById('airbase-select').value] || AirportsDatabase.KSFO;
+                    const rwyLatDiff = (base.lat - this.lat) * 111320;
+                    const rwyLonDiff = (base.lon - this.lon) * 111320 * Math.cos(this.lat * Math.PI / 180);
+                    runwayGroup.position.set(rwyLonDiff, 0, -rwyLatDiff);
+                    buildingsGroup.position.set(rwyLonDiff, 0, -rwyLatDiff);
+                }
+
+                document.getElementById('geoCoordVal').innerText = `${this.lat.toFixed(3)}°, ${this.lon.toFixed(3)}°`;
+
+                // Celestial Deep Space Synchronizer
+                if (flightDomain === 'astro' || this.posY * 3.28084 > 60000) {
+                    const spaceSpeedDeg = this.airspeedKts * 0.0008 * warpMult * dt;
+                    raDeg = (raDeg + spaceSpeedDeg * Math.sin(hdgRad) + 360.0) % 360.0;
+                    decDeg = Math.max(-89.9, Math.min(89.9, decDeg + spaceSpeedDeg * Math.sin(this.pitch * Math.PI / 180)));
+
+                    document.getElementById('celestial-pos').innerText = `RA ${raDeg.toFixed(2)}° | DEC ${decDeg.toFixed(2)}°`;
+                    if (aladinInstance) {
+                        aladinInstance.gotoObject(`${raDeg} ${decDeg}`);
+                    }
+                }
+
+                if (this.posY <= 1.8) {
+                    this.posY = 1.8;
+                    this.verticalSpeedFpm = 0.0;
+                    this.pitch = Math.max(0.0, this.pitch);
+                    this.roll = 0.0;
+                }
+
+                // FLOATING ORIGIN: Fighter Mesh remains locked at (0, Y, 0)
+                const euler = new THREE.Euler(
+                    +this.pitch * Math.PI / 180,
+                    -this.yaw * Math.PI / 180,
+                    -this.roll * Math.PI / 180,
+                    'YXZ'
+                );
+                fighterMesh.position.set(0, this.posY, 0);
+                fighterMesh.quaternion.setFromEuler(euler);
+
+                // Nozzles & Visual FX
+                const nozzlePitchRad = -inputs.pitchCmd * 0.3;
+                nozzleLMesh.rotation.x = nozzlePitchRad;
+                nozzleRMesh.rotation.x = nozzlePitchRad;
+
+                const abOpacity = this.afterburnerActive ? (0.7 + Math.random() * 0.3) : 0.0;
+                afterburnerL.material.opacity = abOpacity;
+                afterburnerR.material.opacity = abOpacity;
+
+                const mach = (this.airspeedKts * warpMult) / 661.7;
+                sonicConeMesh.material.opacity = (mach > 0.96 && mach < 1.12) ? (0.4 + Math.random()*0.3) : 0.0;
+
+                if (soundEnabled && jetGainNode) {
+                    const targetGain = 0.05 + (this.throttle * 0.25) + (this.hyperdriveActive ? 0.3 : 0.0);
+                    jetGainNode.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+                }
+            }
+        };
+
+        buildAirbaseAndBuildings('KSFO');
+        FighterPhysics.resetToBase('KSFO');
+
+        function switchAirbase(code) {
+            buildAirbaseAndBuildings(code);
+            FighterPhysics.resetToBase(code);
+        }
+
+        function toggleAutopilot() {
+            FighterPhysics.autopilotActive = !FighterPhysics.autopilotActive;
+            const btn = document.getElementById('btn-ap-nav');
+            const touchBtn = document.getElementById('btn-touch-ap');
+            if (FighterPhysics.autopilotActive) {
+                btn.innerText = "🧭 AP NAV: ON";
+                btn.classList.add('btn-active');
+                if (touchBtn) touchBtn.classList.add('btn-active');
+            } else {
+                btn.innerText = "🧭 AP NAV: OFF";
+                btn.classList.remove('btn-active');
+                if (touchBtn) touchBtn.classList.remove('btn-active');
+            }
+        }
+
+        function toggleHyperdrive() {
+            FighterPhysics.hyperdriveActive = !FighterPhysics.hyperdriveActive;
+            const btn = document.getElementById('btn-hyperdrive');
+            const touchBtn = document.getElementById('btn-touch-warp');
+            if (FighterPhysics.hyperdriveActive) {
+                btn.classList.add('active');
+                if (touchBtn) touchBtn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+                if (touchBtn) touchBtn.classList.remove('active');
+            }
+        }
+
+        function toggleAirbrakes() { FighterPhysics.airbrakes = !FighterPhysics.airbrakes; }
+        function toggleGear() { FighterPhysics.gearDown = !FighterPhysics.gearDown; }
+
+        // =================================================================
+        // 7. DYNAMIC UNCLIPPED TOUCH CONTROL ENGINE
+        // =================================================================
+        const keyState = {};
+        const touchInput = { pitchCmd: 0, rollCmd: 0 };
+
+        window.addEventListener('keydown', e => {
+            keyState[e.code] = true;
+            if (!audioCtx) initAudioEngine();
+        });
+        window.addEventListener('keyup', e => {
+            keyState[e.code] = false;
+            if (e.code === 'Space') toggleAirbrakes();
+            if (e.code === 'KeyG') toggleGear();
+            if (e.code === 'KeyC') cycleCam();
+            if (e.code === 'KeyH') toggleHUDMode();
+        });
+
+        // Touch Joystick (Dynamic Rect Calculation to Fix Clipping)
+        const joystickBound = document.getElementById('joystick-bound');
+        const joystickStick = document.getElementById('joystick-stick');
+        let joystickTouchId = null;
+
+        function handleJoystickTouch(touch) {
+            const rect = joystickBound.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxRadius = rect.width / 2;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
+
+            // Unclipped 360-degree pitch & roll control
+            touchInput.pitchCmd = Math.max(-1, Math.min(1, dy / maxRadius)); // +dy is Stick Down = Pitch UP
+            touchInput.rollCmd = Math.max(-1, Math.min(1, dx / maxRadius));  // +dx is Stick Right = Roll RIGHT
+        }
+
+        joystickBound.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (!audioCtx) initAudioEngine();
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            handleJoystickTouch(touch);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', e => {
+            if (joystickTouchId === null) return;
+            for (let t of e.changedTouches) {
+                if (t.identifier === joystickTouchId) {
+                    handleJoystickTouch(t);
+                    break;
+                }
+            }
+        }, { passive: false });
+
+        const resetJoystick = () => {
+            joystickTouchId = null;
+            joystickStick.style.transform = `translate(0px, 0px)`;
+            touchInput.pitchCmd = 0;
+            touchInput.rollCmd = 0;
+        };
+
+        window.addEventListener('touchend', resetJoystick);
+        window.addEventListener('touchcancel', resetJoystick);
+
+        // Touch Throttle Slider (Dynamic Rect Calculation)
+        const throttleBound = document.getElementById('throttle-bound');
+        const throttleHandle = document.getElementById('throttle-handle');
+        let throttleTouchId = null;
+
+        function handleThrottleTouch(touch) {
+            const rect = throttleBound.getBoundingClientRect();
+            const relativeY = Math.max(0, Math.min(rect.height, touch.clientY - rect.top));
+            const powerRatio = 1.0 - (relativeY / rect.height);
+
+            FighterPhysics.throttle = Math.max(0, Math.min(1, powerRatio));
+
+            const handleOffsetY = relativeY - (rect.height / 2);
+            throttleHandle.style.transform = `translateY(${handleOffsetY}px)`;
+        }
+
+        throttleBound.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (!audioCtx) initAudioEngine();
+            const touch = e.changedTouches[0];
+            throttleTouchId = touch.identifier;
+            handleThrottleTouch(touch);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', e => {
+            if (throttleTouchId === null) return;
+            for (let t of e.changedTouches) {
+                if (t.identifier === throttleTouchId) {
+                    handleThrottleTouch(t);
+                    break;
+                }
+            }
+        }, { passive: false });
+
+        const resetThrottleTouch = () => { throttleTouchId = null; };
+        window.addEventListener('touchend', resetThrottleTouch);
+        window.addEventListener('touchcancel', resetThrottleTouch);
+
+        function toggleWindow(id) {
+            const win = document.getElementById(id);
+            if (win) win.style.display = win.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function attachPanelDrag(headerId, panelId) {
+            const header = document.getElementById(headerId);
+            const panel = document.getElementById(panelId);
+            if (!header || !panel) return;
+
+            let isDragging = false, startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+            header.addEventListener('mousedown', e => {
+                isDragging = true;
+                startX = e.clientX; startY = e.clientY;
+                initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX, dy = e.clientY - startY;
+                panel.style.left = `${initialLeft + dx}px`;
+                panel.style.top = `${initialTop + dy}px`;
+                panel.style.right = 'auto';
+            });
+
+            window.addEventListener('mouseup', () => isDragging = false);
+        }
+
+        attachPanelDrag('spaceHeader', 'spaceWin');
+        attachPanelDrag('metarHeader', 'metarWin');
+
+        let camMode = 0;
+        function cycleCam() {
+            camMode = (camMode + 1) % 2;
+            document.getElementById('cam-tag').innerText = camMode === 0 ? "CAM: CHASE 3D" : "CAM: COCKPIT HUD";
+        }
+
+        let hudMode = 0;
+        function toggleHUDMode() {
+            hudMode = (hudMode + 1) % 3;
+            const pfdCanvas = document.getElementById('pfd-canvas');
+            const dashLeft = document.getElementById('dash-left');
+            const dashRight = document.getElementById('dash-right');
+            const modeLbl = document.getElementById('hud-mode-lbl');
+
+            if (hudMode === 0) {
+                pfdCanvas.style.opacity = '1';
+                dashLeft.style.opacity = '1'; dashRight.style.opacity = '1';
+                modeLbl.innerText = "FULL";
+            } else if (hudMode === 1) {
+                pfdCanvas.style.opacity = '0.5';
+                dashLeft.style.opacity = '1'; dashRight.style.opacity = '1';
+                modeLbl.innerText = "COMPACT";
+            } else {
+                pfdCanvas.style.opacity = '0';
+                dashLeft.style.opacity = '0'; dashRight.style.opacity = '0';
+                modeLbl.innerText = "MINIMIZED";
+            }
+        }
+
+        function updateCamera() {
+            const hdgRad = FighterPhysics.yaw * Math.PI / 180;
+            const fovWarp = FighterPhysics.hyperdriveActive ? 85 : 60;
+            if (camera.fov !== fovWarp) {
+                camera.fov = fovWarp;
+                camera.updateProjectionMatrix();
+            }
+
+            if (camMode === 0) {
+                const dist = 28; const height = 7;
+                camera.position.x = -Math.sin(hdgRad) * dist;
+                camera.position.z = Math.cos(hdgRad) * dist;
+                camera.position.y = FighterPhysics.posY + height;
+                camera.lookAt(0, FighterPhysics.posY + 2, 0);
+            } else {
+                camera.position.set(0, FighterPhysics.posY + 1.1, 0);
+                const lookX = Math.sin(hdgRad) * 200;
+                const lookZ = -Math.cos(hdgRad) * 200;
+                const lookY = FighterPhysics.posY + 1.1 + Math.sin(FighterPhysics.pitch * Math.PI / 180) * 200;
+                camera.lookAt(lookX, lookY, lookZ);
+            }
+        }
+
+        // =================================================================
+        // 8. RADAR SCOPE & AUTHENTIC HUD CANVAS
+        // =================================================================
+        const radarCanvas = document.getElementById('radar-canvas');
+        const rCtx = radarCanvas.getContext('2d');
+
+        function drawRadarScope() {
+            rCtx.clearRect(0, 0, 85, 95);
+            const rcx = 42, rcy = 47;
+
+            rCtx.strokeStyle = 'rgba(0,225,255,0.4)';
+            rCtx.lineWidth = 1;
+            rCtx.beginPath(); rCtx.arc(rcx, rcy, 18, 0, Math.PI*2); rCtx.stroke();
+            rCtx.beginPath(); rCtx.arc(rcx, rcy, 36, 0, Math.PI*2); rCtx.stroke();
+
+            rCtx.fillStyle = '#00e1ff';
+            rCtx.beginPath(); rCtx.arc(rcx, rcy, 3, 0, Math.PI*2); rCtx.fill();
+        }
+
+        const pfdCanvas = document.getElementById('pfd-canvas');
+        const pfd = pfdCanvas.getContext('2d');
+
+        function drawTacticalHUD() {
+            if (hudMode === 2) return;
+
+            pfd.clearRect(0, 0, 600, 600);
+            const cx = 300, cy = 300;
+
+            pfd.save();
+            pfd.translate(cx, cy);
+            pfd.rotate(-FighterPhysics.roll * Math.PI / 180);
+
+            pfd.strokeStyle = '#00e1ff';
+            pfd.lineWidth = 2;
+
+            const fovDeg = 40.0;
+            const pxPerDeg = 600.0 / fovDeg;
+            const pitchPix = FighterPhysics.pitch * pxPerDeg;
+
+            // Horizon Line (0°)
+            pfd.beginPath();
+            pfd.moveTo(-160, pitchPix); pfd.lineTo(160, pitchPix);
+            pfd.stroke();
+
+            // Pitch Ladder
+            for (let deg = -80; deg <= 80; deg += 5) {
+                if (deg === 0) continue;
+
+                const y = pitchPix - (deg * pxPerDeg);
+                if (y < -260 || y > 260) continue;
+
+                const isSolid = deg > 0;
+                const lineHalfLen = (Math.abs(deg) % 10 === 0) ? 55 : 35;
+                const flagHeight = (deg > 0) ? 8 : -8;
+
+                pfd.save();
+                if (!isSolid) pfd.setLineDash([8, 6]);
+
+                pfd.beginPath();
+                pfd.moveTo(-lineHalfLen - 20, y);
+                pfd.lineTo(-20, y);
+                pfd.lineTo(-20, y + flagHeight);
+                pfd.stroke();
+
+                pfd.beginPath();
+                pfd.moveTo(20, y + flagHeight);
+                pfd.lineTo(20, y);
+                pfd.lineTo(lineHalfLen + 20, y);
+                pfd.stroke();
+
+                pfd.restore();
+
+                pfd.fillStyle = '#00e1ff';
+                pfd.font = '11px monospace';
+                pfd.fillText(Math.abs(deg).toString(), lineHalfLen + 25, y + 4);
+                pfd.fillText(Math.abs(deg).toString(), -lineHalfLen - 42, y + 4);
+            }
+
+            pfd.restore();
+
+            // Flight Path Marker Symbol
+            pfd.strokeStyle = '#00e1ff';
+            pfd.lineWidth = 2;
+            pfd.beginPath();
+            pfd.arc(cx, cy, 8, 0, Math.PI * 2);
+            pfd.moveTo(cx - 22, cy); pfd.lineTo(cx - 8, cy);
+            pfd.moveTo(cx + 22, cy); pfd.lineTo(cx + 8, cy);
+            pfd.moveTo(cx, cy - 14); pfd.lineTo(cx, cy - 8);
+            pfd.stroke();
+
+            // Altitude Tape
+            const tapeX = 490;
+            pfd.strokeStyle = '#00e1ff';
+            pfd.strokeRect(tapeX, 100, 50, 400);
+
+            const currentAltFt = FighterPhysics.posY * 3.28084;
+            const tapeAltRange = 1000;
+
+            for (let a = -500; a <= 500; a += 100) {
+                const targetAlt = Math.floor(currentAltFt / 100) * 100 + a;
+                const yPos = cy - ((targetAlt - currentAltFt) / tapeAltRange) * 400;
+
+                if (yPos >= 105 && yPos <= 495) {
+                    const isMajor = targetAlt % 500 === 0;
+                    const len = isMajor ? 14 : 7;
+                    pfd.beginPath();
+                    pfd.moveTo(tapeX, yPos); pfd.lineTo(tapeX + len, yPos);
+                    pfd.stroke();
+
+                    if (isMajor) {
+                        pfd.fillStyle = '#00e1ff'; pfd.font = '10px monospace';
+                        pfd.fillText(targetAlt.toString(), tapeX + 16, yPos + 3);
+                    }
+                }
+            }
+
+            // Altitude Box
+            pfd.fillStyle = '#0b1622';
+            pfd.fillRect(tapeX - 10, cy - 14, 65, 28);
+            pfd.strokeStyle = '#00e1ff';
+            pfd.strokeRect(tapeX - 10, cy - 14, 65, 28);
+            pfd.fillStyle = '#ffffff'; pfd.font = 'bold 12px monospace';
+            pfd.fillText(`${Math.round(currentAltFt)}`, tapeX - 5, cy + 4);
+
+            // Airspeed Tape
+            const spdTapeX = 60;
+            pfd.strokeStyle = '#00e1ff';
+            pfd.strokeRect(spdTapeX - 50, 100, 50, 400);
+
+            pfd.fillStyle = '#0b1622';
+            pfd.fillRect(spdTapeX - 55, cy - 14, 65, 28);
+            pfd.strokeStyle = '#00e1ff';
+            pfd.strokeRect(spdTapeX - 55, cy - 14, 65, 28);
+            pfd.fillStyle = '#ffffff'; pfd.font = 'bold 12px monospace';
+            pfd.fillText(`${Math.round(FighterPhysics.airspeedKts * (FighterPhysics.hyperdriveActive ? 30 : 1))}`, spdTapeX - 48, cy + 4);
+
+            // Telemetry Output
+            const mach = ((FighterPhysics.airspeedKts * (FighterPhysics.hyperdriveActive ? 30 : 1)) / 661.7).toFixed(2);
+            document.getElementById('val-spd').innerText = `${Math.round(FighterPhysics.airspeedKts * (FighterPhysics.hyperdriveActive ? 30 : 1))} KTS`;
+            document.getElementById('val-mch').innerText = mach;
+            document.getElementById('val-alt').innerText = `${Math.round(currentAltFt)} FT`;
+            document.getElementById('val-vsi').innerText = `${Math.round(FighterPhysics.verticalSpeedFpm)} FPM`;
+            document.getElementById('val-pwr').innerText = `${Math.round(FighterPhysics.throttle * 100)}%`;
+            document.getElementById('val-g').innerText = `${FighterPhysics.gForce.toFixed(1)} G`;
+
+            const abLabel = document.getElementById('val-ab');
+            if (FighterPhysics.hyperdriveActive) {
+                abLabel.innerText = "HYPERDRIVE WARP";
+                abLabel.classList.add('ab-active');
+            } else if (FighterPhysics.afterburnerActive) {
+                abLabel.innerText = "AFTERBURNER";
+                abLabel.classList.add('ab-active');
+            } else {
+                abLabel.innerText = "MIL POWER";
+                abLabel.classList.remove('ab-active');
+            }
+
+            document.getElementById('stall-alert').style.display = FighterPhysics.stalled ? 'block' : 'none';
+        }
+
+        // =================================================================
+        // 9. MAIN RENDER LOOP
+        // =================================================================
+        let lastTime = performance.now();
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const dt = Math.min((now - lastTime) / 1000.0, 0.1);
+            lastTime = now;
+
+            const inputs = {
+                pitchCmd: (((keyState['KeyS'] || keyState['ArrowDown']) ? 1 : 0) - ((keyState['KeyW'] || keyState['ArrowUp']) ? 1 : 0)) || touchInput.pitchCmd,
+                rollCmd: (((keyState['KeyD'] || keyState['ArrowRight']) ? 1 : 0) - ((keyState['KeyA'] || keyState['ArrowLeft']) ? 1 : 0)) || touchInput.rollCmd,
+                yawCmd: (keyState['KeyE'] ? 1 : 0) - (keyState['KeyQ'] ? 1 : 0),
+                throttleDelta: (keyState['ShiftLeft'] ? 0.4 : 0) - (keyState['ControlLeft'] ? 0.4 : 0)
+            };
+
+            FighterPhysics.update(dt, inputs);
+            updateCamera();
+            drawTacticalHUD();
+            drawRadarScope();
+
+            renderer.render(scene, camera);
+        }
+
+        requestAnimationFrame(animate);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
