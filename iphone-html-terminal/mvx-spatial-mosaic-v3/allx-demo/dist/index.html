@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="A browser-portable ALL application"><meta name="generator" content="ALLX 1.0.1"><title>ALL // Universal Browser App</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{min-height:100vh}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+img,video{max-width:100%;display:block}
+.all-root{min-height:100vh;padding:clamp(18px,4vw,56px)}
+.all-page{width:min(1100px,100%);margin:0 auto;display:grid;gap:20px}
+.all-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.all-card{border:1px solid #243244;border-radius:24px;padding:24px;background:#111827}
+.all-video{width:100%;border-radius:18px;background:#000}
+
+.all-root{background:#070b14;color:#f8fafc;font:system-ui, -apple-system, BlinkMacSystemFont, sans-serif}
+.all-card{background:#111827;border:1px solid #243244;radius:24px;padding:32px;shadow:0 20px 60px rgba(0,0,0,.35)}</style></head><body><div class="all-root"><div><header><h1>ALL — Universal Markup</h1><p>Write one .all file. Compile to ordinary browser files.</p></header><section class="all-card"><h2>Hello <span id="all-1" data-all-bind="name"></span></h2><p><span id="all-2" data-all-bind="message"></span></p><p>Interactions: <span id="all-3" data-all-bind="count"></span></p><div class="all-row"><button id="all-4">Increment</button><button id="all-5">Reset</button></div></section><video src="sample.mp4" controls poster="" pay-per-minute="0.005 USD" track-object="jacket" timestamps="00:12-00:45" class="all-video" data-all-pay-per-minute="0.005 USD" data-all-track-object="jacket" data-all-timestamps="00:12-00:45"></video></div><div class="all-card"><h2>Reusable component</h2><p>Components are compiler-expanded.</p></div></div><script>(function(){
+"use strict";
+const state=Object.assign({},{"count": "0", "name": "ALLX", "message": "Reactive state is active."}),handlers=[{"id": "all-4", "event": "click", "code": "count += 1", "line": 32}, {"id": "all-5", "event": "click", "code": "count = 0", "line": 35}];
+window.ALL={state};
+function render(){document.querySelectorAll("[data-all-bind]").forEach(e=>e.textContent=state[e.dataset.allBind]??"");}
+function run(code,event){
+ code=String(code||"").trim();let m=code.match(/^([A-Za-z_]\w*)\s*\+=\s*(-?\d+(?:\.\d+)?)$/);
+ if(m&&m[1] in state){state[m[1]]=Number(state[m[1]])+Number(m[2]);return render();}
+ m=code.match(/^([A-Za-z_]\w*)\s*-=\s*(-?\d+(?:\.\d+)?)$/);
+ if(m&&m[1] in state){state[m[1]]=Number(state[m[1]])-Number(m[2]);return render();}
+ m=code.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);if(!m||!(m[1] in state))return;
+ let v=m[2].trim();if(v==="true"||v==="false")state[m[1]]=v==="true";else if(v==="event.value"&&event?.target)state[m[1]]=event.target.value;else if(/^".*"$/.test(v)||/^'.*'$/.test(v))state[m[1]]=v.slice(1,-1);else if(!Number.isNaN(Number(v)))state[m[1]]=Number(v);else return;render();
+}
+addEventListener("DOMContentLoaded",()=>{render();handlers.forEach(h=>{let e=document.getElementById(h.id);if(e)e.addEventListener(h.event,x=>run(h.code,x));});});
+})();</script></body></html>

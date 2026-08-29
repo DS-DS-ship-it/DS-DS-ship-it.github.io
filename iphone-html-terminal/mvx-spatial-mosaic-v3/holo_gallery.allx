@@ -1,0 +1,52 @@
+app "Holo-Cinema // Cyber-Art Installation"
+
+meta:
+    description = "An immersive artistic spatial video experience built with ALLX"
+
+state:
+    neural_sync = 99.8
+    stream_fps = 120
+    exhibition_mode = "Cinematic Neo-Noir"
+    exposure_level = 1.0
+
+style:
+    page:
+        background = "#02040a"
+        color = "#e2e8f0"
+        font = "system-ui, -apple-system, sans-serif"
+    card:
+        background = "linear-gradient(145deg, #0d1117 0%, #161b22 100%)"
+        border = "1px solid rgba(56, 189, 248, 0.3)"
+        radius = "32px"
+        padding = "40px"
+        shadow = "0 25px 80px rgba(14, 165, 233, 0.15)"
+
+page:
+    header:
+        h1: "HOLO-CINEMA // CYBER-ART INSTALLATION"
+        p: "Exhibition 04: Spatial Object Tracking, Timeline X-Ray, & Decentralized Streams."
+    card:
+        row:
+            button:
+                text: "Boost Neural Sync (+0.1%)"
+                click: "neural_sync += 0.1"
+            button:
+                text: "Optimize FPS (120Hz)"
+                click: "stream_fps = 120"
+        
+        # Next-Gen Artistic Spatial Video Component
+        video:
+            src = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+            controls = true
+            autoplay = true
+            muted = true
+            loop = true
+            pay_per_minute = "0.015 USD"
+            track_object = "holographic-android-prime"
+            timestamps = "00:15-01:45"
+            choice = "Branch -> alternate_reality.allx"
+
+        row:
+            p: "Current Mode: {exhibition_mode}"
+            p: "Neural Sync: {neural_sync}%"
+            p: "Render Pipeline: {stream_fps} FPS (GPU Accelerated)"

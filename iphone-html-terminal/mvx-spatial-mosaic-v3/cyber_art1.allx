@@ -1,0 +1,47 @@
+app "Cyber-Neural Visualizer"
+
+meta:
+    description = "Generative visual art and cybernetic telemetry in ALLX"
+
+state:
+    resonance = 528
+    core_flux = 74.2
+    shield_active = true
+
+style:
+    page:
+        background = "#020205"
+        color = "#f8fafc"
+        font = "system-ui, -apple-system, sans-serif"
+    card:
+        background = "radial-gradient(circle at 50% 0%, #1e1b4b 0%, #09090b 100%)"
+        border = "1px solid rgba(56, 189, 248, 0.4)"
+        radius = "32px"
+        padding = "40px"
+        shadow = "0 0 60px rgba(56, 189, 248, 0.2)"
+
+page:
+    header:
+        h1: "CYBER-NEURAL VISUALIZER"
+        p: "Generative frequency matrix rendered natively via .ALLX layout schema."
+    card:
+        div:
+            class = "flex flex-col items-center justify-center py-6"
+            div:
+                class = "w-48 h-48 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-[0_0_80px_rgba(56,189,248,0.7)] flex items-center justify-center animate-pulse mb-8"
+                div:
+                    class = "w-36 h-36 rounded-full bg-slate-950 flex items-center justify-center text-center font-mono font-bold text-xl text-sky-400"
+                    text = "{core_flux}%"
+
+            h2: "Harmonic Resonance: {resonance} Hz"
+            p: "Quantum entanglement matrix locked, glowing, and fully synchronized."
+
+            row:
+                button:
+                    class = "px-6 py-3 bg-sky-500 text-slate-950 font-bold rounded-xl hover:bg-sky-400 transition shadow-lg shadow-sky-500/30"
+                    text = "Amplify Flux (+5%)"
+                    click = "core_flux += 5"
+                button:
+                    class = "px-6 py-3 bg-slate-800 text-slate-200 font-bold rounded-xl hover:bg-slate-700 transition border border-slate-700"
+                    text = "Shift Frequency (+12Hz)"
+                    click = "resonance += 12"

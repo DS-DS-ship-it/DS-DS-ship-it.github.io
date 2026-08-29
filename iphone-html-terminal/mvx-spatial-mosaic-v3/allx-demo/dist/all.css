@@ -1,0 +1,15 @@
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{min-height:100vh}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+img,video{max-width:100%;display:block}
+.all-root{min-height:100vh;padding:clamp(18px,4vw,56px)}
+.all-page{width:min(1100px,100%);margin:0 auto;display:grid;gap:20px}
+.all-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.all-card{border:1px solid #243244;border-radius:24px;padding:24px;background:#111827}
+.all-video{width:100%;border-radius:18px;background:#000}
+
+.all-root{background:#070b14;color:#f8fafc;font:system-ui, -apple-system, BlinkMacSystemFont, sans-serif}
+.all-card{background:#111827;border:1px solid #243244;radius:24px;padding:32px;shadow:0 20px 60px rgba(0,0,0,.35)}

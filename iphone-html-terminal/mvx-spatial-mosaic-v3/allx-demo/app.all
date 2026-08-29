@@ -1,0 +1,53 @@
+app "ALL // Universal Browser App"
+
+meta:
+    description = "A browser-portable ALL application"
+
+state:
+    count = 0
+    name = "ALLX"
+    message = "Reactive state is active."
+
+style:
+    page:
+        background = "#070b14"
+        color = "#f8fafc"
+        font = "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+    card:
+        background = "#111827"
+        border = "1px solid #243244"
+        radius = "24px"
+        padding = "32px"
+        shadow = "0 20px 60px rgba(0,0,0,.35)"
+
+page:
+    header:
+        h1: "ALL — Universal Markup"
+        p: "Write one .all file. Compile to ordinary browser files."
+    card:
+        h2: "Hello {name}"
+        p: "{message}"
+        p: "Interactions: {count}"
+        row:
+            button:
+                text = "Increment"
+                click = "count += 1"
+            button:
+                text = "Reset"
+                click = "count = 0"
+    video:
+        src = "sample.mp4"
+        controls = true
+        poster = ""
+        pay_per_minute = "0.005 USD"
+        track_object = "jacket"
+        timestamps = "00:12-00:45"
+
+component Card:
+    div:
+        class = "all-card"
+        slot
+
+use Card:
+    h2: "Reusable component"
+    p: "Components are compiler-expanded."

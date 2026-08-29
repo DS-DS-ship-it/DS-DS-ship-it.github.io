@@ -1,0 +1,58 @@
+app "Quantum Core Command Center"
+
+meta:
+    description = "High-performance reactive cybernetic dashboard"
+
+state:
+    power_level = 88
+    core_temp = 42
+    system_clicks = 0
+    core_status = "STABLE 🟢"
+
+style:
+    page:
+        background = "#030712"
+        color = "#f8fafc"
+        font = "system-ui, -apple-system, sans-serif"
+    card:
+        background = "#0f172a"
+        border = "2px solid #1e293b"
+        radius = "24px"
+        padding = "32px"
+        shadow = "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+
+page:
+    header:
+        h1: "QUANTUM CORE // COMMAND CENTER"
+        p: "Live multi-threaded reactive telemetry node operating via native .ALLX engine."
+    card:
+        h2: "System Status: {core_status}"
+        p: "Total Operator Interventions: {system_clicks}"
+        row:
+            card:
+                h3: "Reactor Output"
+                p: "Power: {power_level}%"
+                row:
+                    button:
+                        text: "⚡ Overclock (+10)"
+                        click: "power_level += 10"
+                    button:
+                        text: "🔻 Throttle (-10)"
+                        click: "power_level -= 10"
+            card:
+                h3: "Thermal Regulation"
+                p: "Temperature: {core_temp} °C"
+                row:
+                    button:
+                        text: "❄️ Inject Cryo (-5)"
+                        click: "core_temp -= 5"
+                    button:
+                        text: "🔥 Ignite (+5)"
+                        click: "core_temp += 5"
+    row:
+        button:
+            text: "Reset All Systems"
+            click: "power_level = 50"
+        button:
+            text: "Emergency Purge"
+            click: "system_clicks = 0"

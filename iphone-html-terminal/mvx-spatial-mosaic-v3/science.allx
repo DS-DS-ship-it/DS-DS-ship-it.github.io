@@ -1,0 +1,45 @@
+app "Genomic Quantum Analyzer"
+
+meta:
+    description = "Real-time scientific telemetry built entirely with ALLX"
+
+state:
+    base_pairs = 1420
+    temperature = 37.5
+    sequencing = true
+
+style:
+    page:
+        background = "#020617"
+        color = "#f8fafc"
+        font = "system-ui, -apple-system, sans-serif"
+    card:
+        background = "#0f172a"
+        border = "1px solid #1e293b"
+        radius = "20px"
+        padding = "28px"
+        shadow = "0 10px 30px rgba(0,0,0,0.5)"
+
+page:
+    header:
+        h1: "Genomic Quantum Analyzer"
+        p: "Scientific telemetry processed reactively via native .ALLX bindings."
+    row:
+        card:
+            h3: "Sequence Length"
+            p: "{base_pairs} base pairs"
+            button:
+                text: "Inject Codon (+3)"
+                click: "base_pairs += 3"
+        card:
+            h3: "Thermal Denaturation Index"
+            p: "{temperature} °C"
+            button:
+                text: "Cool Chamber (-0.5)"
+                click: "temperature -= 0.5"
+    video:
+        src = "sample.mp4"
+        controls = true
+        pay_per_minute = "0.001 USD"
+        track_object = "enzyme-active-site"
+        timestamps = "00:05-00:30"

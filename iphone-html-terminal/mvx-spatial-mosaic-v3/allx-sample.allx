@@ -1,0 +1,92 @@
+app "ALLX Flower Studio" {
+
+    style {
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle, #17243a, #05070b);
+            color: white;
+            font-family: system-ui, sans-serif;
+        }
+
+        .flower {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            position: relative;
+            animation: bloom 5s ease-in-out infinite alternate;
+            transform-origin: center;
+        }
+
+        .petal {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 80px;
+            height: 120px;
+            margin-left: -40px;
+            margin-top: -60px;
+            border-radius: 60% 40% 60% 40%;
+            background: linear-gradient(135deg, #ff7ab6, #b46cff);
+            transform-origin: 50% 100%;
+        }
+
+        .p1 { transform: rotate(0deg) translateY(-45px); }
+        .p2 { transform: rotate(60deg) translateY(-45px); }
+        .p3 { transform: rotate(120deg) translateY(-45px); }
+        .p4 { transform: rotate(180deg) translateY(-45px); }
+        .p5 { transform: rotate(240deg) translateY(-45px); }
+        .p6 { transform: rotate(300deg) translateY(-45px); }
+
+        .center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 58px;
+            height: 58px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffe78a, #e79b24);
+            box-shadow: 0 0 45px #ffd36a;
+        }
+
+        @keyframes bloom {
+            from {
+                transform: scale(.35) rotate(-8deg);
+            }
+            to {
+                transform: scale(1) rotate(8deg);
+            }
+        }
+    }
+
+    text "ALLX — browser-native media markup through compilation" {
+        text-align: center;
+        padding: 24px;
+        font-size: 1.1rem;
+    }
+
+    scene "flower" {
+        class: flower;
+    }
+
+    script {
+        const scene = document.querySelector('.allx-scene');
+
+        if (scene) {
+            scene.innerHTML =
+                '<div class="flower">' +
+                '<div class="petal p1"></div>' +
+                '<div class="petal p2"></div>' +
+                '<div class="petal p3"></div>' +
+                '<div class="petal p4"></div>' +
+                '<div class="petal p5"></div>' +
+                '<div class="petal p6"></div>' +
+                '<div class="center"></div>' +
+                '</div>';
+        }
+    }
+
+}
