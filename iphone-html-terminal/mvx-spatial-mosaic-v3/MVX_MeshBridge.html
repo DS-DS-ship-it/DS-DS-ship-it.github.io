@@ -2,14 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
->
-
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05070b">
-
+<meta name="color-scheme" content="dark">
 <title>MVX MeshBridge</title>
 
 <style>
@@ -17,23 +13,25 @@
     color-scheme: dark;
 
     --bg: #05070b;
+    --bg2: #080c12;
     --panel: #0b1018;
     --panel2: #101722;
-    --panel3: #070b11;
+    --panel3: #131c28;
 
     --line: rgba(255,255,255,.10);
+    --line2: rgba(255,255,255,.06);
 
     --text: #f3f7ff;
     --muted: #9aa8bb;
+    --muted2: #6e7c90;
 
     --accent: #64d8ff;
     --accent2: #7cffb2;
-    --danger: #ff6b7a;
     --warning: #ffd166;
-    --purple: #a78bfa;
+    --danger: #ff6b7a;
+    --purple: #b58cff;
 
-    --shadow:
-        0 20px 70px rgba(0,0,0,.25);
+    --shadow: 0 20px 70px rgba(0,0,0,.25);
 }
 
 * {
@@ -44,22 +42,11 @@ html,
 body {
     margin: 0;
     min-height: 100%;
-
     background:
-        radial-gradient(
-            circle at 20% 0%,
-            rgba(70,170,255,.14),
-            transparent 35%
-        ),
-        radial-gradient(
-            circle at 90% 10%,
-            rgba(120,255,180,.08),
-            transparent 30%
-        ),
+        radial-gradient(circle at 20% 0%, rgba(70,170,255,.14), transparent 35%),
+        radial-gradient(circle at 90% 10%, rgba(120,255,180,.08), transparent 30%),
         var(--bg);
-
     color: var(--text);
-
     font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -71,132 +58,158 @@ body {
 
 body {
     padding:
-        max(24px, env(safe-area-inset-top))
-        max(18px, env(safe-area-inset-right))
+        max(20px, env(safe-area-inset-top))
+        max(16px, env(safe-area-inset-right))
         max(24px, env(safe-area-inset-bottom))
-        max(18px, env(safe-area-inset-left));
+        max(16px, env(safe-area-inset-left));
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
 }
 
 .wrap {
-    width: min(1150px, 100%);
+    width: min(1200px, 100%);
     margin: 0 auto;
 }
 
-/* ------------------------------------------------------------
+/* =========================================================
    HERO
------------------------------------------------------------- */
+   ========================================================= */
 
 .hero {
-    padding: 38px 0 22px;
+    padding: 34px 0 20px;
 }
 
 .kicker {
     color: var(--accent);
-
     font-size: 12px;
     font-weight: 800;
-
     letter-spacing: .16em;
     text-transform: uppercase;
 }
 
 h1 {
     margin: 8px 0 10px;
-
-    font-size:
-        clamp(40px, 8vw, 76px);
-
-    line-height: .95;
-
+    font-size: clamp(42px, 8vw, 78px);
+    line-height: .94;
     letter-spacing: -.055em;
 }
 
 .subtitle {
-    max-width: 820px;
-
+    max-width: 850px;
     color: var(--muted);
-
-    font-size:
-        clamp(16px, 2.5vw, 21px);
-
+    font-size: clamp(16px, 2.5vw, 21px);
     line-height: 1.55;
+}
+
+/* =========================================================
+   ENGINE STATUS
+   ========================================================= */
+
+.engineBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
 }
 
 .status {
     display: inline-flex;
-
     align-items: center;
-    gap: 8px;
-
-    border:
-        1px solid rgba(124,255,178,.22);
-
-    background:
-        rgba(124,255,178,.06);
-
+    gap: 9px;
+    border: 1px solid rgba(124,255,178,.22);
+    background: rgba(124,255,178,.06);
     border-radius: 999px;
-
-    padding: 7px 11px;
-
+    padding: 8px 13px;
     color: var(--accent2);
-
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
+}
+
+.status.offline {
+    color: var(--danger);
+    border-color: rgba(255,107,122,.22);
+    background: rgba(255,107,122,.06);
+}
+
+.status.warning {
+    color: var(--warning);
+    border-color: rgba(255,209,102,.22);
+    background: rgba(255,209,102,.06);
 }
 
 .dot {
     width: 8px;
     height: 8px;
-
+    flex: 0 0 auto;
     border-radius: 50%;
-
     background: var(--accent2);
-
-    box-shadow:
-        0 0 14px var(--accent2);
+    box-shadow: 0 0 14px var(--accent2);
 }
+
+.status.offline .dot {
+    background: var(--danger);
+    box-shadow: 0 0 14px var(--danger);
+}
+
+.status.warning .dot {
+    background: var(--warning);
+    box-shadow: 0 0 14px var(--warning);
+}
+
+.engineEndpoint {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    padding: 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,.025);
+    word-break: break-all;
+}
+
+.lastUpdate {
+    color: var(--muted2);
+    font-size: 12px;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
 
 .buttons {
     display: flex;
-
     flex-wrap: wrap;
-
     gap: 10px;
-
     margin-top: 20px;
 }
 
 .button {
+    appearance: none;
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
-
     min-height: 46px;
-
     padding: 0 18px;
-
-    border:
-        1px solid var(--line);
-
     border-radius: 13px;
-
+    border: 1px solid var(--line);
     color: var(--text);
-
     text-decoration: none;
-
     font-weight: 750;
-
     background: var(--panel2);
-
-    cursor: pointer;
 }
 
 .button.primary {
     color: #001017;
-
     background: var(--accent);
-
     border-color: var(--accent);
 }
 
@@ -204,305 +217,214 @@ h1 {
     filter: brightness(1.08);
 }
 
-.button:active {
-    transform: translateY(1px);
+.button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
 }
 
-/* ------------------------------------------------------------
-   GENERAL CARDS
------------------------------------------------------------- */
+/* =========================================================
+   CARDS / GRID
+   ========================================================= */
 
 .grid {
     display: grid;
-
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(250px, 1fr)
-        );
-
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 14px;
-
     margin: 24px 0;
 }
 
 .card {
-    border:
-        1px solid var(--line);
-
+    border: 1px solid var(--line);
     border-radius: 22px;
-
     background:
-        linear-gradient(
-            145deg,
+        linear-gradient(145deg,
             rgba(255,255,255,.055),
-            rgba(255,255,255,.018)
-        );
-
+            rgba(255,255,255,.018));
     padding: 22px;
-
     box-shadow: var(--shadow);
 }
 
 .card h2 {
     margin: 0 0 9px;
-
     font-size: 18px;
 }
 
 .card p {
     margin: 0;
-
     color: var(--muted);
-
     line-height: 1.55;
 }
 
-pre {
-    overflow-x: auto;
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
 
-    padding: 15px;
-
-    border-radius: 14px;
-
-    background: #020408;
-
-    border:
-        1px solid var(--line);
-
-    color: #dce9f8;
-
-    font-size: 13px;
+.dashboard {
+    margin-top: 28px;
 }
 
-.features {
-    display: grid;
-
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(180px, 1fr)
-        );
-
-    gap: 9px;
-
-    margin-top: 16px;
-}
-
-.feature {
-    border:
-        1px solid var(--line);
-
-    border-radius: 12px;
-
-    padding: 11px;
-
-    color: #c8d4e5;
-
-    background:
-        rgba(255,255,255,.025);
-
-    font-size: 13px;
-}
-
-/* ------------------------------------------------------------
-   LIVE MESHBRIDGE
------------------------------------------------------------- */
-
-.mesh-live {
-    margin: 30px 0;
-}
-
-.mesh-toolbar {
+.dashboardHeader {
     display: flex;
-
+    justify-content: space-between;
+    align-items: flex-end;
     flex-wrap: wrap;
-
-    align-items: center;
-
-    gap: 9px;
-
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
-.mesh-toolbar h2 {
-    width: 100%;
-    margin-bottom: 4px;
+.dashboardHeader h2 {
+    margin: 0;
+    font-size: 26px;
+    letter-spacing: -.025em;
 }
 
-.mesh-pill {
-    display: inline-flex;
+.dashboardHeader p {
+    margin: 5px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+}
 
-    align-items: center;
+.dashboardActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
 
-    gap: 7px;
-
-    padding: 7px 11px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius: 999px;
-
+.smallButton {
+    min-height: 38px;
+    padding: 0 13px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
     background: var(--panel2);
-
+    color: var(--text);
     font-size: 12px;
-
     font-weight: 750;
 }
 
-.mesh-pill.ok {
-    color: var(--accent2);
-
-    border-color:
-        rgba(124,255,178,.25);
-
-    background:
-        rgba(124,255,178,.06);
+.smallButton:hover {
+    background: var(--panel3);
 }
 
-.mesh-pill.bad {
-    color: var(--danger);
+/* =========================================================
+   STAT CARDS
+   ========================================================= */
 
-    border-color:
-        rgba(255,107,122,.25);
-
-    background:
-        rgba(255,107,122,.06);
-}
-
-.mesh-pill.warn {
-    color: var(--warning);
-
-    border-color:
-        rgba(255,209,102,.25);
-
-    background:
-        rgba(255,209,102,.06);
-}
-
-.mesh-grid {
+.statsGrid {
     display: grid;
-
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(210px, 1fr)
-        );
-
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
-.mesh-stat {
-    min-height: 145px;
+.stat {
+    min-height: 112px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgba(255,255,255,.025);
+    padding: 16px;
 }
 
-.mesh-stat-number {
-    margin-top: 8px;
-
-    font-size: 36px;
-
-    font-weight: 850;
-
-    letter-spacing: -.04em;
-}
-
-.mesh-stat-label {
-    margin-top: 5px;
-
-    color: var(--muted);
-
-    font-size: 13px;
-}
-
-.mesh-meta {
-    margin-top: 8px;
-
-    color: var(--muted);
-
-    line-height: 1.55;
-
-    word-break: break-word;
-}
-
-.mesh-section-title {
-    margin:
-        30px 0 12px;
-
-    font-size: 15px;
-
-    color: var(--accent);
-
+.statLabel {
+    color: var(--muted2);
+    font-size: 11px;
     font-weight: 800;
-
     letter-spacing: .08em;
-
     text-transform: uppercase;
 }
 
-.mesh-table-wrap {
-    overflow-x: auto;
-
-    max-height: 360px;
-
-    overflow-y: auto;
-
-    border-radius: 14px;
-
-    border:
-        1px solid var(--line);
+.statValue {
+    margin-top: 9px;
+    color: var(--text);
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
 }
 
-.mesh-table {
-    width: 100%;
-
-    border-collapse: collapse;
-
-    min-width: 650px;
-
-    font-size: 12px;
-}
-
-.mesh-table th,
-.mesh-table td {
-    text-align: left;
-
-    padding: 9px;
-
-    border-bottom:
-        1px solid var(--line);
-
-    vertical-align: top;
-}
-
-.mesh-table th {
-    position: sticky;
-
-    top: 0;
-
-    z-index: 2;
-
-    background: var(--panel2);
-
+.statSub {
+    margin-top: 4px;
     color: var(--muted);
-
-    font-weight: 750;
+    font-size: 11px;
 }
 
-.mesh-table tr:last-child td {
-    border-bottom: 0;
+/* =========================================================
+   PANELS
+   ========================================================= */
+
+.panelGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
 }
 
-.ok {
-    color: var(--accent2);
+@media (max-width: 800px) {
+    .panelGrid {
+        grid-template-columns: 1fr;
+    }
 }
 
-.bad {
-    color: var(--danger);
+.panel {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(255,255,255,.025);
+    overflow: hidden;
 }
 
-.warn {
-    color: var(--warning);
+.panel.full {
+    grid-column: 1 / -1;
+}
+
+.panelHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line2);
+}
+
+.panelHead h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.panelHead span {
+    color: var(--muted2);
+    font-size: 11px;
+}
+
+.panelBody {
+    padding: 16px 18px;
+}
+
+/* =========================================================
+   NODE DETAILS
+   ========================================================= */
+
+.detailGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.detail {
+    min-width: 0;
+}
+
+.detailLabel {
+    color: var(--muted2);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.detailValue {
+    margin-top: 5px;
+    color: var(--text);
+    font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
 .mono {
@@ -515,412 +437,371 @@ pre {
         monospace;
 }
 
-.small {
-    color: var(--muted);
+/* =========================================================
+   TABLES
+   ========================================================= */
 
-    font-size: 11px;
-
-    line-height: 1.5;
+.tableWrap {
+    width: 100%;
+    overflow-x: auto;
 }
 
-.muted {
-    color: var(--muted);
+table {
+    width: 100%;
+    min-width: 620px;
+    border-collapse: collapse;
 }
 
-/* ------------------------------------------------------------
-   RANGE / RELAY VISUALIZATION
------------------------------------------------------------- */
-
-.range-card {
-    overflow: hidden;
-}
-
-.range-visual {
-    position: relative;
-
-    min-height: 235px;
-
-    margin-top: 16px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius: 18px;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(100,216,255,.07),
-            transparent 58%
-        ),
-        #04070c;
-}
-
-.range-line {
-    position: absolute;
-
-    left: 13%;
-
-    right: 13%;
-
-    top: 50%;
-
-    height: 2px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(100,216,255,.7),
-            rgba(124,255,178,.7),
-            rgba(100,216,255,.7),
-            transparent
-        );
-}
-
-.range-node {
-    position: absolute;
-
-    top: 50%;
-
-    transform:
-        translate(-50%, -50%);
-}
-
-.range-node.one {
-    left: 14%;
-}
-
-.range-node.two {
-    left: 50%;
-}
-
-.range-node.three {
-    left: 86%;
-}
-
-.range-node-circle {
-    width: 58px;
-    height: 58px;
-
-    display: grid;
-
-    place-items: center;
-
-    border-radius: 50%;
-
-    border:
-        2px solid var(--accent);
-
-    background:
-        rgba(100,216,255,.12);
-
-    box-shadow:
-        0 0 30px rgba(100,216,255,.22);
-}
-
-.range-node.relay .range-node-circle {
-    border-color: var(--accent2);
-
-    background:
-        rgba(124,255,178,.12);
-
-    box-shadow:
-        0 0 35px rgba(124,255,178,.22);
-}
-
-.range-node-label {
-    position: absolute;
-
-    top: 72px;
-
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    width: 130px;
-
-    text-align: center;
-
+th,
+td {
+    padding: 10px 9px;
+    border-bottom: 1px solid var(--line2);
+    text-align: left;
+    vertical-align: top;
     font-size: 12px;
+}
 
+th {
+    color: var(--muted2);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+td {
+    color: #dce5f2;
+}
+
+.empty {
+    padding: 22px 8px;
+    color: var(--muted2);
+    text-align: center;
+    font-size: 12px;
+}
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.035);
+    color: var(--muted);
+    font-size: 10px;
     font-weight: 800;
 }
 
-.range-node-sub {
-    display: block;
-
-    margin-top: 4px;
-
-    color: var(--muted);
-
-    font-size: 10px;
-
-    font-weight: 500;
+.badge.online {
+    color: var(--accent2);
+    border-color: rgba(124,255,178,.18);
+    background: rgba(124,255,178,.05);
 }
 
-.range-arrow {
-    position: absolute;
+.badge.offline {
+    color: var(--danger);
+    border-color: rgba(255,107,122,.18);
+    background: rgba(255,107,122,.05);
+}
 
-    top: calc(50% - 9px);
-
+.badge.gateway {
     color: var(--accent);
-
-    font-size: 18px;
+    border-color: rgba(100,216,255,.18);
+    background: rgba(100,216,255,.05);
 }
 
-.range-arrow.one {
-    left: 31%;
-}
-
-.range-arrow.two {
-    left: 67%;
-}
-
-/* ------------------------------------------------------------
+/* =========================================================
    TOPOLOGY
------------------------------------------------------------- */
+   ========================================================= */
 
 .topology {
-    position: relative;
-
-    min-height: 300px;
-
-    margin-top: 15px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius: 18px;
-
+    min-height: 310px;
+    border-radius: 16px;
+    border: 1px solid var(--line2);
+    background:
+        radial-gradient(circle at 50% 50%,
+            rgba(100,216,255,.07),
+            transparent 45%),
+        #060a10;
     overflow: hidden;
-
-    background:
-        radial-gradient(
-            circle at 50% 50%,
-            rgba(124,255,178,.06),
-            transparent 55%
-        ),
-        #03060b;
 }
 
-.topology-grid {
-    position: absolute;
-
-    inset: 0;
-
-    background-image:
-        linear-gradient(
-            rgba(255,255,255,.035) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,.035) 1px,
-            transparent 1px
-        );
-
-    background-size: 30px 30px;
-}
-
-.topology-svg {
-    position: absolute;
-
-    inset: 0;
-
+.topology svg {
+    display: block;
     width: 100%;
-    height: 100%;
+    height: 310px;
 }
 
-.topology-info {
-    position: absolute;
-
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 8px;
+.topologyText {
+    fill: #dce9f8;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
 }
 
-.topology-badge {
-    padding: 6px 9px;
+.topologySub {
+    fill: #7e8da0;
+    font-family: system-ui, sans-serif;
+    font-size: 9px;
+}
 
-    border-radius: 999px;
+/* =========================================================
+   RELAY VISUAL
+   ========================================================= */
 
-    background:
-        rgba(5,7,11,.82);
+.relayBox {
+    margin-top: 14px;
+    border: 1px solid rgba(100,216,255,.13);
+    border-radius: 16px;
+    padding: 15px;
+    background: rgba(100,216,255,.025);
+}
 
-    border:
-        1px solid var(--line);
-
-    color: var(--muted);
-
+.relayTitle {
+    color: var(--accent);
     font-size: 11px;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
 }
 
-/* ------------------------------------------------------------
-   SEND
------------------------------------------------------------- */
-
-.send-box {
-    display: grid;
-
-    grid-template-columns:
-        minmax(0, 1fr)
-        auto;
-
+.relayDiagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 10px;
-
-    align-items: stretch;
+    margin-top: 15px;
+    overflow-x: auto;
+    padding: 4px;
 }
 
-.send-fields {
+.relayNode {
+    flex: 0 0 115px;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel2);
+}
+
+.relayNode strong {
+    font-size: 12px;
+}
+
+.relayNode span {
+    margin-top: 4px;
+    color: var(--muted2);
+    font-size: 9px;
+}
+
+.relayArrow {
+    color: var(--accent);
+    font-size: 20px;
+}
+
+/* =========================================================
+   SEND MESSAGE
+   ========================================================= */
+
+.formGrid {
     display: grid;
-
-    gap: 9px;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
-.mesh-input,
-.mesh-textarea {
+@media (max-width: 700px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    color: var(--muted2);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.field input,
+.field textarea,
+.field select {
     width: 100%;
-
-    border:
-        1px solid var(--line);
-
+    border: 1px solid var(--line);
     border-radius: 11px;
-
-    padding: 11px;
-
-    background: #020408;
-
+    background: #070b11;
     color: var(--text);
-
+    padding: 11px 12px;
     outline: none;
-
-    font:
-        inherit;
 }
 
-.mesh-input:focus,
-.mesh-textarea:focus {
-    border-color:
-        rgba(100,216,255,.55);
-
-    box-shadow:
-        0 0 0 3px rgba(100,216,255,.08);
-}
-
-.mesh-textarea {
-    min-height: 85px;
-
+.field textarea {
+    min-height: 100px;
     resize: vertical;
 }
 
-/* ------------------------------------------------------------
-   GATEWAY
------------------------------------------------------------- */
-
-.gateway-box {
-    display: grid;
-
-    grid-template-columns:
-        repeat(
-            auto-fit,
-            minmax(190px, 1fr)
-        );
-
-    gap: 12px;
-
-    margin-top: 14px;
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+    border-color: rgba(100,216,255,.55);
+    box-shadow: 0 0 0 3px rgba(100,216,255,.07);
 }
 
-.gateway-item {
-    padding: 15px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius: 14px;
-
-    background:
-        rgba(255,255,255,.025);
+.formActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
 }
 
-.gateway-title {
-    font-size: 12px;
-
+.sendStatus {
     color: var(--muted);
-
-    margin-bottom: 7px;
-}
-
-.gateway-value {
-    font-size: 20px;
-
-    font-weight: 800;
-}
-
-/* ------------------------------------------------------------
-   CODE / FOOTER
------------------------------------------------------------- */
-
-footer {
-    padding: 30px 0 8px;
-
-    color: #667487;
-
     font-size: 12px;
+}
+
+/* =========================================================
+   CONNECTION SETTINGS
+   ========================================================= */
+
+.connectionBox {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+}
+
+@media (max-width: 650px) {
+    .connectionBox {
+        grid-template-columns: 1fr;
+    }
+}
+
+.connectionBox input {
+    width: 100%;
+    min-height: 43px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #070b11;
+    color: var(--text);
+    padding: 0 12px;
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+}
+
+.connectionBox input:focus {
+    border-color: rgba(100,216,255,.55);
+}
+
+/* =========================================================
+   ERROR / LOG
+   ========================================================= */
+
+.notice {
+    margin-top: 12px;
+    border: 1px solid rgba(255,209,102,.18);
+    border-radius: 13px;
+    padding: 12px;
+    background: rgba(255,209,102,.04);
+    color: #d8c890;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.notice.error {
+    border-color: rgba(255,107,122,.18);
+    background: rgba(255,107,122,.04);
+    color: #e7a0a8;
+}
+
+.notice.success {
+    border-color: rgba(124,255,178,.18);
+    background: rgba(124,255,178,.04);
+    color: #a7dfbd;
 }
 
 .hidden {
     display: none !important;
 }
 
-hr.mesh-rule {
-    border: 0;
+/* =========================================================
+   FEATURES / ORIGINAL CONTENT
+   ========================================================= */
 
-    border-top:
-        1px solid var(--line);
-
-    margin:
-        22px 0;
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 9px;
+    margin-top: 16px;
 }
 
-/* ------------------------------------------------------------
-   MOBILE
------------------------------------------------------------- */
+.feature {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px;
+    color: #c8d4e5;
+    background: rgba(255,255,255,.025);
+    font-size: 13px;
+}
 
-@media (max-width: 680px) {
+pre {
+    overflow-x: auto;
+    padding: 15px;
+    border-radius: 14px;
+    background: #020408;
+    border: 1px solid var(--line);
+    color: #dce9f8;
+    font-size: 13px;
+}
+
+footer {
+    padding: 30px 0 8px;
+    color: #667487;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+    body {
+        padding:
+            max(16px, env(safe-area-inset-top))
+            max(12px, env(safe-area-inset-right))
+            max(20px, env(safe-area-inset-bottom))
+            max(12px, env(safe-area-inset-left));
+    }
 
     .hero {
-        padding-top: 25px;
+        padding-top: 24px;
     }
 
     .card {
-        padding: 17px;
-
+        padding: 18px;
         border-radius: 18px;
     }
 
-    .send-box {
-        grid-template-columns: 1fr;
+    .stat {
+        min-height: 100px;
     }
 
-    .range-visual {
-        min-height: 250px;
-    }
-
-    .range-node-circle {
-        width: 50px;
-        height: 50px;
-    }
-
-    .range-node-label {
-        width: 105px;
+    .relayDiagram {
+        justify-content: flex-start;
     }
 }
 </style>
@@ -930,48 +811,58 @@ hr.mesh-rule {
 
 <div class="wrap">
 
-<!-- ==========================================================
-     ORIGINAL MVX LANDING PAGE
-=========================================================== -->
+<!-- =======================================================
+     ORIGINAL MVX MESHBRIDGE LANDING PAGE
+     ======================================================= -->
 
 <section class="hero">
 
-    <div class="kicker">
-        MVX NETWORKING
-    </div>
+    <div class="kicker">MVX NETWORKING</div>
 
-    <h1>
-        MeshBridge
-    </h1>
+    <h1>MeshBridge</h1>
 
     <p class="subtitle">
-        Offline-first peer-to-peer mesh networking for
-        low-latency communication, relay networking,
-        store-and-forward transport, file transfer,
-        Internet gateway sharing and future multi-radio
-        expansion.
+        Offline-first peer-to-peer mesh networking for low-latency
+        communication, relay networking, store-and-forward transport,
+        file transfer and future multi-radio expansion.
     </p>
 
-    <div class="status">
-        <span class="dot"></span>
-        MVX MeshBridge 3.x
+    <div class="engineBar">
+
+        <div id="engineStatus" class="status warning">
+            <span class="dot"></span>
+            <span id="engineStatusText">Checking engine…</span>
+        </div>
+
+        <div id="engineEndpoint" class="engineEndpoint">
+            http://127.0.0.1:49154
+        </div>
+
+        <div id="lastUpdate" class="lastUpdate">
+            Waiting for local engine…
+        </div>
+
     </div>
 
     <div class="buttons">
 
-        <a
-            class="button primary"
-            href="https://github.com/DS-DS-ship-it/DS-DS-ship-it.github.io/releases/latest/download/MVX-MeshBridge-macos-arm64.zip"
-        >
+        <a class="button primary"
+           href="https://github.com/DS-DS-ship-it/DS-DS-ship-it.github.io/releases/latest/download/MVX-MeshBridge-macos-arm64.zip">
             Download macOS ARM64
         </a>
 
-        <a
-            class="button"
-            href="https://github.com/DS-DS-ship-it/DS-DS-ship-it.github.io"
-        >
+        <a class="button"
+           href="https://github.com/DS-DS-ship-it/DS-DS-ship-it.github.io"
+           target="_blank"
+           rel="noopener">
             GitHub
         </a>
+
+        <button class="button"
+                id="jumpDashboard"
+                type="button">
+            Live Dashboard
+        </button>
 
     </div>
 
@@ -982,47 +873,36 @@ hr.mesh-rule {
 
     <div class="card">
 
-        <h2>
-            Native Mesh Engine
-        </h2>
+        <h2>Native Mesh Engine</h2>
 
         <p>
-            MeshBridge runs as a native networking engine
-            and can expose the same MVX network to multiple
-            computers, phones, tablets and future radio
-            transports.
+            MeshBridge runs as a local native networking engine.
+            The web interface connects to the local engine through
+            the MeshBridge HTTP compatibility API.
         </p>
 
     </div>
 
-
     <div class="card">
 
-        <h2>
-            Intelligent Relays
-        </h2>
+        <h2>Low-Latency Design</h2>
 
         <p>
-            Nodes do not have to communicate directly with
-            every other node. A middle computer can relay
-            packets, allowing multiple short links to form
-            one larger effective mesh.
+            TCP_NODELAY, tuned socket buffers, priority queues,
+            duplicate suppression, bounded routing and asynchronous
+            networking are used throughout the engine.
         </p>
 
     </div>
 
-
     <div class="card">
 
-        <h2>
-            Offline First
-        </h2>
+        <h2>Offline First</h2>
 
         <p>
-            MeshBridge is designed to continue operating
-            when normal Internet connectivity is unavailable,
-            using peer relays, routing and store-and-forward
-            behavior.
+            MeshBridge is designed to continue operating when normal
+            Internet connectivity is unavailable, using peer relays,
+            persistence and store-and-forward behavior.
         </p>
 
     </div>
@@ -1030,17 +910,623 @@ hr.mesh-rule {
 </section>
 
 
-<section class="card">
+<!-- =======================================================
+     LIVE DASHBOARD
+     ======================================================= -->
 
-    <h2>
-        Run MeshBridge
-    </h2>
+<section id="dashboard" class="dashboard">
+
+    <div class="dashboardHeader">
+
+        <div>
+            <h2>Live MeshBridge Dashboard</h2>
+
+            <p>
+                Local engine telemetry and mesh network state.
+            </p>
+        </div>
+
+        <div class="dashboardActions">
+
+            <button id="refreshButton"
+                    class="smallButton"
+                    type="button">
+                Refresh Now
+            </button>
+
+            <button id="autoButton"
+                    class="smallButton"
+                    type="button">
+                Auto Refresh: ON
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         CONNECTION SETTINGS
+         =================================================== -->
+
+    <div class="panel">
+
+        <div class="panelHead">
+            <h3>Engine Connection</h3>
+            <span>Local MeshBridge HTTP API</span>
+        </div>
+
+        <div class="panelBody">
+
+            <div class="connectionBox">
+
+                <input
+                    id="engineInput"
+                    type="text"
+                    value="http://127.0.0.1:49154"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-label="MeshBridge engine URL">
+
+                <button id="connectButton"
+                        class="smallButton"
+                        type="button">
+                    Connect
+                </button>
+
+            </div>
+
+            <div id="connectionNotice"
+                 class="notice hidden">
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         STATS
+         =================================================== -->
+
+    <div class="statsGrid">
+
+        <div class="stat">
+            <div class="statLabel">Engine</div>
+            <div id="statEngine" class="statValue">—</div>
+            <div id="statEngineSub" class="statSub">—</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Neighbors</div>
+            <div id="statNeighbors" class="statValue">0</div>
+            <div class="statSub">direct peers</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Routes</div>
+            <div id="statRoutes" class="statValue">0</div>
+            <div class="statSub">known paths</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Sessions</div>
+            <div id="statSessions" class="statValue">0</div>
+            <div class="statSub">active sessions</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Messages</div>
+            <div id="statMessages" class="statValue">0</div>
+            <div class="statSub">stored messages</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Packets</div>
+            <div id="statPackets" class="statValue">0</div>
+            <div class="statSub">packet activity</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Discovered</div>
+            <div id="statDiscovery" class="statValue">0</div>
+            <div class="statSub">known nodes</div>
+        </div>
+
+        <div class="stat">
+            <div class="statLabel">Gateway</div>
+            <div id="statGateway" class="statValue">NO</div>
+            <div id="statGatewaySub" class="statSub">Internet gateway</div>
+        </div>
+
+    </div>
+
+
+    <div class="panelGrid">
+
+
+        <!-- ===============================================
+             NODE
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Node Identity</h3>
+                <span id="nodeStateBadge"
+                      class="badge">
+                    UNKNOWN
+                </span>
+            </div>
+
+            <div class="panelBody">
+
+                <div class="detailGrid">
+
+                    <div class="detail">
+                        <div class="detailLabel">Node ID</div>
+                        <div id="nodeId"
+                             class="detailValue mono">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Version</div>
+                        <div id="nodeVersion"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Protocol</div>
+                        <div id="nodeProtocol"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Platform</div>
+                        <div id="nodePlatform"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Machine</div>
+                        <div id="nodeMachine"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Gateway</div>
+                        <div id="nodeGateway"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">API RTT</div>
+                        <div id="apiRtt"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Uptime</div>
+                        <div id="nodeUptime"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             CONNECTION INFO
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Connection State</h3>
+                <span>Browser → local engine</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div class="detailGrid">
+
+                    <div class="detail">
+                        <div class="detailLabel">Endpoint</div>
+                        <div id="connectionEndpoint"
+                             class="detailValue mono">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">HTTP API</div>
+                        <div id="httpState"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">CORS</div>
+                        <div id="corsState"
+                             class="detailValue">
+                            Browser enforced
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">PNA</div>
+                        <div id="pnaState"
+                             class="detailValue">
+                            Browser enforced
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Polling</div>
+                        <div id="pollState"
+                             class="detailValue">
+                            —
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="detailLabel">Last Error</div>
+                        <div id="lastError"
+                             class="detailValue">
+                            None
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             NEIGHBORS
+             =============================================== -->
+
+        <div class="panel full">
+
+            <div class="panelHead">
+
+                <h3>Neighbors</h3>
+
+                <span>
+                    Directly discovered peers
+                </span>
+
+            </div>
+
+            <div class="panelBody">
+
+                <div id="neighborsTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             ROUTES
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Routes</h3>
+                <span>Mesh routing table</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="routesTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             SESSIONS
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Sessions</h3>
+                <span>Peer sessions</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="sessionsTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             DISCOVERY
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Node Discovery</h3>
+                <span>UDP discovery state</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="discoveryTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             PACKETS
+             =============================================== -->
+
+        <div class="panel">
+
+            <div class="panelHead">
+                <h3>Packet Activity</h3>
+                <span>Recent packet telemetry</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="packetsTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             MESSAGES
+             =============================================== -->
+
+        <div class="panel full">
+
+            <div class="panelHead">
+                <h3>Messages</h3>
+                <span>Mesh message history</span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="messagesTable"
+                     class="tableWrap">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             TOPOLOGY
+             =============================================== -->
+
+        <div class="panel full">
+
+            <div class="panelHead">
+                <h3>Mesh Topology</h3>
+                <span id="topologySummary">
+                    Waiting for topology…
+                </span>
+            </div>
+
+            <div class="panelBody">
+
+                <div id="topology"
+                     class="topology">
+                </div>
+
+                <div class="relayBox">
+
+                    <div class="relayTitle">
+                        Multi-Hop Range Expansion
+                    </div>
+
+                    <div class="relayDiagram">
+
+                        <div class="relayNode">
+                            <strong>NODE A</strong>
+                            <span>Origin</span>
+                        </div>
+
+                        <div class="relayArrow">→</div>
+
+                        <div class="relayNode">
+                            <strong>NODE B</strong>
+                            <span>Relay</span>
+                        </div>
+
+                        <div class="relayArrow">→</div>
+
+                        <div class="relayNode">
+                            <strong>NODE C</strong>
+                            <span>Destination</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===============================================
+             ENCRYPTED MESSAGING
+             =============================================== -->
+
+        <div class="panel full">
+
+            <div class="panelHead">
+
+                <h3>Encrypted Mesh Message</h3>
+
+                <span>
+                    MeshBridge API
+                </span>
+
+            </div>
+
+            <div class="panelBody">
+
+                <form id="sendForm">
+
+                    <div class="formGrid">
+
+                        <div class="field">
+
+                            <label for="destination">
+                                Destination Node ID
+                            </label>
+
+                            <input
+                                id="destination"
+                                type="text"
+                                placeholder="Node ID"
+                                autocomplete="off"
+                                spellcheck="false">
+
+                        </div>
+
+                        <div class="field">
+
+                            <label for="priority">
+                                Priority
+                            </label>
+
+                            <select id="priority">
+
+                                <option value="0">
+                                    Normal
+                                </option>
+
+                                <option value="1">
+                                    High
+                                </option>
+
+                                <option value="2">
+                                    Urgent
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="field"
+                         style="margin-top:10px">
+
+                        <label for="message">
+                            Message
+                        </label>
+
+                        <textarea
+                            id="message"
+                            placeholder="Enter encrypted mesh message…"></textarea>
+
+                    </div>
+
+                    <div class="formActions">
+
+                        <button
+                            id="sendButton"
+                            class="button primary"
+                            type="submit">
+
+                            Send Message
+
+                        </button>
+
+                        <span id="sendStatus"
+                              class="sendStatus">
+                            Engine connection required.
+                        </span>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- ===================================================
+         ENGINE NOTICE
+         =================================================== -->
+
+    <div id="globalNotice"
+         class="notice hidden">
+    </div>
+
+</section>
+
+
+<!-- =======================================================
+     ORIGINAL RUN SECTION
+     ======================================================= -->
+
+<section class="card"
+         style="margin-top:24px">
+
+    <h2>Run MeshBridge</h2>
 
     <p>
-        Start a local node with:
+        The current Python development engine can be started
+        directly from the repository:
     </p>
 
-    <pre>./MVX-MeshBridge-macos-arm64 node</pre>
+    <pre>cd ~/DS-DS-ship-it.github.io
+python3 iphone-html-terminal/mvx-spatial-mosaic-v3/meshbridge/mvx_meshbridge_3.py node</pre>
 
     <div class="features">
 
@@ -1081,7 +1567,7 @@ hr.mesh-rule {
         </div>
 
         <div class="feature">
-            Internet gateway
+            Gateway fetch
         </div>
 
         <div class="feature">
@@ -1097,879 +1583,44 @@ hr.mesh-rule {
 </section>
 
 
-<!-- ==========================================================
-     LIVE MESHBRIDGE DASHBOARD
-=========================================================== -->
-
-<section
-    class="card mesh-live"
-    id="mvx-live"
->
-
-    <div class="mesh-toolbar">
-
-        <h2>
-            Live MeshBridge Network
-        </h2>
-
-        <span
-            class="mesh-pill warn"
-            id="mvx-connection"
-        >
-            ● Checking engine…
-        </span>
-
-        <span
-            class="mesh-pill"
-            id="mvx-node-pill"
-        >
-            Node —
-        </span>
-
-        <span
-            class="mesh-pill"
-            id="mvx-version-pill"
-        >
-            MVX —
-        </span>
-
-    </div>
-
-
-    <p
-        class="small"
-        id="mvx-connection-detail"
-    >
-        The page will continue to work normally even when
-        the local MeshBridge engine is unavailable.
-    </p>
-
-
-    <!-- NODE STATS -->
-
-    <div class="mesh-grid">
-
-        <div class="card mesh-stat">
-
-            <h2>
-                Local Node
-            </h2>
-
-            <div
-                class="mono"
-                id="mvx-node"
-            >
-                —
-            </div>
-
-            <div
-                class="mesh-meta"
-                id="mvx-node-meta"
-            >
-                Waiting for local engine…
-            </div>
-
-        </div>
-
-
-        <div class="card mesh-stat">
-
-            <h2>
-                Neighbors
-            </h2>
-
-            <div
-                class="mesh-stat-number"
-                id="mvx-neighbor-count"
-            >
-                0
-            </div>
-
-            <div class="mesh-stat-label">
-                Directly reachable peers
-            </div>
-
-        </div>
-
-
-        <div class="card mesh-stat">
-
-            <h2>
-                Routes
-            </h2>
-
-            <div
-                class="mesh-stat-number"
-                id="mvx-route-count"
-            >
-                0
-            </div>
-
-            <div class="mesh-stat-label">
-                Known mesh destinations
-            </div>
-
-        </div>
-
-
-        <div class="card mesh-stat">
-
-            <h2>
-                Secure Sessions
-            </h2>
-
-            <div
-                class="mesh-stat-number"
-                id="mvx-session-count"
-            >
-                0
-            </div>
-
-            <div class="mesh-stat-label">
-                Encrypted peer sessions
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- RANGE CONCEPT -->
-
-    <div class="mesh-section-title">
-        Effective Mesh Range
-    </div>
-
-
-    <div class="card range-card">
-
-        <h2>
-            Multi-Hop Relay Expansion
-        </h2>
-
-        <p>
-            MeshBridge does not magically increase the physical
-            range of a Wi-Fi radio. Instead, each computer can
-            become a forwarding node. Multiple shorter wireless
-            links can therefore create a substantially larger
-            effective coverage area.
-        </p>
-
-
-        <div class="range-visual">
-
-            <div class="range-line"></div>
-
-            <div class="range-arrow one">
-                →
-            </div>
-
-            <div class="range-arrow two">
-                →
-            </div>
-
-
-            <div class="range-node one">
-
-                <div class="range-node-circle">
-                    A
-                </div>
-
-                <div class="range-node-label">
-                    Computer A
-
-                    <span class="range-node-sub">
-                        Source / client
-                    </span>
-                </div>
-
-            </div>
-
-
-            <div class="range-node two relay">
-
-                <div class="range-node-circle">
-                    B
-                </div>
-
-                <div class="range-node-label">
-                    Computer B
-
-                    <span class="range-node-sub">
-                        Relay / gateway
-                    </span>
-                </div>
-
-            </div>
-
-
-            <div class="range-node three">
-
-                <div class="range-node-circle">
-                    C
-                </div>
-
-                <div class="range-node-label">
-                    Computer C
-
-                    <span class="range-node-sub">
-                        Destination / client
-                    </span>
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="gateway-box">
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    DIRECT LINK
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-direct-range"
-                >
-                    1 hop
-                </div>
-
-            </div>
-
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    RELAY LINK
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-relay-range"
-                >
-                    2+ hops
-                </div>
-
-            </div>
-
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    ROUTING
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-routing-state"
-                >
-                    Ready
-                </div>
-
-            </div>
-
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    INTERNET GATEWAY
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-gateway-state"
-                >
-                    Not detected
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- NEIGHBORS -->
-
-    <div class="mesh-section-title">
-        Neighbors / Link Metrics
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Node
-                    </th>
-
-                    <th>
-                        State
-                    </th>
-
-                    <th>
-                        Transport
-                    </th>
-
-                    <th>
-                        Latency
-                    </th>
-
-                    <th>
-                        RSSI
-                    </th>
-
-                    <th>
-                        SNR
-                    </th>
-
-                    <th>
-                        Last Seen
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-neighbors">
-
-                <tr>
-                    <td colspan="7">
-                        No neighbors discovered.
-                    </td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- ROUTES -->
-
-    <div class="mesh-section-title">
-        Multi-Hop Routes
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Destination
-                    </th>
-
-                    <th>
-                        Next Hop
-                    </th>
-
-                    <th>
-                        Transport
-                    </th>
-
-                    <th>
-                        Hops
-                    </th>
-
-                    <th>
-                        Metric
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-routes">
-
-                <tr>
-                    <td colspan="5">
-                        No routes discovered.
-                    </td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- DISCOVERY -->
-
-    <div class="mesh-section-title">
-        Node Discovery
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Node
-                    </th>
-
-                    <th>
-                        Online
-                    </th>
-
-                    <th>
-                        Authenticated
-                    </th>
-
-                    <th>
-                        Transports
-                    </th>
-
-                    <th>
-                        Gateway
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-discovery">
-
-                <tr>
-                    <td colspan="5">
-                        No nodes discovered.
-                    </td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- SESSIONS -->
-
-    <div class="mesh-section-title">
-        Encrypted Sessions
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Peer
-                    </th>
-
-                    <th>
-                        State
-                    </th>
-
-                    <th>
-                        Cipher
-                    </th>
-
-                    <th>
-                        Key Exchange
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-sessions">
-
-                <tr>
-                    <td colspan="4">
-                        No encrypted sessions.
-                    </td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- PACKETS -->
-
-    <div class="mesh-section-title">
-        Packet Activity
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Time
-                    </th>
-
-                    <th>
-                        Direction
-                    </th>
-
-                    <th>
-                        Path
-                    </th>
-
-                    <th>
-                        Transport
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-packets">
-
-                <tr>
-                    <td colspan="4">
-                        No packet activity.
-                    </td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- MESSAGES -->
-
-    <div class="mesh-section-title">
-        Messages
-    </div>
-
-
-    <div class="mesh-table-wrap">
-
-        <table class="mesh-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Time
-                    </th>
-
-                    <th>
-                        Source → Destination
-                    </th>
-
-                    <th>
-                        Transport
-                    </th>
-
-                    <th>
-                        Message
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody id="mvx-messages">
-
-                <tr>
-                    <td colspan="4">
-                        No messages.
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- TOPOLOGY -->
-
-    <div class="mesh-section-title">
-        Live Mesh Topology
-    </div>
-
-
-    <div class="topology">
-
-        <div class="topology-grid"></div>
-
-        <svg
-            id="mvx-topology-svg"
-            class="topology-svg"
-            viewBox="0 0 1000 420"
-            preserveAspectRatio="none"
-        >
-        </svg>
-
-        <div class="topology-info">
-
-            <div
-                class="topology-badge"
-                id="mvx-topology-summary"
-            >
-                0 nodes · 0 links
-            </div>
-
-            <div
-                class="topology-badge"
-                id="mvx-topology-status"
-            >
-                Waiting for topology data
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- GATEWAY -->
-
-    <div class="mesh-section-title">
-        Internet Gateway
-    </div>
-
-
-    <div class="card">
-
-        <h2>
-            Shared Internet Architecture
-        </h2>
-
-        <p>
-            A node with Internet access can eventually act as
-            an MVX Internet gateway. Other mesh nodes can route
-            their traffic through it. Gateway availability is
-            shown here when the native engine advertises gateway
-            capability.
-        </p>
-
-
-        <div class="gateway-box">
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    LOCAL NODE
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-local-gateway"
-                >
-                    Unknown
-                </div>
-
-            </div>
-
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    GATEWAY ROUTE
-                </div>
-
-                <div
-                    class="gateway-value"
-                    id="mvx-gateway-route"
-                >
-                    None
-                </div>
-
-            </div>
-
-
-            <div class="gateway-item">
-
-                <div class="gateway-title">
-                    FAILOVER
-                </div>
-
-                <div
-                    class="gateway-value"
-                >
-                    Planned
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- SEND MESSAGE -->
-
-    <div class="mesh-section-title">
-        Encrypted Message
-    </div>
-
-
-    <div class="card">
-
-        <p class="small">
-            Messages are sent through the local MeshBridge
-            engine. The browser does not implement the
-            cryptographic transport itself.
-        </p>
-
-
-        <div class="send-box">
-
-            <div class="send-fields">
-
-                <input
-                    class="mesh-input"
-                    id="mvx-target"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="Destination Node ID — 32 hexadecimal characters"
-                >
-
-                <textarea
-                    class="mesh-textarea"
-                    id="mvx-message"
-                    placeholder="Message"
-                ></textarea>
-
-            </div>
-
-
-            <button
-                class="button primary"
-                id="mvx-send"
-                type="button"
-            >
-                Send
-            </button>
-
-        </div>
-
-
-        <p
-            class="small"
-            id="mvx-send-status"
-        ></p>
-
-    </div>
-
-
-    <!-- ENGINE CONFIGURATION -->
-
-    <div class="mesh-section-title">
-        Local Engine
-    </div>
-
-
-    <div class="card">
-
-        <h2>
-            MeshBridge Engine Connection
-        </h2>
-
-        <p>
-            Default local engine:
-        </p>
-
-        <pre id="mvx-engine-url-display">http://127.0.0.1:49154</pre>
-
-        <p class="small">
-            The web page remains usable when this local
-            service is not running. Start MeshBridge locally
-            to activate live networking information.
-        </p>
-
-        <button
-            class="button"
-            id="mvx-reconnect"
-            type="button"
-        >
-            Reconnect
-        </button>
-
-    </div>
-
-</section>
-
-
-<!-- ==========================================================
-     SECURITY / TRANSPORT INFORMATION
-=========================================================== -->
+<!-- =======================================================
+     SECURITY
+     ======================================================= -->
 
 <section class="grid">
 
     <div class="card">
 
-        <h2>
-            Security
-        </h2>
+        <h2>Security</h2>
 
         <p>
-            The native MVX networking layer is designed around
-            authenticated node identities, encrypted peer
-            sessions, key exchange and authenticated encrypted
-            messages.
+            The MeshBridge architecture supports authenticated node
+            identities, key exchange, derived session keys and
+            authenticated encrypted messaging.
         </p>
 
     </div>
 
-
     <div class="card">
 
-        <h2>
-            Multi-Transport
-        </h2>
+        <h2>Future Transports</h2>
 
         <p>
-            The routing layer is intended to operate above
-            individual transports, allowing Wi-Fi, Ethernet,
-            Bluetooth, LoRa and Meshtastic-compatible radios
-            to participate in the same logical network.
+            The transport architecture can expand toward Wi-Fi,
+            Ethernet, Bluetooth LE, LoRa, Meshtastic-compatible
+            radios and native Apple networking.
         </p>
 
     </div>
 
-
     <div class="card">
 
-        <h2>
-            Effective Range
-        </h2>
+        <h2>iPhone Architecture</h2>
 
         <p>
-            Adding relay nodes increases effective network
-            coverage without pretending that the radio itself
-            has gained additional transmit power.
+            This page can run in Safari on iPhone. Direct local
+            radio operation requires an appropriate native iOS
+            networking layer rather than ordinary Safari JavaScript.
         </p>
 
     </div>
@@ -1979,9 +1630,7 @@ hr.mesh-rule {
 
 <footer>
 
-    MVX MeshBridge 3.x
-    <br>
-
+    MVX MeshBridge 3.0 compatibility dashboard<br>
     DS-DS-ship-it / DS-DS-ship-it.github.io
 
 </footer>
@@ -1989,1767 +1638,2638 @@ hr.mesh-rule {
 </div>
 
 
-<!-- ==========================================================
-     SAFE MESHBRIDGE COMPATIBILITY LAYER
-
-     IMPORTANT:
-     This script is intentionally self-contained.
-
-     If the local engine is unavailable or the API changes,
-     the landing page still remains visible.
-=========================================================== -->
-
 <script>
-(function () {
+"use strict";
 
-    "use strict";
-
-
-    /* --------------------------------------------------------
-       CONFIGURATION
-    -------------------------------------------------------- */
-
-    const CONFIG = {
-        base:
-            "http://127.0.0.1:49154",
-
-        pollMs:
-            2000,
-
-        requestTimeoutMs:
-            2500,
-
-        maxRows:
-            150
-    };
-
-
-    /* --------------------------------------------------------
-       STATE
-    -------------------------------------------------------- */
-
-    const state = {
-
-        connected:
-            false,
-
-        online:
-            false,
-
-        status:
-            null,
-
-        topology:
-            null,
-
-        lastUpdate:
-            0,
-
-        error:
-            "",
-
-        polling:
-            false
-
-    };
+/*
+ * ============================================================
+ * MVX MESHBRIDGE WEB COMPATIBILITY DASHBOARD
+ * ============================================================
+ *
+ * Verified local engine:
+ *
+ *     http://127.0.0.1:49154
+ *
+ * Verified status endpoint:
+ *
+ *     GET /api/v1/status
+ *
+ * The dashboard deliberately does NOT treat:
+ *
+ *     neighbors: []
+ *
+ * as engine failure.
+ *
+ * "online": true from /api/v1/status is authoritative.
+ *
+ * /api/v1/events is SSE and is therefore NOT fetched with fetch().
+ * This dashboard uses safe polling for compatibility.
+ */
 
 
-    /* --------------------------------------------------------
-       HELPERS
-    -------------------------------------------------------- */
+/* ============================================================
+   CONFIGURATION
+   ============================================================ */
 
-    function $(id) {
+const DEFAULT_ENGINE =
+    "http://127.0.0.1:49154";
 
-        return document.getElementById(id);
+const POLL_INTERVAL =
+    2000;
 
+const STORAGE_KEY =
+    "mvx.meshbridge.engine";
+
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+const state = {
+
+    base: DEFAULT_ENGINE,
+
+    online: false,
+
+    autoRefresh: true,
+
+    timer: null,
+
+    requestInFlight: false,
+
+    lastUpdate: null,
+
+    lastError: null,
+
+    apiRtt: null,
+
+    status: {},
+
+    node: {},
+
+    neighbors: [],
+
+    routes: [],
+
+    sessions: [],
+
+    messages: [],
+
+    packets: [],
+
+    discovery: {},
+
+    topology: {},
+
+    endpoints: {}
+
+};
+
+
+/* ============================================================
+   DOM HELPERS
+   ============================================================ */
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+
+function text(value) {
+
+    if (value === null ||
+        value === undefined ||
+        value === "") {
+
+        return "—";
     }
 
+    return String(value);
+}
 
-    function escapeHtml(value) {
 
-        return String(
-            value == null
-                ? ""
-                : value
-        ).replace(
-            /[&<>"']/g,
-            function (character) {
+function escapeHTML(value) {
 
-                return {
-                    "&": "&amp;",
-                    "<": "&lt;",
-                    ">": "&gt;",
-                    '"': "&quot;",
-                    "'": "&#39;"
-                }[character];
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
-            }
-        );
 
+function number(value, suffix = "") {
+
+    if (value === null ||
+        value === undefined ||
+        value === "" ||
+        Number.isNaN(Number(value))) {
+
+        return "—";
     }
 
+    const n = Number(value);
 
-    function shortId(value) {
+    if (Math.abs(n) >= 1000) {
 
-        const s =
-            String(
-                value == null
-                    ? ""
-                    : value
-            );
-
-        if (!s) {
-            return "—";
-        }
-
-        if (s.length <= 18) {
-            return s;
-        }
-
-        return (
-            s.slice(0, 8) +
-            "…" +
-            s.slice(-8)
-        );
-
+        return n.toLocaleString() + suffix;
     }
 
+    if (Number.isInteger(n)) {
 
-    function number(value, suffix) {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === "" ||
-            Number.isNaN(Number(value))
-        ) {
-            return "—";
-        }
-
-        return (
-            Number(value).toFixed(1) +
-            (suffix || "")
-        );
-
+        return n + suffix;
     }
 
+    return n.toFixed(1) + suffix;
+}
 
-    function timestamp(value) {
 
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "—";
-        }
+function first(obj, keys, fallback = null) {
 
-        const n =
-            Number(value);
-
-        if (!Number.isFinite(n)) {
-            return "—";
-        }
-
-        try {
-
-            return new Date(
-                n > 100000000000
-                    ? n
-                    : n * 1000
-            ).toLocaleTimeString();
-
-        } catch (_) {
-
-            return "—";
-
-        }
-
+    if (!obj || typeof obj !== "object") {
+        return fallback;
     }
 
+    for (const key of keys) {
 
-    function arrayFrom(value, keys) {
+        if (obj[key] !== undefined &&
+            obj[key] !== null &&
+            obj[key] !== "") {
 
-        if (Array.isArray(value)) {
-            return value;
+            return obj[key];
         }
+    }
 
-        if (!value || typeof value !== "object") {
-            return [];
-        }
+    return fallback;
+}
 
-        for (
-            let i = 0;
-            i < keys.length;
-            i++
-        ) {
 
-            const candidate =
-                value[keys[i]];
+function arrayFrom(data, keys = []) {
 
-            if (Array.isArray(candidate)) {
-                return candidate;
-            }
+    if (Array.isArray(data)) {
+        return data;
+    }
 
-        }
-
+    if (!data || typeof data !== "object") {
         return [];
-
     }
 
+    for (const key of keys) {
 
-    function setText(id, value) {
-
-        const element =
-            $(id);
-
-        if (!element) {
-            return;
+        if (Array.isArray(data[key])) {
+            return data[key];
         }
-
-        element.textContent =
-            value == null
-                ? ""
-                : String(value);
-
     }
 
+    return [];
+}
 
-    function setClass(id, className) {
 
-        const element =
-            $(id);
+function cleanBase(value) {
 
-        if (!element) {
-            return;
-        }
+    let base = String(value || "").trim();
 
-        element.className =
-            className;
-
+    if (!base) {
+        return DEFAULT_ENGINE;
     }
 
+    base = base.replace(/\/+$/, "");
 
-    function setRows(id, html, columns) {
+    /*
+     * Accept accidental trailing API path and normalize it.
+     */
 
-        const element =
-            $(id);
+    base = base.replace(/\/api\/v1$/i, "");
+    base = base.replace(/\/api$/i, "");
 
-        if (!element) {
-            return;
+    return base;
+}
+
+
+function endpoint(path) {
+
+    return state.base + path;
+}
+
+
+/* ============================================================
+   LOCAL STORAGE
+   ============================================================ */
+
+function loadSavedEngine() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(STORAGE_KEY);
+
+        if (saved) {
+            state.base = cleanBase(saved);
         }
 
-        if (!html) {
-
-            element.innerHTML =
-                '<tr><td colspan="' +
-                columns +
-                '">No data.</td></tr>';
-
-            return;
-
-        }
-
-        element.innerHTML =
-            html;
-
+    } catch (_) {
+        state.base = DEFAULT_ENGINE;
     }
 
+    $("engineInput").value =
+        state.base;
 
-    /* --------------------------------------------------------
-       HTTP
-    -------------------------------------------------------- */
+    $("engineEndpoint").textContent =
+        state.base;
+}
 
-    async function fetchJson(path) {
 
-        const controller =
-            new AbortController();
+function saveEngine() {
 
-        const timer =
-            setTimeout(
-                function () {
-                    controller.abort();
-                },
-                CONFIG.requestTimeoutMs
+    try {
+
+        localStorage.setItem(
+            STORAGE_KEY,
+            state.base
+        );
+
+    } catch (_) {
+        /* localStorage can be unavailable */
+    }
+}
+
+
+/* ============================================================
+   HTTP
+   ============================================================ */
+
+async function getJSON(path, timeoutMs = 5000) {
+
+    const controller =
+        new AbortController();
+
+    const timer =
+        setTimeout(
+            () => controller.abort(),
+            timeoutMs
+        );
+
+    const started =
+        performance.now();
+
+    try {
+
+        const response =
+            await fetch(
+                endpoint(path),
+                {
+                    method: "GET",
+                    cache: "no-store",
+                    credentials: "omit",
+                    signal: controller.signal,
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
             );
 
-        try {
+        const elapsed =
+            performance.now() - started;
 
-            const response =
-                await fetch(
-                    CONFIG.base + path,
-                    {
-                        method: "GET",
-                        cache: "no-store",
-                        signal:
-                            controller.signal
-                    }
-                );
+        if (!response.ok) {
 
-            if (!response.ok) {
+            throw new Error(
+                "HTTP " +
+                response.status +
+                " " +
+                response.statusText
+            );
+        }
 
-                throw new Error(
-                    "HTTP " +
-                    response.status
-                );
+        const data =
+            await response.json();
 
-            }
+        return {
+            data,
+            rtt: elapsed
+        };
+
+    } finally {
+
+        clearTimeout(timer);
+    }
+}
+
+
+async function postJSON(path, body, timeoutMs = 8000) {
+
+    const controller =
+        new AbortController();
+
+    const timer =
+        setTimeout(
+            () => controller.abort(),
+            timeoutMs
+        );
+
+    try {
+
+        const response =
+            await fetch(
+                endpoint(path),
+                {
+                    method: "POST",
+                    cache: "no-store",
+                    credentials: "omit",
+                    signal: controller.signal,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+
+        if (!response.ok) {
+
+            const bodyText =
+                await response.text()
+                    .catch(() => "");
+
+            throw new Error(
+                "HTTP " +
+                response.status +
+                " " +
+                response.statusText +
+                (bodyText
+                    ? ": " + bodyText.slice(0, 300)
+                    : "")
+            );
+        }
+
+        const contentType =
+            response.headers.get(
+                "content-type"
+            ) || "";
+
+        if (contentType.includes("json")) {
 
             return await response.json();
-
-        } finally {
-
-            clearTimeout(timer);
-
         }
 
+        return {
+            ok: true
+        };
+
+    } finally {
+
+        clearTimeout(timer);
+    }
+}
+
+
+/* ============================================================
+   ENGINE STATUS
+   ============================================================ */
+
+function setEngineVisual(
+    mode,
+    message
+) {
+
+    const el =
+        $("engineStatus");
+
+    const textEl =
+        $("engineStatusText");
+
+    el.classList.remove(
+        "offline",
+        "warning"
+    );
+
+    if (mode === "online") {
+
+        textEl.textContent =
+            message || "Engine Online";
+
+        return;
     }
 
+    if (mode === "offline") {
 
-    /* --------------------------------------------------------
-       STATUS
-    -------------------------------------------------------- */
+        el.classList.add("offline");
 
-    function renderConnection(online, error) {
+        textEl.textContent =
+            message || "Engine Offline";
 
-        const badge =
-            $("mvx-connection");
-
-        if (!badge) {
-            return;
-        }
-
-        if (online) {
-
-            badge.textContent =
-                "● Engine online";
-
-            badge.className =
-                "mesh-pill ok";
-
-            setText(
-                "mvx-connection-detail",
-                "MeshBridge is reachable on the local machine."
-            );
-
-            return;
-
-        }
-
-        badge.textContent =
-            "● Engine offline";
-
-        badge.className =
-            "mesh-pill bad";
-
-        setText(
-            "mvx-connection-detail",
-            error
-                ? "Local engine unavailable: " + error
-                : "Start MeshBridge locally to activate live networking."
-        );
-
+        return;
     }
 
+    el.classList.add("warning");
 
-    function renderStatus(data) {
-
-        if (!data) {
-            return;
-        }
-
-        state.status =
-            data;
-
-        state.online =
-            Boolean(
-                data.online
-            );
-
-        state.connected =
-            true;
-
-        state.lastUpdate =
-            Date.now();
-
-        state.error =
-            "";
-
-        renderConnection(
-            state.online,
-            ""
-        );
+    textEl.textContent =
+        message || "Checking Engine…";
+}
 
 
-        setText(
-            "mvx-node",
-            data.node_id || "—"
-        );
+function showNotice(
+    message,
+    type = ""
+) {
+
+    const notice =
+        $("connectionNotice");
+
+    notice.textContent =
+        message;
+
+    notice.classList.remove(
+        "hidden",
+        "error",
+        "success"
+    );
+
+    if (type) {
+        notice.classList.add(type);
+    }
+}
 
 
-        setText(
-            "mvx-node-pill",
-            "Node " +
-            shortId(data.node_id)
-        );
+function hideNotice() {
+
+    $("connectionNotice")
+        .classList.add("hidden");
+}
 
 
-        setText(
-            "mvx-version-pill",
-            "MVX " +
-            (data.version || "—") +
-            " / P" +
-            (data.protocol || "—")
-        );
+function setLastError(message) {
+
+    state.lastError =
+        message || null;
+
+    $("lastError").textContent =
+        state.lastError || "None";
+}
 
 
-        setText(
-            "mvx-node-meta",
-            [
-                data.platform || "Unknown platform",
-                data.machine || "",
-                data.gateway
-                    ? "Internet gateway"
-                    : "Not gateway",
-                data.uptime_seconds != null
-                    ? "uptime " +
-                      number(
-                          data.uptime_seconds,
-                          "s"
-                      )
-                    : ""
-            ]
-            .filter(Boolean)
-            .join(" · ")
-        );
+/* ============================================================
+   AUTHORITATIVE CONNECTION TEST
+   ============================================================ */
 
+async function checkEngine() {
 
-        const neighbors =
-            arrayFrom(
-                data.neighbors,
-                ["neighbors"]
-            );
-
-        const routes =
-            arrayFrom(
-                data.routes,
-                ["routes"]
-            );
-
-        const sessions =
-            arrayFrom(
-                data.sessions,
-                ["sessions"]
-            );
-
-        const discovered =
-            arrayFrom(
-                data.discovered,
-                [
-                    "discovered",
-                    "known_nodes",
-                    "nodes"
-                ]
-            );
-
-        const messages =
-            arrayFrom(
-                data.messages,
-                ["messages"]
-            );
-
-        const packets =
-            arrayFrom(
-                data.packet_activity,
-                [
-                    "packet_activity",
-                    "packets"
-                ]
-            );
-
-
-        setText(
-            "mvx-neighbor-count",
-            neighbors.length
-        );
-
-        setText(
-            "mvx-route-count",
-            routes.length
-        );
-
-        setText(
-            "mvx-session-count",
-            sessions.length
-        );
-
-
-        renderNeighbors(
-            neighbors
-        );
-
-        renderRoutes(
-            routes
-        );
-
-        renderDiscovery(
-            discovered
-        );
-
-        renderSessions(
-            sessions
-        );
-
-        renderMessages(
-            messages
-        );
-
-        renderPackets(
-            packets
-        );
-
-
-        const gateway =
-            Boolean(
-                data.gateway
-            );
-
-        setText(
-            "mvx-gateway-state",
-            gateway
-                ? "ACTIVE"
-                : "Not detected"
-        );
-
-        setClass(
-            "mvx-gateway-state",
-            gateway
-                ? "gateway-value ok"
-                : "gateway-value"
-        );
-
-
-        setText(
-            "mvx-local-gateway",
-            gateway
-                ? "ACTIVE"
-                : "NO"
-        );
-
-
-        setText(
-            "mvx-routing-state",
-            routes.length
-                ? "ACTIVE"
-                : "Ready"
-        );
-
+    if (state.requestInFlight) {
+        return false;
     }
 
+    state.requestInFlight = true;
 
-    /* --------------------------------------------------------
-       NEIGHBORS
-    -------------------------------------------------------- */
+    setEngineVisual(
+        "checking",
+        "Checking engine…"
+    );
 
-    function renderNeighbors(list) {
+    $("httpState").textContent =
+        "Connecting…";
 
-        const rows =
-            list
-                .slice(
-                    0,
-                    CONFIG.maxRows
-                )
-                .map(
-                    function (n) {
+    $("pollState").textContent =
+        "Request in progress";
 
-                        const online =
-                            n.online !== false;
+    try {
 
-                        const transport =
-                            n.transport ||
-                            n.type ||
-                            "—";
+        /*
+         * This is intentionally the first and authoritative
+         * request. We know this endpoint exists and works.
+         */
 
-                        const latency =
-                            n.latency_ms != null
-                                ? n.latency_ms
-                                : n.rtt_ms;
-
-                        const last =
-                            n.last_seen ||
-                            n.lastSeen ||
-                            n.time;
-
-                        return (
-                            "<tr>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    n.id ||
-                                    n.node_id
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td class='" +
-                            (
-                                online
-                                    ? "ok"
-                                    : "bad"
-                            ) +
-                            "'>" +
-                            (
-                                online
-                                    ? "ONLINE"
-                                    : "STALE"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                transport
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            number(
-                                latency,
-                                " ms"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            number(
-                                n.rssi,
-                                ""
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            number(
-                                n.snr,
-                                ""
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                timestamp(last)
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-neighbors",
-            rows,
-            7
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       ROUTES
-    -------------------------------------------------------- */
-
-    function renderRoutes(list) {
-
-        const rows =
-            list
-                .slice(
-                    0,
-                    CONFIG.maxRows
-                )
-                .map(
-                    function (r) {
-
-                        return (
-                            "<tr>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    r.destination ||
-                                    r.dst ||
-                                    r.node_id
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    r.next_hop ||
-                                    r.nextHop ||
-                                    r.via
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                r.transport ||
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                r.hops ??
-                                r.hop_count ??
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                r.metric ??
-                                r.cost ??
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-routes",
-            rows,
-            5
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       DISCOVERY
-    -------------------------------------------------------- */
-
-    function renderDiscovery(list) {
-
-        const rows =
-            list
-                .slice(
-                    0,
-                    CONFIG.maxRows
-                )
-                .map(
-                    function (n) {
-
-                        const transports =
-                            n.transports;
-
-                        let transportText =
-                            "—";
-
-                        if (
-                            transports &&
-                            typeof transports ===
-                                "object"
-                        ) {
-
-                            transportText =
-                                Object.keys(
-                                    transports
-                                ).join(", ");
-
-                        } else if (
-                            typeof transports ===
-                                "string"
-                        ) {
-
-                            transportText =
-                                transports;
-
-                        }
-
-                        const gateway =
-                            Boolean(
-                                n.gateway ||
-                                n.internet_gateway
-                            );
-
-                        return (
-                            "<tr>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    n.id ||
-                                    n.node_id
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td class='" +
-                            (
-                                n.online !== false
-                                    ? "ok"
-                                    : "bad"
-                            ) +
-                            "'>" +
-                            (
-                                n.online !== false
-                                    ? "YES"
-                                    : "NO"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            (
-                                n.authenticated
-                                    ? "YES"
-                                    : "NO"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                transportText
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            (
-                                gateway
-                                    ? "YES"
-                                    : "NO"
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-discovery",
-            rows,
-            5
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       SESSIONS
-    -------------------------------------------------------- */
-
-    function renderSessions(list) {
-
-        const rows =
-            list
-                .slice(
-                    0,
-                    CONFIG.maxRows
-                )
-                .map(
-                    function (s) {
-
-                        return (
-                            "<tr>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    s.peer_id ||
-                                    s.peer ||
-                                    s.node_id
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td class='" +
-                            (
-                                s.established
-                                    ? "ok"
-                                    : "warn"
-                            ) +
-                            "'>" +
-                            (
-                                s.established
-                                    ? "ESTABLISHED"
-                                    : "PENDING"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                s.cipher ||
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                s.key_exchange ||
-                                s.keyExchange ||
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-sessions",
-            rows,
-            4
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       MESSAGES
-    -------------------------------------------------------- */
-
-    function renderMessages(list) {
-
-        const rows =
-            list
-                .slice(
-                    -CONFIG.maxRows
-                )
-                .reverse()
-                .map(
-                    function (m) {
-
-                        return (
-                            "<tr>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                timestamp(
-                                    m.time ||
-                                    m.timestamp
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    m.src ||
-                                    m.source
-                                )
-                            ) +
-                            " → " +
-                            escapeHtml(
-                                shortId(
-                                    m.dst ||
-                                    m.destination
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                m.transport ||
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                m.payload ||
-                                m.message ||
-                                m.text ||
-                                ""
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-messages",
-            rows,
-            4
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       PACKETS
-    -------------------------------------------------------- */
-
-    function renderPackets(list) {
-
-        const rows =
-            list
-                .slice(
-                    -CONFIG.maxRows
-                )
-                .reverse()
-                .map(
-                    function (p) {
-
-                        return (
-                            "<tr>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                timestamp(
-                                    p.time ||
-                                    p.timestamp
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                p.direction ||
-                                p.type ||
-                                "EVENT"
-                            ) +
-                            "</td>" +
-
-                            "<td class='mono'>" +
-                            escapeHtml(
-                                shortId(
-                                    p.src ||
-                                    p.source
-                                )
-                            ) +
-                            " → " +
-                            escapeHtml(
-                                shortId(
-                                    p.dst ||
-                                    p.destination
-                                )
-                            ) +
-                            "</td>" +
-
-                            "<td>" +
-                            escapeHtml(
-                                p.transport ||
-                                "—"
-                            ) +
-                            "</td>" +
-
-                            "</tr>"
-                        );
-
-                    }
-                )
-                .join("");
-
-
-        setRows(
-            "mvx-packets",
-            rows,
-            4
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       TOPOLOGY
-    -------------------------------------------------------- */
-
-    function renderTopology(data) {
-
-        if (!data) {
-            return;
-        }
-
-        state.topology =
-            data;
-
-        const nodes =
-            arrayFrom(
-                data.nodes,
-                ["nodes"]
+        const result =
+            await getJSON(
+                "/api/v1/status",
+                5000
             );
-
-        const links =
-            arrayFrom(
-                data.links ||
-                data.edges,
-                [
-                    "links",
-                    "edges"
-                ]
-            );
-
-
-        setText(
-            "mvx-topology-summary",
-            nodes.length +
-            " nodes · " +
-            links.length +
-            " links"
-        );
-
-
-        setText(
-            "mvx-topology-status",
-            nodes.length
-                ? "Live topology"
-                : "No peers discovered"
-        );
-
-
-        const svg =
-            $("mvx-topology-svg");
-
-        if (!svg) {
-            return;
-        }
-
-
-        svg.innerHTML =
-            "";
-
-
-        if (!nodes.length) {
-
-            return;
-
-        }
-
-
-        const positions =
-            [];
-
-
-        const cx =
-            500;
-
-        const cy =
-            190;
-
-        const radius =
-            Math.min(
-                145,
-                45 +
-                nodes.length * 12
-            );
-
-
-        nodes.forEach(
-            function (node, index) {
-
-                let x =
-                    cx;
-
-                let y =
-                    cy;
-
-
-                if (nodes.length > 1) {
-
-                    const angle =
-                        (
-                            index /
-                            nodes.length
-                        ) *
-                        Math.PI *
-                        2 -
-                        Math.PI / 2;
-
-                    x =
-                        cx +
-                        Math.cos(angle) *
-                        radius;
-
-                    y =
-                        cy +
-                        Math.sin(angle) *
-                        radius;
-
-                }
-
-
-                positions.push({
-                    id:
-                        String(
-                            node.id ||
-                            node.node_id ||
-                            node.name ||
-                            index
-                        ),
-                    x:
-                        x,
-                    y:
-                        y
-                });
-
-            }
-        );
-
-
-        function findPosition(id) {
-
-            const key =
-                String(
-                    id == null
-                        ? ""
-                        : id
-                );
-
-            return positions.find(
-                function (p) {
-                    return (
-                        p.id === key
-                    );
-                }
-            );
-
-        }
-
-
-        links.forEach(
-            function (link) {
-
-                const source =
-                    findPosition(
-                        link.source ||
-                        link.src ||
-                        link.from
-                    );
-
-                const target =
-                    findPosition(
-                        link.target ||
-                        link.dst ||
-                        link.to
-                    );
-
-                if (
-                    !source ||
-                    !target
-                ) {
-                    return;
-                }
-
-
-                const line =
-                    document.createElementNS(
-                        "http://www.w3.org/2000/svg",
-                        "line"
-                    );
-
-
-                line.setAttribute(
-                    "x1",
-                    source.x
-                );
-
-                line.setAttribute(
-                    "y1",
-                    source.y
-                );
-
-                line.setAttribute(
-                    "x2",
-                    target.x
-                );
-
-                line.setAttribute(
-                    "y2",
-                    target.y
-                );
-
-                line.setAttribute(
-                    "stroke",
-                    "rgba(100,216,255,.65)"
-                );
-
-                line.setAttribute(
-                    "stroke-width",
-                    "2"
-                );
-
-
-                svg.appendChild(
-                    line
-                );
-
-            }
-        );
-
-
-        positions.forEach(
-            function (node) {
-
-                const circle =
-                    document.createElementNS(
-                        "http://www.w3.org/2000/svg",
-                        "circle"
-                    );
-
-
-                circle.setAttribute(
-                    "cx",
-                    node.x
-                );
-
-                circle.setAttribute(
-                    "cy",
-                    node.y
-                );
-
-                circle.setAttribute(
-                    "r",
-                    "20"
-                );
-
-                circle.setAttribute(
-                    "fill",
-                    "rgba(100,216,255,.16)"
-                );
-
-                circle.setAttribute(
-                    "stroke",
-                    "#64d8ff"
-                );
-
-                circle.setAttribute(
-                    "stroke-width",
-                    "2"
-                );
-
-
-                svg.appendChild(
-                    circle
-                );
-
-
-                const text =
-                    document.createElementNS(
-                        "http://www.w3.org/2000/svg",
-                        "text"
-                    );
-
-
-                text.setAttribute(
-                    "x",
-                    node.x
-                );
-
-                text.setAttribute(
-                    "y",
-                    node.y + 4
-                );
-
-                text.setAttribute(
-                    "text-anchor",
-                    "middle"
-                );
-
-                text.setAttribute(
-                    "fill",
-                    "#f3f7ff"
-                );
-
-                text.setAttribute(
-                    "font-size",
-                    "10"
-                );
-
-                text.textContent =
-                    shortId(
-                        node.id
-                    );
-
-
-                svg.appendChild(
-                    text
-                );
-
-            }
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       LOAD ALL DATA
-    -------------------------------------------------------- */
-
-    async function refresh() {
-
-        if (state.polling) {
-            return;
-        }
-
-        state.polling =
-            true;
-
-
-        try {
-
-            const status =
-                await fetchJson(
-                    "/api/v1/status"
-                );
-
-
-            renderStatus(
-                status
-            );
-
-
-            /* Topology is separate so a
-               topology failure cannot break
-               the main status panel. */
-
-            try {
-
-                const topology =
-                    await fetchJson(
-                        "/api/v1/topology"
-                    );
-
-                renderTopology(
-                    topology
-                );
-
-            } catch (_) {
-
-                /* Safe failure */
-
-            }
-
-
-        } catch (error) {
-
-            state.connected =
-                false;
-
-            state.online =
-                false;
-
-            state.error =
-                String(
-                    error &&
-                    error.message
-                        ? error.message
-                        : error
-                );
-
-            renderConnection(
-                false,
-                state.error
-            );
-
-        } finally {
-
-            state.polling =
-                false;
-
-        }
-
-    }
-
-
-    /* --------------------------------------------------------
-       SEND
-    -------------------------------------------------------- */
-
-    async function sendMessage() {
-
-        const target =
-            (
-                $("mvx-target")
-                    ?.value ||
-                ""
-            ).trim();
-
-
-        const message =
-            (
-                $("mvx-message")
-                    ?.value ||
-                ""
-            );
-
 
         const status =
-            $("mvx-send-status");
+            result.data || {};
 
+        state.status =
+            status;
 
-        if (!target) {
+        state.apiRtt =
+            result.rtt;
 
-            if (status) {
-                status.textContent =
-                    "Enter a destination Node ID.";
-            }
+        if (status.online !== true) {
 
-            return;
+            state.online = false;
 
+            setEngineVisual(
+                "offline",
+                "Engine Offline"
+            );
+
+            $("httpState").textContent =
+                "HTTP reachable, node offline";
+
+            showNotice(
+                "The MeshBridge HTTP server responded, but the node reported online=false.",
+                "error"
+            );
+
+            setLastError(
+                "Node reported online=false"
+            );
+
+            return false;
         }
 
+        state.online = true;
 
-        if (
-            !/^[0-9a-fA-F]{32}$/.test(
-                target
+        setEngineVisual(
+            "online",
+            "Engine Online"
+        );
+
+        $("httpState").textContent =
+            "Connected";
+
+        $("connectionEndpoint").textContent =
+            state.base;
+
+        $("apiRtt").textContent =
+            number(state.apiRtt, " ms");
+
+        hideNotice();
+
+        setLastError(null);
+
+        return true;
+
+    } catch (error) {
+
+        state.online = false;
+
+        const message =
+            error && error.message
+                ? error.message
+                : String(error);
+
+        setEngineVisual(
+            "offline",
+            "Engine Offline"
+        );
+
+        $("httpState").textContent =
+            "Connection failed";
+
+        showNotice(
+            "The browser could not reach " +
+            state.base +
+            ". " +
+            message +
+            " The local MeshBridge process may be stopped, the address may be wrong, or the browser may be blocking local-network access.",
+            "error"
+        );
+
+        setLastError(message);
+
+        return false;
+
+    } finally {
+
+        state.requestInFlight = false;
+
+        $("pollState").textContent =
+            state.autoRefresh
+                ? "Polling every " +
+                  (POLL_INTERVAL / 1000) +
+                  " seconds"
+                : "Manual refresh";
+    }
+}
+
+
+/* ============================================================
+   ENDPOINT LOADING
+   ============================================================ */
+
+async function safeGet(
+    key,
+    path,
+    fallback
+) {
+
+    try {
+
+        const result =
+            await getJSON(
+                path,
+                5000
+            );
+
+        state.endpoints[key] =
+            result.data;
+
+        return result.data;
+
+    } catch (error) {
+
+        /*
+         * A secondary endpoint failing should NOT make the entire
+         * engine appear offline.
+         */
+
+        state.endpoints[key] =
+            fallback;
+
+        return fallback;
+    }
+}
+
+
+async function loadDashboard() {
+
+    const connected =
+        await checkEngine();
+
+    if (!connected) {
+
+        renderAll();
+        return;
+    }
+
+    /*
+     * Load each compatibility endpoint separately.
+     *
+     * This matters because /api/v1/status currently contains
+     * neighbors/routes/sessions but not messages/packets/
+     * discovery/topology data in full.
+     */
+
+    const results =
+        await Promise.all([
+
+            safeGet(
+                "node",
+                "/api/v1/node",
+                {}
+            ),
+
+            safeGet(
+                "neighbors",
+                "/api/v1/neighbors",
+                { neighbors: [] }
+            ),
+
+            safeGet(
+                "routes",
+                "/api/v1/routes",
+                { routes: [] }
+            ),
+
+            safeGet(
+                "sessions",
+                "/api/v1/sessions",
+                { sessions: [] }
+            ),
+
+            safeGet(
+                "messages",
+                "/api/v1/messages",
+                { messages: [] }
+            ),
+
+            safeGet(
+                "packets",
+                "/api/v1/packets",
+                { packets: [] }
+            ),
+
+            safeGet(
+                "discovery",
+                "/api/v1/discovery",
+                { known_nodes: [] }
+            ),
+
+            safeGet(
+                "topology",
+                "/api/v1/topology",
+                {
+                    nodes: [],
+                    edges: []
+                }
             )
-        ) {
 
-            if (status) {
-                status.textContent =
-                    "Node ID must contain 32 hexadecimal characters.";
+        ]);
+
+    state.node =
+        results[0] || {};
+
+    state.neighbors =
+        arrayFrom(
+            results[1],
+            ["neighbors"]
+        );
+
+    state.routes =
+        arrayFrom(
+            results[2],
+            ["routes"]
+        );
+
+    state.sessions =
+        arrayFrom(
+            results[3],
+            ["sessions"]
+        );
+
+    state.messages =
+        arrayFrom(
+            results[4],
+            ["messages"]
+        );
+
+    state.packets =
+        arrayFrom(
+            results[5],
+            ["packets"]
+        );
+
+    state.discovery =
+        results[6] || {};
+
+    state.topology =
+        results[7] || {};
+
+    state.lastUpdate =
+        new Date();
+
+    renderAll();
+}
+
+
+/* ============================================================
+   STATUS NORMALIZATION
+   ============================================================ */
+
+function getNodeObject() {
+
+    if (state.node &&
+        state.node.node &&
+        typeof state.node.node === "object") {
+
+        return state.node.node;
+    }
+
+    if (state.node &&
+        typeof state.node === "object") {
+
+        return state.node;
+    }
+
+    return {};
+}
+
+
+function normalizedNode() {
+
+    const node =
+        getNodeObject();
+
+    const status =
+        state.status || {};
+
+    return {
+
+        id: first(
+            node,
+            ["id", "node_id"],
+            first(
+                status,
+                ["node_id"],
+                "—"
+            )
+        ),
+
+        online:
+            node.online !== undefined
+                ? !!node.online
+                : !!status.online,
+
+        version:
+            first(
+                node,
+                ["version"],
+                status.version
+            ),
+
+        protocol:
+            first(
+                node,
+                ["protocol"],
+                status.protocol
+            ),
+
+        platform:
+            first(
+                node,
+                ["platform"],
+                status.platform
+            ),
+
+        machine:
+            first(
+                node,
+                ["machine"],
+                status.machine
+            ),
+
+        gateway:
+            node.gateway !== undefined
+                ? !!node.gateway
+                : !!status.gateway,
+
+        uptime:
+            first(
+                node,
+                ["uptime"],
+                status.uptime
+            )
+
+    };
+}
+
+
+/* ============================================================
+   RENDER ALL
+   ============================================================ */
+
+function renderAll() {
+
+    renderStats();
+    renderNode();
+    renderNeighbors();
+    renderRoutes();
+    renderSessions();
+    renderDiscovery();
+    renderPackets();
+    renderMessages();
+    renderTopology();
+
+    $("lastUpdate").textContent =
+        state.lastUpdate
+            ? "Updated " +
+              state.lastUpdate.toLocaleTimeString()
+            : "Waiting for local engine…";
+
+    $("sendStatus").textContent =
+        state.online
+            ? "Engine online."
+            : "Engine connection required.";
+
+    $("sendButton").disabled =
+        !state.online;
+}
+
+
+/* ============================================================
+   STATS
+   ============================================================ */
+
+function renderStats() {
+
+    const node =
+        normalizedNode();
+
+    $("statEngine").textContent =
+        state.online
+            ? "ONLINE"
+            : "OFFLINE";
+
+    $("statEngineSub").textContent =
+        node.version
+            ? "MeshBridge " +
+              node.version
+            : "—";
+
+    $("statNeighbors").textContent =
+        state.neighbors.length;
+
+    $("statRoutes").textContent =
+        state.routes.length;
+
+    $("statSessions").textContent =
+        state.sessions.length;
+
+    $("statMessages").textContent =
+        state.messages.length;
+
+    $("statPackets").textContent =
+        state.packets.length;
+
+    const discovered =
+        arrayFrom(
+            state.discovery,
+            ["known_nodes", "nodes"]
+        );
+
+    $("statDiscovery").textContent =
+        discovered.length;
+
+    $("statGateway").textContent =
+        node.gateway
+            ? "YES"
+            : "NO";
+
+    $("statGatewaySub").textContent =
+        node.gateway
+            ? "This node is gateway"
+            : "Internet gateway";
+
+}
+
+
+/* ============================================================
+   NODE
+   ============================================================ */
+
+function renderNode() {
+
+    const node =
+        normalizedNode();
+
+    $("nodeId").textContent =
+        text(node.id);
+
+    $("nodeVersion").textContent =
+        text(node.version);
+
+    $("nodeProtocol").textContent =
+        text(node.protocol);
+
+    $("nodePlatform").textContent =
+        text(node.platform);
+
+    $("nodeMachine").textContent =
+        text(node.machine);
+
+    $("nodeGateway").textContent =
+        node.gateway
+            ? "YES"
+            : "NO";
+
+    $("apiRtt").textContent =
+        state.apiRtt !== null
+            ? number(state.apiRtt, " ms")
+            : "—";
+
+    $("nodeUptime").textContent =
+        formatUptime(node.uptime);
+
+    const badge =
+        $("nodeStateBadge");
+
+    badge.className =
+        "badge " +
+        (node.online
+            ? "online"
+            : "offline");
+
+    badge.textContent =
+        node.online
+            ? "ONLINE"
+            : "OFFLINE";
+
+    $("connectionEndpoint").textContent =
+        state.base;
+
+}
+
+
+/* ============================================================
+   UPTIME
+   ============================================================ */
+
+function formatUptime(value) {
+
+    if (value === null ||
+        value === undefined ||
+        value === "") {
+
+        return "—";
+    }
+
+    const n =
+        Number(value);
+
+    if (!Number.isFinite(n)) {
+        return String(value);
+    }
+
+    /*
+     * The current API exposes an epoch-like started_at/uptime
+     * value. If it looks like a Unix timestamp, calculate
+     * elapsed time from now.
+     */
+
+    const now =
+        Date.now() / 1000;
+
+    let seconds = n;
+
+    if (n > 1000000000) {
+
+        seconds =
+            Math.max(
+                0,
+                now - n
+            );
+    }
+
+    seconds =
+        Math.floor(seconds);
+
+    const days =
+        Math.floor(
+            seconds / 86400
+        );
+
+    seconds %= 86400;
+
+    const hours =
+        Math.floor(
+            seconds / 3600
+        );
+
+    seconds %= 3600;
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+    seconds %= 60;
+
+    if (days > 0) {
+        return (
+            days +
+            "d " +
+            hours +
+            "h " +
+            minutes +
+            "m"
+        );
+    }
+
+    if (hours > 0) {
+        return (
+            hours +
+            "h " +
+            minutes +
+            "m"
+        );
+    }
+
+    if (minutes > 0) {
+        return (
+            minutes +
+            "m " +
+            seconds +
+            "s"
+        );
+    }
+
+    return seconds + "s";
+}
+
+
+/* ============================================================
+   NEIGHBORS
+   ============================================================ */
+
+function renderNeighbors() {
+
+    const container =
+        $("neighborsTable");
+
+    if (!state.neighbors.length) {
+
+        container.innerHTML =
+            '<div class="empty">' +
+            (
+                state.online
+                    ? "No neighboring MeshBridge nodes discovered yet."
+                    : "Engine offline."
+            ) +
+            "</div>";
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Node</th>
+                    <th>State</th>
+                    <th>Transport</th>
+                    <th>Address</th>
+                    <th>Latency</th>
+                    <th>RSSI</th>
+                    <th>SNR</th>
+                    <th>Last Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of state.neighbors) {
+
+        const id =
+            first(
+                item,
+                ["id", "node_id", "peer_id"],
+                "—"
+            );
+
+        const online =
+            item.online !== undefined
+                ? !!item.online
+                : true;
+
+        const transport =
+            first(
+                item,
+                ["transport", "type"],
+                "—"
+            );
+
+        const address =
+            first(
+                item,
+                ["address", "addr", "endpoint"],
+                "—"
+            );
+
+        const latency =
+            first(
+                item,
+                ["rtt_ms", "latency_ms", "latency"],
+                null
+            );
+
+        const rssi =
+            first(
+                item,
+                ["rssi", "RSSI"],
+                null
+            );
+
+        const snr =
+            first(
+                item,
+                ["snr", "SNR"],
+                null
+            );
+
+        const lastSeen =
+            first(
+                item,
+                ["last_seen", "lastSeen"],
+                null
+            );
+
+        html += `
+            <tr>
+                <td class="mono">
+                    ${escapeHTML(id)}
+                </td>
+
+                <td>
+                    <span class="badge ${
+                        online
+                            ? "online"
+                            : "offline"
+                    }">
+                        ${online ? "ONLINE" : "OFFLINE"}
+                    </span>
+                </td>
+
+                <td>
+                    ${escapeHTML(transport)}
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(address)}
+                </td>
+
+                <td>
+                    ${number(latency, " ms")}
+                </td>
+
+                <td>
+                    ${number(rssi, " dBm")}
+                </td>
+
+                <td>
+                    ${number(snr, " dB")}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        formatTimeValue(lastSeen)
+                    )}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   ROUTES
+   ============================================================ */
+
+function renderRoutes() {
+
+    const container =
+        $("routesTable");
+
+    if (!state.routes.length) {
+
+        container.innerHTML =
+            '<div class="empty">' +
+            (
+                state.online
+                    ? "No mesh routes currently advertised."
+                    : "Engine offline."
+            ) +
+            "</div>";
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Destination</th>
+                    <th>Next Hop</th>
+                    <th>Hops</th>
+                    <th>Transport</th>
+                    <th>Latency</th>
+                    <th>Metric</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of state.routes) {
+
+        const destination =
+            first(
+                item,
+                ["destination", "destination_id", "target", "node_id"],
+                "—"
+            );
+
+        const nextHop =
+            first(
+                item,
+                ["next_hop", "nextHop", "via", "gateway"],
+                "—"
+            );
+
+        const hops =
+            first(
+                item,
+                ["hop_count", "hops", "distance"],
+                null
+            );
+
+        const transport =
+            first(
+                item,
+                ["transport", "type"],
+                "—"
+            );
+
+        const latency =
+            first(
+                item,
+                ["rtt_ms", "latency_ms", "latency"],
+                null
+            );
+
+        const metric =
+            first(
+                item,
+                ["metric", "cost", "score"],
+                null
+            );
+
+        html += `
+            <tr>
+                <td class="mono">
+                    ${escapeHTML(destination)}
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(nextHop)}
+                </td>
+
+                <td>
+                    ${text(hops)}
+                </td>
+
+                <td>
+                    ${escapeHTML(transport)}
+                </td>
+
+                <td>
+                    ${number(latency, " ms")}
+                </td>
+
+                <td>
+                    ${number(metric)}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   SESSIONS
+   ============================================================ */
+
+function renderSessions() {
+
+    const container =
+        $("sessionsTable");
+
+    if (!state.sessions.length) {
+
+        container.innerHTML =
+            '<div class="empty">' +
+            (
+                state.online
+                    ? "No active peer sessions."
+                    : "Engine offline."
+            ) +
+            "</div>";
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Peer</th>
+                    <th>State</th>
+                    <th>Transport</th>
+                    <th>Latency</th>
+                    <th>Since</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of state.sessions) {
+
+        const peer =
+            typeof item === "string"
+                ? item
+                : first(
+                    item,
+                    ["peer_id", "node_id", "id", "peer"],
+                    "—"
+                );
+
+        const sessionState =
+            typeof item === "string"
+                ? "active"
+                : first(
+                    item,
+                    ["state", "status"],
+                    "active"
+                );
+
+        const transport =
+            typeof item === "string"
+                ? "—"
+                : first(
+                    item,
+                    ["transport", "type"],
+                    "—"
+                );
+
+        const latency =
+            typeof item === "string"
+                ? null
+                : first(
+                    item,
+                    ["rtt_ms", "latency_ms", "latency"],
+                    null
+                );
+
+        const since =
+            typeof item === "string"
+                ? null
+                : first(
+                    item,
+                    ["created_at", "started_at", "since"],
+                    null
+                );
+
+        html += `
+            <tr>
+                <td class="mono">
+                    ${escapeHTML(peer)}
+                </td>
+
+                <td>
+                    <span class="badge online">
+                        ${escapeHTML(sessionState)}
+                    </span>
+                </td>
+
+                <td>
+                    ${escapeHTML(transport)}
+                </td>
+
+                <td>
+                    ${number(latency, " ms")}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        formatTimeValue(since)
+                    )}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   DISCOVERY
+   ============================================================ */
+
+function renderDiscovery() {
+
+    const container =
+        $("discoveryTable");
+
+    const known =
+        arrayFrom(
+            state.discovery,
+            ["known_nodes", "nodes"]
+        );
+
+    const enabled =
+        state.discovery &&
+        state.discovery.enabled !== undefined
+            ? state.discovery.enabled
+            : null;
+
+    const port =
+        state.discovery &&
+        state.discovery.port !== undefined
+            ? state.discovery.port
+            : null;
+
+    if (!known.length) {
+
+        container.innerHTML = `
+            <div class="detailGrid">
+
+                <div class="detail">
+                    <div class="detailLabel">
+                        Discovery
+                    </div>
+
+                    <div class="detailValue">
+                        ${
+                            enabled === null
+                                ? "—"
+                                : enabled
+                                    ? "Enabled"
+                                    : "Disabled"
+                        }
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <div class="detailLabel">
+                        UDP Port
+                    </div>
+
+                    <div class="detailValue">
+                        ${text(port)}
+                    </div>
+                </div>
+
+                <div class="detail">
+                    <div class="detailLabel">
+                        Known Nodes
+                    </div>
+
+                    <div class="detailValue">
+                        0
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="empty">
+                No discovered peer nodes yet.
+            </div>
+        `;
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Node</th>
+                    <th>State</th>
+                    <th>Address</th>
+                    <th>Transport</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of known) {
+
+        const id =
+            typeof item === "string"
+                ? item
+                : first(
+                    item,
+                    ["id", "node_id"],
+                    "—"
+                );
+
+        const online =
+            typeof item === "object" &&
+            item.online !== undefined
+                ? !!item.online
+                : true;
+
+        const address =
+            typeof item === "object"
+                ? first(
+                    item,
+                    ["address", "addr", "endpoint"],
+                    "—"
+                )
+                : "—";
+
+        const transport =
+            typeof item === "object"
+                ? first(
+                    item,
+                    ["transport", "type"],
+                    "—"
+                )
+                : "—";
+
+        html += `
+            <tr>
+                <td class="mono">
+                    ${escapeHTML(id)}
+                </td>
+
+                <td>
+                    <span class="badge ${
+                        online
+                            ? "online"
+                            : "offline"
+                    }">
+                        ${online ? "ONLINE" : "OFFLINE"}
+                    </span>
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(address)}
+                </td>
+
+                <td>
+                    ${escapeHTML(transport)}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   PACKETS
+   ============================================================ */
+
+function renderPackets() {
+
+    const container =
+        $("packetsTable");
+
+    if (!state.packets.length) {
+
+        container.innerHTML =
+            '<div class="empty">' +
+            (
+                state.online
+                    ? "No packet records currently available."
+                    : "Engine offline."
+            ) +
+            "</div>";
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Direction</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Transport</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of state.packets) {
+
+        const time =
+            first(
+                item,
+                ["time", "timestamp", "created_at"],
+                null
+            );
+
+        const direction =
+            first(
+                item,
+                ["direction", "dir"],
+                "—"
+            );
+
+        const source =
+            first(
+                item,
+                ["source", "source_id", "src"],
+                "—"
+            );
+
+        const destination =
+            first(
+                item,
+                ["destination", "destination_id", "dst", "target"],
+                "—"
+            );
+
+        const transport =
+            first(
+                item,
+                ["transport", "type"],
+                "—"
+            );
+
+        const type =
+            first(
+                item,
+                ["packet_type", "kind", "message_type", "type"],
+                "—"
+            );
+
+        html += `
+            <tr>
+                <td>
+                    ${escapeHTML(
+                        formatTimeValue(time)
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(direction)}
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(source)}
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(destination)}
+                </td>
+
+                <td>
+                    ${escapeHTML(transport)}
+                </td>
+
+                <td>
+                    ${escapeHTML(type)}
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   MESSAGES
+   ============================================================ */
+
+function renderMessages() {
+
+    const container =
+        $("messagesTable");
+
+    if (!state.messages.length) {
+
+        container.innerHTML =
+            '<div class="empty">' +
+            (
+                state.online
+                    ? "No mesh messages stored yet."
+                    : "Engine offline."
+            ) +
+            "</div>";
+
+        return;
+    }
+
+    let html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Direction</th>
+                    <th>Peer</th>
+                    <th>Message</th>
+                    <th>Encrypted</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const item of state.messages) {
+
+        const time =
+            first(
+                item,
+                ["time", "timestamp", "created_at"],
+                null
+            );
+
+        const direction =
+            first(
+                item,
+                ["direction", "dir"],
+                "—"
+            );
+
+        const peer =
+            first(
+                item,
+                ["peer_id", "node_id", "source", "destination", "target"],
+                "—"
+            );
+
+        const message =
+            first(
+                item,
+                ["message", "text", "body", "content"],
+                "—"
+            );
+
+        const encrypted =
+            first(
+                item,
+                ["encrypted", "is_encrypted", "secure"],
+                null
+            );
+
+        html += `
+            <tr>
+                <td>
+                    ${escapeHTML(
+                        formatTimeValue(time)
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(direction)}
+                </td>
+
+                <td class="mono">
+                    ${escapeHTML(peer)}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        String(message).slice(0, 300)
+                    )}
+                </td>
+
+                <td>
+                    ${
+                        encrypted === null
+                            ? "—"
+                            : encrypted
+                                ? '<span class="badge online">YES</span>'
+                                : '<span class="badge">NO</span>'
+                    }
+                </td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    container.innerHTML =
+        html;
+}
+
+
+/* ============================================================
+   TIME
+   ============================================================ */
+
+function formatTimeValue(value) {
+
+    if (value === null ||
+        value === undefined ||
+        value === "") {
+
+        return "—";
+    }
+
+    /*
+     * Date strings.
+     */
+
+    if (typeof value === "string") {
+
+        const parsed =
+            Date.parse(value);
+
+        if (!Number.isNaN(parsed)) {
+
+            return new Date(parsed)
+                .toLocaleTimeString();
+        }
+
+        return value;
+    }
+
+    const n =
+        Number(value);
+
+    if (!Number.isFinite(n)) {
+        return String(value);
+    }
+
+    /*
+     * Seconds since epoch.
+     */
+
+    if (n > 1000000000) {
+
+        return new Date(
+            n * 1000
+        ).toLocaleTimeString();
+    }
+
+    /*
+     * Milliseconds since epoch.
+     */
+
+    if (n > 1000000000000) {
+
+        return new Date(
+            n
+        ).toLocaleTimeString();
+    }
+
+    return String(value);
+}
+
+
+/* ============================================================
+   TOPOLOGY
+   ============================================================ */
+
+function normalizeTopology() {
+
+    const data =
+        state.topology || {};
+
+    const nodes =
+        arrayFrom(
+            data,
+            ["nodes"]
+        );
+
+    const edges =
+        arrayFrom(
+            data,
+            ["edges", "links"]
+        );
+
+    const normalizedNodes =
+        nodes.map(
+            item => {
+
+                if (typeof item === "string") {
+
+                    return {
+                        id: item,
+                        online: true
+                    };
+                }
+
+                return {
+                    id: first(
+                        item,
+                        ["id", "node_id"],
+                        "unknown"
+                    ),
+
+                    online:
+                        item.online !== undefined
+                            ? !!item.online
+                            : true,
+
+                    type:
+                        first(
+                            item,
+                            ["type", "role"],
+                            ""
+                        )
+                };
             }
+        );
 
-            return;
+    const normalizedEdges =
+        edges.map(
+            item => {
 
-        }
+                return {
+                    source: first(
+                        item,
+                        ["source", "src", "from"],
+                        null
+                    ),
 
+                    target: first(
+                        item,
+                        ["target", "dst", "to"],
+                        null
+                    ),
 
-        if (!message.trim()) {
-
-            if (status) {
-                status.textContent =
-                    "Enter a message.";
+                    transport:
+                        first(
+                            item,
+                            ["transport", "type"],
+                            ""
+                        )
+                };
             }
+        ).filter(
+            edge =>
+                edge.source &&
+                edge.target
+        );
 
-            return;
-
-        }
-
-
-        if (status) {
-            status.textContent =
-                "Sending…";
-        }
+    return {
+        nodes: normalizedNodes,
+        edges: normalizedEdges
+    };
+}
 
 
-        try {
+function renderTopology() {
 
-            const response =
-                await fetch(
-                    CONFIG.base +
-                    "/api/v1/send",
+    const container =
+        $("topology");
+
+    const graph =
+        normalizeTopology();
+
+    let nodes =
+        graph.nodes.slice();
+
+    const selfId =
+        first(
+            state.topology,
+            ["self"],
+            normalizedNode().id
+        );
+
+    /*
+     * Ensure the local node appears even if the topology
+     * endpoint only returns edges.
+     */
+
+    if (selfId &&
+        !nodes.some(
+            n => n.id === selfId
+        )) {
+
+        nodes.unshift({
+            id: selfId,
+            online: state.online,
+            type: "self"
+        });
+    }
+
+    $("topologySummary").textContent =
+        nodes.length +
+        " node" +
+        (nodes.length === 1 ? "" : "s") +
+        " · " +
+        graph.edges.length +
+        " link" +
+        (graph.edges.length === 1 ? "" : "s");
+
+    if (!nodes.length) {
+
+        container.innerHTML =
+            '<div class="empty" style="padding-top:140px">' +
+            "No topology data available." +
+            "</div>";
+
+        return;
+    }
+
+    const width =
+        900;
+
+    const height =
+        310;
+
+    const cx =
+        width / 2;
+
+    const cy =
+        height / 2;
+
+    const radius =
+        Math.min(
+            105,
+            45 +
+            nodes.length * 13
+        );
+
+    const positions =
+        new Map();
+
+    nodes.forEach(
+        (node, index) => {
+
+            if (nodes.length === 1) {
+
+                positions.set(
+                    node.id,
                     {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-                                target:
-                                    target,
-
-                                destination:
-                                    target,
-
-                                message:
-                                    message,
-
-                                text:
-                                    message,
-
-                                priority:
-                                    1
-                            })
+                        x: cx,
+                        y: cy
                     }
                 );
 
+                return;
+            }
 
-            if (!response.ok) {
+            const angle =
+                (
+                    index /
+                    nodes.length
+                ) *
+                Math.PI *
+                2 -
+                Math.PI / 2;
 
-                throw new Error(
-                    "HTTP " +
-                    response.status
+            positions.set(
+                node.id,
+                {
+                    x:
+                        cx +
+                        Math.cos(angle) *
+                        radius,
+
+                    y:
+                        cy +
+                        Math.sin(angle) *
+                        radius
+                }
+            );
+        }
+    );
+
+    let svg = `
+        <svg
+            viewBox="0 0 ${width} ${height}"
+            role="img"
+            aria-label="Mesh topology">
+    `;
+
+    /*
+     * Edges first.
+     */
+
+    for (const edge of graph.edges) {
+
+        const a =
+            positions.get(
+                String(edge.source)
+            );
+
+        const b =
+            positions.get(
+                String(edge.target)
+            );
+
+        if (!a || !b) {
+            continue;
+        }
+
+        svg += `
+            <line
+                x1="${a.x}"
+                y1="${a.y}"
+                x2="${b.x}"
+                y2="${b.y}"
+                stroke="rgba(100,216,255,.35)"
+                stroke-width="2">
+            </line>
+        `;
+
+        const mx =
+            (a.x + b.x) / 2;
+
+        const my =
+            (a.y + b.y) / 2;
+
+        if (edge.transport) {
+
+            svg += `
+                <text
+                    x="${mx}"
+                    y="${my - 5}"
+                    text-anchor="middle"
+                    class="topologySub">
+                    ${escapeHTML(edge.transport)}
+                </text>
+            `;
+        }
+    }
+
+    /*
+     * Nodes.
+     */
+
+    for (const node of nodes) {
+
+        const p =
+            positions.get(
+                node.id
+            );
+
+        if (!p) {
+            continue;
+        }
+
+        const isSelf =
+            node.id === selfId;
+
+        svg += `
+            <circle
+                cx="${p.x}"
+                cy="${p.y}"
+                r="${isSelf ? 28 : 23}"
+                fill="${
+                    isSelf
+                        ? "rgba(100,216,255,.16)"
+                        : "rgba(124,255,178,.10)"
+                }"
+                stroke="${
+                    isSelf
+                        ? "rgba(100,216,255,.85)"
+                        : "rgba(124,255,178,.65)"
+                }"
+                stroke-width="2">
+            </circle>
+
+            <circle
+                cx="${p.x}"
+                cy="${p.y}"
+                r="6"
+                fill="${
+                    node.online
+                        ? "#7cffb2"
+                        : "#ff6b7a"
+                }">
+            </circle>
+
+            <text
+                x="${p.x}"
+                y="${p.y + 43}"
+                text-anchor="middle"
+                class="topologyText">
+                ${escapeHTML(shortId(node.id))}
+            </text>
+
+            <text
+                x="${p.x}"
+                y="${p.y + 57}"
+                text-anchor="middle"
+                class="topologySub">
+                ${
+                    isSelf
+                        ? "THIS NODE"
+                        : node.online
+                            ? "ONLINE"
+                            : "OFFLINE"
+                }
+            </text>
+        `;
+    }
+
+    svg += `
+        </svg>
+    `;
+
+    container.innerHTML =
+        svg;
+}
+
+
+function shortId(id) {
+
+    const value =
+        String(id || "");
+
+    if (value.length <= 18) {
+        return value;
+    }
+
+    return (
+        value.slice(0, 8) +
+        "…" +
+        value.slice(-8)
+    );
+}
+
+
+/* ============================================================
+   SEND MESSAGE
+   ============================================================ */
+
+async function sendMessage(event) {
+
+    event.preventDefault();
+
+    if (!state.online) {
+
+        $("sendStatus").textContent =
+            "MeshBridge engine is offline.";
+
+        return;
+    }
+
+    const destination =
+        $("destination").value.trim();
+
+    const message =
+        $("message").value;
+
+    const priority =
+        Number(
+            $("priority").value
+        );
+
+    if (!destination) {
+
+        $("sendStatus").textContent =
+            "Enter a destination node ID.";
+
+        return;
+    }
+
+    if (!message.trim()) {
+
+        $("sendStatus").textContent =
+            "Enter a message.";
+
+        return;
+    }
+
+    const button =
+        $("sendButton");
+
+    button.disabled =
+        true;
+
+    $("sendStatus").textContent =
+        "Sending…";
+
+    /*
+     * Send a compatibility payload containing both common
+     * field names. The server can consume the fields it knows.
+     */
+
+    const payload = {
+
+        destination:
+            destination,
+
+        target:
+            destination,
+
+        message:
+            message,
+
+        text:
+            message,
+
+        priority:
+            priority
+
+    };
+
+    try {
+
+        const result =
+            await postJSON(
+                "/api/v1/send",
+                payload
+            );
+
+        $("sendStatus").textContent =
+            "Message submitted.";
+
+        $("message").value =
+            "";
+
+        /*
+         * Refresh quickly so the message appears in history
+         * if the engine persists it.
+         */
+
+        setTimeout(
+            () => loadDashboard(),
+            250
+        );
+
+        console.debug(
+            "MeshBridge send result:",
+            result
+        );
+
+    } catch (error) {
+
+        $("sendStatus").textContent =
+            "Send failed: " +
+            (
+                error &&
+                error.message
+                    ? error.message
+                    : String(error)
+            );
+
+    } finally {
+
+        button.disabled =
+            !state.online;
+    }
+}
+
+
+/* ============================================================
+   AUTO REFRESH
+   ============================================================ */
+
+function startPolling() {
+
+    stopPolling();
+
+    if (!state.autoRefresh) {
+        return;
+    }
+
+    state.timer =
+        setInterval(
+            () => loadDashboard(),
+            POLL_INTERVAL
+        );
+}
+
+
+function stopPolling() {
+
+    if (state.timer) {
+
+        clearInterval(
+            state.timer
+        );
+
+        state.timer =
+            null;
+    }
+}
+
+
+/* ============================================================
+   UI EVENTS
+   ============================================================ */
+
+$("connectButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+            state.base =
+                cleanBase(
+                    $("engineInput").value
                 );
 
-            }
+            $("engineInput").value =
+                state.base;
 
+            $("engineEndpoint").textContent =
+                state.base;
 
-            if (status) {
-                status.textContent =
-                    "Message accepted by MeshBridge.";
-            }
+            saveEngine();
 
-
-            const textarea =
-                $("mvx-message");
-
-            if (textarea) {
-                textarea.value =
-                    "";
-            }
-
-
-            await refresh();
-
-
-        } catch (error) {
-
-            if (status) {
-
-                status.textContent =
-                    "Send failed: " +
-                    (
-                        error.message ||
-                        error
-                    );
-
-            }
-
-        }
-
-    }
-
-
-    /* --------------------------------------------------------
-       RECONNECT BUTTON
-    -------------------------------------------------------- */
-
-    const reconnect =
-        $("mvx-reconnect");
-
-    if (reconnect) {
-
-        reconnect.addEventListener(
-            "click",
-            function () {
-
-                refresh();
-
-            }
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       SEND BUTTON
-    -------------------------------------------------------- */
-
-    const send =
-        $("mvx-send");
-
-    if (send) {
-
-        send.addEventListener(
-            "click",
-            sendMessage
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       ENTER KEY
-    -------------------------------------------------------- */
-
-    const messageBox =
-        $("mvx-message");
-
-    if (messageBox) {
-
-        messageBox.addEventListener(
-            "keydown",
-            function (event) {
-
-                if (
-                    event.key === "Enter" &&
-                    (
-                        event.metaKey ||
-                        event.ctrlKey
-                    )
-                ) {
-
-                    event.preventDefault();
-
-                    sendMessage();
-
-                }
-
-            }
-        );
-
-    }
-
-
-    /* --------------------------------------------------------
-       PUBLIC API
-    -------------------------------------------------------- */
-
-    window.MVXMeshBridge =
-        window.MVXMeshBridge ||
-        {};
-
-
-    Object.assign(
-        window.MVXMeshBridge,
-        {
-
-            config:
-                CONFIG,
-
-            state:
-                state,
-
-            refresh:
-                refresh,
-
-            send:
-                sendMessage
-
+            await loadDashboard();
         }
     );
 
 
-    /* --------------------------------------------------------
-       INITIALIZATION
+$("engineInput")
+    .addEventListener(
+        "keydown",
+        event => {
 
-       The landing page has already rendered before this
-       script executes, so a networking failure cannot make
-       the entire page disappear.
-    -------------------------------------------------------- */
+            if (event.key === "Enter") {
 
-    renderConnection(
-        false,
-        ""
+                event.preventDefault();
+
+                $("connectButton")
+                    .click();
+            }
+        }
     );
 
 
-    refresh();
-
-
-    setInterval(
-        refresh,
-        CONFIG.pollMs
+$("refreshButton")
+    .addEventListener(
+        "click",
+        () => loadDashboard()
     );
 
 
-})();
+$("autoButton")
+    .addEventListener(
+        "click",
+        () => {
+
+            state.autoRefresh =
+                !state.autoRefresh;
+
+            $("autoButton").textContent =
+                state.autoRefresh
+                    ? "Auto Refresh: ON"
+                    : "Auto Refresh: OFF";
+
+            $("pollState").textContent =
+                state.autoRefresh
+                    ? "Polling every " +
+                      (POLL_INTERVAL / 1000) +
+                      " seconds"
+                    : "Manual refresh";
+
+            if (state.autoRefresh) {
+
+                startPolling();
+
+            } else {
+
+                stopPolling();
+            }
+        }
+    );
+
+
+$("jumpDashboard")
+    .addEventListener(
+        "click",
+        () => {
+
+            $("dashboard")
+                .scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+        }
+    );
+
+
+$("sendForm")
+    .addEventListener(
+        "submit",
+        sendMessage
+    );
+
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+
+function init() {
+
+    loadSavedEngine();
+
+    $("connectionEndpoint").textContent =
+        state.base;
+
+    $("httpState").textContent =
+        "Not tested";
+
+    $("pollState").textContent =
+        "Starting…";
+
+    /*
+     * Render an empty but functional UI immediately.
+     * This guarantees the page itself never disappears just
+     * because the local engine is unavailable.
+     */
+
+    renderAll();
+
+    /*
+     * Connect immediately.
+     */
+
+    loadDashboard();
+
+    /*
+     * Then keep checking.
+     */
+
+    startPolling();
+}
+
+
+init();
+
 </script>
 
 </body>
