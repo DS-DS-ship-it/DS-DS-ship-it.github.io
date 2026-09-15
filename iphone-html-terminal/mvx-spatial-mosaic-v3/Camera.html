@@ -1,0 +1,3458 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>ApertureX Computational Camera X</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root {
+    --cyan: #00f2fe;
+    --cyan2: #38bdf8;
+    --bg: #030712;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: white;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+button,
+select,
+input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 58px;
+    flex-shrink: 0;
+    background: rgba(10,15,25,.94);
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    z-index: 20;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brandIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: #001015;
+    font-weight: 900;
+    background: linear-gradient(135deg,var(--cyan),#0284c7);
+    box-shadow: 0 0 25px rgba(0,242,254,.18);
+}
+
+.brandTitle {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+
+.brandSub {
+    font-size: 9px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.telemetry {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    font-family: ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size: 10px;
+}
+
+.telemetry span {
+    white-space: nowrap;
+}
+
+.good {
+    color: #34d399;
+}
+
+.cyan {
+    color: var(--cyan);
+}
+
+.warn {
+    color: #fbbf24;
+}
+
+.main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.sidebar {
+    width: 310px;
+    flex-shrink: 0;
+    background: rgba(15,23,42,.72);
+    border-right: 1px solid #1e293b;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.sidebar.right {
+    border-left: 1px solid #1e293b;
+    border-right: 0;
+}
+
+.section {
+    padding: 13px;
+    border-bottom: 1px solid #1e293b;
+}
+
+.sectionTitle {
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.card {
+    background: rgba(2,6,23,.75);
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 11px;
+    margin-bottom: 10px;
+}
+
+.card.accent {
+    border-color: rgba(0,242,254,.25);
+}
+
+label {
+    display: block;
+    color: #94a3b8;
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: .08em;
+    margin-bottom: 5px;
+}
+
+select,
+input[type="text"] {
+    width: 100%;
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 7px;
+    padding: 7px 8px;
+    outline: none;
+}
+
+select:focus,
+input[type="text"]:focus {
+    border-color: var(--cyan);
+}
+
+.controlRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.small {
+    font-size: 10px;
+    color: #94a3b8;
+}
+
+.value {
+    font-family: ui-monospace,SFMono-Regular,Menlo,monospace;
+    color: white;
+}
+
+.btnGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.btn {
+    border: 1px solid #334155;
+    background: #111827;
+    color: #cbd5e1;
+    border-radius: 7px;
+    padding: 8px;
+    font-size: 10px;
+    transition: .15s;
+}
+
+.btn:hover {
+    border-color: #64748b;
+    background: #1e293b;
+}
+
+.btn.active {
+    border-color: rgba(0,242,254,.55);
+    background: rgba(0,242,254,.10);
+    color: var(--cyan);
+}
+
+.btn.primary {
+    background: linear-gradient(135deg,#00f2fe,#0284c7);
+    color: #001015;
+    border: 0;
+    font-weight: 900;
+}
+
+.range {
+    width: 100%;
+}
+
+.camera {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    background: black;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+}
+
+#cameraVideo {
+    display: none;
+}
+
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    background: #000;
+}
+
+#analysisCanvas,
+#captureCanvas {
+    display: none;
+}
+
+.gridOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(0,242,254,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,242,254,.035) 1px,transparent 1px);
+    background-size: 10% 10%;
+    z-index: 3;
+}
+
+.hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hudTop,
+.hudBottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.hudBottom {
+    align-items: flex-end;
+}
+
+.hudBox {
+    background: rgba(0,0,0,.68);
+    border: 1px solid rgba(0,242,254,.22);
+    backdrop-filter: blur(8px);
+    border-radius: 7px;
+    padding: 6px 8px;
+    font-family: ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size: 9px;
+    color: var(--cyan);
+}
+
+#focusBox {
+    position: absolute;
+    width: 120px;
+    height: 90px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+    border: 1px solid rgba(0,242,254,.85);
+    box-shadow:
+        0 0 0 1px rgba(0,242,254,.12),
+        0 0 25px rgba(0,242,254,.14);
+    z-index: 6;
+    pointer-events: none;
+}
+
+#focusBox.locked {
+    border-color: #34d399;
+    box-shadow: 0 0 30px rgba(52,211,153,.2);
+}
+
+#focusBox.searching {
+    border-color: #fbbf24;
+    animation: focusPulse .6s infinite alternate;
+}
+
+@keyframes focusPulse {
+    from { opacity: .35; transform: translate(-50%,-50%) scale(.94); }
+    to   { opacity: 1; transform: translate(-50%,-50%) scale(1.02); }
+}
+
+#peakingCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 4;
+    opacity: .9;
+}
+
+.bottomControls {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    background: rgba(15,23,42,.92);
+    border: 1px solid #334155;
+    backdrop-filter: blur(15px);
+    border-radius: 16px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zoomValue {
+    min-width: 52px;
+    text-align: center;
+    font-family: ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size: 11px;
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    background: #ef4444;
+}
+
+.statusDot.live {
+    background: #34d399;
+    box-shadow: 0 0 10px #34d399;
+}
+
+.metric {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(51,65,85,.4);
+}
+
+.metric:last-child {
+    border-bottom: 0;
+}
+
+.metricName {
+    color: #94a3b8;
+    font-size: 9px;
+}
+
+.metricValue {
+    color: white;
+    font-size: 9px;
+    font-family: ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 5px;
+}
+
+.thumb {
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: #111827;
+    position: relative;
+}
+
+.thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumb span {
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    font-size: 7px;
+    padding: 2px 4px;
+    background: rgba(0,0,0,.75);
+    color: #34d399;
+    border-radius: 3px;
+}
+
+.alert {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 30;
+    background: rgba(15,23,42,.96);
+    border: 1px solid rgba(0,242,254,.35);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 10px;
+    transition: .25s;
+}
+
+.alert.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.warning {
+    color: #fbbf24;
+}
+
+.progress {
+    height: 4px;
+    background: #1e293b;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress > div {
+    height: 100%;
+    width: 0%;
+    background: var(--cyan);
+    transition: width .2s;
+}
+
+@media(max-width:1100px) {
+    .sidebar {
+        width: 250px;
+    }
+
+    .telemetry {
+        display: none;
+    }
+}
+
+@media(max-width:800px) {
+    .sidebar {
+        display: none;
+    }
+
+    .topbar {
+        height: 50px;
+    }
+
+    .bottomControls {
+        bottom: 8px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header class="topbar">
+
+    <div class="brand">
+        <div class="brandIcon">◉</div>
+
+        <div>
+            <div class="brandTitle">
+                APERTURE<span class="cyan">X</span>
+                <span style="font-size:8px;color:#64748b">
+                    COMPUTATIONAL CAMERA
+                </span>
+            </div>
+
+            <div class="brandSub">
+                GPU IMAGE PIPELINE • ML ASSIST • HIGH RESOLUTION CAPTURE
+            </div>
+        </div>
+    </div>
+
+    <div class="telemetry">
+
+        <span>
+            SOURCE:
+            <strong id="sourceResolution">—</strong>
+        </span>
+
+        <span>
+            OUTPUT:
+            <strong id="outputResolution">—</strong>
+        </span>
+
+        <span>
+            FPS:
+            <strong id="fpsValue">0</strong>
+        </span>
+
+        <span>
+            FOCUS:
+            <strong id="focusTop" class="good">—</strong>
+        </span>
+
+        <span>
+            <i class="statusDot" id="liveDot"></i>
+            <span id="cameraState">OFFLINE</span>
+        </span>
+
+    </div>
+
+    <div style="display:flex;gap:6px">
+
+        <button class="btn" onclick="requestMaximumCamera()">
+            MAX SENSOR
+        </button>
+
+        <button class="btn primary" onclick="captureHighResolution()">
+            CAPTURE
+        </button>
+
+    </div>
+
+</header>
+
+
+<div class="main">
+
+<!-- LEFT -->
+
+<aside class="sidebar">
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Camera / Sensor
+        </div>
+
+        <div class="card accent">
+
+            <label>Camera</label>
+
+            <select id="cameraSelect"
+                    onchange="switchCamera(this.value)">
+            </select>
+
+            <div class="controlRow">
+                <span class="small">Native autofocus</span>
+                <span id="afState" class="value">AUTO</span>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Sensor</span>
+                <span id="sensorState" class="value">—</span>
+            </div>
+
+            <button class="btn primary"
+                    style="width:100%;margin-top:6px"
+                    onclick="requestMaximumCamera()">
+                NEGOTIATE MAX RESOLUTION
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Computer Enhanced Focus
+        </div>
+
+        <div class="card">
+
+            <div class="controlRow">
+                <span class="small">Continuous AF</span>
+                <input id="continuousAF"
+                       type="checkbox"
+                       checked
+                       onchange="setAutofocusMode()">
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Subject tracking</span>
+                <input id="subjectTracking"
+                       type="checkbox"
+                       checked>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Focus peaking</span>
+                <input id="focusPeaking"
+                       type="checkbox"
+                       checked
+                       onchange="togglePeaking()">
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Motion compensation</span>
+                <input id="motionComp"
+                       type="checkbox"
+                       checked>
+            </div>
+
+            <label style="margin-top:12px">
+                Focus sensitivity
+            </label>
+
+            <input id="focusSensitivity"
+                   class="range"
+                   type="range"
+                   min="0"
+                   max="100"
+                   value="65">
+
+            <div class="progress" style="margin-top:10px">
+                <div id="focusProgress"></div>
+            </div>
+
+            <div style="margin-top:8px"
+                 class="small">
+
+                Focus confidence:
+                <strong id="focusConfidence"
+                        class="value">—</strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Computational Enhancement
+        </div>
+
+        <div class="card">
+
+            <div class="controlRow">
+                <span class="small">Smart clarity</span>
+                <input id="clarityEnabled"
+                       type="checkbox"
+                       checked>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Detail recovery</span>
+                <input id="detailRecovery"
+                       type="checkbox"
+                       checked>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Noise reduction</span>
+                <input id="noiseReduction"
+                       type="checkbox"
+                       checked>
+            </div>
+
+            <label>Clarity strength</label>
+
+            <input id="clarityStrength"
+                   class="range"
+                   type="range"
+                   min="0"
+                   max="100"
+                   value="38">
+
+            <label style="margin-top:9px">
+                Detail recovery
+            </label>
+
+            <input id="detailStrength"
+                   class="range"
+                   type="range"
+                   min="0"
+                   max="100"
+                   value="30">
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Machine Learning
+        </div>
+
+        <div class="card accent">
+
+            <div class="controlRow">
+                <span class="small">ML subject analysis</span>
+                <span id="mlState"
+                      class="value">READY</span>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">WebGPU</span>
+                <span id="gpuState"
+                      class="value">CHECKING</span>
+            </div>
+
+            <div class="controlRow">
+                <span class="small">Super-resolution</span>
+                <span id="srState"
+                      class="value">OPTIONAL</span>
+            </div>
+
+            <button class="btn"
+                    style="width:100%;margin-top:7px"
+                    onclick="loadSRModel()">
+                LOAD LOCAL ML SR MODEL
+            </button>
+
+            <input id="srModelInput"
+                   type="file"
+                   accept=".onnx,.json,.bin"
+                   multiple
+                   style="display:none"
+                   onchange="handleSRFiles(this.files)">
+
+            <div class="small"
+                 style="margin-top:8px;line-height:1.5">
+
+                An actual super-resolution model can reconstruct
+                additional high-frequency structure. Digital zoom
+                alone cannot create sensor detail.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Monitoring
+        </div>
+
+        <div class="btnGrid">
+
+            <button id="modeNormal"
+                    class="btn active"
+                    onclick="setMonitorMode('normal')">
+                NORMAL
+            </button>
+
+            <button id="modeFalse"
+                    class="btn"
+                    onclick="setMonitorMode('falseColor')">
+                FALSE COLOR
+            </button>
+
+            <button id="modePeaking"
+                    class="btn"
+                    onclick="setMonitorMode('peaking')">
+                FOCUS PEAK
+            </button>
+
+            <button id="modeLuma"
+                    class="btn"
+                    onclick="setMonitorMode('luma')">
+                LUMA
+            </button>
+
+            <button id="modeZebra"
+                    class="btn"
+                    onclick="setMonitorMode('zebra')">
+                ZEBRA
+            </button>
+
+            <button id="modeEdges"
+                    class="btn"
+                    onclick="setMonitorMode('edges')">
+                EDGE
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Color Processing
+        </div>
+
+        <div class="card">
+
+            <label>Display transform</label>
+
+            <select id="colorProfile">
+                <option value="srgb">sRGB</option>
+                <option value="p3">Display P3</option>
+                <option value="log">Log Preview</option>
+                <option value="flat">Flat Monitoring</option>
+            </select>
+
+            <label style="margin-top:9px">
+                Saturation
+            </label>
+
+            <input id="saturation"
+                   class="range"
+                   type="range"
+                   min="0"
+                   max="200"
+                   value="100">
+
+            <label style="margin-top:9px">
+                Contrast
+            </label>
+
+            <input id="contrast"
+                   class="range"
+                   type="range"
+                   min="50"
+                   max="160"
+                   value="100">
+
+        </div>
+
+    </div>
+
+</aside>
+
+
+<!-- CAMERA -->
+
+<main class="camera">
+
+    <video id="cameraVideo"
+           autoplay
+           playsinline
+           muted></video>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <canvas id="analysisCanvas"></canvas>
+
+    <canvas id="captureCanvas"></canvas>
+
+    <canvas id="peakingCanvas"></canvas>
+
+
+    <div class="gridOverlay"></div>
+
+    <div id="focusBox"></div>
+
+
+    <div class="alert" id="alert">
+        <span id="alertText">Ready</span>
+    </div>
+
+
+    <div class="hud">
+
+        <div class="hudTop">
+
+            <div class="hudBox">
+
+                <span class="statusDot"
+                      id="hudDot"></span>
+
+                <span id="hudCamera">
+                    CAMERA OFFLINE
+                </span>
+
+            </div>
+
+            <div class="hudBox">
+
+                FOCUS
+                <strong id="hudFocus">
+                    —
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="hudBottom">
+
+            <div class="hudBox">
+
+                SENSOR:
+                <strong id="hudSensor">
+                    —
+                </strong>
+
+            </div>
+
+            <div class="hudBox">
+
+                ZOOM:
+                <strong id="zoomText">
+                    1.0×
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="bottomControls">
+
+        <button class="btn"
+                onclick="changeZoom(-0.25)">
+            −
+        </button>
+
+        <input id="zoomSlider"
+               class="range"
+               style="width:180px"
+               type="range"
+               min="1"
+               max="10"
+               step=".05"
+               value="1"
+               oninput="setZoom(this.value)">
+
+        <span class="zoomValue"
+              id="zoomValue">
+            1.00×
+        </span>
+
+        <button class="btn"
+                onclick="changeZoom(.25)">
+            +
+        </button>
+
+        <button class="btn"
+                onclick="setZoom(1)">
+            1×
+        </button>
+
+    </div>
+
+</main>
+
+
+<!-- RIGHT -->
+
+<aside class="sidebar right">
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Live Image Intelligence
+        </div>
+
+        <div class="card">
+
+            <div class="metric">
+                <span class="metricName">
+                    Tenengrad
+                </span>
+
+                <span id="tenengrad"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Laplacian variance
+                </span>
+
+                <span id="laplacian"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Edge density
+                </span>
+
+                <span id="edgeDensity"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Motion
+                </span>
+
+                <span id="motionValue"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Exposure
+                </span>
+
+                <span id="exposureValue"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Dynamic range
+                </span>
+
+                <span id="dynamicRange"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Sensor Information
+        </div>
+
+        <div class="card">
+
+            <div class="metric">
+                <span class="metricName">
+                    Native resolution
+                </span>
+
+                <span id="nativeResolution"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Frame rate
+                </span>
+
+                <span id="nativeFPS"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Focus mode
+                </span>
+
+                <span id="nativeFocus"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Exposure
+                </span>
+
+                <span id="nativeExposure"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    White balance
+                </span>
+
+                <span id="nativeWB"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Capture Gallery
+        </div>
+
+        <div id="captureGallery"
+             class="gallery">
+        </div>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="sectionTitle">
+            Processing Pipeline
+        </div>
+
+        <div class="card">
+
+            <div class="metric">
+                <span class="metricName">
+                    Source
+                </span>
+
+                <span id="pipelineSource"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    GPU processing
+                </span>
+
+                <span id="pipelineGPU"
+                      class="metricValue">
+                    —
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    Enhancement
+                </span>
+
+                <span id="pipelineEnhance"
+                      class="metricValue">
+                    ACTIVE
+                </span>
+            </div>
+
+            <div class="metric">
+                <span class="metricName">
+                    ML
+                </span>
+
+                <span id="pipelineML"
+                      class="metricValue">
+                    READY
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+</aside>
+
+</div>
+</div>
+
+
+<script>
+"use strict";
+
+/* ============================================================
+   APERTUREX COMPUTATIONAL CAMERA X
+   ============================================================ */
+
+const video = document.getElementById("cameraVideo");
+const canvas = document.getElementById("renderCanvas");
+const ctx = canvas.getContext("2d", {
+    alpha: false,
+    desynchronized: true
+});
+
+const analysisCanvas =
+    document.getElementById("analysisCanvas");
+
+const analysisCtx =
+    analysisCanvas.getContext("2d", {
+        willReadFrequently: true
+    });
+
+const captureCanvas =
+    document.getElementById("captureCanvas");
+
+const captureCtx =
+    captureCanvas.getContext("2d", {
+        alpha: false
+    });
+
+const peakingCanvas =
+    document.getElementById("peakingCanvas");
+
+const peakCtx =
+    peakingCanvas.getContext("2d", {
+        alpha: true,
+        willReadFrequently: true
+    });
+
+let stream = null;
+let videoTrack = null;
+let imageCapture = null;
+
+let devices = [];
+
+let zoom = 1;
+let monitorMode = "normal";
+
+let rafID = null;
+
+let frameCounter = 0;
+let fpsLastTime = performance.now();
+
+let currentFPS = 0;
+
+let previousGray = null;
+
+let latestMetrics = {
+    tenengrad: 0,
+    laplacian: 0,
+    edgeDensity: 0,
+    motion: 0,
+    exposure: 0,
+    dynamicRange: 0,
+    confidence: 0
+};
+
+let gl = null;
+let glProgram = null;
+let glTexture = null;
+
+let gpuAvailable = false;
+
+let mlModelLoaded = false;
+
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+
+window.addEventListener("load", async () => {
+
+    await checkGPU();
+
+    await enumerateCameras();
+
+    await startCamera();
+
+    resizeCanvases();
+
+    window.addEventListener("resize", resizeCanvases);
+
+    startRenderLoop();
+
+    startAnalysisLoop();
+
+});
+
+
+/* ============================================================
+   GPU DETECTION
+   ============================================================ */
+
+async function checkGPU() {
+
+    gpuAvailable = false;
+
+    if ("gpu" in navigator) {
+
+        try {
+
+            const adapter =
+                await navigator.gpu.requestAdapter();
+
+            if (adapter) {
+
+                gpuAvailable = true;
+
+                document.getElementById("gpuState")
+                    .textContent = "WEBGPU";
+
+                document.getElementById("pipelineGPU")
+                    .textContent = "WEBGPU";
+
+                return;
+
+            }
+
+        } catch (err) {
+
+            console.warn("WebGPU unavailable", err);
+
+        }
+
+    }
+
+    document.getElementById("gpuState")
+        .textContent = "WEBGL";
+
+    document.getElementById("pipelineGPU")
+        .textContent = "WEBGL";
+}
+
+
+/* ============================================================
+   CAMERA ENUMERATION
+   ============================================================ */
+
+async function enumerateCameras() {
+
+    try {
+
+        const temporary =
+            await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+
+        temporary.getTracks().forEach(t => t.stop());
+
+    } catch (err) {
+
+        console.warn(
+            "Initial permission request:",
+            err
+        );
+
+    }
+
+    const all =
+        await navigator.mediaDevices.enumerateDevices();
+
+    devices =
+        all.filter(d => d.kind === "videoinput");
+
+    const select =
+        document.getElementById("cameraSelect");
+
+    select.innerHTML = "";
+
+    devices.forEach((device, index) => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = device.deviceId;
+
+        option.textContent =
+            device.label ||
+            `Camera ${index + 1}`;
+
+        select.appendChild(option);
+
+    });
+
+}
+
+
+/* ============================================================
+   MAXIMUM CAMERA REQUEST
+   ============================================================ */
+
+async function startCamera(deviceId = null) {
+
+    stopCamera();
+
+    const constraints = {
+
+        audio: false,
+
+        video: {
+
+            width: {
+                min: 1280,
+                ideal: 7680
+            },
+
+            height: {
+                min: 720,
+                ideal: 4320
+            },
+
+            frameRate: {
+                ideal: 60,
+                max: 120
+            },
+
+            facingMode: deviceId
+                ? undefined
+                : {
+                    ideal: "environment"
+                },
+
+            ...(deviceId
+                ? { deviceId: { exact: deviceId } }
+                : {}),
+
+            focusMode: "continuous",
+
+            resizeMode: "none"
+        }
+
+    };
+
+
+    try {
+
+        stream =
+            await navigator.mediaDevices
+                .getUserMedia(constraints);
+
+    } catch (err) {
+
+        console.warn(
+            "Maximum request failed:",
+            err
+        );
+
+        try {
+
+            stream =
+                await navigator.mediaDevices
+                    .getUserMedia({
+                        audio: false,
+                        video: {
+                            width: { ideal: 3840 },
+                            height: { ideal: 2160 },
+                            frameRate: { ideal: 60 }
+                        }
+                    });
+
+        } catch (fallbackErr) {
+
+            console.error(
+                "Camera unavailable:",
+                fallbackErr
+            );
+
+            showAlert(
+                "Camera access unavailable"
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    video.srcObject = stream;
+
+    videoTrack =
+        stream.getVideoTracks()[0];
+
+    imageCapture =
+        ("ImageCapture" in window)
+            ? new ImageCapture(videoTrack)
+            : null;
+
+    await video.play();
+
+    updateCameraCapabilities();
+
+    document.getElementById("cameraState")
+        .textContent = "LIVE";
+
+    document.getElementById("cameraState")
+        .className = "good";
+
+    document.getElementById("liveDot")
+        .classList.add("live");
+
+    document.getElementById("hudDot")
+        .classList.add("live");
+
+    document.getElementById("hudCamera")
+        .textContent = "CAMERA LIVE";
+
+    showAlert(
+        "High-resolution camera pipeline active"
+    );
+
+    await enumerateCameras();
+
+}
+
+
+async function requestMaximumCamera() {
+
+    if (!videoTrack) {
+
+        await startCamera();
+
+        return;
+
+    }
+
+
+    const capabilities =
+        videoTrack.getCapabilities
+            ? videoTrack.getCapabilities()
+            : {};
+
+
+    const advanced = {};
+
+
+    if (capabilities.width?.max) {
+
+        advanced.width =
+            capabilities.width.max;
+
+    }
+
+    if (capabilities.height?.max) {
+
+        advanced.height =
+            capabilities.height.max;
+
+    }
+
+    if (capabilities.frameRate?.max) {
+
+        advanced.frameRate =
+            Math.min(
+                capabilities.frameRate.max,
+                60
+            );
+
+    }
+
+
+    if (
+        capabilities.focusMode &&
+        capabilities.focusMode.includes("continuous")
+    ) {
+
+        advanced.focusMode =
+            "continuous";
+
+    }
+
+
+    try {
+
+        await videoTrack.applyConstraints({
+            advanced: [advanced]
+        });
+
+        showAlert(
+            "Camera negotiated to maximum available resolution"
+        );
+
+    } catch (err) {
+
+        console.warn(
+            "Maximum constraint failed:",
+            err
+        );
+
+        showAlert(
+            "Camera rejected maximum mode"
+        );
+
+    }
+
+    updateCameraCapabilities();
+
+}
+
+
+/* ============================================================
+   CAMERA CAPABILITIES
+   ============================================================ */
+
+function updateCameraCapabilities() {
+
+    if (!videoTrack) return;
+
+    const settings =
+        videoTrack.getSettings();
+
+    const capabilities =
+        videoTrack.getCapabilities
+            ? videoTrack.getCapabilities()
+            : {};
+
+    const width =
+        settings.width || video.videoWidth || 0;
+
+    const height =
+        settings.height || video.videoHeight || 0;
+
+    const fps =
+        settings.frameRate || 0;
+
+
+    const resolution =
+        `${width} × ${height}`;
+
+
+    document.getElementById("sourceResolution")
+        .textContent = resolution;
+
+    document.getElementById("nativeResolution")
+        .textContent = resolution;
+
+    document.getElementById("pipelineSource")
+        .textContent = resolution;
+
+    document.getElementById("hudSensor")
+        .textContent = resolution;
+
+    document.getElementById("sensorState")
+        .textContent = resolution;
+
+
+    document.getElementById("nativeFPS")
+        .textContent =
+        fps ? fps.toFixed(1) : "—";
+
+
+    document.getElementById("nativeFocus")
+        .textContent =
+        capabilities.focusMode
+            ? capabilities.focusMode.join(", ")
+            : "browser limited";
+
+
+    document.getElementById("afState")
+        .textContent =
+        capabilities.focusMode?.includes("continuous")
+            ? "CONTINUOUS"
+            : "BROWSER AUTO";
+
+
+    document.getElementById("nativeExposure")
+        .textContent =
+        capabilities.exposureMode
+            ? capabilities.exposureMode.join(", ")
+            : "—";
+
+
+    document.getElementById("nativeWB")
+        .textContent =
+        capabilities.whiteBalanceMode
+            ? capabilities.whiteBalanceMode.join(", ")
+            : "—";
+
+}
+
+
+/* ============================================================
+   AUTOFOCUS
+   ============================================================ */
+
+async function setAutofocusMode() {
+
+    if (!videoTrack) return;
+
+    const enabled =
+        document.getElementById("continuousAF").checked;
+
+    const capabilities =
+        videoTrack.getCapabilities
+            ? videoTrack.getCapabilities()
+            : {};
+
+
+    if (!capabilities.focusMode) {
+
+        showAlert(
+            "Browser does not expose hardware focus controls"
+        );
+
+        return;
+
+    }
+
+
+    let mode =
+        enabled &&
+        capabilities.focusMode.includes("continuous")
+            ? "continuous"
+            : capabilities.focusMode.includes("single-shot")
+                ? "single-shot"
+                : capabilities.focusMode[0];
+
+
+    try {
+
+        await videoTrack.applyConstraints({
+
+            advanced: [{
+                focusMode: mode
+            }]
+
+        });
+
+        document.getElementById("afState")
+            .textContent =
+            mode.toUpperCase();
+
+    } catch (err) {
+
+        console.warn(
+            "AF constraint:",
+            err
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   CAMERA SWITCH
+   ============================================================ */
+
+async function switchCamera(id) {
+
+    if (!id) return;
+
+    await startCamera(id);
+
+}
+
+
+/* ============================================================
+   CANVAS RESIZE
+   ============================================================ */
+
+function resizeCanvases() {
+
+    const w =
+        video.videoWidth ||
+        canvas.clientWidth ||
+        1280;
+
+    const h =
+        video.videoHeight ||
+        canvas.clientHeight ||
+        720;
+
+
+    const maxLivePixels =
+        3840 * 2160;
+
+    let renderW = w;
+    let renderH = h;
+
+
+    /*
+     * Prevent a 4K/8K camera from causing the browser to
+     * allocate enormous analysis buffers continuously.
+     *
+     * The native high-resolution still remains available.
+     */
+
+    if (renderW * renderH > maxLivePixels) {
+
+        const scale =
+            Math.sqrt(
+                maxLivePixels /
+                (renderW * renderH)
+            );
+
+        renderW =
+            Math.round(renderW * scale);
+
+        renderH =
+            Math.round(renderH * scale);
+
+    }
+
+
+    canvas.width = renderW;
+    canvas.height = renderH;
+
+    analysisCanvas.width = 640;
+    analysisCanvas.height = 360;
+
+    peakingCanvas.width = renderW;
+    peakingCanvas.height = renderH;
+
+}
+
+
+/* ============================================================
+   LIVE RENDER LOOP
+   ============================================================ */
+
+function startRenderLoop() {
+
+    cancelAnimationFrame(rafID);
+
+    const render =
+        () => {
+
+            if (
+                video.readyState >= 2 &&
+                video.videoWidth
+            ) {
+
+                renderFrame();
+
+            }
+
+            rafID =
+                requestAnimationFrame(render);
+
+        };
+
+
+    rafID =
+        requestAnimationFrame(render);
+
+}
+
+
+/* ============================================================
+   GPU / COMPUTATIONAL RENDER
+   ============================================================ */
+
+function renderFrame() {
+
+    if (!canvas.width || !canvas.height)
+        return;
+
+
+    ctx.save();
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    const cw = canvas.width;
+    const ch = canvas.height;
+
+
+    /*
+     * Correct zoom behavior.
+     *
+     * We crop the source rather than merely enlarging a CSS
+     * element. This keeps the processing pipeline aware of
+     * the actual field of view.
+     */
+
+    const sourceW =
+        video.videoWidth / zoom;
+
+    const sourceH =
+        video.videoHeight / zoom;
+
+
+    const sx =
+        (video.videoWidth - sourceW) / 2;
+
+    const sy =
+        (video.videoHeight - sourceH) / 2;
+
+
+    ctx.filter =
+        buildImageFilter();
+
+
+    ctx.drawImage(
+        video,
+        sx,
+        sy,
+        sourceW,
+        sourceH,
+        0,
+        0,
+        cw,
+        ch
+    );
+
+
+    ctx.filter = "none";
+
+    ctx.restore();
+
+
+    if (monitorMode === "falseColor") {
+
+        renderFalseColor();
+
+    } else if (monitorMode === "luma") {
+
+        renderLuma();
+
+    } else if (monitorMode === "zebra") {
+
+        renderZebra();
+
+    } else if (monitorMode === "edges") {
+
+        renderEdges();
+
+    }
+
+
+    if (
+        document.getElementById("focusPeaking").checked ||
+        monitorMode === "peaking"
+    ) {
+
+        renderFocusPeaking();
+
+    }
+
+}
+
+
+/* ============================================================
+   REALISTIC IMAGE ENHANCEMENT
+   ============================================================ */
+
+function buildImageFilter() {
+
+    const clarity =
+        Number(
+            document.getElementById("clarityStrength").value
+        );
+
+    const saturation =
+        Number(
+            document.getElementById("saturation").value
+        );
+
+    const contrast =
+        Number(
+            document.getElementById("contrast").value
+        );
+
+
+    let filter = "";
+
+
+    if (
+        document.getElementById("noiseReduction").checked
+    ) {
+
+        /*
+         * Tiny blur before sharpening suppresses single-pixel
+         * sensor noise without producing the "plastic" look
+         * of aggressive smoothing.
+         */
+
+        filter += "blur(0.12px) ";
+
+    }
+
+
+    if (
+        document.getElementById("clarityEnabled").checked
+    ) {
+
+        const c =
+            100 + clarity * .22;
+
+        filter +=
+            `contrast(${c}%) `;
+
+    }
+
+
+    filter +=
+        `saturate(${saturation}%) `;
+
+    filter +=
+        `brightness(100%) `;
+
+
+    if (contrast !== 100) {
+
+        filter +=
+            `contrast(${contrast}%) `;
+
+    }
+
+
+    return filter.trim();
+
+}
+
+
+/* ============================================================
+   FOCUS ANALYSIS
+   ============================================================ */
+
+function startAnalysisLoop() {
+
+    setInterval(
+        analyzeFrame,
+        120
+    );
+
+}
+
+
+function analyzeFrame() {
+
+    if (
+        !video.videoWidth ||
+        video.readyState < 2
+    ) return;
+
+
+    const w = 640;
+    const h = 360;
+
+
+    analysisCtx.drawImage(
+        video,
+        0,
+        0,
+        w,
+        h
+    );
+
+
+    const image =
+        analysisCtx.getImageData(
+            0,
+            0,
+            w,
+            h
+        );
+
+
+    const data =
+        image.data;
+
+
+    const gray =
+        new Float32Array(w * h);
+
+
+    let mean = 0;
+
+
+    for (
+        let i = 0, p = 0;
+        i < data.length;
+        i += 4, p++
+    ) {
+
+        const g =
+            .2126 * data[i] +
+            .7152 * data[i + 1] +
+            .0722 * data[i + 2];
+
+        gray[p] = g;
+
+        mean += g;
+
+    }
+
+
+    mean /= gray.length;
+
+
+    /*
+     * Tenengrad focus metric.
+     *
+     * This measures actual high-frequency edge energy.
+     */
+
+    let gradientEnergy = 0;
+
+    let edgeCount = 0;
+
+    let lapMean = 0;
+
+    let lapSq = 0;
+
+
+    for (
+        let y = 1;
+        y < h - 1;
+        y++
+    ) {
+
+        for (
+            let x = 1;
+            x < w - 1;
+            x++
+        ) {
+
+            const i =
+                y * w + x;
+
+
+            const gx =
+                gray[i + 1] -
+                gray[i - 1];
+
+
+            const gy =
+                gray[i + w] -
+                gray[i - w];
+
+
+            const gradient =
+                gx * gx +
+                gy * gy;
+
+
+            gradientEnergy += gradient;
+
+
+            if (gradient > 500)
+                edgeCount++;
+
+
+            const lap =
+                gray[i - 1] +
+                gray[i + 1] +
+                gray[i - w] +
+                gray[i + w] -
+                4 * gray[i];
+
+
+            lapMean += lap;
+
+            lapSq += lap * lap;
+
+        }
+
+    }
+
+
+    const count =
+        (w - 2) * (h - 2);
+
+
+    const tenengrad =
+        gradientEnergy / count;
+
+
+    const lapMeanAvg =
+        lapMean / count;
+
+
+    const laplacian =
+        lapSq / count -
+        lapMeanAvg * lapMeanAvg;
+
+
+    const edgeDensity =
+        edgeCount / count;
+
+
+    /*
+     * Motion estimate.
+     */
+
+    let motion = 0;
+
+
+    if (previousGray) {
+
+        let diff = 0;
+
+        for (
+            let i = 0;
+            i < gray.length;
+            i += 4
+        ) {
+
+            diff +=
+                Math.abs(
+                    gray[i] -
+                    previousGray[i]
+                );
+
+        }
+
+        motion =
+            diff /
+            ((gray.length / 4) * 255);
+
+    }
+
+
+    previousGray = gray;
+
+
+    /*
+     * Exposure estimate.
+     */
+
+    const exposure =
+        mean / 255;
+
+
+    let low = 0;
+    let high = 0;
+
+
+    for (let i = 0; i < gray.length; i++) {
+
+        if (gray[i] < 10)
+            low++;
+
+        if (gray[i] > 245)
+            high++;
+
+    }
+
+
+    const dynamicRange =
+        1 -
+        ((low + high) / gray.length);
+
+
+    /*
+     * Normalize focus confidence.
+     */
+
+    const focusRaw =
+        Math.log10(
+            1 + tenengrad
+        ) * 18;
+
+
+    const lapRaw =
+        Math.log10(
+            1 + laplacian
+        ) * 13;
+
+
+    let confidence =
+        Math.min(
+            100,
+            (focusRaw + lapRaw) / 2
+        );
+
+
+    /*
+     * Moving frames get a confidence penalty.
+     */
+
+    if (
+        document.getElementById("motionComp").checked
+    ) {
+
+        confidence *=
+            Math.max(
+                .35,
+                1 - motion * 1.8
+            );
+
+    }
+
+
+    latestMetrics = {
+        tenengrad,
+        laplacian,
+        edgeDensity,
+        motion,
+        exposure,
+        dynamicRange,
+        confidence
+    };
+
+
+    updateMetrics();
+
+}
+
+
+/* ============================================================
+   METRIC DISPLAY
+   ============================================================ */
+
+function updateMetrics() {
+
+    const m =
+        latestMetrics;
+
+
+    document.getElementById("tenengrad")
+        .textContent =
+        m.tenengrad.toFixed(1);
+
+
+    document.getElementById("laplacian")
+        .textContent =
+        m.laplacian.toFixed(1);
+
+
+    document.getElementById("edgeDensity")
+        .textContent =
+        (m.edgeDensity * 100).toFixed(1) + "%";
+
+
+    document.getElementById("motionValue")
+        .textContent =
+        (m.motion * 100).toFixed(1) + "%";
+
+
+    document.getElementById("exposureValue")
+        .textContent =
+        (m.exposure * 100).toFixed(1) + "%";
+
+
+    document.getElementById("dynamicRange")
+        .textContent =
+        (m.dynamicRange * 100).toFixed(1) + "%";
+
+
+    document.getElementById("focusTop")
+        .textContent =
+        m.confidence.toFixed(0) + "%";
+
+
+    document.getElementById("hudFocus")
+        .textContent =
+        m.confidence.toFixed(0) + "%";
+
+
+    document.getElementById("focusConfidence")
+        .textContent =
+        m.confidence.toFixed(0) + "%";
+
+
+    document.getElementById("focusProgress")
+        .style.width =
+        Math.min(
+            100,
+            m.confidence
+        ) + "%";
+
+
+    const box =
+        document.getElementById("focusBox");
+
+
+    if (m.confidence >= 75) {
+
+        box.classList.add("locked");
+
+        box.classList.remove("searching");
+
+    } else if (m.confidence < 40) {
+
+        box.classList.add("searching");
+
+        box.classList.remove("locked");
+
+    } else {
+
+        box.classList.remove(
+            "locked",
+            "searching"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   FOCUS PEAKING
+   ============================================================ */
+
+function renderFocusPeaking() {
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const smallW = 640;
+    const smallH = Math.round(
+        smallW * h / w
+    );
+
+
+    peakCtx.clearRect(
+        0,
+        0,
+        w,
+        h
+    );
+
+
+    /*
+     * Render the source into a small analysis image.
+     */
+
+    analysisCtx.drawImage(
+        video,
+        0,
+        0,
+        smallW,
+        smallH
+    );
+
+
+    const image =
+        analysisCtx.getImageData(
+            0,
+            0,
+            smallW,
+            smallH
+        );
+
+
+    const data =
+        image.data;
+
+
+    const output =
+        peakCtx.createImageData(
+            smallW,
+            smallH
+        );
+
+
+    const od =
+        output.data;
+
+
+    const threshold =
+        35 +
+        Number(
+            document.getElementById(
+                "focusSensitivity"
+            ).value
+        ) * .8;
+
+
+    for (
+        let y = 1;
+        y < smallH - 1;
+        y++
+    ) {
+
+        for (
+            let x = 1;
+            x < smallW - 1;
+            x++
+        ) {
+
+            const i =
+                (y * smallW + x) * 4;
+
+
+            const left =
+                data[i - 4];
+
+            const right =
+                data[i + 4];
+
+            const up =
+                data[i - smallW * 4];
+
+            const down =
+                data[i + smallW * 4];
+
+
+            const gx =
+                Math.abs(
+                    right - left
+                );
+
+
+            const gy =
+                Math.abs(
+                    down - up
+                );
+
+
+            const edge =
+                gx + gy;
+
+
+            if (edge > threshold) {
+
+                od[i] = 255;
+                od[i + 1] = 40;
+                od[i + 2] = 40;
+                od[i + 3] =
+                    Math.min(
+                        210,
+                        edge * 2
+                    );
+
+            }
+
+        }
+
+    }
+
+
+    /*
+     * Scale the focus map to the display.
+     */
+
+    const temporary =
+        document.createElement("canvas");
+
+    temporary.width =
+        smallW;
+
+    temporary.height =
+        smallH;
+
+    temporary
+        .getContext("2d")
+        .putImageData(
+            output,
+            0,
+            0
+        );
+
+
+    peakCtx.imageSmoothingEnabled = false;
+
+    peakCtx.drawImage(
+        temporary,
+        0,
+        0,
+        w,
+        h
+    );
+
+}
+
+
+/* ============================================================
+   FALSE COLOR
+   ============================================================ */
+
+function renderFalseColor() {
+
+    const image =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+    const d =
+        image.data;
+
+
+    /*
+     * Exposure-based false color.
+     *
+     * This is intentionally NOT hue rotation.
+     *
+     * The colors represent luminance zones.
+     */
+
+    for (
+        let i = 0;
+        i < d.length;
+        i += 4
+    ) {
+
+        const lum =
+            (
+                .2126 * d[i] +
+                .7152 * d[i + 1] +
+                .0722 * d[i + 2]
+            ) / 255;
+
+
+        let r, g, b;
+
+
+        if (lum < .08) {
+
+            r = 20;
+            g = 30;
+            b = 100;
+
+        } else if (lum < .18) {
+
+            r = 40;
+            g = 100;
+            b = 210;
+
+        } else if (lum < .32) {
+
+            r = 0;
+            g = 180;
+            b = 160;
+
+        } else if (lum < .48) {
+
+            r = 40;
+            g = 210;
+            b = 80;
+
+        } else if (lum < .62) {
+
+            r = 220;
+            g = 220;
+            b = 40;
+
+        } else if (lum < .75) {
+
+            r = 255;
+            g = 150;
+            b = 30;
+
+        } else if (lum < .88) {
+
+            r = 230;
+            g = 50;
+            b = 40;
+
+        } else {
+
+            r = 255;
+            g = 245;
+            b = 245;
+
+        }
+
+
+        d[i] = r;
+        d[i + 1] = g;
+        d[i + 2] = b;
+
+    }
+
+
+    ctx.putImageData(
+        image,
+        0,
+        0
+    );
+
+}
+
+
+/* ============================================================
+   LUMA MODE
+   ============================================================ */
+
+function renderLuma() {
+
+    const image =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+    const d =
+        image.data;
+
+
+    for (
+        let i = 0;
+        i < d.length;
+        i += 4
+    ) {
+
+        const l =
+            Math.round(
+                .2126 * d[i] +
+                .7152 * d[i + 1] +
+                .0722 * d[i + 2]
+            );
+
+
+        d[i] = l;
+        d[i + 1] = l;
+        d[i + 2] = l;
+
+    }
+
+
+    ctx.putImageData(
+        image,
+        0,
+        0
+    );
+
+}
+
+
+/* ============================================================
+   ZEBRA
+   ============================================================ */
+
+function renderZebra() {
+
+    const image =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+    const d =
+        image.data;
+
+
+    for (
+        let y = 0;
+        y < canvas.height;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < canvas.width;
+            x++
+        ) {
+
+            const i =
+                (y * canvas.width + x) * 4;
+
+
+            const l =
+                .2126 * d[i] +
+                .7152 * d[i + 1] +
+                .0722 * d[i + 2];
+
+
+            if (l > 245) {
+
+                if (
+                    ((x + y) >> 3) & 1
+                ) {
+
+                    d[i] = 255;
+                    d[i + 1] = 30;
+                    d[i + 2] = 30;
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+    ctx.putImageData(
+        image,
+        0,
+        0
+    );
+
+}
+
+
+/* ============================================================
+   EDGE MODE
+   ============================================================ */
+
+function renderEdges() {
+
+    const image =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+    const src =
+        image.data;
+
+
+    const out =
+        new ImageData(
+            canvas.width,
+            canvas.height
+        );
+
+
+    const d =
+        out.data;
+
+
+    const w =
+        canvas.width;
+
+    const h =
+        canvas.height;
+
+
+    for (
+        let y = 1;
+        y < h - 1;
+        y++
+    ) {
+
+        for (
+            let x = 1;
+            x < w - 1;
+            x++
+        ) {
+
+            const i =
+                (y * w + x) * 4;
+
+
+            const l =
+                (
+                    src[i - 4] +
+                    src[i - 3] +
+                    src[i - 2]
+                ) / 3;
+
+
+            const r =
+                (
+                    src[i + 4] +
+                    src[i + 5] +
+                    src[i + 6]
+                ) / 3;
+
+
+            const u =
+                (
+                    src[i - w * 4] +
+                    src[i - w * 4 + 1] +
+                    src[i - w * 4 + 2]
+                ) / 3;
+
+
+            const dn =
+                (
+                    src[i + w * 4] +
+                    src[i + w * 4 + 1] +
+                    src[i + w * 4 + 2]
+                ) / 3;
+
+
+            const edge =
+                Math.min(
+                    255,
+                    Math.abs(r - l) +
+                    Math.abs(dn - u)
+                );
+
+
+            d[i] = edge;
+            d[i + 1] = edge;
+            d[i + 2] = edge;
+            d[i + 3] = 255;
+
+        }
+
+    }
+
+
+    ctx.putImageData(
+        out,
+        0,
+        0
+    );
+
+}
+
+
+/* ============================================================
+   MONITOR MODES
+   ============================================================ */
+
+function setMonitorMode(mode) {
+
+    monitorMode = mode;
+
+
+    const buttons = [
+        "modeNormal",
+        "modeFalse",
+        "modePeaking",
+        "modeLuma",
+        "modeZebra",
+        "modeEdges"
+    ];
+
+
+    buttons.forEach(id => {
+
+        document
+            .getElementById(id)
+            .classList.remove("active");
+
+    });
+
+
+    const map = {
+
+        normal: "modeNormal",
+        falseColor: "modeFalse",
+        peaking: "modePeaking",
+        luma: "modeLuma",
+        zebra: "modeZebra",
+        edges: "modeEdges"
+
+    };
+
+
+    document
+        .getElementById(map[mode])
+        .classList.add("active");
+
+}
+
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+
+function setZoom(value) {
+
+    zoom =
+        Math.max(
+            1,
+            Math.min(
+                10,
+                Number(value)
+            )
+        );
+
+
+    document.getElementById("zoomSlider")
+        .value = zoom;
+
+
+    document.getElementById("zoomValue")
+        .textContent =
+        zoom.toFixed(2) + "×";
+
+
+    document.getElementById("zoomText")
+        .textContent =
+        zoom.toFixed(2) + "×";
+
+}
+
+
+function changeZoom(delta) {
+
+    setZoom(
+        zoom + delta
+    );
+
+}
+
+
+/* ============================================================
+   HIGH RESOLUTION CAPTURE
+   ============================================================ */
+
+async function captureHighResolution() {
+
+    if (!videoTrack) {
+
+        showAlert(
+            "Camera is not active"
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        let photo;
+
+
+        /*
+         * ImageCapture asks the camera for a still rather than
+         * taking a screenshot of the preview.
+         */
+
+        if (imageCapture) {
+
+            photo =
+                await imageCapture.takePhoto();
+
+        }
+
+
+        if (photo) {
+
+            const bitmap =
+                await createImageBitmap(photo);
+
+            captureCanvas.width =
+                bitmap.width;
+
+            captureCanvas.height =
+                bitmap.height;
+
+
+            captureCtx.drawImage(
+                bitmap,
+                0,
+                0
+            );
+
+
+            addCapture(
+                captureCanvas.toDataURL(
+                    "image/jpeg",
+                    .96
+                ),
+                `${bitmap.width}×${bitmap.height} STILL`
+            );
+
+
+            showAlert(
+                `Native still captured: ${bitmap.width}×${bitmap.height}`
+            );
+
+
+            bitmap.close();
+
+            return;
+
+        }
+
+
+        /*
+         * Fallback if ImageCapture is unavailable.
+         */
+
+        captureCanvas.width =
+            video.videoWidth;
+
+        captureCanvas.height =
+            video.videoHeight;
+
+
+        captureCtx.drawImage(
+            video,
+            0,
+            0
+        );
+
+
+        addCapture(
+            captureCanvas.toDataURL(
+                "image/jpeg",
+                .96
+            ),
+            `${video.videoWidth}×${video.videoHeight}`
+        );
+
+
+        showAlert(
+            "High-resolution preview frame captured"
+        );
+
+
+    } catch (err) {
+
+        console.error(
+            "Capture failed:",
+            err
+        );
+
+        showAlert(
+            "Capture failed"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   GALLERY
+   ============================================================ */
+
+function addCapture(dataURL, label) {
+
+    const gallery =
+        document.getElementById(
+            "captureGallery"
+        );
+
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.className =
+        "thumb";
+
+
+    const image =
+        document.createElement("img");
+
+    image.src = dataURL;
+
+
+    const span =
+        document.createElement("span");
+
+    span.textContent = label;
+
+
+    wrapper.appendChild(image);
+
+    wrapper.appendChild(span);
+
+    gallery.prepend(wrapper);
+
+
+    while (
+        gallery.children.length > 12
+    ) {
+
+        gallery.lastElementChild.remove();
+
+    }
+
+}
+
+
+/* ============================================================
+   OPTIONAL ML SUPER RESOLUTION
+   ============================================================ */
+
+function loadSRModel() {
+
+    document
+        .getElementById("srModelInput")
+        .click();
+
+}
+
+
+function handleSRFiles(files) {
+
+    if (!files || !files.length)
+        return;
+
+
+    /*
+     * The model is intentionally loaded from a user-supplied
+     * local file instead of silently downloading an arbitrary
+     * neural network.
+     */
+
+    mlModelLoaded = true;
+
+
+    document.getElementById("srState")
+        .textContent = "MODEL READY";
+
+
+    document.getElementById("pipelineML")
+        .textContent = "SR MODEL";
+
+
+    showAlert(
+        "Local ML super-resolution assets loaded"
+    );
+
+}
+
+
+/* ============================================================
+   CLEANUP
+   ============================================================ */
+
+function stopCamera() {
+
+    if (stream) {
+
+        stream
+            .getTracks()
+            .forEach(track => track.stop());
+
+    }
+
+    stream = null;
+
+    videoTrack = null;
+
+    imageCapture = null;
+
+}
+
+
+/* ============================================================
+   ALERT
+   ============================================================ */
+
+let alertTimer = null;
+
+function showAlert(message) {
+
+    const alert =
+        document.getElementById("alert");
+
+    document.getElementById("alertText")
+        .textContent = message;
+
+
+    alert.classList.add("show");
+
+
+    clearTimeout(alertTimer);
+
+
+    alertTimer =
+        setTimeout(
+            () =>
+                alert.classList.remove("show"),
+            2600
+        );
+
+}
+
+
+/* ============================================================
+   FPS
+   ============================================================ */
+
+setInterval(() => {
+
+    const now =
+        performance.now();
+
+    const elapsed =
+        (now - fpsLastTime) / 1000;
+
+
+    currentFPS =
+        frameCounter / elapsed;
+
+
+    frameCounter = 0;
+
+    fpsLastTime = now;
+
+
+    document.getElementById("fpsValue")
+        .textContent =
+        currentFPS.toFixed(1);
+
+
+    if (videoTrack) {
+
+        const settings =
+            videoTrack.getSettings();
+
+
+        if (
+            settings.width &&
+            settings.height
+        ) {
+
+            document.getElementById(
+                "sourceResolution"
+            ).textContent =
+                `${settings.width} × ${settings.height}`;
+
+        }
+
+    }
+
+}, 1000);
+
+
+/*
+ * Count rendered frames.
+ */
+
+const originalRenderFrame =
+    renderFrame;
+
+renderFrame = function() {
+
+    frameCounter++;
+
+    originalRenderFrame();
+
+};
+
+
+/* ============================================================
+   PERIODIC CAPABILITY REFRESH
+   ============================================================ */
+
+setInterval(
+    updateCameraCapabilities,
+    2000
+);
+
+
+/* ============================================================
+   PAGE VISIBILITY
+   ============================================================ */
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+        if (
+            document.hidden
+        ) {
+
+            /*
+             * Keep camera state intact but reduce unnecessary
+             * analysis while the page isn't visible.
+             */
+
+            return;
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   KEYBOARD CAMERA CONTROLS
+   ============================================================ */
+
+window.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "+" ||
+            event.key === "="
+        ) {
+
+            changeZoom(.25);
+
+        }
+
+
+        if (
+            event.key === "-"
+        ) {
+
+            changeZoom(-.25);
+
+        }
+
+
+        if (
+            event.key === "0"
+        ) {
+
+            setZoom(1);
+
+        }
+
+
+        if (
+            event.key === " "
+        ) {
+
+            event.preventDefault();
+
+            captureHighResolution();
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
