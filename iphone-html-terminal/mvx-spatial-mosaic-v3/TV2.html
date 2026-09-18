@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2184,32 +2185,16 @@ const SOURCES = {
   documentary: { label: '🔬 Documentaries', url: 'https://iptv-org.github.io/iptv/categories/documentary.m3u' },
   science: { label: '🧪 Science & Tech', url: 'https://iptv-org.github.io/iptv/categories/science.m3u' },
   kids: { label: '🧸 Kids & Family', url: 'https://iptv-org.github.io/iptv/categories/kids.m3u' },
-  animation: { label: '🎨 Cartoons & Anime', url: 'https://iptv-org.github.io/iptv/categories/animation.m3u' },
-  comedy: { label: '😂 Comedy Hub', url: 'https://iptv-org.github.io/iptv/categories/comedy.m3u' },
-  classic: { label: '📼 Classic Cinema', url: 'https://iptv-org.github.io/iptv/categories/classic.m3u' },
-  business: { label: '💼 Business & Finance', url: 'https://iptv-org.github.io/iptv/categories/business.m3u' },
-  travel: { label: '✈️ Travel & Explore', url: 'https://iptv-org.github.io/iptv/categories/travel.m3u' },
-  weather: { label: '🌤 Weather Radar', url: 'https://iptv-org.github.io/iptv/categories/weather.m3u' },
   us: { label: '🇺🇸 United States', url: 'https://iptv-org.github.io/iptv/countries/us.m3u' },
   ca: { label: '🇨🇦 Canada', url: 'https://iptv-org.github.io/iptv/countries/ca.m3u' },
   gb: { label: '🇬🇧 United Kingdom', url: 'https://iptv-org.github.io/iptv/countries/gb.m3u' },
-  au: { label: '🇦🇺 Australia', url: 'https://iptv-org.github.io/iptv/countries/au.m3u' },
-  de: { label: '🇩🇪 Germany', url: 'https://iptv-org.github.io/iptv/countries/de.m3u' },
-  fr: { label: '🇫🇷 France', url: 'https://iptv-org.github.io/iptv/countries/fr.m3u' },
-  es: { label: '🇪🇸 Spain', url: 'https://iptv-org.github.io/iptv/countries/es.m3u' },
-  it: { label: '🇮🇹 Italy', url: 'https://iptv-org.github.io/iptv/countries/it.m3u' },
-  jp: { label: '🇯🇵 Japan', url: 'https://iptv-org.github.io/iptv/countries/jp.m3u' },
   master: { label: '🌐 Worldwide Master Mega', url: 'https://iptv-org.github.io/iptv/index.category.m3u' }
 };
 
 const PRESETS = {
   quick: { label: '⚡ Quick Sync (1.5k+)', keys: ['freetv', 'news', 'sports', 'movies', 'documentary'] },
   usa: { label: '🇺🇸 USA + Canada', keys: ['us', 'ca'] },
-  world: { label: '🌐 Worldwide Mega (8k+)', keys: ['master', 'freetv'] },
-  entertainment: { label: '🎭 Entertainment Pack', keys: ['entertainment', 'comedy', 'classic', 'series'] },
-  science: { label: '🔬 Science Pack', keys: ['science', 'documentary', 'travel', 'weather'] },
-  kids: { label: '🧸 Kids Pack', keys: ['kids', 'animation'] },
-  international: { label: '🌎 Europe & World', keys: ['gb', 'de', 'fr', 'es', 'it', 'jp'] }
+  world: { label: '🌐 Worldwide Mega (8k+)', keys: ['master', 'freetv'] }
 };
 
 const CORS_PROXIES = [
@@ -2503,7 +2488,12 @@ function renderAuroraProcessedFrame(ctx, source, w, h) {
 
   ctx.save();
   ctx.filter = buildCanvasFilterString(s);
-  ctx.drawImage(source, 0, 0, w, h);
+  try {
+    ctx.drawImage(source, 0, 0, w, h);
+  } catch {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+  }
   ctx.filter = 'none';
 
   const ssrGain = Math.max(0, (Number(s.sharpness || 100) - 100) / 100);
@@ -2520,13 +2510,17 @@ function renderAuroraProcessedFrame(ctx, source, w, h) {
     }
     const tctx = temp.getContext('2d');
     tctx.clearRect(0, 0, w, h);
-    tctx.drawImage(ctx.canvas, 0, 0, w, h);
+    try {
+      tctx.drawImage(ctx.canvas, 0, 0, w, h);
+    } catch {}
 
     ctx.save();
     ctx.globalAlpha = Math.min(0.65, (ssrGain * 0.35) + (acuGain * 0.45));
     ctx.globalCompositeOperation = 'overlay';
     ctx.filter = `contrast(${1.15 + acuGain * 0.35}) brightness(1.02)`;
-    ctx.drawImage(temp, 0, 0, w, h);
+    try {
+      ctx.drawImage(temp, 0, 0, w, h);
+    } catch {}
     ctx.restore();
   }
 
@@ -2705,7 +2699,12 @@ function renderStudioLoop() {
     const ctxEnhanced = canvasEnhanced.getContext('2d');
     
     if (ctxRaw && ctxEnhanced) {
-      ctxRaw.drawImage(video, 0, 0, w, h);
+      try {
+        ctxRaw.drawImage(video, 0, 0, w, h);
+      } catch {
+        ctxRaw.fillStyle = '#000';
+        ctxRaw.fillRect(0, 0, w, h);
+      }
       renderAuroraProcessedFrame(ctxEnhanced, video, w, h);
     }
 
@@ -2753,7 +2752,9 @@ function renderMainSplitLoop() {
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(video, 0, 0, w, h);
+      try {
+        ctx.drawImage(video, 0, 0, w, h);
+      } catch {}
     }
     canvas.style.clipPath = `inset(0 calc(100% - ${mainSplitPos}%) 0 0)`;
   }
@@ -2828,7 +2829,7 @@ function setupDraggers() {
       if (e.target.id === 'splitBar' || e.target.closest('#splitBar')) {
         isDraggingMainSplit = true;
         window.addEventListener('touchmove', onMainMove, { passive: true });
-        window.addEventListener('touchend', onMainEnd);
+        window.addEventListener('touchend', onStudioEnd);
       }
     }, { passive: true });
   }
@@ -3987,7 +3988,7 @@ function play(channel) {
   }
 
   setState('connecting', isAirPlayActive ? 'CONNECTING AIRPLAY...' : 'CONNECTING');
-  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + ((current && current.name) || 'CHANNEL') : '● TUNING • ' + ((current && current.name) || 'CHANNEL');
+  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + ((current && current.name) || 'CHANNEL') : '● LIVE AIR • ' + ((current && current.name) || 'CHANNEL');
   $('livePill').textContent = '● Signal CONNECTING';
   $('hudRight').textContent = '🛡️ RECOVERY READY';
 
@@ -4015,9 +4016,6 @@ function isNativeHls() {
 function shouldUseNative() {
   if (settings.playback === 'native') return true;
   if (settings.playback === 'hlsjs') return false;
-  var isApple = /Macintosh|iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
-  if (isApple && isNativeHls()) return true;
-  if (window.Hls && Hls.isSupported()) return false;
   return isNativeHls() || isAirPlayActive;
 }
 
@@ -4102,7 +4100,7 @@ function loadStream(channel, attempt = 0, token = sessionToken) {
     lowLatencyMode: lowLatency,
     liveSyncDurationCount: lowLatency ? 2 : 4,
     liveMaxLatencyDurationCount: lowLatency ? 5 : 8,
-    backBufferLength: isTV ? 10 : 30,
+    backBufferLength: 30,
     maxBufferLength: lowLatency ? 18 : 45,
     maxMaxBufferLength: 75,
     maxBufferSize: isTV ? 25 * 1024 * 1024 : 80 * 1024 * 1024,
