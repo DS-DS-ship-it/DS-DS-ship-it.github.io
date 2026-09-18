@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050810">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Smart Antenna TV Pro X — Broadcast command center with Authoritative Aurora Q1024 Processing Engine, Studio Equalizer, and Dual-Path AirPlay Continuity.">
+<meta name="description" content="Smart Antenna TV Pro X — Broadcast command center with Authoritative Aurora Q1024 Processing Engine, Studio Equalizer, and Real-Time Processed AirPlay Streaming.">
 <title>SMART ANTENNA TV PRO X — Broadcast Command Center & Aurora Engine</title>
 
 <!-- HLS.js Engine -->
@@ -293,7 +293,7 @@ select:focus-visible,
   user-select:none;
 }
 
-/* Primary Hardware Video Decoder & Visible GPU Target */
+/* Source Media Video Decoder & Visible GPU Target */
 .screen video#video{
   position:absolute;
   inset:0;
@@ -308,7 +308,7 @@ select:focus-visible,
   z-index:1;
 }
 
-/* Active in WebKit compositor for AirPlay picking */
+/* Hidden AirPlay Processed Stream Transmitter Video */
 .airplay-bridge-video{
   position:absolute;
   inset:0;
@@ -316,7 +316,7 @@ select:focus-visible,
   height:100%;
   pointer-events:none;
   z-index:2;
-  opacity:0.001;
+  opacity:0.001; /* Active in WebKit compositor for AirPlay picking */
 }
 
 /* Main Screen Split Canvas Overlay (Raw Broadcast Frame) */
@@ -1985,76 +1985,6 @@ select:focus-visible,
 'use strict';
 
 /* =========================================================
-   SILENT TERMINAL DIAGNOSTICS & TELEMETRY ENGINE
-   ========================================================= */
-
-const AirPlayInspector = {
-  enabled: true,
-  log(module, action, details = {}, level = 'info') {
-    if (!this.enabled) return;
-    const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-    const color = {
-      'AirPlay:Hardware': '#00e5ff',
-      'AirPlay:Router': '#a17cff',
-      'AirPlay:AudioBridge': '#21d69a',
-      'AirPlay:MediaStream': '#ffc44d',
-      'Aurora:Engine': '#ff4fa3',
-      'HLS:Playback': '#67efff'
-    }[module] || '#ffffff';
-
-    const header = `%c[${timestamp}] [${module}] ${action}`;
-    const style = `color:${color};font-weight:bold;`;
-
-    if (level === 'error') {
-      console.error(header, style, details);
-    } else if (level === 'warn') {
-      console.warn(header, style, details);
-    } else {
-      console.log(header, style, details);
-    }
-  },
-
-  dumpDiagnostics() {
-    console.group('%c📡 SMART ANTENNA PRO X — AIRPLAY & AURORA DIAGNOSTICS DUMP', 'color:#00e5ff;font-weight:bold;font-size:13px;');
-    console.log('Timestamp:', new Date().toISOString());
-    console.table({
-      'User Agent': navigator.userAgent,
-      'WebKit AirPlay Available': Boolean(window.WebKitPlaybackTargetAvailabilityEvent),
-      'Remote Playback API': Boolean(video && video.remote),
-      'AirPlay Active': isAirPlayActive,
-      'Active Routing Mode': settings.airplayMode,
-      'Source Video State': video ? `Ready: ${video.readyState}, Paused: ${video.paused}` : 'None',
-      'Source Resolution': video ? `${video.videoWidth}x${video.videoHeight}` : 'Unknown',
-      'Processed Video State': auroraProcessedVideo ? `Ready: ${auroraProcessedVideo.readyState}, Active: ${Boolean(auroraProcessedVideo.srcObject)}` : 'None',
-      'Web Audio Context': audioContextBridge ? audioContextBridge.state : 'Uninitialized',
-      'Custom SSR Active': isPictureProcessingActive(),
-      'Current Preset': pictureSettings.preset,
-      'Sharpness (SSR)': pictureSettings.sharpness,
-      'Detail Recovery': pictureSettings.detailRecovery,
-      'Noise Reduction': pictureSettings.noiseReduction,
-      'Color Tint': `${pictureSettings.tint}°`
-    });
-    console.groupEnd();
-  },
-
-  testPipeline() {
-    console.group('%c🔍 AIRPLAY PIPELINE STEP-BY-STEP HEALTH TEST', 'color:#21d69a;font-weight:bold;font-size:12px;');
-    console.log('1. Checking Video Element:', video && video.readyState >= 2 ? '✅ READY' : '❌ NOT READY');
-    console.log('2. Checking WebKit Target Availability:', Boolean(window.WebKitPlaybackTargetAvailabilityEvent) ? '✅ SUPPORTED' : '⚠️ NOT NATIVE WEBKIT (Chrome/Firefox)');
-    console.log('3. Checking Target Picker Function:', typeof video.webkitShowPlaybackTargetPicker === 'function' ? '✅ AVAILABLE' : '❌ UNAVAILABLE');
-    console.log('4. Testing Canvas Stream Capture:', typeof HTMLCanvasElement.prototype.captureStream === 'function' ? '✅ SUPPORTED' : '❌ UNSUPPORTED');
-    console.log('5. Audio Context Bridge Status:', audioContextBridge ? audioContextBridge.state : '⚪ STANDBY');
-    console.log('6. Master Filter String:', buildCanvasFilterString(pictureSettings));
-    console.groupEnd();
-  }
-};
-
-// Expose diagnostic commands directly in developer terminal
-window.dumpAirPlayDiagnostics = () => AirPlayInspector.dumpDiagnostics();
-window.testAirPlayStream = () => AirPlayInspector.testPipeline();
-window.AirPlayDebug = AirPlayInspector;
-
-/* =========================================================
    CANONICAL CONSTANTS & AURORA STATE OBJECT
    ========================================================= */
 
@@ -2260,6 +2190,7 @@ let auroraProcessedVideo = null;
 let numBuffer = '';
 let numTimer = null;
 
+// Audio context bridge for processed AirPlay stream
 let audioContextBridge = null;
 let audioSourceNode = null;
 let audioDestinationNode = null;
@@ -2297,10 +2228,7 @@ function loadAnyStoredChannels() {
   ];
   for (const v of versions) {
     const list = load(v, null);
-    if (Array.isArray(list) && list.length > 0) {
-      AirPlayInspector.log('HLS:Playback', `Restored ${list.length} channels from cache key: ${v}`);
-      return list;
-    }
+    if (Array.isArray(list) && list.length > 0) return list;
   }
   return null;
 }
@@ -2423,7 +2351,7 @@ function handleBackdropClick(event, id) {
 }
 
 /* =========================================================
-   CANONICAL PICTURE SETTINGS & HARDWARE RENDERER
+   AUTHORITATIVE PICTURE ENGINE & GPU SHADER BUILDER
    ========================================================= */
 
 function isPictureProcessingActive() {
@@ -2440,6 +2368,7 @@ function isPictureProcessingActive() {
   );
 }
 
+/* Builds 100% compliant CSS filter string supported on all WebKit, Safari & Chrome GPUs */
 function buildCanvasFilterString(s) {
   if (!s || s.rawBypass || !s.auroraEnabled) {
     return 'none';
@@ -2466,6 +2395,7 @@ function buildCanvasFilterString(s) {
     filters.push(`hue-rotate(${tint.toFixed(1)}deg)`);
   }
 
+  /* Aurora temperature approximation: Positive = warmer, Negative = cooler */
   if (temperature > 0) {
     filters.push(`sepia(${Math.min(40.0, temperature * 0.7).toFixed(1)}%)`);
     filters.push(`hue-rotate(${(-temperature * 0.14).toFixed(1)}deg)`);
@@ -2474,6 +2404,7 @@ function buildCanvasFilterString(s) {
     filters.push(`saturate(${(1.0 + Math.abs(temperature) * 0.005).toFixed(3)})`);
   }
 
+  /* Noise Reduction / Deblocking */
   const noise = Number(s.noiseReduction || 0);
   if (noise > 0) {
     filters.push(`blur(${((noise / 100.0) * 1.5).toFixed(2)}px)`);
@@ -2482,6 +2413,7 @@ function buildCanvasFilterString(s) {
   return filters.join(' ');
 }
 
+/* Performs spatial unsharp mask and high-frequency edge enhancement directly on canvas framebuffer */
 function renderAuroraProcessedFrame(ctx, source, w, h) {
   const s = pictureSettings;
 
@@ -2526,6 +2458,7 @@ function updateAuroraPipeline() {
 
   const filterString = buildCanvasFilterString(pictureSettings);
 
+  /* Instantly update main visible video and enhanced studio canvas */
   if (video) {
     video.style.filter = filterString;
   }
@@ -2533,13 +2466,6 @@ function updateAuroraPipeline() {
   if (studioEnhanced) {
     studioEnhanced.style.filter = filterString;
   }
-
-  AirPlayInspector.log('Aurora:Engine', 'Pipeline Updated', {
-    filter: filterString,
-    ssrGain: pictureSettings.sharpness,
-    acutanceGain: pictureSettings.detailRecovery,
-    tint: pictureSettings.tint
-  });
 }
 
 function setPictureSetting(name, value) {
@@ -2691,6 +2617,7 @@ function renderStudioLoop() {
       renderAuroraProcessedFrame(ctxEnhanced, video, w, h);
     }
 
+    // Apply exact filter and split clip to top canvas
     canvasEnhanced.style.filter = buildCanvasFilterString(pictureSettings);
     canvasEnhanced.style.clipPath = `inset(0 0 0 ${studioSplitPos}%)`;
   }
@@ -2702,6 +2629,7 @@ function resetStudioSplit() {
   document.documentElement.style.setProperty('--studio-split-x', '50%');
 }
 
+// Main Player Screen A/B Split Compare
 function toggleSplitScreen() {
   isMainSplitActive = !isMainSplitActive;
   const canvas = $('splitCanvas');
@@ -2817,7 +2745,7 @@ function setupDraggers() {
 }
 
 /* =========================================================
-   AIRPLAY INTEGRATION & DISPLAY CONTINUITY
+   AIRPLAY COMMAND CENTER & ROUTER PIPELINE
    ========================================================= */
 
 function updateAirPlayStatus() {
@@ -2832,12 +2760,10 @@ function updateAirPlayStatus() {
 function setAirPlayRoutingMode(mode) {
   settings.airplayMode = mode;
   save(STORAGE.settings, settings);
-  AirPlayInspector.log('AirPlay:Router', `Mode changed to: ${mode}`);
   toast(`AirPlay router set to: ${mode === 'mirror' ? 'TV Clean Screen Mirroring' : (mode === 'processed' ? 'Aurora Processed Stream' : 'Native 4K')}`);
 }
 
 async function startAirPlay() {
-  AirPlayInspector.log('AirPlay:Router', 'Launching AirPlay Menu', { mode: settings.airplayMode });
   if (settings.airplayMode === 'mirror') {
     triggerCleanScreenMirroring();
     return;
@@ -2850,18 +2776,12 @@ async function startAirPlay() {
 
 function triggerNativeAirPlay() {
   closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Hardware', 'Requesting native target picker on <video id="video">');
   if (typeof video.webkitShowPlaybackTargetPicker === 'function') {
     video.disableRemotePlayback = false;
-    try {
-      video.webkitShowPlaybackTargetPicker();
-      AirPlayInspector.log('AirPlay:Hardware', 'Native target picker opened successfully');
-      return true;
-    } catch(err) {
-      AirPlayInspector.log('AirPlay:Hardware', 'Native picker throw error', err, 'error');
-    }
+    video.webkitShowPlaybackTargetPicker();
+    return true;
   } else if (video.remote && video.remote.prompt) {
-    video.remote.prompt().catch(err => AirPlayInspector.log('AirPlay:Hardware', 'Remote prompt error', err, 'warn'));
+    video.remote.prompt().catch(err => console.warn('Remote prompt error:', err));
     return true;
   }
   toast('Native AirPlay is supported on Safari, macOS, and iOS');
@@ -2870,7 +2790,6 @@ function triggerNativeAirPlay() {
 
 function triggerCleanScreenMirroring() {
   closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Router', 'Entering Clean Screen Mirroring fullscreen mode');
   fullscreen();
   toast('AirPlay Mirroring Active: Fullscreen clean output with all Equalizer settings transmitted via Screen Mirroring.');
   triggerOSD('🖥️ AIRPLAY SCREEN MIRRORING ACTIVE');
@@ -2878,7 +2797,6 @@ function triggerCleanScreenMirroring() {
 
 function triggerAuroraStreamAirPlay() {
   closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:MediaStream', 'Encoding live Aurora stream with custom SSR for AirPlay');
   toast('Encoding live Aurora stream with custom SSR for AirPlay…');
 
   try {
@@ -2886,7 +2804,6 @@ function triggerAuroraStreamAirPlay() {
     if (!canvas) throw new Error('Canvas buffer unavailable');
 
     const stream = canvas.captureStream(30);
-    AirPlayInspector.log('AirPlay:MediaStream', 'Canvas captureStream initialized', { tracks: stream.getVideoTracks().length });
 
     // Audio capture bridge via Web Audio API
     try {
@@ -2897,14 +2814,12 @@ function triggerAuroraStreamAirPlay() {
         audioDestinationNode = audioContextBridge.createMediaStreamDestination();
         audioSourceNode.connect(audioDestinationNode);
         audioSourceNode.connect(audioContextBridge.destination);
-        AirPlayInspector.log('AirPlay:AudioBridge', 'Web Audio MediaStreamDestination created', { sampleRate: audioContextBridge.sampleRate });
       }
       if (audioDestinationNode && audioDestinationNode.stream.getAudioTracks().length > 0) {
         stream.addTrack(audioDestinationNode.stream.getAudioTracks()[0]);
-        AirPlayInspector.log('AirPlay:AudioBridge', 'Synced audio track appended to AirPlay stream');
       }
     } catch(e) {
-      AirPlayInspector.log('AirPlay:AudioBridge', 'Audio bridge notice (likely cross-origin CORS restriction)', e, 'warn');
+      console.warn('Audio capture bridge notice:', e);
     }
 
     if (!auroraProcessedVideo) {
@@ -2916,23 +2831,21 @@ function triggerAuroraStreamAirPlay() {
 
     if (typeof auroraProcessedVideo.webkitShowPlaybackTargetPicker === 'function') {
       auroraProcessedVideo.webkitShowPlaybackTargetPicker();
-      AirPlayInspector.log('AirPlay:Hardware', 'Processed video target picker launched');
       return true;
     } else if (auroraProcessedVideo.remote && auroraProcessedVideo.remote.prompt) {
-      auroraProcessedVideo.remote.prompt().catch(err => AirPlayInspector.log('AirPlay:Hardware', 'Remote prompt error', err, 'warn'));
+      auroraProcessedVideo.remote.prompt().catch(err => console.warn('Remote prompt error:', err));
       return true;
     }
   } catch (err) {
-    AirPlayInspector.log('AirPlay:MediaStream', 'MediaStream AirPlay bridge notice', err, 'warn');
+    console.warn('MediaStream AirPlay bridge notice:', err);
   }
 
-  AirPlayInspector.log('AirPlay:Router', 'Falling back to native video AirPlay picker');
+  // Fallback to native target picker
   triggerNativeAirPlay();
 }
 
 function openTVDisplayWindow() {
   closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Router', 'Opening borderless TV Second-Screen popout window');
   const tvWin = window.open('', 'AirPlayTVDisplay', 'width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no');
   if (!tvWin) {
     toast('Please allow popups to open the TV Second-Screen window.');
@@ -2971,24 +2884,16 @@ function openTVDisplayWindow() {
 function setupAirPlayIntegration() {
   video.addEventListener('webkitplaybacktargetavailabilitychanged', (event) => {
     airPlayAvailable = (event.availability === 'available');
-    AirPlayInspector.log('AirPlay:Hardware', 'Target availability changed', { available: airPlayAvailable });
   });
 
   video.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', () => {
     isAirPlayActive = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
-    AirPlayInspector.log('AirPlay:Hardware', 'Wireless target changed', { isWireless: isAirPlayActive });
     onAirPlayStateChange(isAirPlayActive);
   });
 
   if (video.remote) {
-    video.remote.addEventListener('connect', () => {
-      AirPlayInspector.log('AirPlay:Hardware', 'Remote Playback connected');
-      onAirPlayStateChange(true);
-    });
-    video.remote.addEventListener('disconnect', () => {
-      AirPlayInspector.log('AirPlay:Hardware', 'Remote Playback disconnected');
-      onAirPlayStateChange(false);
-    });
+    video.remote.addEventListener('connect', () => onAirPlayStateChange(true));
+    video.remote.addEventListener('disconnect', () => onAirPlayStateChange(false));
   }
 }
 
@@ -3027,7 +2932,6 @@ function disconnectAirPlay() {
   onAirPlayStateChange(false);
   shieldNotify('Playback Returned to Local Screen');
   video.play().catch(() => {});
-  AirPlayInspector.log('AirPlay:Hardware', 'AirPlay manually disconnected by user');
 }
 
 /* =========================================================
@@ -3438,7 +3342,6 @@ async function scanPreset(key) {
 
   scanActive = true;
   updateStatus(`<span class="spinner"></span> ${esc(preset.label)}: initiating multi-feed sync…`);
-  AirPlayInspector.log('HLS:Playback', `Sync started for preset: ${preset.label}`);
 
   let totalAdded = 0;
   let totalParsed = 0;
@@ -3488,7 +3391,7 @@ function renderPacks() {
   const entries = [
     ['quick', '⚡ Quick Sync (1.5k+)'],
     ['usa', '🇺🇸 USA & Canada'],
-    ['world', '🌐 Worldwide Mega (8k+)'],
+    ['world', '🌐 World Mega (8k+)'],
     ['entertainment', '🎭 Entertainment'],
     ['science', '🔬 Science & Docs'],
     ['kids', '🧸 Kids & Cartoons'],
@@ -4011,7 +3914,7 @@ function loadStream(channel, attempt = 0, token = sessionToken) {
   const isDirect = (native || isAirPlayActive) && attempt === 0;
   const targetUrl = isDirect ? channel.url : CORS_PROXIES[pIdx](channel.url);
 
-  AirPlayInspector.log('HLS:Playback', `Tuning channel "${channel.name}"`, { attempt, native, targetUrl });
+  console.log(`[Playback Engine] Tuning: "${channel.name}" (Attempt ${attempt}, Native: ${native}, Target: ${targetUrl})`);
 
   if (native || isAirPlayActive) {
     fetchText(channel.url).then(res => {
@@ -4799,8 +4702,7 @@ function init() {
   video = $('video');
   auroraProcessedVideo = $('auroraProcessedVideo');
 
-  AirPlayInspector.log('Aurora:Engine', 'Booting Aurora Pipeline with Diagnostics Active');
-
+  /* Load channels with multi-version storage fallback so existing channels are retained */
   const storedChannels = loadAnyStoredChannels();
   if (storedChannels && Array.isArray(storedChannels) && storedChannels.length > 0) {
     channels = storedChannels.map(normalizeChannel);
@@ -4840,8 +4742,7 @@ function init() {
   setupKeyboardShortcuts();
   setupDragAndDrop();
 
-  AirPlayInspector.log('HLS:Playback', 'Station ready', { channelsCount: channels.length });
-  updateStatus(`📡 Ready • <strong>${channels.length.toLocaleString()}</strong> live broadcast channels initialized • Aurora Hardware Pipeline Active`);
+  updateStatus(`📡 Ready • <strong>${channels.length.toLocaleString()}</strong> live broadcast channels initialized • Authoritative Aurora Pipeline Active`);
 }
 
 window.addEventListener('DOMContentLoaded', init);
