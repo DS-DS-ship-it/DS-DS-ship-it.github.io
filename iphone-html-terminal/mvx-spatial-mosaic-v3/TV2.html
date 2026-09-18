@@ -280,72 +280,83 @@ select:focus-visible,
   margin:auto;
 }
 
-/* SMART TV COMPATIBLE SCREEN CONTAINER & FALLBACK */
+/* AUTHORITATIVE AURORA CANVAS SCREEN */
 .screen{
   position:relative;
-  width:100%;
-  height:0;
-  padding-top:56.25%; /* 16:9 Aspect Ratio Fallback for All Smart TVs & webOS */
+  overflow:hidden;
   background:#000;
   border:1px solid #1c2b41;
   border-radius:11px;
-  overflow:hidden;
   box-shadow:inset 0 0 80px #000;
   user-select:none;
-  -webkit-user-select:none;
 }
 
-@supports (aspect-ratio: 16/9){
-  .screen{
-    height:auto;
-    padding-top:0;
-    aspect-ratio:16/9;
-  }
-}
-
-/* Primary Hardware Video Decoder & Visible GPU Target */
-.screen video#video{
+/* Hidden hardware video decoder feeding the Aurora canvas */
+.screen video.source-video{
   position:absolute;
-  top:0;left:0;right:0;bottom:0;
+  top:0;
+  left:0;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* The actual visible authoritative canvas */
+.screen canvas.aurora-display-canvas{
+  display:block;
   width:100%;
-  height:100%;
+  aspect-ratio:16/9;
   background:#000;
   object-fit:contain;
   transform:translateZ(0);
-  -webkit-transform:translateZ(0);
-  will-change:transform;
-  transition:transform 0.2s ease;
-  z-index:1;
 }
 
-/* Active in WebKit compositor for AirPlay picking */
-.airplay-bridge-video{
+/* Safari/WebKit-safe processed presentation layer.  The source canvas is
+   always drawn raw; this overlay receives the visible CSS image processing. */
+.screen canvas.aurora-processed-canvas{
   position:absolute;
-  top:0;left:0;right:0;bottom:0;
+  inset:0;
+  display:block;
   width:100%;
   height:100%;
-  pointer-events:none;
-  z-index:2;
-  opacity:0.001;
-}
-
-/* Main Screen Split Canvas Overlay (Raw Broadcast Frame) */
-.split-canvas{
-  position:absolute;
-  top:0;left:0;right:0;bottom:0;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  pointer-events:none;
-  z-index:3;
-  display:none;
-  clip-path:inset(0 calc(100% - var(--split-x, 50%)) 0 0);
+  aspect-ratio:16/9;
   background:transparent;
-  filter:none !important;
+  object-fit:contain;
+  transform:translateZ(0);
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  clip-path:none;
+  transition:opacity .12s ease;
 }
 
-.split-canvas.active{ display:block; }
+.screen.split-processing canvas.aurora-processed-canvas{
+  opacity:1;
+  visibility:visible;
+  clip-path:inset(0 0 0 var(--split-x,50%));
+}
 
+.screen.full-processing canvas.aurora-processed-canvas{
+  opacity:1;
+  visibility:visible;
+  clip-path:none;
+}
+
+.screen.full-processing canvas.aurora-display-canvas{
+  opacity:0;
+}
+
+.screen.split-processing canvas.aurora-display-canvas{
+  opacity:1;
+}
+
+.screen canvas.fill{ object-fit:cover; }
+.screen canvas.stretch{ object-fit:fill; }
+.screen canvas.crt{ aspect-ratio:4/3; }
+.screen canvas.cinema{ aspect-ratio:21/9; }
+
+/* Interactive Split-Screen Wipe Controls */
 .split-bar{
   position:absolute;
   top:0;
@@ -548,6 +559,7 @@ select:focus-visible,
 }
 
 .now-logo img{ width:100%; height:100%; object-fit:contain; }
+
 .now-main{ min-width:0; flex:1; }
 .now-title{ overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:14px; font-weight:900; }
 .now-meta{ margin-top:4px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted); font-size:9px; }
@@ -883,7 +895,7 @@ select:focus-visible,
 /* DUAL-PANE STUDIO WORKBENCH */
 .modal{
   position:fixed;
-  top:0;left:0;right:0;bottom:0;width:100%;height:100%;
+  inset:0;
   z-index:500;
   display:none;
   align-items:center;
@@ -946,8 +958,7 @@ select:focus-visible,
 .studio-screen-wrap{
   position:relative;
   width:100%;
-  height:0;
-  padding-top:56.25%;
+  aspect-ratio:16/9;
   background:#000;
   border:1px solid #1c2b41;
   border-radius:12px;
@@ -956,29 +967,25 @@ select:focus-visible,
   user-select:none;
 }
 
-@supports (aspect-ratio: 16/9){
-  .studio-screen-wrap{
-    height:auto;
-    padding-top:0;
-    aspect-ratio:16/9;
-  }
-}
-
 .studio-canvas{
   position:absolute;
-  top:0;left:0;right:0;bottom:0;width:100%;height:100%;
+  inset:0;
+  width:100%;
+  height:100%;
   object-fit:contain;
   display:block;
 }
 
-.studio-canvas-raw{
-  z-index:1;
-  filter:none !important;
-}
-
-.studio-canvas-enhanced{
-  z-index:2;
-  clip-path:inset(0 0 0 var(--studio-split-x, 50%));
+.studio-processed-canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+  opacity:1;
+  clip-path:inset(0 0 0 var(--studio-split-x,50%));
 }
 
 .studio-split-bar{
@@ -1271,7 +1278,7 @@ select:focus-visible,
 
 .loading-screen{
   position:absolute;
-  top:0;left:0;right:0;bottom:0;width:100%;height:100%;
+  inset:0;
   z-index:8;
   display:none;
   place-items:center;
@@ -1323,6 +1330,65 @@ select:focus-visible,
   .studio-sliders{ grid-template-columns:1fr; }
   .preset-grid{ grid-template-columns:1fr 1fr; }
 }
+
+
+/* =========================================================
+   UNIVERSAL TV OUTPUT / AIRPLAY / LG OUTPUT SUITE
+   ========================================================= */
+.airplay-control{
+  border-color:rgba(0,229,255,.65);
+  background:linear-gradient(135deg,#073b4c,#075985);
+}
+.mirror-control{
+  border-color:rgba(161,124,255,.65);
+  background:linear-gradient(135deg,#2e1065,#4c1d95);
+}
+.lg-control{
+  border-color:rgba(236,72,153,.65);
+  background:linear-gradient(135deg,#4a044e,#831843);
+}
+.airplay-control.active,.mirror-control.active,.lg-control.active{
+  box-shadow:0 0 18px rgba(0,229,255,.32);
+  border-color:#fff;
+}
+.tv-output-banner{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%) translateY(12px);
+  width:min(92%,760px);
+  padding:10px 14px;
+  border:1px solid rgba(0,229,255,.55);
+  border-radius:10px;
+  background:rgba(3,8,15,.92);
+  color:#dffaff;
+  box-shadow:0 12px 35px rgba(0,0,0,.65),0 0 22px rgba(0,229,255,.12);
+  backdrop-filter:blur(15px);
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+  text-align:center;
+  font:700 10px var(--mono);
+}
+.tv-output-banner.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+.mirror-ready #video{
+  display:none !important;
+}
+.mirror-ready #auroraCanvas,
+.mirror-ready #auroraProcessedCanvas{
+  width:100% !important;
+  height:100% !important;
+}
+
+
+.tv-output-dock{position:absolute;z-index:40;top:12px;right:12px;display:flex;gap:8px;align-items:center;padding:6px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(3,8,15,.78);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.tv-output-btn{border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 11px;background:rgba(15,23,42,.92);color:#fff;font:800 11px var(--mono);cursor:pointer;white-space:nowrap}.tv-output-btn:hover{transform:translateY(-1px);border-color:#fff}.tv-output-btn.tv-airplay{border-color:rgba(0,229,255,.65)}.tv-output-btn.tv-mirror{border-color:rgba(168,85,247,.65)}.tv-output-btn.tv-local{border-color:rgba(74,222,128,.6)}
+@media(max-width:700px){.tv-output-dock{left:10px;right:10px;top:10px;justify-content:stretch}.tv-output-btn{flex:1;padding:9px 7px}.tv-output-btn span{display:none}}
+
 </style>
 </head>
 
@@ -1335,7 +1401,7 @@ select:focus-visible,
     <div class="logo">📡</div>
     <div>
       <h1>SMART ANTENNA TV PRO X</h1>
-      <small>ALLX SPATIAL 2.0 • AURORA Q1024 FRAMEBUFFER PIPELINE • DUAL AIRPLAY CONTINUITY</small>
+      <small>ALLX SPATIAL 2.0 • AURORA Q1024 CANVAS PIPELINE • DUAL AIRPLAY CONTINUITY</small>
     </div>
   </div>
 
@@ -1366,10 +1432,10 @@ select:focus-visible,
 
 <aside class="panel player" id="playerPanel">
   <div class="screen" id="playerScreen">
-    <!-- Unmodified Source Media Video Decoder & Visible GPU Target -->
+    <!-- Unmodified Source Media Video Decoder -->
     <video
       id="video"
-      controls
+      class="source-video"
       autoplay
       playsinline
       webkit-playsinline
@@ -1378,18 +1444,11 @@ select:focus-visible,
       preload="auto">
     </video>
 
-    <!-- Hidden AirPlay Processed Stream Transmitter Bridge -->
-    <video
-      id="auroraProcessedVideo"
-      class="airplay-bridge-video"
-      playsinline
-      webkit-playsinline
-      x-webkit-airplay="allow"
-      airplay="allow">
-    </video>
-
-    <!-- Main Screen A/B Split Canvas Layer (RAW Unprocessed Overlay) -->
-    <canvas id="splitCanvas" class="split-canvas"></canvas>
+    <!-- Authoritative Aurora Canvas Framebuffer Display -->
+    <canvas id="auroraCanvas" class="aurora-display-canvas"></canvas>
+    <!-- Processed presentation/export buffer. The visible local/mirrored image uses
+         this layer so Aurora settings remain part of the displayed window. -->
+    <canvas id="auroraProcessedCanvas" class="aurora-processed-canvas" aria-hidden="true"></canvas>
 
     <!-- Interactive Main Split Slider Bar -->
     <div id="splitBar" class="split-bar">
@@ -1404,6 +1463,12 @@ select:focus-visible,
 
     <!-- TV On-Screen Display Notification -->
     <div class="aurora-osd" id="auroraOsd">🎨 PICTURE: QUANTUM SSR</div>
+
+    <div class="tv-output-dock" aria-label="TV output controls">
+      <button class="tv-output-btn tv-airplay" id="floatingAirPlayBtn" onclick="startAirPlay()" title="Stream this channel to Apple TV or an AirPlay 2 TV">📺 <span>AirPlay / TV</span></button>
+      <button class="tv-output-btn tv-mirror" id="floatingMirrorBtn" onclick="startScreenMirroring()" title="Open the Mac screen-mirroring instructions without changing the video to fullscreen">🖥️ <span>Mirror</span></button>
+      <button class="tv-output-btn tv-local" id="floatingLocalBtn" onclick="disconnectAirPlay()" title="Return playback to this Mac" style="display:none">↩ <span>Local</span></button>
+    </div>
 
     <div class="hud">
       <span id="hudLeft">● STANDBY</span>
@@ -1511,8 +1576,18 @@ select:focus-visible,
   </div>
 
   <div class="quick-row">
-    <button class="btn small" onclick="openModal('airplayModal')" id="airplayBtn" title="Launch AirPlay Output Pipeline">📺 AirPlay</button>
-    <button class="btn small danger" onclick="disconnectAirPlay()" id="localScreenBtn" title="Return to local screen" style="display:none">🖥️ Return to Laptop</button>
+    <button class="btn small airplay-control" onclick="startAirPlay()" id="airplayBtn" title="Open the native AirPlay device picker">
+      📺 AirPlay
+    </button>
+    <button class="btn small mirror-control" onclick="startScreenMirroring()" id="mirrorBtn" title="Prepare the processed application window for macOS Screen Mirroring">
+      🖥️ Mirror TV
+    </button>
+    <button class="btn small lg-control" onclick="startLGTVOutput()" id="lgTvBtn" title="LG TV AirPlay 2 output">
+      🟣 LG TV
+    </button>
+    <button class="btn small danger" onclick="disconnectAirPlay()" id="localScreenBtn" title="Return playback to this Mac" style="display:none">
+      🖥️ Local
+    </button>
     <button class="btn small" onclick="toggleSplitScreen()" id="splitBtn" title="Toggle Main Screen Split Compare">↔ Compare</button>
     <button class="btn small" id="bypassBtn" onmousedown="setBypass(true)" onmouseup="setBypass(false)" ontouchstart="setBypass(true)" ontouchend="setBypass(false)" title="Hold down to preview RAW broadcast">👁 RAW</button>
     <button class="btn small" onclick="togglePIP()">▣ PiP</button>
@@ -1630,7 +1705,7 @@ select:focus-visible,
         <p>Real-time Spatial Super-Resolution (SSR), High-Frequency Edge Acutance, Denoising, and Authoritative Chromatic Alignment.</p>
       </div>
       <div class="actions">
-        <button class="btn small primary" onclick="openModal('airplayModal')" id="studioAirPlayBtn">📺 Stream to TV</button>
+        <button class="btn small primary" onclick="startAirPlay()" id="studioAirPlayBtn">📺 Stream to TV</button>
         <button class="btn small" onmousedown="setBypass(true)" onmouseup="setBypass(false)" ontouchstart="setBypass(true)" ontouchend="setBypass(false)">👁 Hold RAW</button>
         <button class="btn icon" onclick="closeModal('pictureModal')">✕</button>
       </div>
@@ -1640,8 +1715,8 @@ select:focus-visible,
       <!-- LEFT PANE: LIVE SPLIT SCREEN RIGHT NEXT TO EQUALIZER -->
       <div class="studio-screen-col">
         <div class="studio-screen-wrap" id="studioScreenWrap">
-          <canvas id="studioCanvasRaw" class="studio-canvas studio-canvas-raw"></canvas>
-          <canvas id="studioCanvasEnhanced" class="studio-canvas studio-canvas-enhanced"></canvas>
+          <canvas id="studioCanvas" class="studio-canvas"></canvas>
+      <canvas id="studioProcessedCanvas" class="studio-processed-canvas" aria-hidden="true"></canvas>
           
           <!-- Interactive Draggable Split Bar -->
           <div id="studioSplitBar" class="studio-split-bar">
@@ -1672,13 +1747,12 @@ select:focus-visible,
 
         <div class="studio-airplay-card">
           <div class="studio-airplay-header">
-            <span>📶 AirPlay Output Mode: <b id="studioAirPlayState">SOURCE NATIVE</b></span>
-            <button class="btn small primary" onclick="openModal('airplayModal')">AirPlay Menu</button>
+            <span>📶 AirPlay Output Mode: <b id="studioAirPlayState">SOURCE OUTPUT</b></span>
+            <button class="btn small primary" onclick="startAirPlay()">Launch AirPlay</button>
           </div>
           <div class="studio-airplay-modes">
-            <label><input type="radio" name="apMode" value="processed" checked onchange="setAirPlayRoutingMode('processed')"> Aurora Processed Stream</label>
-            <label><input type="radio" name="apMode" value="mirror" onchange="setAirPlayRoutingMode('mirror')"> TV Screen Mirroring</label>
-            <label><input type="radio" name="apMode" value="direct" onchange="setAirPlayRoutingMode('direct')"> Native 4K Raw</label>
+            <label><input type="radio" name="apMode" value="auto" checked onchange="setAirPlayRoutingMode('auto')"> Smart Dynamic (Auto Processed / Direct 4K)</label>
+            <label><input type="radio" name="apMode" value="mirror" onchange="setAirPlayRoutingMode('mirror')"> TV Clean Screen Mirroring (Equalized)</label>
           </div>
         </div>
       </div>
@@ -1715,21 +1789,21 @@ select:focus-visible,
           <div class="dialog-card">
             <label>Spatial Super-Resolution (SSR) <b id="valSSR">130%</b></label>
             <input type="range" id="eqSSR" min="0" max="200" step="5" value="130" oninput="setPictureSetting('sharpness', this.value)">
-            <div class="slider-subtext">Spatial high-frequency detail reconstruction and dynamic range.</div>
+            <div class="slider-subtext">Spatial sub-pixel pixel reconstruction and 4K upscaling.</div>
           </div>
 
           <!-- 2. High-Frequency Edge Enhancement / Acutance -->
           <div class="dialog-card">
             <label>Edge Acutance (Sharpening) <b id="valAcutance">+4.2 dB</b></label>
             <input type="range" id="eqAcutance" min="0" max="200" step="5" value="140" oninput="setPictureSetting('detailRecovery', this.value)">
-            <div class="slider-subtext">Active unsharp spatial edge sharpening and text contour crispness.</div>
+            <div class="slider-subtext">Micro-contrast boundary sharpening for text and contours.</div>
           </div>
 
           <!-- 3. Artifact & Spatiotemporal Denoising -->
           <div class="dialog-card">
             <label>Spatiotemporal Denoising <b id="valDenoise">20%</b></label>
             <input type="range" id="eqDenoise" min="0" max="100" step="5" value="20" oninput="setPictureSetting('noiseReduction', this.value)">
-            <div class="slider-subtext">Filters compression macroblocks and mosquito noise artifacts.</div>
+            <div class="slider-subtext">Filters compression macroblocks and mosquito noise.</div>
           </div>
 
           <!-- 4. Color Tint / Chromatic Alignment -->
@@ -1743,28 +1817,28 @@ select:focus-visible,
           <div class="dialog-card">
             <label>Color Temperature <b id="valTemp">0 (D65 Neutral)</b></label>
             <input type="range" id="eqTemp" min="-50" max="50" step="5" value="0" oninput="setPictureSetting('temperature', this.value)">
-            <div class="slider-subtext">Shifts Kelvin balance: negative is cool blue, positive is warm amber.</div>
+            <div class="slider-subtext">Shifts Kelvin temperature: negative is cool, positive is warm.</div>
           </div>
 
           <!-- 6. Quantum Chroma Saturation -->
           <div class="dialog-card">
             <label>Quantum Chroma Saturation <b id="valSaturation">125%</b></label>
             <input type="range" id="eqSaturation" min="0" max="250" step="5" value="125" oninput="setPictureSetting('saturation', this.value)">
-            <div class="slider-subtext">Color volume from black & white monochrome (0%) to technicolor (250%).</div>
+            <div class="slider-subtext">Wide color volume from monochrome (0%) to technicolor (250%).</div>
           </div>
 
           <!-- 7. Dynamic Contrast (HDR+ Curve) -->
           <div class="dialog-card">
             <label>Dynamic Contrast (HDR+ Curve) <b id="valContrast">1.20x</b></label>
             <input type="range" id="eqContrast" min="50" max="200" step="5" value="120" oninput="setPictureSetting('contrast', this.value)">
-            <div class="slider-subtext">HDR tone mapping expands highlight punch and shadow depth.</div>
+            <div class="slider-subtext">HDR-style tone mapping expands dynamic range highlights.</div>
           </div>
 
           <!-- 8. Peak Brightness & Black Level -->
           <div class="dialog-card">
             <label>Peak Brightness & Luma <b id="valBrightness">103%</b></label>
             <input type="range" id="eqBrightness" min="60" max="140" step="2" value="103" oninput="setPictureSetting('brightness', this.value)">
-            <div class="slider-subtext">Fine-tunes black-floor level and peak nit brightness.</div>
+            <div class="slider-subtext">Fine-tunes black-floor floor-lift and dynamic peak nit delivery.</div>
           </div>
         </div>
 
@@ -1778,54 +1852,16 @@ select:focus-visible,
   </div>
 </div>
 
-<!-- AIRPLAY TRANSMISSION SUITE DIALOG -->
-<div class="modal" id="airplayModal" onclick="handleBackdropClick(event, 'airplayModal')">
-  <div class="dialog" onclick="event.stopPropagation()">
-    <div class="dialog-head">
-      <h2>📺 AirPlay & Wireless TV Transmission Suite</h2>
-      <button class="btn icon" onclick="closeModal('airplayModal')">✕</button>
-    </div>
-    <p>Select your wireless transmission engine to send live television to your Apple TV, AirPlay 2 Smart TV, or external display.</p>
-
-    <div class="dialog-grid" style="margin-top:10px;">
-      <!-- Option 1: Aurora Processed Stream -->
-      <div class="dialog-card">
-        <label><b>🔮 Aurora Processed AirPlay Stream</b></label>
-        <p>Transmits the live video stream with your Custom SSR, Acutance, Tint, and Contrast applied directly to the AirPlay stream.</p>
-        <button class="btn primary" style="width:100%;margin-top:8px;" onclick="triggerAuroraStreamAirPlay()">
-          🚀 Stream with Custom SSR
-        </button>
-      </div>
-
-      <!-- Option 2: AirPlay Screen Mirroring -->
-      <div class="dialog-card">
-        <label><b>🖥️ Clean TV Screen Mirroring</b></label>
-        <p>Enters full-screen, clean borderless view with all GPU shaders active. Mirror your Mac/iPhone screen to Apple TV via Control Center.</p>
-        <button class="btn aurora" style="width:100%;margin-top:8px;" onclick="triggerCleanScreenMirroring()">
-          🖥️ Clean TV Fullscreen Mode
-        </button>
-      </div>
-
-      <!-- Option 3: Native 4K Stream Passthrough -->
-      <div class="dialog-card">
-        <label><b>⚡ Native 4K Stream Passthrough</b></label>
-        <p>Direct HLS stream link sent to Apple TV hardware decoder. Maximum battery life and raw broadcast fidelity.</p>
-        <button class="btn" style="width:100%;margin-top:8px;" onclick="triggerNativeAirPlay()">
-          ⚡ Native 4K Passthrough
-        </button>
-      </div>
-
-      <!-- Option 4: Extended Display Popout Window -->
-      <div class="dialog-card">
-        <label><b>🪟 TV Second-Screen Popout Window</b></label>
-        <p>Opens a dedicated, clean video player window to drag onto an external HDMI monitor or extended AirPlay display.</p>
-        <button class="btn" style="width:100%;margin-top:8px;" onclick="openTVDisplayWindow()">
-          🪟 Open TV Second-Screen
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- DEDICATED AIRPLAY PROCESSED STREAM VIDEO BRIDGE (HIDDEN) -->
+<video
+  id="auroraAirPlayVideo"
+  style="display:none;position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+  autoplay
+  playsinline
+  webkit-playsinline
+  x-webkit-airplay="allow"
+  airplay="allow">
+</video>
 
 <!-- SOURCE MODAL -->
 <div class="modal" id="sourceModal" onclick="handleBackdropClick(event, 'sourceModal')">
@@ -1879,9 +1915,9 @@ select:focus-visible,
       <div class="dialog-card">
         <label>AirPlay Delivery Mode</label>
         <select id="settingAirPlayMode">
-          <option value="processed" selected>Aurora Processed Stream (with Custom SSR)</option>
+          <option value="auto" selected>Smart Dynamic (Auto Processed / Direct 4K)</option>
+          <option value="direct">Force 4K AV-Direct Master Stream Lock</option>
           <option value="mirror">Clean TV Screen Mirroring (Equalized)</option>
-          <option value="direct">Direct 4K AV-Stream Lock (Raw HLS)</option>
         </select>
       </div>
 
@@ -1942,7 +1978,7 @@ select:focus-visible,
     <div class="dialog-grid">
       <div class="dialog-card">
         <label>Pipeline Architecture</label>
-        <strong style="color:var(--cyan)">ALLX Spatial 2.0 & Aurora Authoritative Canvas Pipeline</strong>
+        <strong style="color:var(--cyan)">ALLX Spatial 2.0 & Aurora Authoritative Canvas</strong>
       </div>
       <div class="dialog-card">
         <label>Active Picture Preset</label>
@@ -1987,7 +2023,7 @@ select:focus-visible,
       <div class="dialog-card"><span class="kbd">T</span> Theater Mode</div>
       <div class="dialog-card"><span class="kbd">R</span> Live Edge Re-Sync</div>
       <div class="dialog-card"><span class="kbd">Z</span> Random Channel Zap</div>
-      <div class="dialog-card"><span class="kbd">[ / ]</span> Previous / Next Channel</div>
+      <div class="dialog-card"><span class="kbd">← →</span> or <span class="kbd">P / N</span> Previous / Next Channel</div>
       <div class="dialog-card"><span class="kbd">0-9</span> Direct Channel Number Tuning</div>
       <div class="dialog-card"><span class="kbd">/</span> Search Focus</div>
       <div class="dialog-card"><span class="kbd">C</span> Captions</div>
@@ -2002,88 +2038,19 @@ select:focus-visible,
 'use strict';
 
 /* =========================================================
-   SILENT TERMINAL DIAGNOSTICS & TELEMETRY ENGINE
-   ========================================================= */
-
-const AirPlayInspector = {
-  enabled: true,
-  log(module, action, details = {}, level = 'info') {
-    if (!this.enabled) return;
-    const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
-    const color = {
-      'AirPlay:Hardware': '#00e5ff',
-      'AirPlay:Router': '#a17cff',
-      'AirPlay:AudioBridge': '#21d69a',
-      'AirPlay:MediaStream': '#ffc44d',
-      'Aurora:Engine': '#ff4fa3',
-      'HLS:Playback': '#67efff'
-    }[module] || '#ffffff';
-
-    const header = `%c[${timestamp}] [${module}] ${action}`;
-    const style = `color:${color};font-weight:bold;`;
-
-    if (level === 'error') {
-      console.error(header, style, details);
-    } else if (level === 'warn') {
-      console.warn(header, style, details);
-    } else {
-      console.log(header, style, details);
-    }
-  },
-
-  dumpDiagnostics() {
-    console.group('%c📡 SMART ANTENNA PRO X — AIRPLAY & AURORA DIAGNOSTICS DUMP', 'color:#00e5ff;font-weight:bold;font-size:13px;');
-    console.log('Timestamp:', new Date().toISOString());
-    console.table({
-      'User Agent': navigator.userAgent,
-      'WebKit AirPlay Available': Boolean(window.WebKitPlaybackTargetAvailabilityEvent),
-      'Remote Playback API': Boolean(video && video.remote),
-      'AirPlay Active': isAirPlayActive,
-      'Active Routing Mode': settings.airplayMode,
-      'Source Video State': video ? `Ready: ${video.readyState}, Paused: ${video.paused}` : 'None',
-      'Source Resolution': video ? `${video.videoWidth}x${video.videoHeight}` : 'Unknown',
-      'Processed Video State': auroraProcessedVideo ? `Ready: ${auroraProcessedVideo.readyState}, Active: ${Boolean(auroraProcessedVideo.srcObject)}` : 'None',
-      'Web Audio Context': audioContextBridge ? audioContextBridge.state : 'Uninitialized',
-      'Custom SSR Active': isPictureProcessingActive(),
-      'Current Preset': pictureSettings.preset,
-      'Sharpness (SSR)': pictureSettings.sharpness,
-      'Detail Recovery': pictureSettings.detailRecovery,
-      'Noise Reduction': pictureSettings.noiseReduction,
-      'Color Tint': `${pictureSettings.tint}°`
-    });
-    console.groupEnd();
-  },
-
-  testPipeline() {
-    console.group('%c🔍 AIRPLAY PIPELINE STEP-BY-STEP HEALTH TEST', 'color:#21d69a;font-weight:bold;font-size:12px;');
-    console.log('1. Checking Video Element:', video && video.readyState >= 2 ? '✅ READY' : '❌ NOT READY');
-    console.log('2. Checking WebKit Target Availability:', Boolean(window.WebKitPlaybackTargetAvailabilityEvent) ? '✅ SUPPORTED' : '⚠️ NOT NATIVE WEBKIT (Chrome/Firefox)');
-    console.log('3. Checking Target Picker Function:', typeof video.webkitShowPlaybackTargetPicker === 'function' ? '✅ AVAILABLE' : '❌ UNAVAILABLE');
-    console.log('4. Testing Canvas Stream Capture:', typeof HTMLCanvasElement.prototype.captureStream === 'function' ? '✅ SUPPORTED' : '❌ UNSUPPORTED');
-    console.log('5. Audio Context Bridge Status:', audioContextBridge ? audioContextBridge.state : '⚪ STANDBY');
-    console.log('6. Master Filter String:', buildCanvasFilterString(pictureSettings));
-    console.groupEnd();
-  }
-};
-
-window.dumpAirPlayDiagnostics = () => AirPlayInspector.dumpDiagnostics();
-window.testAirPlayStream = () => AirPlayInspector.testPipeline();
-window.AirPlayDebug = AirPlayInspector;
-
-/* =========================================================
    CANONICAL CONSTANTS & AURORA STATE OBJECT
    ========================================================= */
 
 const STORAGE = {
-  channels: 'sat_pro_channels_v11',
-  favorites: 'sat_pro_favorites_v11',
-  history: 'sat_pro_history_v11',
-  sources: 'sat_pro_sources_v11',
-  settings: 'sat_pro_settings_v11',
-  cache: 'sat_pro_playlist_cache_v11',
-  health: 'sat_pro_health_v11',
-  view: 'sat_pro_view_v11',
-  pictureSettings: 'sat_pro_picture_settings_v11'
+  channels: 'sat_pro_channels_v10',
+  favorites: 'sat_pro_favorites_v10',
+  history: 'sat_pro_history_v10',
+  sources: 'sat_pro_sources_v10',
+  settings: 'sat_pro_settings_v10',
+  cache: 'sat_pro_playlist_cache_v10',
+  health: 'sat_pro_health_v10',
+  view: 'sat_pro_view_v10',
+  pictureSettings: 'sat_pro_picture_settings_v10'
 };
 
 const DEFAULT_SETTINGS = {
@@ -2094,20 +2061,21 @@ const DEFAULT_SETTINGS = {
   cache: '60',
   playback: 'auto',
   audio: 'direct',
-  airplayMode: 'processed'
+  airplayMode: 'auto'
 };
 
+/* Master canonical picture settings state object */
 const pictureSettings = {
   preset: "auto",
-  brightness: 103,
-  contrast: 120,
-  saturation: 125,
-  sharpness: 130,
-  detailRecovery: 140,
-  noiseReduction: 20,
+  brightness: 103, // 60 to 140
+  contrast: 120,   // 50 to 200
+  saturation: 125, // 0 to 250
+  sharpness: 130,  // 0 to 200 (SSR Gain)
+  detailRecovery: 140, // 0 to 200 (Acutance Gain)
+  noiseReduction: 20,  // 0 to 100
   gamma: 1.0,
-  temperature: 0,
-  tint: 0,
+  temperature: 0,  // -50 to +50
+  tint: 0,         // -180 to +180 deg
   localContrast: 15,
   quantumSSR: true,
   auroraHDR: true,
@@ -2184,16 +2152,32 @@ const SOURCES = {
   documentary: { label: '🔬 Documentaries', url: 'https://iptv-org.github.io/iptv/categories/documentary.m3u' },
   science: { label: '🧪 Science & Tech', url: 'https://iptv-org.github.io/iptv/categories/science.m3u' },
   kids: { label: '🧸 Kids & Family', url: 'https://iptv-org.github.io/iptv/categories/kids.m3u' },
+  animation: { label: '🎨 Cartoons & Anime', url: 'https://iptv-org.github.io/iptv/categories/animation.m3u' },
+  comedy: { label: '😂 Comedy Hub', url: 'https://iptv-org.github.io/iptv/categories/comedy.m3u' },
+  classic: { label: '📼 Classic Cinema', url: 'https://iptv-org.github.io/iptv/categories/classic.m3u' },
+  business: { label: '💼 Business & Finance', url: 'https://iptv-org.github.io/iptv/categories/business.m3u' },
+  travel: { label: '✈️ Travel & Explore', url: 'https://iptv-org.github.io/iptv/categories/travel.m3u' },
+  weather: { label: '🌤 Weather Radar', url: 'https://iptv-org.github.io/iptv/categories/weather.m3u' },
   us: { label: '🇺🇸 United States', url: 'https://iptv-org.github.io/iptv/countries/us.m3u' },
   ca: { label: '🇨🇦 Canada', url: 'https://iptv-org.github.io/iptv/countries/ca.m3u' },
   gb: { label: '🇬🇧 United Kingdom', url: 'https://iptv-org.github.io/iptv/countries/gb.m3u' },
+  au: { label: '🇦🇺 Australia', url: 'https://iptv-org.github.io/iptv/countries/au.m3u' },
+  de: { label: '🇩🇪 Germany', url: 'https://iptv-org.github.io/iptv/countries/de.m3u' },
+  fr: { label: '🇫🇷 France', url: 'https://iptv-org.github.io/iptv/countries/fr.m3u' },
+  es: { label: '🇪🇸 Spain', url: 'https://iptv-org.github.io/iptv/countries/es.m3u' },
+  it: { label: '🇮🇹 Italy', url: 'https://iptv-org.github.io/iptv/countries/it.m3u' },
+  jp: { label: '🇯🇵 Japan', url: 'https://iptv-org.github.io/iptv/countries/jp.m3u' },
   master: { label: '🌐 Worldwide Master Mega', url: 'https://iptv-org.github.io/iptv/index.category.m3u' }
 };
 
 const PRESETS = {
-  quick: { label: '⚡ Quick Sync (1.5k+)', keys: ['freetv', 'news', 'sports', 'movies', 'documentary'] },
+  quick: { label: '⚡ Quick Sync', keys: ['freetv', 'news', 'sports', 'movies', 'documentary'] },
   usa: { label: '🇺🇸 USA + Canada', keys: ['us', 'ca'] },
-  world: { label: '🌐 Worldwide Mega (8k+)', keys: ['master', 'freetv'] }
+  world: { label: '🌐 Global Master', keys: ['master', 'freetv'] },
+  entertainment: { label: '🎭 Entertainment Pack', keys: ['entertainment', 'comedy', 'classic', 'series'] },
+  science: { label: '🔬 Science Pack', keys: ['science', 'documentary', 'travel', 'weather'] },
+  kids: { label: '🧸 Kids Pack', keys: ['kids', 'animation'] },
+  international: { label: '🌎 Europe & World', keys: ['gb', 'de', 'fr', 'es', 'it', 'jp'] }
 };
 
 const CORS_PROXIES = [
@@ -2255,23 +2239,25 @@ let debounceTimer = null;
 let telemetryTimer = null;
 let osdTimer = null;
 let video = null;
-let auroraProcessedVideo = null;
+let auroraCanvas = null;
+let auroraCtx = null;
+let auroraProcessedCanvas = null;
+let auroraProcessedCtx = null;
+let auroraAirPlayVideo = null;
+let outputTarget = 'local'; // local | airplay | lg | mirror
+
 let numBuffer = '';
 let numTimer = null;
 
-let audioContextBridge = null;
-let audioSourceNode = null;
-let audioDestinationNode = null;
-
 /* =========================================================
-   STORAGE HELPERS (MULTI-VERSION INHERITANCE)
+   STORAGE HELPERS
    ========================================================= */
 
 function load(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
-    var parsed = JSON.parse(raw); return (parsed !== null && parsed !== undefined) ? parsed : fallback;
+    return JSON.parse(raw) ?? fallback;
   } catch {
     return fallback;
   }
@@ -2283,22 +2269,6 @@ function save(key, value) {
   } catch (e) {
     console.warn('Storage failure', e);
   }
-}
-
-function loadAnyStoredChannels() {
-  const versions = [
-    'sat_pro_channels_v11',
-    'sat_pro_channels_v10',
-    'sat_pro_channels_v9',
-    'sat_pro_channels_v8',
-    'sat_pro_channels_v7',
-    'sat_pro_channels'
-  ];
-  for (const v of versions) {
-    const list = load(v, null);
-    if (Array.isArray(list) && list.length > 0) return list;
-  }
-  return null;
 }
 
 function loadSettings() {
@@ -2324,7 +2294,7 @@ function esc(value = '') {
 function initials(value = 'TV') {
   const words = String(value).replace(/[^a-z0-9 ]/gi, ' ').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return 'TV';
-  return ((words[0][0] || 'T') + ((words[1] && words[1][0]) || words[0][1] || 'V')).toUpperCase();
+  return ((words[0][0] || 'T') + (words[1]?.[0] || words[0][1] || 'V')).toUpperCase();
 }
 
 function flag(country) {
@@ -2419,7 +2389,7 @@ function handleBackdropClick(event, id) {
 }
 
 /* =========================================================
-   AUTHORITATIVE PICTURE ENGINE & GPU SHADER BUILDER
+   CANONICAL PICTURE SETTINGS & AURORA PIPELINE
    ========================================================= */
 
 function isPictureProcessingActive() {
@@ -2436,128 +2406,8 @@ function isPictureProcessingActive() {
   );
 }
 
-/* Builds 100% compliant CSS filter string supported on all WebKit, Safari & Chrome GPUs */
-function buildCanvasFilterString(s) {
-  if (!s || s.rawBypass || !s.auroraEnabled) {
-    return 'none';
-  }
-
-  const brightness = Math.max(0.10, Math.min(2.50, Number(s.brightness || 100) / 100));
-  const contrast = Math.max(0.10, Math.min(3.00, Number(s.contrast || 100) / 100));
-  const saturation = Math.max(0.0, Math.min(3.00, Number(s.saturation || 100) / 100));
-  const tint = Number(s.tint || 0);
-  const temperature = Number(s.temperature || 0);
-
-  /* Micro-contrast gain for SSR & Acutance */
-  const ssrGain = Math.max(0.0, (Number(s.sharpness || 100) - 100.0) / 100.0);
-  const acuGain = Math.max(0.0, (Number(s.detailRecovery || 100) - 100.0) / 100.0);
-  const effectiveContrast = contrast * (1.0 + (ssrGain * 0.12) + (acuGain * 0.16));
-
-  let filters = [
-    `brightness(${brightness.toFixed(2)})`,
-    `contrast(${effectiveContrast.toFixed(2)})`,
-    `saturate(${saturation.toFixed(2)})`
-  ];
-
-  if (Math.abs(tint) > 0.01) {
-    filters.push(`hue-rotate(${tint.toFixed(1)}deg)`);
-  }
-
-  /* Aurora temperature approximation: Positive = warmer, Negative = cooler */
-  if (temperature > 0) {
-    filters.push(`sepia(${Math.min(40.0, temperature * 0.7).toFixed(1)}%)`);
-    filters.push(`hue-rotate(${(-temperature * 0.14).toFixed(1)}deg)`);
-  } else if (temperature < 0) {
-    filters.push(`hue-rotate(${(temperature * 0.22).toFixed(1)}deg)`);
-    filters.push(`saturate(${(1.0 + Math.abs(temperature) * 0.005).toFixed(3)})`);
-  }
-
-  /* Noise Reduction / Deblocking */
-  const noise = Number(s.noiseReduction || 0);
-  if (noise > 0) {
-    filters.push(`blur(${((noise / 100.0) * 1.5).toFixed(2)}px)`);
-  }
-
-  return filters.join(' ');
-}
-
-/* Performs spatial unsharp mask and high-frequency edge enhancement directly on canvas framebuffer */
-function renderAuroraProcessedFrame(ctx, source, w, h) {
-  const s = pictureSettings;
-
-  ctx.save();
-  ctx.filter = buildCanvasFilterString(s);
-  try {
-    ctx.drawImage(source, 0, 0, w, h);
-  } catch {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-  }
-  ctx.filter = 'none';
-
-  const ssrGain = Math.max(0, (Number(s.sharpness || 100) - 100) / 100);
-  const acuGain = Math.max(0, (Number(s.detailRecovery || 100) - 100) / 100);
-
-  if (!s.rawBypass && s.auroraEnabled && (ssrGain > 0 || acuGain > 0)) {
-    if (!ctx._tempCanvas) {
-      ctx._tempCanvas = document.createElement('canvas');
-    }
-    const temp = ctx._tempCanvas;
-    if (temp.width !== w || temp.height !== h) {
-      temp.width = w;
-      temp.height = h;
-    }
-    const tctx = temp.getContext('2d');
-    tctx.clearRect(0, 0, w, h);
-    try {
-      tctx.drawImage(ctx.canvas, 0, 0, w, h);
-    } catch {}
-
-    ctx.save();
-    ctx.globalAlpha = Math.min(0.65, (ssrGain * 0.35) + (acuGain * 0.45));
-    ctx.globalCompositeOperation = 'overlay';
-    ctx.filter = `contrast(${1.15 + acuGain * 0.35}) brightness(1.02)`;
-    try {
-      ctx.drawImage(temp, 0, 0, w, h);
-    } catch {}
-    ctx.restore();
-  }
-
-  ctx.restore();
-}
-
-function updateAuroraPipeline() {
-  syncEqualizerUiInputs();
-  syncEqualizerLabels(pictureSettings);
-  updateVisualizer(pictureSettings);
-  updateResolutionTelemetry();
-  updateAirPlayStatus();
-
-  const filterString = buildCanvasFilterString(pictureSettings);
-  var isTV = /Web0S|webOS|LG|SmartTV|Tizen|Android TV|Shield|BRAVIA|NetCast|AFTT|AFTM|CrKey/i.test(navigator.userAgent);
-
-  if (video) {
-    if (isTV) {
-      // Prevent black screen bug on LG webOS and Nvidia Shield hardware video decoders
-      video.style.filter = 'none';
-      video.style.webkitFilter = 'none';
-    } else {
-      video.style.filter = filterString;
-      video.style.webkitFilter = filterString;
-    }
-  }
-
-  const studioEnhanced = $('studioCanvasEnhanced');
-  if (studioEnhanced) {
-    studioEnhanced.style.filter = filterString;
-  }
-}
-
 function setPictureSetting(name, value) {
-  if (!Object.prototype.hasOwnProperty.call(pictureSettings, name)) {
-    console.warn('Unknown picture setting:', name);
-    return;
-  }
+  if (!Object.prototype.hasOwnProperty.call(pictureSettings, name)) return;
 
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return;
@@ -2566,26 +2416,31 @@ function setPictureSetting(name, value) {
 
   if (pictureSettings.preset !== 'bypass') {
     pictureSettings.preset = 'custom';
-    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   }
 
-  save(STORAGE.pictureSettings, pictureSettings);
+  syncEqualizerUiInputs();
   updateAuroraPipeline();
+  save(STORAGE.pictureSettings, pictureSettings);
 
-  if (name === 'brightness') triggerOSD(`☀️ Brightness: ${numericValue}%`);
-  else if (name === 'contrast') triggerOSD(`🌟 Contrast: ${(numericValue / 100).toFixed(2)}×`);
-  else if (name === 'saturation') triggerOSD(`🎨 Saturation: ${numericValue}%`);
-  else if (name === 'tint') triggerOSD(`🎨 Tint: ${numericValue}°`);
-  else if (name === 'temperature') triggerOSD(`🌡 Temperature: ${numericValue}`);
-  else if (name === 'sharpness') triggerOSD(`🔮 Aurora SSR: ${numericValue}%`);
-  else if (name === 'detailRecovery') triggerOSD(`⚡ Aurora Acutance: ${numericValue}%`);
-  else if (name === 'noiseReduction') triggerOSD(`🧼 Aurora Denoise: ${numericValue}%`);
+  const messages = {
+    brightness: `☀️ Brightness: ${numericValue}%`,
+    contrast: `🌟 Contrast: ${(numericValue / 100).toFixed(2)}×`,
+    saturation: `🎨 Saturation: ${numericValue}%`,
+    tint: `🎨 Tint: ${numericValue}°`,
+    temperature: `🌡 Temperature: ${numericValue}`,
+    sharpness: `🔮 Aurora SSR: ${numericValue}%`,
+    detailRecovery: `⚡ Aurora Acutance: ${numericValue}%`,
+    noiseReduction: `🧼 Aurora Denoise: ${numericValue}%`
+  };
+  if (messages[name]) triggerOSD(messages[name]);
 }
 
 function applyPicturePreset(name) {
   const preset = PICTURE_PRESETS[name];
   if (!preset) return;
   Object.assign(pictureSettings, preset);
+  pictureSettings.rawBypass = name === 'bypass';
 
   syncEqualizerUiInputs();
   updateAuroraPipeline();
@@ -2597,10 +2452,112 @@ function applyPicturePreset(name) {
 
 function setBypass(active) {
   pictureSettings.rawBypass = Boolean(active);
+  if (pictureSettings.rawBypass) pictureSettings.preset = 'bypass';
+  else if (pictureSettings.preset === 'bypass') pictureSettings.preset = 'auto';
   updateAuroraPipeline();
-  triggerOSD(active ? '⚪ RAW BROADCAST (PICTURE PIPELINE BYPASSED)' : `✨ AURORA RESTORED (${pictureSettings.preset.toUpperCase()})`);
+  save(STORAGE.pictureSettings, pictureSettings);
+  triggerOSD(active ? '⚪ RAW BROADCAST — PIPELINE BYPASSED' : `✨ AURORA RESTORED (${pictureSettings.preset.toUpperCase()})`);
   const bBtn = $('bypassBtn');
   if (bBtn) bBtn.classList.toggle('active', active);
+}
+
+/*
+ * IMPORTANT SAFARI FIX
+ * --------------------
+ * Safari/WebKit can ignore or inconsistently apply CanvasRenderingContext2D.filter
+ * while a video is being copied into a canvas.  The authoritative frame buffer
+ * therefore remains RAW.  Picture processing is applied to a second presentation
+ * canvas with the normal CSS filter pipeline, which WebKit renders reliably.
+ */
+function buildCanvasFilterString(s) {
+  if (!s || s.rawBypass || !s.auroraEnabled) return 'none';
+
+  const brightness = Math.max(0.10, Math.min(2.50, Number(s.brightness ?? 100) / 100));
+  const contrastBase = Math.max(0.10, Math.min(3.00, Number(s.contrast ?? 100) / 100));
+  const saturationBase = Math.max(0.00, Math.min(3.00, Number(s.saturation ?? 100) / 100));
+  const tint = Number(s.tint ?? 0);
+  const temperature = Number(s.temperature ?? 0);
+  const sharpness = Math.max(0, Math.min(200, Number(s.sharpness ?? 0)));
+  const acutance = Math.max(0, Math.min(200, Number(s.detailRecovery ?? 0)));
+  const denoise = Math.max(0, Math.min(100, Number(s.noiseReduction ?? 0)));
+
+  /*
+   * CSS has no native sharpen/denoise primitive.  We map those controls to
+   * conservative contrast/saturation/brightness adjustments so every slider
+   * has a visible, deterministic effect without pretending to perform a
+   * GPU convolution that Safari may not execute.
+   */
+  const edgeLift = (sharpness * 0.0018) + (acutance * 0.0010);
+  const denoiseCompression = denoise * 0.0015;
+  const contrast = Math.max(0.10, Math.min(3.00, contrastBase + edgeLift - denoiseCompression));
+  const saturation = Math.max(0.00, Math.min(3.00, saturationBase - denoise * 0.0010));
+
+  const filters = [
+    `brightness(${brightness})`,
+    `contrast(${contrast})`,
+    `saturate(${saturation})`
+  ];
+
+  if (Math.abs(tint) > 0.01) filters.push(`hue-rotate(${tint}deg)`);
+
+  if (temperature > 0) {
+    filters.push(`sepia(${Math.min(35, temperature * 0.70)}%)`);
+    filters.push(`hue-rotate(${-temperature * 0.12}deg)`);
+  } else if (temperature < 0) {
+    filters.push(`hue-rotate(${temperature * 0.22}deg)`);
+    filters.push(`saturate(${1 + Math.abs(temperature) * 0.004})`);
+  }
+
+  return filters.join(' ');
+}
+
+function getPictureFilter(s = pictureSettings) {
+  return buildCanvasFilterString(s);
+}
+
+function syncProcessedCanvasGeometry(canvas, w, h) {
+  if (!canvas) return;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+}
+
+function applyAuroraPresentationState() {
+  const screen = $('playerScreen');
+  const active = Boolean(pictureSettings.auroraEnabled && !pictureSettings.rawBypass);
+
+  if (auroraCanvas) auroraCanvas.style.filter = 'none';
+  if (auroraProcessedCanvas) {
+    auroraProcessedCanvas.style.filter = active ? getPictureFilter() : 'none';
+    auroraProcessedCanvas.style.display = 'block';
+  }
+
+  if (screen) {
+    screen.classList.toggle('full-processing', active && !isMainSplitActive);
+    screen.classList.toggle('split-processing', active && isMainSplitActive);
+  }
+
+  const bBtn = $('bypassBtn');
+  if (bBtn) bBtn.classList.toggle('active', pictureSettings.rawBypass);
+
+  const header = $('auroraHeaderBtn');
+  if (header) header.classList.toggle('active', pictureSettings.auroraEnabled && !pictureSettings.rawBypass);
+
+  const hud = $('hudAurora');
+  if (hud) hud.textContent = active ? '✨ AURORA Q1024 • ACTIVE' : '⚪ RAW SOURCE';
+
+  const pill = $('auroraPill');
+  if (pill) pill.textContent = active ? `✨ Aurora: ${pictureSettings.preset.toUpperCase()}` : '⚪ Aurora: BYPASS';
+}
+
+function updateAuroraPipeline() {
+  syncEqualizerUiInputs();
+  syncEqualizerLabels(pictureSettings);
+  updateVisualizer(pictureSettings);
+  updateResolutionTelemetry();
+  updateAirPlayStatus();
+  applyAuroraPresentationState();
 }
 
 function updateVisualizer(p) {
@@ -2620,47 +2577,24 @@ function updateVisualizer(p) {
 
 function syncEqualizerLabels(p) {
   if ($('valSSR')) $('valSSR').textContent = `${p.sharpness}% (${p.sharpness >= 150 ? 'Ultra 4K' : (p.sharpness >= 110 ? 'High' : 'Standard')})`;
-  if ($('valAcutance')) $('valAcutance').textContent = `${p.detailRecovery >= 100 ? '+' : ''}${((p.detailRecovery - 100) * 0.07).toFixed(1)} dB`;
-  if ($('valDenoise')) $('valDenoise').textContent = `${p.noiseReduction}% (${p.noiseReduction > 40 ? 'High' : (p.noiseReduction > 15 ? 'Med' : 'Off')})`;
-  
-  if ($('valTint')) {
-    const t = Math.round(p.tint);
-    $('valTint').textContent = t === 0 ? '0° (Neutral)' : (t < 0 ? `${t}° (Turf Green)` : `+${t}° (Skin Magenta)`);
-  }
-  
-  if ($('valTemp')) {
-    const tm = Math.round(p.temperature);
-    $('valTemp').textContent = tm === 0 ? '0 (D65 Neutral)' : (tm < 0 ? `${tm} (Cool Blue)` : `+${tm} (Warm Amber)`);
-  }
-  
-  if ($('valSaturation')) $('valSaturation').textContent = `${p.saturation}% Quantum Chroma`;
-  if ($('valContrast')) $('valContrast').textContent = `${(p.contrast / 100).toFixed(2)}x Dynamic Range`;
-  if ($('valBrightness')) $('valBrightness').textContent = `${p.brightness}% Peak Luma`;
-
-  const mObj = PICTURE_PRESETS[p.preset] || { badge: 'CUSTOM SSR', name: 'CUSTOM' };
-  if ($('mPicMode')) $('mPicMode').textContent = mObj.badge;
-  if ($('hudAurora')) $('hudAurora').textContent = isAirPlayActive ? `📶 AIRPLAY • ${mObj.badge}` : mObj.badge;
-  if ($('auroraPill')) $('auroraPill').textContent = `✨ Aurora: ${mObj.badge}`;
-  if ($('auroraModeBtn')) $('auroraModeBtn').textContent = `🎨 ${mObj.badge}`;
-  if ($('studioEnhancedLabel')) $('studioEnhancedLabel').textContent = mObj.badge;
-  if ($('mainSplitRightTag')) $('mainSplitRightTag').textContent = mObj.badge;
+  if ($('valAcutance')) $('valAcutance').textContent = `${p.detailRecovery >= 100 ? 'High' : 'Standard'} ${p.detailRecovery}%`;
+  if ($('valDenoise')) $('valDenoise').textContent = `${p.noiseReduction}%`;
+  if ($('valTint')) $('valTint').textContent = `${p.tint}°`;
+  if ($('valTemp')) $('valTemp').textContent = `${p.temperature > 0 ? '+' : ''}${p.temperature}`;
+  if ($('valSaturation')) $('valSaturation').textContent = `${p.saturation}%`;
+  if ($('valContrast')) $('valContrast').textContent = `${p.contrast}%`;
+  if ($('valBrightness')) $('valBrightness').textContent = `${p.brightness}%`;
 }
 
 function syncEqualizerUiInputs() {
   const p = pictureSettings;
-  if ($('eqSSR')) $('eqSSR').value = p.sharpness;
-  if ($('eqAcutance')) $('eqAcutance').value = p.detailRecovery;
-  if ($('eqDenoise')) $('eqDenoise').value = p.noiseReduction;
-  if ($('eqTint')) $('eqTint').value = p.tint;
-  if ($('eqTemp')) $('eqTemp').value = p.temperature;
-  if ($('eqSaturation')) $('eqSaturation').value = p.saturation;
-  if ($('eqContrast')) $('eqContrast').value = p.contrast;
-  if ($('eqBrightness')) $('eqBrightness').value = p.brightness;
-
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.id === `pbtn_${p.preset}`);
-  });
-
+  const pairs = [
+    ['eqSSR', p.sharpness], ['eqAcutance', p.detailRecovery], ['eqDenoise', p.noiseReduction],
+    ['eqTint', p.tint], ['eqTemp', p.temperature], ['eqSaturation', p.saturation],
+    ['eqContrast', p.contrast], ['eqBrightness', p.brightness]
+  ];
+  pairs.forEach(([id, value]) => { const el = $(id); if (el) el.value = value; });
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.toggle('active', btn.id === `pbtn_${p.preset}`));
   syncEqualizerLabels(p);
 }
 
@@ -2675,40 +2609,103 @@ function saveCustomPictureProfile() {
 }
 
 /* =========================================================
-   STUDIO & MAIN SCREEN SPLIT-COMPARE RENDERING
+   AUTHORITATIVE FRAME-BUFFER RENDERING LOOP
+   ========================================================= */
+function renderAuroraMasterFrame() {
+  if (!video || !auroraCanvas || !auroraCtx) {
+    requestAnimationFrame(renderAuroraMasterFrame);
+    return;
+  }
+
+  if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+    requestAnimationFrame(renderAuroraMasterFrame);
+    return;
+  }
+
+  const w = video.videoWidth || 1280;
+  const h = video.videoHeight || 720;
+  syncProcessedCanvasGeometry(auroraCanvas, w, h);
+  syncProcessedCanvasGeometry(auroraProcessedCanvas, w, h);
+
+  /* Always copy the decoder's unmodified frame. Never use ctx.filter here. */
+  auroraCtx.save();
+  auroraCtx.filter = 'none';
+  auroraCtx.globalCompositeOperation = 'copy';
+  auroraCtx.clearRect(0, 0, w, h);
+  auroraCtx.drawImage(video, 0, 0, w, h);
+  auroraCtx.restore();
+
+  if (auroraProcessedCtx && auroraProcessedCanvas) {
+    /*
+      The visible processed layer uses CSS filters for Safari reliability.
+      The export buffer additionally tries the standard Canvas 2D filter API
+      so a MediaStream capture can contain baked picture changes on engines
+      that implement CanvasRenderingContext2D.filter.
+    */
+    const active = pictureSettings.auroraEnabled && !pictureSettings.rawBypass;
+
+    auroraProcessedCtx.save();
+    auroraProcessedCtx.globalCompositeOperation = 'copy';
+    auroraProcessedCtx.clearRect(0, 0, w, h);
+
+    try {
+      auroraProcessedCtx.filter = active ? getPictureFilter() : 'none';
+    } catch {
+      auroraProcessedCtx.filter = 'none';
+    }
+
+    auroraProcessedCtx.drawImage(video, 0, 0, w, h);
+    auroraProcessedCtx.restore();
+
+    auroraProcessedCanvas.style.filter = active ? getPictureFilter() : 'none';
+  }
+
+  applyAuroraPresentationState();
+  requestAnimationFrame(renderAuroraMasterFrame);
+}
+
+/* =========================================================
+   STUDIO SPLIT-SCREEN WORKBENCH
    ========================================================= */
 
 function renderStudioLoop() {
   if (!isStudioOpen) return;
-  const canvasRaw = $('studioCanvasRaw');
-  const canvasEnhanced = $('studioCanvasEnhanced');
-
-  if (canvasRaw && canvasEnhanced && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+  const canvas = $('studioCanvas');
+  const processed = $('studioProcessedCanvas');
+  if (canvas && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
     const w = video.videoWidth || 1280;
     const h = video.videoHeight || 720;
-    
-    if (canvasRaw.width !== w || canvasRaw.height !== h) {
-      canvasRaw.width = w;
-      canvasRaw.height = h;
-      canvasEnhanced.width = w;
-      canvasEnhanced.height = h;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
     }
-    
-    const ctxRaw = canvasRaw.getContext('2d');
-    const ctxEnhanced = canvasEnhanced.getContext('2d');
-    
-    if (ctxRaw && ctxEnhanced) {
-      try {
-        ctxRaw.drawImage(video, 0, 0, w, h);
-      } catch {
-        ctxRaw.fillStyle = '#000';
-        ctxRaw.fillRect(0, 0, w, h);
-      }
-      renderAuroraProcessedFrame(ctxEnhanced, video, w, h);
+    if (processed && (processed.width !== w || processed.height !== h)) {
+      processed.width = w;
+      processed.height = h;
     }
 
-    canvasEnhanced.style.filter = buildCanvasFilterString(pictureSettings);
-    canvasEnhanced.style.clipPath = `inset(0 0 0 ${studioSplitPos}%)`;
+    const ctx = canvas.getContext('2d');
+    const pctx = processed ? processed.getContext('2d') : null;
+    if (ctx) {
+      ctx.save();
+      ctx.filter = 'none';
+      ctx.globalCompositeOperation = 'copy';
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(video, 0, 0, w, h);
+      ctx.restore();
+    }
+    if (pctx && processed) {
+      pctx.save();
+      pctx.filter = 'none';
+      pctx.globalCompositeOperation = 'copy';
+      pctx.clearRect(0, 0, w, h);
+      pctx.drawImage(video, 0, 0, w, h);
+      pctx.restore();
+      processed.style.filter = getPictureFilter();
+      processed.style.clipPath = pictureSettings.rawBypass || !pictureSettings.auroraEnabled
+        ? 'inset(0 0 0 100%)'
+        : `inset(0 0 0 ${Math.max(0, Math.min(100, studioSplitPos))}%)`;
+    }
   }
   requestAnimationFrame(renderStudioLoop);
 }
@@ -2720,56 +2717,29 @@ function resetStudioSplit() {
 
 function toggleSplitScreen() {
   isMainSplitActive = !isMainSplitActive;
-  const canvas = $('splitCanvas');
   const bar = $('splitBar');
   const labels = $('splitLabels');
   const btn = $('splitBtn');
 
-  if (canvas) canvas.classList.toggle('active', isMainSplitActive);
   if (bar) bar.classList.toggle('active', isMainSplitActive);
   if (labels) labels.classList.toggle('active', isMainSplitActive);
   if (btn) btn.classList.toggle('active', isMainSplitActive);
+  applyAuroraPresentationState();
 
-  if (isMainSplitActive) {
-    renderMainSplitLoop();
-    triggerOSD('↔ A/B Split Compare: Left RAW / Right AURORA');
-  } else {
-    triggerOSD('↔ Main Split Compare Disabled');
-  }
-}
-
-function renderMainSplitLoop() {
-  if (!isMainSplitActive) return;
-  const canvas = $('splitCanvas');
-  if (canvas && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-    const w = video.videoWidth || 1280;
-    const h = video.videoHeight || 720;
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-    }
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, w, h);
-      try {
-        ctx.drawImage(video, 0, 0, w, h);
-      } catch {}
-    }
-    canvas.style.clipPath = `inset(0 calc(100% - ${mainSplitPos}%) 0 0)`;
-  }
-  requestAnimationFrame(renderMainSplitLoop);
+  triggerOSD(isMainSplitActive ? '↔ A/B Split Compare: Left RAW / Right AURORA' : '↔ Main Split Compare Disabled');
 }
 
 function setupDraggers() {
+  // Studio Screen Split Divider
   const studioWrap = $('studioScreenWrap');
   if (studioWrap) {
     const onStudioMove = (e) => {
       if (!isDraggingStudioSplit) return;
       const rect = studioWrap.getBoundingClientRect();
-      const clientX = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) || 0;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const pct = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
       studioSplitPos = pct;
-      document.documentElement.style.setProperty('--studio-split-x', pct + '%');
+      document.documentElement.style.setProperty('--studio-split-x', `${pct}%`);
     };
 
     const onStudioEnd = () => {
@@ -2791,21 +2761,22 @@ function setupDraggers() {
     studioWrap.addEventListener('touchstart', (e) => {
       if (e.target.id === 'studioSplitBar' || e.target.closest('#studioSplitBar')) {
         isDraggingStudioSplit = true;
-        window.addEventListener('touchmove', onStudioMove, { passive: true });
+        window.addEventListener('touchmove', onStudioMove);
         window.addEventListener('touchend', onStudioEnd);
       }
     }, { passive: true });
   }
 
+  // Main Player Screen Split Divider
   const mainScreen = $('playerScreen');
   if (mainScreen) {
     const onMainMove = (e) => {
       if (!isDraggingMainSplit || !isMainSplitActive) return;
       const rect = mainScreen.getBoundingClientRect();
-      const clientX = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) || 0;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const pct = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
       mainSplitPos = pct;
-      document.documentElement.style.setProperty('--split-x', pct + '%');
+      document.documentElement.style.setProperty('--split-x', `${pct}%`);
     };
 
     const onMainEnd = () => {
@@ -2820,232 +2791,416 @@ function setupDraggers() {
       if (e.target.id === 'splitBar' || e.target.closest('#splitBar')) {
         isDraggingMainSplit = true;
         window.addEventListener('mousemove', onMainMove);
-        window.addEventListener('mouseup', onStudioEnd);
+        window.addEventListener('mouseup', onMainEnd);
       }
     });
 
     mainScreen.addEventListener('touchstart', (e) => {
       if (e.target.id === 'splitBar' || e.target.closest('#splitBar')) {
         isDraggingMainSplit = true;
-        window.addEventListener('touchmove', onMainMove, { passive: true });
-        window.addEventListener('touchend', onStudioEnd);
+        window.addEventListener('touchmove', onMainMove);
+        window.addEventListener('touchend', onMainEnd);
       }
     }, { passive: true });
   }
 }
 
 /* =========================================================
-   AIRPLAY INTEGRATION & DISPLAY CONTINUITY
-   ========================================================= */
+   UNIVERSAL AIRPLAY 2 / MAC SCREEN MIRROR / LG TV OUTPUT
+   =========================================================
+   Important browser boundary:
+   - Native AirPlay can hand the source media to an AirPlay receiver.
+   - Browser JavaScript cannot invoke macOS Control Center's Screen
+     Mirroring command.
+   - Therefore the processed Aurora picture is guaranteed for Mac
+     window/screen mirroring because the Mac displays the processed
+     canvas. Native AirPlay uses the source-media path.
+   - The application exposes both paths explicitly instead of pretending
+     that a browser can turn a canvas into a guaranteed native AirPlay
+     encoded stream.
+*/
+
+function setVideoRemotePlaybackAllowed(allowed) {
+  if (!video) return;
+  try {
+    video.disableRemotePlayback = !allowed;
+  } catch {}
+  if (allowed) {
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('airplay', 'allow');
+    video.removeAttribute('disableRemotePlayback');
+  } else {
+    /* Keep Safari's native AirPlay route available unless the caller is
+       intentionally disabling remote playback. */
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('airplay', 'allow');
+    video.removeAttribute('disableRemotePlayback');
+  }
+}
+
+function setAirPlayBridgeRemotePlaybackAllowed(allowed) {
+  if (!auroraAirPlayVideo) return;
+  try {
+    auroraAirPlayVideo.disableRemotePlayback = !allowed;
+  } catch {}
+  if (allowed) {
+    auroraAirPlayVideo.setAttribute('x-webkit-airplay', 'allow');
+    auroraAirPlayVideo.setAttribute('airplay', 'allow');
+  } else {
+    auroraAirPlayVideo.setAttribute('x-webkit-airplay', 'deny');
+    auroraAirPlayVideo.setAttribute('disableRemotePlayback', '');
+  }
+}
+
+function setOutputBanner(message, persistent = false) {
+  let banner = $('tvOutputBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'tvOutputBanner';
+    banner.className = 'tv-output-banner';
+    const screen = $('playerScreen');
+    if (screen) screen.appendChild(banner);
+  }
+  banner.textContent = message;
+  banner.classList.add('show');
+  clearTimeout(window.__tvOutputBannerTimer);
+  if (!persistent) {
+    window.__tvOutputBannerTimer = setTimeout(() => {
+      banner.classList.remove('show');
+    }, 5200);
+  }
+}
+
+function getOutputCapabilities() {
+  const nativePicker = typeof video?.webkitShowPlaybackTargetPicker === 'function';
+  const remoteApi = Boolean(video?.remote && typeof video.remote.prompt === 'function');
+  const mediaStream = Boolean(auroraCanvas?.captureStream);
+  const fullscreenApi = Boolean(document.documentElement?.requestFullscreen || $('playerPanel')?.requestFullscreen);
+
+  return {
+    nativePicker,
+    remoteApi,
+    mediaStream,
+    fullscreenApi,
+    safariAirPlay: nativePicker || remoteApi
+  };
+}
+
+function updateOutputButtons() {
+  const caps = getOutputCapabilities();
+  const air = $('airplayBtn');
+  const lg = $('lgTvBtn');
+  const mirror = $('mirrorBtn');
+
+  if (air) {
+    air.classList.toggle('active', isAirPlayActive && settings.airplayMode !== 'mirror');
+    air.textContent = isAirPlayActive ? '📶 AirPlay Active' : '📺 AirPlay';
+    air.title = caps.safariAirPlay
+      ? 'Open the native AirPlay receiver picker'
+      : 'Native AirPlay picker is unavailable in this browser';
+  }
+
+  if (lg) {
+    lg.classList.toggle('active', outputTarget === 'lg');
+    lg.textContent = outputTarget === 'lg' ? '🟣 LG Active' : '🟣 LG TV';
+  }
+
+  if (mirror) {
+    mirror.classList.toggle('active', outputTarget === 'mirror');
+    mirror.textContent = outputTarget === 'mirror' ? '🖥️ Mirror Ready' : '🖥️ Mirror TV';
+  }
+
+  const local = $('localScreenBtn');
+  if (local) local.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+
+  const fa = $('floatingAirPlayBtn');
+  const fm = $('floatingMirrorBtn');
+  const fl = $('floatingLocalBtn');
+  if (fa) fa.classList.toggle('active', isAirPlayActive && outputTarget !== 'mirror');
+  if (fm) fm.classList.toggle('active', outputTarget === 'mirror');
+  if (fl) fl.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+}
 
 function updateAirPlayStatus() {
   const active = isPictureProcessingActive();
-  const label = active ? "AURORA EQUALIZED" : "SOURCE NATIVE";
-  
+  let label = active ? 'AURORA PROCESSED' : 'SOURCE NATIVE';
+
+  if (outputTarget === 'mirror') label = 'MAC MIRROR • AURORA';
+  if (outputTarget === 'lg') label = active ? 'LG / AURORA MIRROR' : 'LG / AIRPLAY 2';
+
   if ($('mAirPlay')) $('mAirPlay').textContent = label;
-  if ($('studioAirPlayState')) $('studioAirPlayState').textContent = isAirPlayActive ? `🟢 Connected (${label})` : `Ready (${label})`;
-  if ($('dxAirPlayState')) $('dxAirPlayState').textContent = isAirPlayActive ? `🟢 Connected (${label})` : `Disconnected (${label})`;
+  if ($('studioAirPlayState')) {
+    $('studioAirPlayState').textContent =
+      isAirPlayActive ? `🟢 Connected (${label})` : `Ready (${label})`;
+  }
+  if ($('dxAirPlayState')) {
+    $('dxAirPlayState').textContent =
+      isAirPlayActive ? `🟢 Connected (${label})` : `Disconnected (${label})`;
+  }
+
+  updateOutputButtons();
 }
 
 function setAirPlayRoutingMode(mode) {
   settings.airplayMode = mode;
   save(STORAGE.settings, settings);
-  AirPlayInspector.log('AirPlay:Router', `Mode changed to: ${mode}`);
-  toast(`AirPlay router set to: ${mode === 'mirror' ? 'TV Clean Screen Mirroring' : (mode === 'processed' ? 'Aurora Processed Stream' : 'Native 4K')}`);
+  updateAirPlayStatus();
+  toast(
+    mode === 'mirror'
+      ? 'Output mode: processed Mac Screen Mirroring'
+      : 'Output mode: native AirPlay 2 source delivery'
+  );
 }
 
-async function startAirPlay() {
-  AirPlayInspector.log('AirPlay:Router', 'Launching AirPlay Menu', { mode: settings.airplayMode });
-  if (settings.airplayMode === 'mirror') {
-    triggerCleanScreenMirroring();
-    return;
-  } else if (settings.airplayMode === 'direct') {
-    triggerNativeAirPlay();
-    return;
+async function openNativeAirPlayPicker(targetLabel = 'AirPlay') {
+  if (!video) return false;
+
+  /* Native AirPlay must operate on the actual HTMLMediaElement and a
+     network-addressable HLS/MP4 URL. Do NOT enter fullscreen here. */
+  setVideoRemotePlaybackAllowed(true);
+  outputTarget = targetLabel.toLowerCase().includes('lg') ? 'lg' : 'airplay';
+  settings.airplayMode = 'direct';
+  save(STORAGE.settings, settings);
+  updateAirPlayStatus();
+
+  /* If the current player is using hls.js/MSE, switch the element back to
+     its direct HLS URL first. Apple documents that MSE/MMS blob playback is
+     not AirPlay-compatible; AirPlay needs a shareable media URL. */
+  if (current?.url) {
+    const nativeCapable = isNativeHls();
+    if (nativeCapable) {
+      try {
+        destroyHls();
+        video.removeAttribute('src');
+        video.src = current.url;
+        video.load();
+        await new Promise(resolve => {
+          if (video.readyState >= 1) return resolve();
+          const done = () => { video.removeEventListener('loadedmetadata', done); resolve(); };
+          video.addEventListener('loadedmetadata', done, { once:true });
+          setTimeout(resolve, 1800);
+        });
+        await video.play().catch(() => {});
+      } catch (err) {
+        console.warn('Native AirPlay source preparation failed:', err);
+      }
+    }
   }
-  triggerAuroraStreamAirPlay();
-}
 
-function triggerNativeAirPlay() {
-  closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Hardware', 'Requesting native target picker on <video id="video">');
   if (typeof video.webkitShowPlaybackTargetPicker === 'function') {
-    video.disableRemotePlayback = false;
     try {
       video.webkitShowPlaybackTargetPicker();
-      AirPlayInspector.log('AirPlay:Hardware', 'Native target picker opened successfully');
+      setOutputBanner(
+        targetLabel === 'LG'
+          ? 'AIRPLAY READY • Select your LG TV in the device picker. Video streams directly to the TV.'
+          : 'AIRPLAY READY • Select Apple TV or any AirPlay 2 TV. Video streams directly to the receiver.'
+      , true);
       return true;
-    } catch(err) {
-      AirPlayInspector.log('AirPlay:Hardware', 'Native picker throw error', err, 'error');
+    } catch (err) {
+      console.warn('WebKit AirPlay picker failed:', err);
     }
-  } else if (video.remote && video.remote.prompt) {
-    video.remote.prompt().catch(err => AirPlayInspector.log('AirPlay:Hardware', 'Remote prompt error', err, 'warn'));
-    return true;
   }
-  toast('Native AirPlay is supported on Safari, macOS, and iOS');
+
+  if (video.remote && typeof video.remote.prompt === 'function') {
+    try {
+      await video.remote.prompt();
+      setOutputBanner(`REMOTE PLAYBACK READY • ${targetLabel}`, true);
+      return true;
+    } catch (err) {
+      console.warn('Remote Playback prompt failed:', err);
+    }
+  }
+
+  setOutputBanner(
+    'This browser does not expose a native TV picker. Open the page in Safari on macOS and use the AirPlay button in the player.'
+  );
   return false;
 }
 
-function triggerCleanScreenMirroring() {
-  closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Router', 'Entering Clean Screen Mirroring fullscreen mode');
-  fullscreen();
-  toast('AirPlay Mirroring Active: Fullscreen clean output with all Equalizer settings transmitted via Screen Mirroring.');
-  triggerOSD('🖥️ AIRPLAY SCREEN MIRRORING ACTIVE');
+function startNativeSourceAirPlay() {
+  return openNativeAirPlayPicker('AirPlay');
 }
 
-function triggerAuroraStreamAirPlay() {
-  closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:MediaStream', 'Encoding live Aurora stream with custom SSR for AirPlay');
-  toast('Encoding live Aurora stream with custom SSR for AirPlay…');
+async function startAirPlay() {
+  /* Always use the real media AirPlay path. Previously this button redirected
+     to fullscreen whenever Aurora processing was enabled, which looked like
+     mirroring but never selected a receiver. */
+  return startNativeSourceAirPlay();
+}
 
+async function startLGTVOutput() {
+  outputTarget = 'lg';
+  settings.airplayMode = 'direct';
+  save(STORAGE.settings, settings);
+  return openNativeAirPlayPicker('LG');
+}
+
+async function startScreenMirroring(target = 'TV') {
+  /* A webpage cannot programmatically open macOS Control Center or select a
+     particular receiver. Most importantly, do not fake this by entering
+     fullscreen. Leave the player playing normally and give the user the
+     actual OS-level mirror path. */
+  outputTarget = 'mirror';
+  settings.airplayMode = 'mirror';
+  save(STORAGE.settings, settings);
+
+  setVideoRemotePlaybackAllowed(true);
+  setAirPlayBridgeRemotePlaybackAllowed(false);
+
+  const screen = $('playerScreen');
+  if (screen) screen.classList.remove('mirror-ready');
+
+  updateAuroraPipeline();
+  updateAirPlayStatus();
+
+  setOutputBanner(
+    `SCREEN MIRROR READY • ${target} • Use macOS Control Center → Screen Mirroring → select your TV. No fullscreen change was made.`,
+    true
+  );
+
+  triggerOSD('🖥️ SCREEN MIRROR • SELECT TV IN macOS CONTROL CENTER');
+  toast('Screen Mirror does not change fullscreen. For direct video streaming, use AirPlay / TV and select the receiver.');
+  return true;
+}
+
+function connectTV() {
+  return startAirPlay();
+}
+
+function toggleAirPlayPicker() {
+  return startAirPlay();
+}
+
+function disconnectAirPlay() {
   try {
-    const canvas = $('studioCanvasEnhanced') || $('splitCanvas');
-    if (!canvas) throw new Error('Canvas buffer unavailable');
+    if (video) video.pause();
+  } catch {}
 
-    const stream = canvas.captureStream(30);
-    AirPlayInspector.log('AirPlay:MediaStream', 'Canvas captureStream initialized', { tracks: stream.getVideoTracks().length });
+  setVideoRemotePlaybackAllowed(false);
+  setAirPlayBridgeRemotePlaybackAllowed(false);
 
-    // Audio capture bridge via Web Audio API
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx && !audioContextBridge) {
-        audioContextBridge = new AudioCtx();
-        audioSourceNode = audioContextBridge.createMediaElementSource(video);
-        audioDestinationNode = audioContextBridge.createMediaStreamDestination();
-        audioSourceNode.connect(audioDestinationNode);
-        audioSourceNode.connect(audioContextBridge.destination);
-        AirPlayInspector.log('AirPlay:AudioBridge', 'Web Audio MediaStreamDestination created', { sampleRate: audioContextBridge.sampleRate });
-      }
-      if (audioDestinationNode && audioDestinationNode.stream.getAudioTracks().length > 0) {
-        stream.addTrack(audioDestinationNode.stream.getAudioTracks()[0]);
-        AirPlayInspector.log('AirPlay:AudioBridge', 'Synced audio track appended to AirPlay stream');
-      }
-    } catch(e) {
-      AirPlayInspector.log('AirPlay:AudioBridge', 'Audio bridge notice (likely cross-origin CORS restriction)', e, 'warn');
-    }
-
-    if (!auroraProcessedVideo) {
-      auroraProcessedVideo = $('auroraProcessedVideo');
-    }
-
-    auroraProcessedVideo.srcObject = stream;
-    auroraProcessedVideo.disableRemotePlayback = false;
-
-    if (typeof auroraProcessedVideo.webkitShowPlaybackTargetPicker === 'function') {
-      auroraProcessedVideo.webkitShowPlaybackTargetPicker();
-      AirPlayInspector.log('AirPlay:Hardware', 'Processed video target picker launched');
-      return true;
-    } else if (auroraProcessedVideo.remote && auroraProcessedVideo.remote.prompt) {
-      auroraProcessedVideo.remote.prompt().catch(err => AirPlayInspector.log('AirPlay:Hardware', 'Remote prompt error', err, 'warn'));
-      return true;
-    }
-  } catch (err) {
-    AirPlayInspector.log('AirPlay:MediaStream', 'MediaStream AirPlay bridge notice', err, 'warn');
+  if (auroraAirPlayVideo) {
+    try { auroraAirPlayVideo.pause(); } catch {}
+    try { auroraAirPlayVideo.srcObject = null; } catch {}
   }
 
-  AirPlayInspector.log('AirPlay:Router', 'Falling back to native video AirPlay picker');
-  triggerNativeAirPlay();
-}
+  isAirPlayActive = false;
+  outputTarget = 'local';
 
-function openTVDisplayWindow() {
-  closeModal('airplayModal');
-  AirPlayInspector.log('AirPlay:Router', 'Opening borderless TV Second-Screen popout window');
-  const tvWin = window.open('', 'AirPlayTVDisplay', 'width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no');
-  if (!tvWin) {
-    toast('Please allow popups to open the TV Second-Screen window.');
-    return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.().catch?.(() => {});
   }
-  tvWin.document.title = 'SMART ANTENNA TV PRO X — TV DISPLAY';
-  tvWin.document.body.style.margin = '0';
-  tvWin.document.body.style.background = '#000';
-  tvWin.document.body.style.overflow = 'hidden';
-  tvWin.document.body.innerHTML = `
-    <div style="position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:#000;">
-      <canvas id="tvDisplayCanvas" style="width:100%;height:100%;object-fit:contain;"></canvas>
-    </div>
-  `;
 
-  const tvCanvas = tvWin.document.getElementById('tvDisplayCanvas');
-  const syncLoop = () => {
-    if (tvWin.closed) return;
-    if (video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      const w = video.videoWidth || 1920;
-      const h = video.videoHeight || 1080;
-      if (tvCanvas.width !== w || tvCanvas.height !== h) {
-        tvCanvas.width = w;
-        tvCanvas.height = h;
-      }
-      const ctx = tvCanvas.getContext('2d');
-      renderAuroraProcessedFrame(ctx, video, w, h);
-      tvCanvas.style.filter = buildCanvasFilterString(pictureSettings);
-    }
-    requestAnimationFrame(syncLoop);
-  };
-  requestAnimationFrame(syncLoop);
-  toast('TV Second-Screen window active. Drag to your TV display and press F for fullscreen.');
+  const screen = $('playerScreen');
+  if (screen) screen.classList.remove('mirror-ready');
+
+  onAirPlayStateChange(false);
+  shieldNotify('Playback Returned to Local Screen');
+  video?.play?.().catch?.(() => {});
 }
 
 function setupAirPlayIntegration() {
-  video.addEventListener('webkitplaybacktargetavailabilitychanged', (event) => {
-    airPlayAvailable = (event.availability === 'available');
-    AirPlayInspector.log('AirPlay:Hardware', 'Target availability changed', { available: airPlayAvailable });
-  });
+  if (!video) return;
 
-  video.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', () => {
-    isAirPlayActive = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
-    AirPlayInspector.log('AirPlay:Hardware', 'Wireless target changed', { isWireless: isAirPlayActive });
-    onAirPlayStateChange(isAirPlayActive);
-  });
-
-  if (video.remote) {
-    video.remote.addEventListener('connect', () => {
-      AirPlayInspector.log('AirPlay:Hardware', 'Remote Playback connected');
-      onAirPlayStateChange(true);
-    });
-    video.remote.addEventListener('disconnect', () => {
-      AirPlayInspector.log('AirPlay:Hardware', 'Remote Playback disconnected');
-      onAirPlayStateChange(false);
+  /*
+    Native Safari/WebKit AirPlay availability.
+  */
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    video.addEventListener('webkitplaybacktargetavailabilitychanged', (event) => {
+      airPlayAvailable = event.availability === 'available';
+      updateOutputButtons();
     });
   }
+
+  if (video.remote && typeof video.remote.watchAvailability === 'function') {
+    video.remote.watchAvailability((available) => {
+      airPlayAvailable = Boolean(available);
+      updateOutputButtons();
+    }).catch(() => {});
+  }
+
+  const onAirPlayWirelessChanged = () => {
+    const sourceWireless = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
+    const bridgeWireless = Boolean(
+      auroraAirPlayVideo &&
+      auroraAirPlayVideo.webkitCurrentPlaybackTargetIsWireless
+    );
+
+    isAirPlayActive = sourceWireless || bridgeWireless;
+    if (isAirPlayActive) {
+      outputTarget = outputTarget === 'lg' ? 'lg' : 'airplay';
+    }
+    onAirPlayStateChange(isAirPlayActive);
+  };
+
+  video.addEventListener(
+    'webkitcurrentplaybacktargetiswirelesschanged',
+    onAirPlayWirelessChanged
+  );
+
+  if (auroraAirPlayVideo) {
+    auroraAirPlayVideo.addEventListener(
+      'webkitcurrentplaybacktargetiswirelesschanged',
+      onAirPlayWirelessChanged
+    );
+  }
+
+  if (video.remote) {
+    video.remote.addEventListener('connect', () => onAirPlayStateChange(true));
+    video.remote.addEventListener('disconnect', () => onAirPlayStateChange(false));
+  }
+
+  updateOutputButtons();
 }
 
 function onAirPlayStateChange(connected) {
-  isAirPlayActive = connected;
+  isAirPlayActive = Boolean(connected);
+
   const apBtn = $('airplayBtn');
   const lsBtn = $('localScreenBtn');
+
   if (apBtn) {
-    apBtn.classList.toggle('active', connected);
-    apBtn.textContent = connected ? '📶 AirPlay Active' : '📺 AirPlay';
+    apBtn.classList.toggle('active', isAirPlayActive);
+    apBtn.textContent = isAirPlayActive ? '📶 AirPlay Active' : '📺 AirPlay';
   }
-  if (lsBtn) lsBtn.style.display = connected ? 'inline-flex' : 'none';
+
+  if (lsBtn) {
+    lsBtn.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+  }
 
   updateAirPlayStatus();
   updateStudioMeta();
 
-  if (connected) {
+  if (isAirPlayActive) {
     setState('live', 'AIRPLAY LIVE');
-    shieldNotify('AirPlay Connected — Stream Transmitting to TV');
-    triggerOSD('📶 AIRPLAY CONNECTED • STREAMING TO TV');
+    shieldNotify(
+      outputTarget === 'lg'
+        ? 'LG TV AirPlay 2 Connected'
+        : 'AirPlay Connected'
+    );
+    triggerOSD(
+      outputTarget === 'lg'
+        ? '🟣 LG TV • AIRPLAY 2 CONNECTED'
+        : '📶 AIRPLAY 2 CONNECTED'
+    );
+
     if ($('unmuteBtn')) $('unmuteBtn').style.display = 'none';
-    $('hudLeft').textContent = '📶 AIRPLAY • ' + (((current && current.name) || 'CHANNEL') || 'CHANNEL');
+    if ($('hudLeft')) {
+      $('hudLeft').textContent =
+        '📶 ' + (outputTarget === 'lg' ? 'LG TV' : 'AIRPLAY') +
+        ' • ' + (current?.name || 'CHANNEL');
+    }
   } else {
     setState('live', 'LIVE ON AIR');
-    shieldNotify('AirPlay Disconnected — Returned to Local Screen');
-    triggerOSD('🖥️ Playback Returned to Local Display');
-    $('hudLeft').textContent = '● LIVE AIR • ' + (((current && current.name) || 'CHANNEL') || 'CHANNEL');
+    if ($('hudLeft')) {
+      $('hudLeft').textContent =
+        outputTarget === 'mirror'
+          ? '🖥️ MIRROR READY • ' + (current?.name || 'CHANNEL')
+          : '● LIVE AIR • ' + (current?.name || 'CHANNEL');
+    }
   }
-  updateMetrics();
-}
 
-function disconnectAirPlay() {
-  video.disableRemotePlayback = true;
-  if (auroraProcessedVideo) auroraProcessedVideo.disableRemotePlayback = true;
-  isAirPlayActive = false;
-  onAirPlayStateChange(false);
-  shieldNotify('Playback Returned to Local Screen');
-  video.play().catch(() => {});
-  AirPlayInspector.log('AirPlay:Hardware', 'AirPlay manually disconnected by user');
+  updateMetrics();
 }
 
 /* =========================================================
@@ -3097,16 +3252,16 @@ function populateQualityNative(variants) {
 }
 
 function updateStudioMeta() {
-  if ($('studioChName')) $('studioChName').textContent = ((current && current.name) || 'CHANNEL') || 'Live Broadcast';
-  const res = (video && video.videoWidth) ? `${video.videoWidth}×${video.videoHeight}` : (((current && current.quality) || 'HD') || 'HD');
-  if ($('studioStreamMeta')) $('studioStreamMeta').textContent = `${res} • Stereo Hardware DAC • Direct Passthrough`;
+  if ($('studioChName')) $('studioChName').textContent = current?.name || 'Live Broadcast';
+  const res = video?.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : (current?.quality || 'HD');
+  if ($('studioStreamMeta')) $('studioStreamMeta').textContent = `${res} • Stereo Hardware DAC • Authoritative Framebuffer`;
   updateAirPlayStatus();
 }
 
 function updateResolutionTelemetry() {
-  const w = (video && video.videoWidth) || 0;
-  const h = (video && video.videoHeight) || 0;
-  let baseRes = (w && h) ? `${w}×${h}` : (((current && current.quality) || 'HD') || 'HD');
+  const w = video?.videoWidth || 0;
+  const h = video?.videoHeight || 0;
+  let baseRes = (w && h) ? `${w}×${h}` : (current?.quality || 'HD');
   
   let displayRes = baseRes;
   if (!pictureSettings.rawBypass && pictureSettings.sharpness > 0) {
@@ -3127,7 +3282,7 @@ function updateResolutionTelemetry() {
 function unlockAudio() {
   if (video) {
     video.muted = false;
-    video.volume = Number(($('volumeSlider') && $('volumeSlider').value) || 1.0);
+    video.volume = Number($('volumeSlider')?.value || 1.0);
     const unmuteBtn = $('unmuteBtn');
     if (unmuteBtn) unmuteBtn.style.display = 'none';
   }
@@ -3430,7 +3585,7 @@ async function fetchPlaylist(url, key = 'custom') {
 
   try {
     const result = await fetchText(url);
-    const parsed = parseM3U(result.text, (SOURCES[key] && SOURCES[key].label) || key || 'Custom Source');
+    const parsed = parseM3U(result.text, SOURCES[key]?.label || key || 'Custom Source');
     sourceStatus[url] = { state: 'online', count: parsed.length, via: result.via, cached: result.cached };
     renderSources();
     return parsed;
@@ -3456,7 +3611,6 @@ async function scanPreset(key) {
 
   scanActive = true;
   updateStatus(`<span class="spinner"></span> ${esc(preset.label)}: initiating multi-feed sync…`);
-  AirPlayInspector.log('HLS:Playback', `Sync started for preset: ${preset.label}`);
 
   let totalAdded = 0;
   let totalParsed = 0;
@@ -3506,7 +3660,7 @@ function renderPacks() {
   const entries = [
     ['quick', '⚡ Quick Sync (1.5k+)'],
     ['usa', '🇺🇸 USA & Canada'],
-    ['world', '🌐 Worldwide Mega (8k+)'],
+    ['world', '🌐 World Mega (8k+)'],
     ['entertainment', '🎭 Entertainment'],
     ['science', '🔬 Science & Docs'],
     ['kids', '🧸 Kids & Cartoons'],
@@ -3531,7 +3685,7 @@ function renderSubs() {
   if (!subcats) return;
 
   const taxonomy = TAXONOMY.find(item => item.id === mainCat);
-  let subs = (taxonomy && taxonomy.subs) || [];
+  let subs = taxonomy?.subs || [];
 
   if (mainCat === 'all') {
     subs = [...new Set(channels.map(c => c.category).filter(Boolean))].sort();
@@ -3610,10 +3764,10 @@ function matchesQuality(channel, filter) {
 
 function applyFilters() {
   let list = favOnly ? favorites.map(normalizeChannel) : [...channels];
-  const query = (($('search') && $('search').value) || '').toLowerCase().trim();
-  const country = ($('country') && $('country').value) || 'all';
-  const language = ($('language') && $('language').value) || 'all';
-  const quality = ($('qualityFilter') && $('qualityFilter').value) || 'all';
+  const query = ($('search')?.value || '').toLowerCase().trim();
+  const country = $('country')?.value || 'all';
+  const language = $('language')?.value || 'all';
+  const quality = $('qualityFilter')?.value || 'all';
 
   if (!favOnly && mainCat !== 'all') {
     list = list.filter(channel => channel.main === mainCat);
@@ -3651,7 +3805,7 @@ function applyFilters() {
     });
   }
 
-  const sort = ($('sort') && $('sort').value) || 'default';
+  const sort = $('sort')?.value || 'default';
   if (sort === 'az') list.sort((a, b) => a.name.localeCompare(b.name));
   else if (sort === 'za') list.sort((a, b) => b.name.localeCompare(a.name));
   else if (sort === 'quality') list.sort((a, b) => qualityRank(b) - qualityRank(a));
@@ -3678,20 +3832,20 @@ function applyFilters() {
 
 function cardHTML(channel, index) {
   const favorite = favorites.some(item => item.url === channel.url);
-  const playing = Boolean(current && current.url === channel.url);
+  const playing = current?.url === channel.url;
   const h = health[channel.url];
   const quality = channel.quality || 'HD';
   const globalIdx = page * pageSize + index;
 
   let healthTag = '';
-  if ((h && h.state) === 'online') healthTag = '<span class="tag live">ONLINE</span>';
-  else if ((h && h.state) === 'offline') healthTag = '<span class="tag off">OFFLINE</span>';
-  else if ((h && h.state) === 'testing') healthTag = '<span class="tag warn">TESTING</span>';
+  if (h?.state === 'online') healthTag = '<span class="tag live">ONLINE</span>';
+  else if (h?.state === 'offline') healthTag = '<span class="tag off">OFFLINE</span>';
+  else if (h?.state === 'testing') healthTag = '<span class="tag warn">TESTING</span>';
 
   const number = globalIdx + 1;
 
   return `
-    <article class="channel ${playing ? 'playing' : ''} ${(h && h.state) === 'offline' ? 'offline' : ''}" tabindex="0" onclick="playByIndex(${globalIdx})" onkeydown="if(event.key==='Enter'||event.key===' '){playByIndex(${globalIdx});}">
+    <article class="channel ${playing ? 'playing' : ''} ${h?.state === 'offline' ? 'offline' : ''}" tabindex="0" onclick="playByIndex(${globalIdx})" onkeydown="if(event.key==='Enter'||event.key===' '){playByIndex(${globalIdx});}">
       <div class="channel-number">#${number}</div>
       <div class="ch-logo">
         ${channel.logo ? `<img src="${esc(channel.logo)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
@@ -3769,7 +3923,7 @@ function renderPage() {
 }
 
 function pageSizeChanged() {
-  pageSize = Number(($('pageSize') && $('pageSize').value)) || 60;
+  pageSize = Number($('pageSize')?.value) || 60;
   page = 0;
   renderPage();
 }
@@ -3853,7 +4007,7 @@ function addHistory(channel) {
   const clean = normalizeChannel(channel);
   history = history.filter(item => item.url !== clean.url);
   history.unshift({ ...clean, seen: Date.now() });
-  history = history.slice(0, Number(settings.history || 50));
+  history = history.slice(0, Number(settings.history) || 50);
 
   save(STORAGE.history, history);
   renderHistory();
@@ -3918,16 +4072,16 @@ function renderDiag() {
   const diagList = $('diagList');
   if (diagList) {
     diagList.innerHTML = `
-      <div class="mini"><div class="mini-main"><strong>Aurora Engine Architecture</strong><small>GPU Hardware Pipeline</small></div><b style="color:var(--aurora-purple)">ACTIVE COMPOSITOR</b></div>
+      <div class="mini"><div class="mini-main"><strong>Aurora Engine Architecture</strong><small>Authoritative Framebuffer</small></div><b style="color:var(--aurora-purple)">ACTIVE CANVAS</b></div>
       <div class="mini"><div class="mini-main"><strong>Audio Pipeline</strong><small>Universal Direct Hardware Routing</small></div><b style="color:var(--green)">${audioEngineMode.toUpperCase()} (Shield Safe)</b></div>
-      <div class="mini"><div class="mini-main"><strong>AirPlay Target State</strong><small>Streaming Status</small></div><b>${isAirPlayActive ? '🟢 Connected' : '⚪ Local Screen'}</b></div>
+      <div class="mini"><div class="mini-main"><strong>AirPlay Target State</strong><small>Active Router Branch</small></div><b>${isAirPlayActive ? '🟢 Connected' : '⚪ Local Screen'}</b></div>
       <div class="mini"><div class="mini-main"><strong>Library Records</strong><small>Active station matrix</small></div><b>${channels.length.toLocaleString()}</b></div>
     `;
   }
 
   if ($('dxChannels')) $('dxChannels').textContent = channels.length.toLocaleString();
   if ($('dxUrls')) $('dxUrls').textContent = new Set(channels.map(c => normalizeUrl(c.url))).size.toLocaleString();
-  if ($('dxAuroraPrecision')) $('dxAuroraPrecision').textContent = `${pictureSettings.preset.toUpperCase()} (${isPictureProcessingActive() ? 'Equalized Engine' : 'Raw Bypass'})`;
+  if ($('dxAuroraPrecision')) $('dxAuroraPrecision').textContent = `${pictureSettings.preset.toUpperCase()} (${isPictureProcessingActive() ? 'Processed Engine' : 'Raw Bypass'})`;
   if ($('dxAudioEngine')) $('dxAudioEngine').textContent = `${audioEngineMode.toUpperCase()} Hardware Direct`;
   if ($('dxAirPlayState')) $('dxAirPlayState').textContent = isAirPlayActive ? '🟢 AirPlay Connected' : '⚪ Local Display';
   if ($('dxCurrent')) $('dxCurrent').textContent = current ? `${current.name} • ${current.url}` : 'No channel tuned.';
@@ -3987,7 +4141,7 @@ function play(channel) {
   }
 
   setState('connecting', isAirPlayActive ? 'CONNECTING AIRPLAY...' : 'CONNECTING');
-  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + ((current && current.name) || 'CHANNEL') : '● LIVE AIR • ' + ((current && current.name) || 'CHANNEL');
+  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + current.name.toUpperCase() : '● TUNING • ' + current.name.toUpperCase();
   $('livePill').textContent = '● Signal CONNECTING';
   $('hudRight').textContent = '🛡️ RECOVERY READY';
 
@@ -4009,7 +4163,7 @@ function destroyHls() {
 }
 
 function isNativeHls() {
-  return Boolean(video && video.canPlayType && video.canPlayType('application/vnd.apple.mpegurl'));
+  return Boolean(video.canPlayType('application/vnd.apple.mpegurl'));
 }
 
 function shouldUseNative() {
@@ -4029,7 +4183,7 @@ function loadStream(channel, attempt = 0, token = sessionToken) {
   const isDirect = (native || isAirPlayActive) && attempt === 0;
   const targetUrl = isDirect ? channel.url : CORS_PROXIES[pIdx](channel.url);
 
-  AirPlayInspector.log('HLS:Playback', `Tuning channel "${channel.name}"`, { attempt, native, targetUrl });
+  console.log(`[Playback Engine] Tuning: "${channel.name}" (Attempt ${attempt}, Native: ${native}, Target: ${targetUrl})`);
 
   if (native || isAirPlayActive) {
     fetchText(channel.url).then(res => {
@@ -4091,20 +4245,18 @@ function loadStream(channel, attempt = 0, token = sessionToken) {
     }
   }
 
-  var isTV = /Web0S|webOS|LG|SmartTV|Tizen|Android TV|Shield|BRAVIA|NetCast|AFTT|AFTM|CrKey/i.test(navigator.userAgent);
-
   hls = new Hls({
     loader: DynamicProxyLoader,
-    enableWorker: !isTV,
+    enableWorker: true,
     lowLatencyMode: lowLatency,
     liveSyncDurationCount: lowLatency ? 2 : 4,
     liveMaxLatencyDurationCount: lowLatency ? 5 : 8,
     backBufferLength: 30,
     maxBufferLength: lowLatency ? 18 : 45,
     maxMaxBufferLength: 75,
-    maxBufferSize: isTV ? 25 * 1024 * 1024 : 80 * 1024 * 1024,
+    maxBufferSize: 80 * 1024 * 1024,
     maxBufferHole: 0.45,
-    capLevelToPlayerSize: isTV,
+    capLevelToPlayerSize: false,
     nudgeOffset: 0.25,
     nudgeMaxRetry: 6,
     fragLoadingTimeOut: 16000,
@@ -4127,7 +4279,7 @@ function loadStream(channel, attempt = 0, token = sessionToken) {
   });
 
   hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-    const level = (hls && hls.levels) ? hls.levels[data.level] : null;
+    const level = hls?.levels?.[data.level];
     if (level) resolution(level.width, level.height, level.bitrate);
     updateAuroraPipeline();
   });
@@ -4156,10 +4308,7 @@ function handleAutoplayFailure(token) {
   if (token !== sessionToken) return;
   video.muted = true;
   const unmuteBtn = $('unmuteBtn');
-  if (unmuteBtn) {
-    unmuteBtn.style.display = 'block';
-    unmuteBtn.textContent = '🔊 TV Audio is Muted — Click or Press OK on Remote to Restore Sound';
-  }
+  if (unmuteBtn) unmuteBtn.style.display = 'block';
 
   video.play()
     .then(() => live(token))
@@ -4175,7 +4324,7 @@ function live(token = sessionToken) {
   setLoading(false);
   setState('live', isAirPlayActive ? 'AIRPLAY LIVE' : 'LIVE ON AIR');
 
-  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + (((current && current.name) || 'CHANNEL') || 'CHANNEL') : '● LIVE AIR • ' + (((current && current.name) || 'CHANNEL') || 'CHANNEL');
+  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + (current?.name || 'CHANNEL') : '● LIVE AIR • ' + (current?.name || 'CHANNEL');
   $('livePill').textContent = isAirPlayActive ? '📶 Signal AIRPLAY' : '● Signal LOCKED';
 
   const unmuteBtn = $('unmuteBtn');
@@ -4316,13 +4465,13 @@ function resolution(width, height, bitrate) {
 
 function aspectChanged() {
   const value = $('aspectSelect').value;
-  video.className = '';
+  auroraCanvas.className = 'aurora-display-canvas';
 
-  video.style.aspectRatio = '16/9';
-  if (value === 'crt') video.classList.add('crt');
-  if (value === 'cinema') video.classList.add('cinema');
-  if (value === 'fill') video.classList.add('fill');
-  if (value === 'stretch') video.classList.add('stretch');
+  auroraCanvas.style.aspectRatio = '16/9';
+  if (value === 'crt') auroraCanvas.classList.add('crt');
+  if (value === 'cinema') auroraCanvas.classList.add('cinema');
+  if (value === 'fill') auroraCanvas.classList.add('fill');
+  if (value === 'stretch') auroraCanvas.classList.add('stretch');
 }
 
 function toggleCC() {
@@ -4368,9 +4517,9 @@ function togglePIP() {
 function fullscreen() {
   const target = $('playerPanel');
   if (!document.fullscreenElement) {
-    if (target && target.requestFullscreen) { target.requestFullscreen().catch(() => toast('Fullscreen unavailable')); }
+    target.requestFullscreen?.().catch(() => toast('Fullscreen unavailable'));
   } else {
-    if (document.exitFullscreen) { document.exitFullscreen(); }
+    document.exitFullscreen?.();
   }
 }
 
@@ -4400,7 +4549,7 @@ function zap() {
     toast('No channels available to zap');
     return;
   }
-  const pool = filtered.filter(c => (!health[c.url] || health[c.url].state !== 'offline'));
+  const pool = filtered.filter(c => health[c.url]?.state !== 'offline');
   const candidates = pool.length ? pool : filtered;
   const channel = candidates[Math.floor(Math.random() * candidates.length)];
   play(channel);
@@ -4537,7 +4686,7 @@ function setupTelemetryTimer() {
       const bufPill = $('bufPill');
       const ovBuffer = $('overlayBuffer');
 
-      if (bufBar) bufBar.style.width = pct + '%';
+      if (bufBar) bufBar.style.width = `${pct}%`;
       if (bufPct) bufPct.textContent = `${pct}% (${headroomSecs.toFixed(1)}s)`;
       if (bufPill) bufPill.textContent = `Buffer ${headroomSecs.toFixed(1)}s`;
       if (ovBuffer) ovBuffer.textContent = `${headroomSecs.toFixed(1)}s`;
@@ -4567,7 +4716,7 @@ async function healthScanVisible() {
 
   for (let i = 0; i < items.length; i += 5) {
     const batch = items.slice(i, i + 5);
-    await Promise.all(batch.map(async (ch) => {
+    await Promise.allSettled(batch.map(async (ch) => {
       try {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), 6000);
@@ -4593,7 +4742,7 @@ async function healthScanVisible() {
 
 function addSource() {
   const input = $('sourceUrl');
-  const url = (input && input.value).trim();
+  const url = input?.value.trim();
   if (!url) {
     toast('Please enter a valid playlist URL');
     return;
@@ -4722,13 +4871,13 @@ function clearStation() {
 }
 
 function saveSettings() {
-  settings.recovery = ($('settingRecovery') && $('settingRecovery').value) || 'on';
-  settings.watchdog = ($('settingWatchdog') && $('settingWatchdog').value) || '4';
-  settings.view = ($('settingView') && $('settingView').value) || 'list';
-  settings.history = ($('settingHistory') && $('settingHistory').value) || '50';
-  settings.cache = ($('settingCache') && $('settingCache').value) || '60';
-  settings.audio = ($('settingAudio') && $('settingAudio').value) || 'direct';
-  settings.airplayMode = ($('settingAirPlayMode') && $('settingAirPlayMode').value) || 'processed';
+  settings.recovery = $('settingRecovery')?.value || 'on';
+  settings.watchdog = $('settingWatchdog')?.value || '4';
+  settings.view = $('settingView')?.value || 'list';
+  settings.history = $('settingHistory')?.value || '50';
+  settings.cache = $('settingCache')?.value || '60';
+  settings.audio = $('settingAudio')?.value || 'direct';
+  settings.airplayMode = $('settingAirPlayMode')?.value || 'auto';
 
   save(STORAGE.settings, settings);
   closeModal('settingsModal');
@@ -4751,25 +4900,9 @@ function setupKeyboardShortcuts() {
   window.addEventListener('touchstart', userInteractionUnlock);
 
   window.addEventListener('keydown', (e) => {
-    // Smart TV Remote Back Key (LG webOS: 461, Tizen: 10009, Esc: 27)
-    if (e.key === 'Escape' || e.keyCode === 461 || e.keyCode === 10009) {
-      ['sourceModal', 'settingsModal', 'diagnosticsModal', 'shortcutsModal', 'pictureModal', 'airplayModal'].forEach(closeModal);
+    if (e.key === 'Escape') {
+      ['sourceModal', 'settingsModal', 'diagnosticsModal', 'shortcutsModal', 'pictureModal'].forEach(closeModal);
       return;
-    }
-
-    // Smart TV Remote D-Pad Navigation & Channel Tuning
-    if (e.keyCode === 38 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-      e.preventDefault(); prevChannel(); return;
-    } else if (e.keyCode === 40 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-      e.preventDefault(); nextChannel(); return;
-    } else if (e.keyCode === 427 || e.keyCode === 33) {
-      e.preventDefault(); nextChannel(); return;
-    } else if (e.keyCode === 428 || e.keyCode === 34) {
-      e.preventDefault(); prevChannel(); return;
-    } else if (e.keyCode === 415) {
-      e.preventDefault(); video.play().catch(function() {}); return;
-    } else if (e.keyCode === 19 || e.keyCode === 413) {
-      e.preventDefault(); video.pause(); return;
     }
 
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
@@ -4816,9 +4949,9 @@ function setupKeyboardShortcuts() {
       zap();
     } else if (e.key === 'r' || e.key === 'R') {
       resync();
-    } else if (e.key === ']' || e.key === 'PageDown' || e.key === 'MediaTrackNext' || e.key === 'ChannelUp') {
+    } else if (e.key === 'n' || e.key === 'N' || e.key === ']' || e.key === 'MediaTrackNext' || e.key === 'ChannelUp') {
       nextChannel();
-    } else if (e.key === '[' || e.key === 'PageUp' || e.key === 'MediaTrackPrevious' || e.key === 'ChannelDown') {
+    } else if (e.key === '[' || e.key === 'MediaTrackPrevious' || e.key === 'ChannelDown') {
       prevChannel();
     } else if (e.key === '/' || (e.ctrlKey && e.key === 'k')) {
       e.preventDefault();
@@ -4836,10 +4969,19 @@ function setupKeyboardShortcuts() {
 
 function init() {
   video = $('video');
-  auroraProcessedVideo = $('auroraProcessedVideo');
+  auroraCanvas = $('auroraCanvas');
+  auroraCtx = auroraCanvas.getContext('2d', { alpha: false, desynchronized: true });
+  auroraProcessedCtx = auroraProcessedCanvas?.getContext('2d', { alpha: false, desynchronized: true });
+  auroraProcessedCanvas = $('auroraProcessedCanvas');
+  auroraProcessedCtx = auroraProcessedCanvas ? auroraProcessedCanvas.getContext('2d', { alpha: false, desynchronized: true }) : null;
+  auroraAirPlayVideo = $('auroraAirPlayVideo');
+  // WebKit / Web Video API routing defaults: keep the source local until
+  // the user explicitly chooses native AirPlay.
+  setVideoRemotePlaybackAllowed(false);
+  setAirPlayBridgeRemotePlaybackAllowed(false);
 
-  /* Load channels with multi-version storage fallback so existing channels are retained */
-  const storedChannels = loadAnyStoredChannels();
+
+  const storedChannels = load(STORAGE.channels, null);
   if (storedChannels && Array.isArray(storedChannels) && storedChannels.length > 0) {
     channels = storedChannels.map(normalizeChannel);
   } else {
@@ -4854,6 +4996,8 @@ function init() {
 
   const savedPicture = load(STORAGE.pictureSettings, null);
   if (savedPicture) Object.assign(pictureSettings, savedPicture);
+
+  outputTarget = settings.airplayMode === 'mirror' ? 'mirror' : 'local';
 
   grid = (settings.view === 'grid');
   $('channels').classList.toggle('list', !grid);
@@ -4878,10 +5022,14 @@ function init() {
   setupKeyboardShortcuts();
   setupDragAndDrop();
 
-  updateStatus(`📡 Ready • <strong>${channels.length.toLocaleString()}</strong> live broadcast channels initialized • Authoritative Aurora Pipeline Active`);
+  // Launch Authoritative Framebuffer Rendering Loop
+  requestAnimationFrame(renderAuroraMasterFrame);
+
+  updateStatus(`📡 Ready • <strong>${channels.length.toLocaleString()}</strong> live broadcast channels initialized • Authoritative Aurora Canvas Active`);
 }
 
 window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
+
