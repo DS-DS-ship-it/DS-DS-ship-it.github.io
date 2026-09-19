@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,6 +35,5266 @@
   --text:#f4f8ff;
   --muted:#91a4bd;
   --dim:#5f738d;
+  --shadow:0 22px 70px rgba(0,0,0,.48);
+  --glow:0 0 30px rgba(0,229,255,.14);
+  --radius:15px;
+  --radius2:10px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  --split-x: 50%;
+  --studio-split-x: 50%;
+}
+
+*{box-sizing:border-box}
+
+html{
+  scroll-behavior:smooth;
+  background:var(--bg);
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:var(--font);
+  background:
+    radial-gradient(circle at 12% 0%,rgba(0,229,255,.085),transparent 28%),
+    radial-gradient(circle at 90% 85%,rgba(161,124,255,.075),transparent 30%),
+    linear-gradient(180deg,#03060b,#050b13 55%,#03060b);
+  font-size:14px;
+}
+
+button,input,select,textarea{ font:inherit; }
+button{ cursor:pointer; }
+button:disabled{ opacity:.42; cursor:not-allowed; }
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+.channel:focus,
+.channel:focus-visible{
+  outline:3px solid var(--cyan) !important;
+  outline-offset:2px;
+  box-shadow:0 0 25px rgba(0,229,255,0.6) !important;
+}
+
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:#050b13; }
+::-webkit-scrollbar-thumb{ background:#243b58; border-radius:20px; }
+::-webkit-scrollbar-thumb:hover{ background:#365678; }
+
+/* APP SHELL */
+.app{
+  width:min(1920px,100%);
+  margin:auto;
+  padding:12px;
+}
+
+.topbar{
+  position:sticky;
+  top:8px;
+  z-index:100;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:11px 14px;
+  margin-bottom:10px;
+  background:rgba(5,10,18,.92);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(20px);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:275px;
+}
+
+.logo{
+  width:44px;
+  height:44px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  border:1px solid rgba(0,229,255,.55);
+  background:
+    radial-gradient(circle at 35% 25%,rgba(255,255,255,.12),transparent 25%),
+    linear-gradient(135deg,rgba(0,229,255,.18),rgba(161,124,255,.2));
+  box-shadow:var(--glow);
+  font-size:21px;
+}
+
+.brand h1{
+  margin:0;
+  font-size:17px;
+  line-height:1.1;
+  font-weight:900;
+  letter-spacing:.35px;
+  background:linear-gradient(90deg,var(--cyan),#8bd4ff,#b68fff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
+.brand small{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:9px;
+  letter-spacing:.35px;
+}
+
+.metrics{
+  display:flex;
+  gap:6px;
+  flex:1;
+  min-width:300px;
+  overflow:auto;
+}
+
+.metric{
+  white-space:nowrap;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#040912;
+  color:var(--muted);
+  font:700 9px var(--mono);
+}
+
+.metric b{ color:var(--cyan); }
+
+.actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  border:1px solid var(--line2);
+  border-radius:8px;
+  padding:8px 10px;
+  color:var(--text);
+  background:linear-gradient(180deg,#16243a,#0e192a);
+  font-size:11px;
+  font-weight:800;
+  transition:.16s ease;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+
+.btn:hover{
+  border-color:var(--cyan);
+  transform:translateY(-1px);
+  box-shadow:0 0 18px rgba(0,229,255,.1);
+}
+
+.btn.primary{
+  border-color:var(--cyan);
+  color:#001319;
+  background:linear-gradient(135deg,var(--cyan),#61bfff);
+}
+
+.btn.active{
+  color:#001319;
+  background:var(--cyan);
+  border-color:var(--cyan);
+}
+
+.btn.aurora{
+  border-color:var(--aurora-emerald);
+  background:linear-gradient(135deg,#064e3b,#047857);
+  color:#a7f3d0;
+}
+
+.btn.aurora.active{
+  border-color:#e879f9;
+  background:linear-gradient(135deg,#701a75,#9333ea);
+  color:#fdf4ff;
+  box-shadow:0 0 16px rgba(192,38,211,0.4);
+}
+
+.btn.danger{
+  color:#ff93a5;
+  border-color:rgba(255,85,112,.55);
+}
+
+.btn.small{ padding:6px 8px; font-size:10px; }
+.btn.icon{ padding:8px 9px; }
+
+.packs{
+  display:flex;
+  gap:7px;
+  overflow:auto;
+  padding:6px 2px 12px;
+}
+
+.pack{
+  white-space:nowrap;
+  padding:7px 11px;
+  color:var(--muted);
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#09121f;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+  transition:all .16s ease;
+}
+
+.pack:hover{ color:var(--text); border-color:var(--cyan); }
+
+/* LAYOUT */
+.layout{
+  display:grid;
+  grid-template-columns:minmax(390px,520px) minmax(0,1fr);
+  gap:12px;
+}
+
+.layout.theater{ grid-template-columns:1fr; }
+
+.panel{
+  background:rgba(8,14,24,.94);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+
+.player{
+  position:sticky;
+  top:78px;
+  height:max-content;
+  padding:12px;
+}
+
+.layout.theater .player{
+  position:relative;
+  top:0;
+  width:min(1280px,100%);
+  margin:auto;
+}
+
+/* AUTHORITATIVE AURORA CANVAS SCREEN */
+.screen{
+  position:relative;
+  overflow:hidden;
+  background:#000;
+  border:1px solid #1c2b41;
+  border-radius:11px;
+  box-shadow:inset 0 0 80px #000;
+  user-select:none;
+  width:100%;
+  aspect-ratio:16/9;
+  min-height:280px;
+}
+
+/* Keep the player physically present even when every child is absolutely positioned. */
+.screen::before{
+  content:"";
+  display:block;
+  width:100%;
+  aspect-ratio:16/9;
+  pointer-events:none;
+}
+
+/* Hidden hardware video decoder feeding the Aurora canvas */
+.screen video.source-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  object-fit:contain;
+  background:#000;
+  z-index:1;
+}
+
+.screen.canvas-fallback .source-video{z-index:2}
+.screen.canvas-fallback .aurora-display-canvas,
+.screen.canvas-fallback .aurora-processed-canvas{display:none !important}
+
+
+/* The actual visible authoritative canvas */
+.screen canvas.aurora-display-canvas{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:block;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  object-fit:contain;
+  transform:translateZ(0);
+  pointer-events:none;
+}
+
+/* Safari/WebKit-safe processed presentation layer.  The source canvas is
+   always drawn raw; this overlay receives the visible CSS image processing. */
+.screen canvas.aurora-processed-canvas{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  aspect-ratio:16/9;
+  background:transparent;
+  object-fit:contain;
+  transform:translateZ(0);
+  pointer-events:none;
+  z-index:4;
+  opacity:0;
+  visibility:hidden;
+  clip-path:none;
+  transition:opacity .12s ease;
+}
+
+.screen.split-processing canvas.aurora-processed-canvas{
+  opacity:1;
+  visibility:visible;
+  clip-path:inset(0 0 0 var(--split-x,50%));
+}
+
+.screen.full-processing canvas.aurora-processed-canvas{
+  opacity:0;
+  visibility:hidden;
+  clip-path:none;
+}
+
+.screen.full-processing canvas.aurora-display-canvas{
+  opacity:1;
+}
+
+/* CSS-filter the authoritative visible canvas. This works even when the
+   stream is cross-origin and the export canvas cannot be read safely. */
+.screen.full-processing canvas.aurora-display-canvas{
+  filter:var(--aurora-display-filter, none);
+}
+
+.screen.split-processing canvas.aurora-display-canvas{
+  opacity:1;
+}
+
+.screen canvas.fill{ object-fit:cover; }
+.screen canvas.stretch{ object-fit:fill; }
+.screen canvas.crt{ aspect-ratio:4/3; }
+.screen canvas.cinema{ aspect-ratio:21/9; }
+
+/* Interactive Split-Screen Wipe Controls */
+.split-bar{
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:var(--split-x, 50%);
+  width:3px;
+  background:var(--cyan);
+  z-index:6;
+  display:none;
+  transform:translateX(-50%);
+  box-shadow:0 0 15px var(--cyan);
+  cursor:ew-resize;
+}
+
+.split-bar.active{ display:block; }
+
+.split-handle{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  background:var(--surface);
+  border:2px solid var(--cyan);
+  color:var(--cyan);
+  font:900 10px var(--mono);
+  display:grid;
+  place-items:center;
+  box-shadow:0 0 12px rgba(0,229,255,0.8);
+  cursor:ew-resize;
+}
+
+.split-labels{
+  position:absolute;
+  bottom:38px;
+  left:10px;
+  right:10px;
+  display:none;
+  justify-content:space-between;
+  pointer-events:none;
+  z-index:6;
+}
+
+.split-labels.active{ display:flex; }
+
+.split-lbl{
+  padding:4px 8px;
+  border-radius:6px;
+  font:800 9px var(--mono);
+  backdrop-filter:blur(8px);
+}
+
+.split-lbl.left{
+  background:rgba(255, 85, 112, 0.85);
+  color:#fff;
+  border:1px solid rgba(255, 85, 112, 0.9);
+}
+
+.split-lbl.right{
+  background:rgba(16, 185, 129, 0.85);
+  color:#fff;
+  border:1px solid rgba(16, 185, 129, 0.9);
+}
+
+.aurora-osd{
+  position:absolute;
+  top:45px;
+  left:50%;
+  transform:translateX(-50%) translateY(-10px);
+  z-index:12;
+  padding:7px 15px;
+  border-radius:8px;
+  background:rgba(9, 17, 29, 0.94);
+  border:1px solid var(--cyan);
+  color:var(--cyan);
+  font:800 10px var(--mono);
+  letter-spacing:0.5px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.7), 0 0 15px rgba(0,229,255,0.3);
+  backdrop-filter:blur(14px);
+  pointer-events:none;
+  opacity:0;
+  transition:all 0.22s ease;
+  white-space:nowrap;
+}
+
+.aurora-osd.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.hud{
+  position:absolute;
+  z-index:5;
+  top:9px;
+  left:10px;
+  right:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  pointer-events:none;
+}
+
+.hud span{
+  padding:5px 7px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:rgba(0,0,0,.58);
+  color:#dce9f8;
+  backdrop-filter:blur(7px);
+  font:800 9px var(--mono);
+}
+
+.hud .live{ color:#73ffc7; border-color:rgba(33,214,154,.45); }
+.hud .aurora-badge{ color:#fdf4ff; background:rgba(147,51,234,0.65); border-color:rgba(232,121,249,0.7); }
+.hud .shield{ color:#ffe18a; border-color:rgba(255,196,77,.45); }
+
+.hud-toast{
+  position:absolute;
+  z-index:10;
+  top:48px;
+  right:10px;
+  max-width:85%;
+  padding:8px 11px;
+  border:1px solid var(--cyan);
+  border-radius:9px;
+  color:var(--cyan);
+  background:rgba(5,13,23,.94);
+  font:700 10px var(--mono);
+  opacity:0;
+  transform:translateY(-8px);
+  transition:.25s;
+  pointer-events:none;
+}
+
+.hud-toast.show{ opacity:1; transform:none; }
+
+.signal-overlay{
+  position:absolute;
+  z-index:4;
+  left:10px;
+  bottom:10px;
+  display:flex;
+  gap:5px;
+  pointer-events:none;
+}
+
+.signal-overlay span{
+  padding:4px 6px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:5px;
+  background:rgba(0,0,0,.6);
+  color:#dce7f4;
+  font:700 8px var(--mono);
+}
+
+.unmute{
+  width:100%;
+  margin-top:8px;
+  padding:10px;
+  border:0;
+  border-radius:7px;
+  color:white;
+  background:linear-gradient(90deg,#ff3f8f,#ff5f62);
+  font-weight:900;
+  cursor:pointer;
+  display:none;
+  animation:pulseUnmute 2s infinite ease-in-out;
+}
+
+@keyframes pulseUnmute{
+  0%, 100%{ transform: scale(1); }
+  50%{ transform: scale(1.02); }
+}
+
+.now{
+  margin-top:10px;
+  padding:11px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:linear-gradient(145deg,#101b2b,#0a121e);
+}
+
+.now-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.now-logo{
+  width:52px;
+  height:52px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid var(--line2);
+  border-radius:9px;
+  background:#02050a;
+  color:var(--cyan);
+  font-weight:900;
+}
+
+.now-logo img{ width:100%; height:100%; object-fit:contain; }
+
+.now-main{ min-width:0; flex:1; }
+.now-title{ overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:14px; font-weight:900; }
+.now-meta{ margin-top:4px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted); font-size:9px; }
+
+.state{
+  flex:none;
+  padding:5px 7px;
+  border:1px solid rgba(33,214,154,.4);
+  border-radius:6px;
+  color:var(--green);
+  background:rgba(33,214,154,.08);
+  font:800 8px var(--mono);
+}
+
+.state.connecting{ color:var(--amber); border-color:rgba(255,196,77,.4); background:rgba(255,196,77,.08); }
+.state.error{ color:var(--red); border-color:rgba(255,85,112,.4); background:rgba(255,85,112,.08); }
+
+.telemetry{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:9px;
+  padding-top:8px;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+
+.pill{
+  padding:4px 7px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  color:var(--muted);
+  background:#07101b;
+  font:700 8px var(--mono);
+}
+
+.pill.cyan{ color:var(--cyan); border-color:rgba(0,229,255,.35); }
+.pill.green{ color:var(--green); border-color:rgba(33,214,154,.35); }
+.pill.amber{ color:var(--amber); border-color:rgba(255,196,77,.35); }
+.pill.aurora{ color:#e879f9; border-color:rgba(232,121,249,.4); background:rgba(147,51,234,.12); }
+
+.meter{
+  margin-top:9px;
+  padding:9px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#060c15;
+}
+
+.meter-top{
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font:700 8px var(--mono);
+}
+
+.bar{
+  height:5px;
+  margin-top:6px;
+  overflow:hidden;
+  border-radius:9px;
+  background:#162237;
+}
+
+.bar i{
+  display:block;
+  width:0;
+  height:100%;
+  border-radius:9px;
+  background:linear-gradient(90deg,var(--cyan),var(--violet));
+  transition:.25s;
+}
+
+.controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:9px;
+}
+
+.controls select,
+.controls input{
+  width:100%;
+  padding:8px;
+  color:var(--text);
+  background:#050a12;
+  border:1px solid var(--line2);
+  border-radius:8px;
+}
+
+.volume-row{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:4px 8px;
+  background:#050a12;
+  border:1px solid var(--line);
+  border-radius:8px;
+  font:700 9px var(--mono);
+  color:var(--muted);
+}
+
+.volume-row input[type="range"]{ flex:1; accent-color:var(--cyan); cursor:pointer; }
+
+.transport{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  margin-top:7px;
+}
+
+.quick-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+
+.quick-row .btn{ flex:1; }
+
+/* EXPLORER */
+.explorer{ min-width:0; padding:12px; }
+
+.tabs{
+  display:flex;
+  gap:6px;
+  overflow:auto;
+  padding-bottom:7px;
+  border-bottom:1px solid var(--line);
+}
+
+.tab{
+  white-space:nowrap;
+  padding:8px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  background:#09111e;
+  font-size:10px;
+  font-weight:800;
+}
+
+.tab.active{ color:#001318; border-color:var(--cyan); background:var(--cyan); }
+
+.subcats{ display:flex; gap:6px; overflow:auto; padding:9px 0; }
+
+.sub{
+  white-space:nowrap;
+  padding:6px 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  background:#09111e;
+  font-size:9px;
+}
+
+.sub.active{ color:white; border-color:var(--violet); background:rgba(161,124,255,.14); }
+
+.filters{
+  display:grid;
+  grid-template-columns:minmax(190px,1fr) repeat(5,minmax(90px,auto));
+  gap:6px;
+  padding:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#080f1a;
+}
+
+.filters input,
+.filters select{
+  width:100%;
+  min-width:0;
+  padding:8px;
+  color:var(--text);
+  background:#03070d;
+  border:1px solid var(--line2);
+  border-radius:8px;
+}
+
+.search{ position:relative; }
+.search input{ padding-left:30px; }
+.search b{ position:absolute; top:8px; left:10px; color:var(--dim); }
+
+.toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 1px;
+}
+
+.toolbar .status{ color:var(--muted); font:700 9px var(--mono); }
+.toolbar-right{ display:flex; gap:5px; }
+
+.channels{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:8px;
+  min-height:420px;
+  max-height:calc(100vh - 315px);
+  overflow:auto;
+  padding:2px;
+  contain:content;
+}
+
+.channels.list{ grid-template-columns:1fr; }
+
+.channel{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:linear-gradient(145deg,#0b1422,#08101b);
+  transition:.15s;
+  cursor:pointer;
+  outline:none;
+}
+
+.channel:hover{ border-color:#365778; transform:translateY(-1px); }
+.channel.playing{ border-color:var(--cyan); box-shadow:inset 0 0 20px rgba(0,229,255,.08); }
+.channel.offline{ opacity:.58; }
+
+.channel-number{
+  width:34px;
+  flex:none;
+  color:var(--dim);
+  text-align:center;
+  font:800 9px var(--mono);
+}
+
+.ch-logo{
+  width:46px;
+  height:46px;
+  flex:0 0 46px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:8px;
+  color:var(--cyan);
+  background:#02050a;
+  font-size:12px;
+  font-weight:900;
+}
+
+.ch-logo img{ width:100%; height:100%; object-fit:contain; }
+.ch-body{ min-width:0; flex:1; }
+.ch-name{ overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:13px; font-weight:700; }
+.channels:not(.list) .ch-name{ white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+
+.ch-meta{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:9px;
+}
+
+.tag{ padding:2px 6px; border:1px solid var(--line); border-radius:4px; font:700 8px var(--mono); }
+.tag.hd{ color:var(--cyan); }
+.tag.live{ color:var(--green); }
+.tag.warn{ color:var(--amber); }
+.tag.off{ color:var(--red); }
+.ch-actions{ display:flex; gap:4px; }
+.star{ padding:6px; border:0; color:#52657e; background:transparent; font-size:18px; cursor:pointer; }
+.star.fav{ color:var(--pink); }
+.star:hover{ color:white; }
+.play-mini{ padding:6px 8px; border:1px solid var(--line); border-radius:6px; color:var(--cyan); background:#08111d; font-size:11px; cursor:pointer; }
+
+.empty{
+  grid-column:1/-1;
+  display:grid;
+  place-items:center;
+  min-height:300px;
+  padding:55px;
+  border:1px dashed var(--line2);
+  border-radius:12px;
+  color:var(--muted);
+  text-align:center;
+}
+
+.empty strong{ display:block; margin-bottom:6px; color:var(--text); font-size:16px; }
+
+.pager{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px;
+  margin-top:7px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#080f1a;
+}
+
+.pager span{ color:var(--muted); font:700 8px var(--mono); }
+
+/* DASHBOARD */
+.bottom-grid{
+  display:grid;
+  grid-template-columns:1.35fr 1fr 1fr;
+  gap:12px;
+  margin-top:12px;
+}
+
+.widget{ padding:12px; }
+.widget h3{ margin:0 0 9px; font-size:12px; }
+.widget-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+
+.list-mini{ display:flex; flex-direction:column; gap:6px; max-height:235px; overflow:auto; }
+
+.mini{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#080f19;
+}
+
+.mini-main{ min-width:0; }
+.mini strong{ display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:10px; }
+.mini small{ color:var(--muted); font-size:8px; }
+
+/* DUAL-PANE STUDIO WORKBENCH */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:500;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+  background:rgba(0,0,0,.84);
+  backdrop-filter:blur(14px);
+}
+
+.modal.show{ display:flex; }
+
+.dialog{
+  width:min(840px,100%);
+  max-height:92vh;
+  overflow:auto;
+  padding:16px;
+  border:1px solid var(--line2);
+  border-radius:15px;
+  background:#09111d;
+  box-shadow:0 30px 110px #000;
+}
+
+.dialog.studio-dialog{
+  width:min(1440px,97vw);
+  max-height:95vh;
+  display:flex;
+  flex-direction:column;
+  padding:16px;
+}
+
+.dialog-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.dialog-head-left{ min-width:0; }
+.dialog h2{ margin:0; font-size:16px; }
+.dialog p{ margin:4px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+
+.studio-workbench-grid{
+  display:grid;
+  grid-template-columns:minmax(420px,1.15fr) minmax(380px,1fr);
+  gap:16px;
+  align-items:start;
+}
+
+@media(max-width:980px){
+  .studio-workbench-grid{ grid-template-columns:1fr; }
+}
+
+.studio-screen-col{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.studio-screen-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  border:1px solid #1c2b41;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 15px 40px rgba(0,0,0,0.8);
+  user-select:none;
+}
+
+.studio-canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+.studio-processed-canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+  opacity:1;
+  clip-path:inset(0 0 0 var(--studio-split-x,50%));
+}
+
+.studio-split-bar{
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:var(--studio-split-x, 50%);
+  width:4px;
+  background:var(--cyan);
+  z-index:10;
+  transform:translateX(-50%);
+  box-shadow:0 0 16px var(--cyan);
+  cursor:ew-resize;
+}
+
+.studio-split-handle{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:#07101b;
+  border:2px solid var(--cyan);
+  color:var(--cyan);
+  font:900 12px var(--mono);
+  display:grid;
+  place-items:center;
+  box-shadow:0 0 15px rgba(0,229,255,0.9);
+  cursor:ew-resize;
+}
+
+.studio-split-tags{
+  position:absolute;
+  bottom:12px;
+  left:12px;
+  right:12px;
+  display:flex;
+  justify-content:space-between;
+  pointer-events:none;
+  z-index:10;
+}
+
+.tag-raw{
+  padding:5px 10px;
+  border-radius:6px;
+  background:rgba(255,85,112,0.85);
+  color:#fff;
+  border:1px solid rgba(255,85,112,0.95);
+  font:800 10px var(--mono);
+  letter-spacing:0.5px;
+  backdrop-filter:blur(6px);
+}
+
+.tag-aurora{
+  padding:5px 10px;
+  border-radius:6px;
+  background:rgba(16,185,129,0.85);
+  color:#fff;
+  border:1px solid rgba(16,185,129,0.95);
+  font:800 10px var(--mono);
+  letter-spacing:0.5px;
+  backdrop-filter:blur(6px);
+}
+
+.studio-screen-osd{
+  position:absolute;
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:5px 12px;
+  background:rgba(5,13,23,0.9);
+  border:1px solid var(--cyan);
+  border-radius:6px;
+  color:var(--cyan);
+  font:800 9px var(--mono);
+  letter-spacing:0.5px;
+  z-index:10;
+  pointer-events:none;
+}
+
+.studio-transport-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 12px;
+  background:#080f19;
+  border:1px solid var(--line);
+  border-radius:9px;
+}
+
+.studio-now-info b{ display:block; font-size:12px; }
+.studio-now-info small{ color:var(--muted); font-size:9px; font-family:var(--mono); }
+
+.studio-airplay-card{
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#050b14;
+}
+
+.studio-airplay-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font:700 10px var(--mono);
+  margin-bottom:6px;
+}
+
+.studio-airplay-header b{ color:var(--cyan); }
+.studio-airplay-modes{ display:flex; gap:12px; font-size:10px; color:var(--muted); }
+.studio-airplay-modes label{ display:flex; align-items:center; gap:5px; cursor:pointer; }
+
+.studio-controls-col{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.eq-visualizer{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:6px;
+  height:54px;
+  padding:6px 12px;
+  background:#040810;
+  border:1px solid var(--line);
+  border-radius:9px;
+}
+
+.eq-bar-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  height:100%;
+  justify-content:flex-end;
+}
+
+.eq-bar{
+  width:100%;
+  max-width:18px;
+  background:linear-gradient(180deg,var(--cyan),var(--violet));
+  border-radius:3px 3px 0 0;
+  transition:height 0.15s ease;
+  min-height:4px;
+}
+
+.eq-bar-wrap span{ font:800 7px var(--mono); color:var(--dim); margin-top:3px; }
+
+.preset-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+}
+
+.preset-btn{
+  padding:7px 5px;
+  border:1px solid var(--line2);
+  border-radius:8px;
+  background:#050a12;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+  text-align:center;
+  cursor:pointer;
+  transition:all 0.16s ease;
+}
+
+.preset-btn:hover{ color:white; border-color:var(--cyan); transform:translateY(-1px); }
+.preset-btn.active{ border-color:var(--cyan); background:rgba(0,229,255,0.16); color:var(--cyan); box-shadow:0 0 12px rgba(0,229,255,0.25); }
+
+.studio-sliders{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+}
+
+.dialog-card{
+  padding:9px 11px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#080f19;
+}
+
+.dialog-card.full{ grid-column:1/-1; }
+
+.dialog label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:4px;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:700;
+}
+
+.dialog label b{ color:var(--cyan); font-family:var(--mono); }
+
+.dialog input[type="range"]{
+  width:100%;
+  accent-color:var(--cyan);
+  cursor:pointer;
+  margin:3px 0;
+}
+
+.slider-subtext{
+  font-size:8px;
+  color:var(--dim);
+  margin-top:2px;
+  font-family:var(--mono);
+}
+
+.drop{
+  margin-top:10px;
+  padding:25px;
+  border:1px dashed var(--line2);
+  border-radius:10px;
+  color:var(--muted);
+  text-align:center;
+  cursor:pointer;
+  transition:.15s;
+}
+
+.source-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+}
+
+.source-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:10px;
+}
+
+.source-url{
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  color:var(--muted);
+  font-size:8px;
+}
+
+.kbd{
+  padding:2px 5px;
+  border:1px solid var(--line2);
+  border-radius:4px;
+  color:var(--muted);
+  font:700 8px var(--mono);
+}
+
+.toast{
+  position:fixed;
+  right:15px;
+  bottom:15px;
+  z-index:1000;
+  max-width:min(450px,calc(100vw - 30px));
+  padding:10px 13px;
+  border:1px solid var(--cyan);
+  border-radius:9px;
+  color:var(--text);
+  background:#07111e;
+  box-shadow:var(--shadow);
+  font-size:10px;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(15px);
+  transition:.22s;
+}
+
+.toast.show{ opacity:1; transform:none; }
+
+.spinner{
+  display:inline-block;
+  width:10px;
+  height:10px;
+  border:2px solid #29425f;
+  border-top-color:var(--cyan);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+
+@keyframes spin{ to{transform:rotate(360deg)} }
+
+.loading-screen{
+  position:absolute;
+  inset:0;
+  z-index:8;
+  display:none;
+  place-items:center;
+  background:rgba(0,0,0,.45);
+  pointer-events:none;
+}
+
+.loading-screen.show{ display:grid; }
+
+.loading-box{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:9px 12px;
+  border:1px solid var(--line2);
+  border-radius:9px;
+  background:rgba(5,10,18,.9);
+  color:var(--muted);
+  font:700 9px var(--mono);
+}
+
+@media(max-width:1250px){
+  .layout{ grid-template-columns:390px 1fr; }
+  .filters{ grid-template-columns:1fr 1fr 1fr; }
+  .filters .search{ grid-column:1/-1; }
+  .bottom-grid{ grid-template-columns:1fr 1fr; }
+  .bottom-grid .widget:last-child{ grid-column:1/-1; }
+}
+
+@media(max-width:880px){
+  .app{ padding:7px; }
+  .topbar{ position:relative; top:0; }
+  .layout{ grid-template-columns:1fr; }
+  .player{ position:relative; top:0; }
+  .channels{ max-height:650px; }
+  .brand{ min-width:0; flex:1; }
+  .metrics{ order:3; flex-basis:100%; }
+  .actions{ justify-content:flex-end; }
+  .bottom-grid{ grid-template-columns:1fr; }
+  .bottom-grid .widget:last-child{ grid-column:auto; }
+}
+
+@media(max-width:600px){
+  .actions{ width:100%; }
+  .actions .btn{ flex:1; }
+  .controls{ grid-template-columns:1fr; }
+  .filters{ grid-template-columns:1fr; }
+  .channels{ grid-template-columns:1fr; }
+  .studio-sliders{ grid-template-columns:1fr; }
+  .preset-grid{ grid-template-columns:1fr 1fr; }
+}
+
+
+/* =========================================================
+   UNIVERSAL TV OUTPUT / AIRPLAY / LG OUTPUT SUITE
+   ========================================================= */
+.airplay-control{
+  border-color:rgba(0,229,255,.65);
+  background:linear-gradient(135deg,#073b4c,#075985);
+}
+.mirror-control{
+  border-color:rgba(161,124,255,.65);
+  background:linear-gradient(135deg,#2e1065,#4c1d95);
+}
+.lg-control{
+  border-color:rgba(236,72,153,.65);
+  background:linear-gradient(135deg,#4a044e,#831843);
+}
+.airplay-control.active,.mirror-control.active,.lg-control.active{
+  box-shadow:0 0 18px rgba(0,229,255,.32);
+  border-color:#fff;
+}
+.tv-output-banner{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%) translateY(12px);
+  width:min(92%,760px);
+  padding:10px 14px;
+  border:1px solid rgba(0,229,255,.55);
+  border-radius:10px;
+  background:rgba(3,8,15,.92);
+  color:#dffaff;
+  box-shadow:0 12px 35px rgba(0,0,0,.65),0 0 22px rgba(0,229,255,.12);
+  backdrop-filter:blur(15px);
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+  text-align:center;
+  font:700 10px var(--mono);
+}
+.tv-output-banner.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+.mirror-ready #video{
+  display:none !important;
+}
+.mirror-ready #auroraCanvas,
+.mirror-ready #auroraProcessedCanvas{
+  width:100% !important;
+  height:100% !important;
+}
+
+
+.tv-output-dock{position:absolute;z-index:40;top:12px;right:12px;display:flex;gap:8px;align-items:center;padding:6px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(3,8,15,.78);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.tv-output-btn{border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:8px 11px;background:rgba(15,23,42,.92);color:#fff;font:800 11px var(--mono);cursor:pointer;white-space:nowrap}.tv-output-btn:hover{transform:translateY(-1px);border-color:#fff}.tv-output-btn.tv-airplay{border-color:rgba(0,229,255,.65)}.tv-output-btn.tv-mirror{border-color:rgba(168,85,247,.65)}.tv-output-btn.tv-local{border-color:rgba(74,222,128,.6)}.tv-output-btn.tv-cast{border-color:rgba(251,191,36,.7)}.tv-output-btn.tv-receive{border-color:rgba(96,165,250,.7)}
+@media(max-width:700px){.tv-output-dock{left:10px;right:10px;top:10px;justify-content:stretch}.tv-output-btn{flex:1;padding:9px 7px}.tv-output-btn span{display:none}}
+
+.screen.mirror-ready #video{display:block !important;visibility:visible !important;opacity:1 !important}
+.screen.mirror-ready{box-shadow:0 0 0 2px rgba(168,85,247,.45),0 0 40px rgba(168,85,247,.2)}
+</style>
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+</head>
+
+<body>
+
+<div class="app">
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">📡</div>
+    <div>
+      <h1>SMART ANTENNA TV PRO X</h1>
+      <small>ALLX SPATIAL 2.0 • AURORA Q1024 CANVAS PIPELINE • DUAL OUTPUT • NATIVE AIRPLAY + PROCESSED CAST</small>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">CHANNELS <b id="mTotal">0</b></div>
+    <div class="metric">VISIBLE <b id="mVisible">0</b></div>
+    <div class="metric">PICTURE <b id="mPicMode" style="color:var(--aurora-purple)">QUANTUM SSR</b></div>
+    <div class="metric">AIRPLAY <b id="mAirPlay" style="color:var(--cyan)">SOURCE NATIVE</b></div>
+    <div class="metric">AUDIO <b id="mAudio" style="color:var(--green)">DIRECT DAC</b></div>
+    <div class="metric" id="clockMetric">LOCAL —</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" onclick="scanPreset('quick')">⚡ QUICK SYNC</button>
+    <button class="btn" onclick="scanPreset('usa')">🇺🇸 USA</button>
+    <button class="btn" onclick="scanPreset('world')">🌐 WORLD</button>
+    <button class="btn aurora active" id="auroraHeaderBtn" onclick="openModal('pictureModal')">🎨 PICTURE EQUALIZER</button>
+    <button class="btn" onclick="zap()">🎲 ZAP</button>
+    <button class="btn" onclick="toggleFavs()">⭐ FAVORITES</button>
+    <button class="btn" onclick="openModal('sourceModal')">➕ SOURCE</button>
+    <button class="btn icon" onclick="openModal('settingsModal')">⚙️</button>
+  </div>
+</header>
+
+<div class="packs" id="packs"></div>
+
+<div class="layout" id="layout">
+
+<aside class="panel player" id="playerPanel">
+  <div class="screen" id="playerScreen">
+    <!-- Unmodified Source Media Video Decoder -->
+    <video
+      id="video"
+      class="source-video"
+      autoplay
+      playsinline
+      webkit-playsinline
+      x-webkit-airplay="allow"
+      airplay="allow"
+      preload="auto">
+    </video>
+
+    <!-- Authoritative Aurora Canvas Framebuffer Display -->
+    <canvas id="auroraCanvas" class="aurora-display-canvas"></canvas>
+    <!-- Processed presentation/export buffer. The visible local/mirrored image uses
+         this layer so Aurora settings remain part of the displayed window. -->
+    <canvas id="auroraProcessedCanvas" class="aurora-processed-canvas" aria-hidden="true"></canvas>
+
+    <!-- Interactive Main Split Slider Bar -->
+    <div id="splitBar" class="split-bar">
+      <div class="split-handle">↔</div>
+    </div>
+
+    <!-- Main Screen Split Badges -->
+    <div id="splitLabels" class="split-labels">
+      <span class="split-lbl left">🔴 RAW SOURCE</span>
+      <span class="split-lbl right" id="mainSplitRightTag">✨ AURORA SSR Q1024</span>
+    </div>
+
+    <!-- TV On-Screen Display Notification -->
+    <div class="aurora-osd" id="auroraOsd">🎨 PICTURE: QUANTUM SSR</div>
+
+    <div class="tv-output-dock" aria-label="TV output controls">
+      <button class="tv-output-btn tv-airplay" id="floatingAirPlayBtn" onclick="startAirPlay()" title="Stream this channel to Apple TV or an AirPlay 2 TV">📺 <span>AirPlay / TV</span></button>
+      <button class="tv-output-btn tv-mirror" id="floatingMirrorBtn" onclick="startScreenMirroring()" title="Prepare the processed application window for macOS Screen Mirroring">🖥️ <span>Mirror</span></button>
+      <button class="tv-output-btn tv-local" id="floatingLocalBtn" onclick="disconnectAirPlay()" title="Return playback to this Mac" style="display:none">↩ <span>Local</span></button>
+      <button class="tv-output-btn tv-cast" id="floatingCastBtn" onclick="openUniversalCast()" title="Stream the processed picture to another browser or compatible TV">🔗 <span>Cast Processed</span></button>
+      <button class="tv-output-btn tv-receive" id="floatingReceiveBtn" onclick="openReceiverMode()" title="Use this computer or TV as the receiver">📡 <span>Receive</span></button>
+    </div>
+
+    <div class="hud">
+      <span id="hudLeft">● STANDBY</span>
+      <span id="hudAurora" class="aurora-badge">✨ AURORA Q1024</span>
+      <span id="hudRight" class="shield">🛡️ RECOVERY READY</span>
+    </div>
+
+    <div class="signal-overlay">
+      <span id="overlayResolution">—</span>
+      <span id="overlayBitrate">—</span>
+      <span id="overlayBuffer">—</span>
+    </div>
+
+    <div class="hud-toast" id="hudToast"></div>
+
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loading-box">
+        <span class="spinner"></span>
+        <span id="loadingText">Tuning channel…</span>
+      </div>
+    </div>
+  </div>
+
+  <button
+    class="unmute"
+    id="unmuteBtn"
+    onclick="unmute()">
+    🔊 TV Audio is Muted — Click or Press OK on Remote to Restore Sound
+  </button>
+
+  <section class="now">
+    <div class="now-head">
+      <div class="now-logo" id="nowLogo">TV</div>
+      <div class="now-main">
+        <div class="now-title" id="nowTitle">Ready for broadcast</div>
+        <div class="now-meta" id="nowMeta">
+          Select a station from the global channel matrix
+        </div>
+      </div>
+      <div class="state" id="state">STANDBY</div>
+    </div>
+
+    <div class="telemetry">
+      <span class="pill cyan" id="resPill">Resolution —</span>
+      <span class="pill green" id="livePill">● Signal —</span>
+      <span class="pill aurora" id="auroraPill">✨ Aurora: Quantum SSR</span>
+      <span class="pill amber" id="shieldPill">🛡️ Recovery 0</span>
+      <span class="pill" id="bitPill">Bitrate —</span>
+      <span class="pill" id="bufPill">Buffer —</span>
+    </div>
+
+    <div class="meter">
+      <div class="meter-top">
+        <span>BUFFER HEADROOM</span>
+        <b id="bufferPct">0%</b>
+      </div>
+      <div class="bar">
+        <i id="bufferBar"></i>
+      </div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <select id="qualitySelect" onchange="qualityChanged()">
+      <option value="max">🏆 Maximum Available Quality</option>
+      <option value="auto">⚡ Adaptive Auto</option>
+    </select>
+
+    <select id="aspectSelect" onchange="aspectChanged()">
+      <option value="normal">📺 16:9 Contain</option>
+      <option value="crt">📺 4:3 CRT</option>
+      <option value="cinema">🎬 21:9 Cinema</option>
+      <option value="fill">🔎 Crop / Fill</option>
+      <option value="stretch">↔ Stretch</option>
+    </select>
+
+    <button class="btn aurora active" id="auroraModeBtn" onclick="openModal('pictureModal')">
+      🎨 Picture & Equalizer
+    </button>
+
+    <button class="btn" id="audioModeBtn" onclick="cycleAudioMode()">
+      🔊 Audio: Direct Hardware (TV Safe)
+    </button>
+
+    <div class="volume-row">
+      <span>🔊 VOL</span>
+      <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
+      <span id="volumeVal">100%</span>
+    </div>
+
+    <button class="btn" id="ccBtn" onclick="toggleCC()">
+      💬 CC Off
+    </button>
+
+    <button class="btn" id="latencyBtn" onclick="toggleLowLatency()">
+      ⚡ Normal Latency
+    </button>
+  </div>
+
+  <div class="transport">
+    <button class="btn" onclick="prevChannel()">⏮ Prev</button>
+    <button class="btn" onclick="togglePlay()">⏯ Play</button>
+    <button class="btn" onclick="nextChannel()">Next ⏭</button>
+    <button class="btn" onclick="resync()">🔄 Re-Sync</button>
+  </div>
+
+  <div class="quick-row">
+    <button class="btn small airplay-control" onclick="startAirPlay()" id="airplayBtn" title="Open the native AirPlay device picker">
+      📺 AirPlay
+    </button>
+    <button class="btn small mirror-control" onclick="startScreenMirroring()" id="mirrorBtn" title="Prepare the processed application window for macOS Screen Mirroring">
+      🖥️ Mirror TV
+    </button>
+    <button class="btn small lg-control" onclick="startLGTVOutput()" id="lgTvBtn" title="LG TV AirPlay 2 output">
+      🟣 LG TV
+    </button>
+    <button class="btn small danger" onclick="disconnectAirPlay()" id="localScreenBtn" title="Return playback to this Mac" style="display:none">
+      🖥️ Local
+    </button>
+    <button class="btn small" onclick="toggleSplitScreen()" id="splitBtn" title="Toggle Main Screen Split Compare">↔ Compare</button>
+    <button class="btn small" id="bypassBtn" onmousedown="setBypass(true)" onmouseup="setBypass(false)" ontouchstart="setBypass(true)" ontouchend="setBypass(false)" title="Hold down to preview RAW broadcast">👁 RAW</button>
+    <button class="btn small" onclick="togglePIP()">▣ PiP</button>
+    <button class="btn small" onclick="toggleTheater()">🎭 Theater</button>
+    <button class="btn small" onclick="fullscreen()">⛶ Fullscreen</button>
+    <button class="btn small" onclick="toggleMute()">🔇 Mute</button>
+    <button class="btn small" onclick="openModal('shortcutsModal')">⌨ Shortcuts</button>
+  </div>
+</aside>
+
+<main class="panel explorer">
+  <nav class="tabs" id="mainTabs"></nav>
+  <div class="subcats" id="subcats"></div>
+
+  <div class="filters">
+    <div class="search">
+      <b>⌕</b>
+      <input
+        id="search"
+        autocomplete="off"
+        placeholder="Search channel, country, language, category…"
+        oninput="debouncedFilter()">
+    </div>
+
+    <select id="country" onchange="applyFilters()">
+      <option value="all">🌍 All Countries</option>
+    </select>
+
+    <select id="language" onchange="applyFilters()">
+      <option value="all">🗣 All Languages</option>
+    </select>
+
+    <select id="qualityFilter" onchange="applyFilters()">
+      <option value="all">⚡ All Quality</option>
+      <option value="4k">✨ 4K / UHD</option>
+      <option value="fhd">🌟 1080p</option>
+      <option value="hd">📺 720p</option>
+      <option value="sd">SD</option>
+    </select>
+
+    <select id="sort" onchange="applyFilters()">
+      <option value="default">Sort: Smart</option>
+      <option value="az">A → Z</option>
+      <option value="za">Z → A</option>
+      <option value="quality">Quality</option>
+      <option value="country">Country</option>
+      <option value="language">Language</option>
+      <option value="category">Category</option>
+    </select>
+
+    <select id="pageSize" onchange="pageSizeChanged()">
+      <option value="30">30</option>
+      <option value="60" selected>60</option>
+      <option value="120">120</option>
+      <option value="240">240</option>
+    </select>
+  </div>
+
+  <div class="toolbar">
+    <div class="status" id="status">
+      Initializing broadcast matrix…
+    </div>
+    <div class="toolbar-right">
+      <button class="btn small" id="viewBtn" onclick="toggleView()">▦ Grid</button>
+      <button class="btn small" onclick="resetFilters()">Reset</button>
+      <button class="btn small" onclick="healthScanVisible()">🩺 Test</button>
+    </div>
+  </div>
+
+  <div class="channels list" id="channels"></div>
+
+  <div class="pager">
+    <button class="btn small" id="prevBtn" onclick="prevPage()">← Previous</button>
+    <span id="pageInfo">Page 1</span>
+    <button class="btn small" id="nextBtn" onclick="nextPage()">Next →</button>
+  </div>
+</main>
+
+</div>
+
+<div class="bottom-grid">
+  <section class="panel widget">
+    <div class="widget-head">
+      <h3>🕘 Recent Viewing</h3>
+      <button class="btn small" onclick="clearHistory()">Clear</button>
+    </div>
+    <div class="list-mini" id="historyList"></div>
+  </section>
+
+  <section class="panel widget">
+    <div class="widget-head">
+      <h3>⭐ Favorite Channels</h3>
+      <button class="btn small" onclick="exportM3U()">Export</button>
+    </div>
+    <div class="list-mini" id="favList"></div>
+  </section>
+
+  <section class="panel widget">
+    <div class="widget-head">
+      <h3>📊 Station & Aurora Diagnostics</h3>
+      <button class="btn small" onclick="openModal('diagnosticsModal')">Details</button>
+    </div>
+    <div class="list-mini" id="diagList"></div>
+  </section>
+</div>
+
+</div>
+
+<!-- AURORA STUDIO WORKBENCH DIALOG -->
+<div class="modal" id="universalCastModal" onclick="handleBackdropClick(event, 'universalCastModal')">
+  <div class="dialog" style="max-width:720px">
+    <div class="dialog-head"><div class="dialog-head-left"><h2>🔗 Universal TV Cast</h2><p>Streams the processed Aurora picture over WebRTC to another browser/device. No macOS Control Center required.</p></div><button class="btn icon" onclick="closeModal('universalCastModal')">✕</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+      <div class="panel" style="padding:18px">
+        <h3>📤 Send this TV</h3><p class="muted">Give the receiver the code below, then press Connect on the receiving device.</p>
+        <div id="castCode" style="font:900 34px var(--mono);letter-spacing:7px;text-align:center;padding:18px;border:1px solid rgba(0,229,255,.4);border-radius:14px;background:rgba(0,0,0,.35);margin:12px 0">------</div>
+        <div id="castStatus" class="muted">Preparing…</div>
+        <button class="btn primary" onclick="refreshCastCode()">↻ New Code</button>
+        <button class="btn" onclick="stopUniversalCast()">■ Stop Cast</button>
+      </div>
+      <div class="panel" style="padding:18px">
+        <h3>📥 Receive TV</h3><p class="muted">Open this same page on the LG TV, phone, tablet, Windows PC, Mac, or another compatible browser.</p>
+        <input id="receiverCode" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="width:100%;font-size:22px;text-align:center;letter-spacing:5px;margin:10px 0">
+        <button class="btn primary" onclick="connectUniversalReceiver()">Connect to TV</button>
+        <button class="btn" onclick="openReceiverMode()">Open Receiver Mode</button>
+      </div>
+    </div>
+    <div id="receiverStage" style="display:none;margin-top:16px;background:#000;border-radius:14px;overflow:hidden;position:relative">
+      <video id="receiverVideo" playsinline controls autoplay style="display:block;width:100%;background:#000"></video>
+      <button class="btn aurora" onclick="openModal('receiverPictureModal')" style="position:absolute;right:12px;top:12px">🎨 Picture Settings</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="receiverPictureModal" onclick="handleBackdropClick(event, 'receiverPictureModal')">
+  <div class="dialog" onclick="event.stopPropagation()" style="max-width:650px">
+    <div class="dialog-head"><h2>🎨 Receiver Picture Settings</h2><button class="btn icon" onclick="closeModal('receiverPictureModal')">✕</button></div>
+    <p class="muted">These controls process the received WebRTC picture locally on the receiving device.</p>
+    <label>Brightness <input type="range" min="50" max="150" value="100" oninput="setReceiverFilter('brightness',this.value)"></label>
+    <label>Contrast <input type="range" min="50" max="180" value="100" oninput="setReceiverFilter('contrast',this.value)"></label>
+    <label>Saturation <input type="range" min="0" max="180" value="100" oninput="setReceiverFilter('saturate',this.value)"></label>
+    <label>Sharpness <input type="range" min="0" max="100" value="0" oninput="setReceiverFilter('sharpness',this.value)"></label>
+  </div>
+</div>
+<div class="modal" id="pictureModal" onclick="handleBackdropClick(event, 'pictureModal')">
+  <div class="dialog studio-dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head">
+      <div class="dialog-head-left">
+        <h2>🎨 Aurora Studio: Picture Mode & Resolution Equalizer</h2>
+        <p>Real-time Spatial Super-Resolution (SSR), High-Frequency Edge Acutance, Denoising, and Authoritative Chromatic Alignment.</p>
+      </div>
+      <div class="actions">
+        <button class="btn small primary" onclick="startAirPlay()" id="studioAirPlayBtn">📺 Stream to TV</button>
+        <button class="btn small" onmousedown="setBypass(true)" onmouseup="setBypass(false)" ontouchstart="setBypass(true)" ontouchend="setBypass(false)">👁 Hold RAW</button>
+        <button class="btn icon" onclick="closeModal('pictureModal')">✕</button>
+      </div>
+    </div>
+
+    <div class="studio-workbench-grid">
+      <!-- LEFT PANE: LIVE SPLIT SCREEN RIGHT NEXT TO EQUALIZER -->
+      <div class="studio-screen-col">
+        <div class="studio-screen-wrap" id="studioScreenWrap">
+          <canvas id="studioCanvas" class="studio-canvas"></canvas>
+      <canvas id="studioProcessedCanvas" class="studio-processed-canvas" aria-hidden="true"></canvas>
+          
+          <!-- Interactive Draggable Split Bar -->
+          <div id="studioSplitBar" class="studio-split-bar">
+            <div class="studio-split-handle">↔</div>
+          </div>
+
+          <!-- Split Badges -->
+          <div class="studio-split-tags">
+            <span class="tag-raw">🔴 RAW SOURCE</span>
+            <span class="tag-aurora" id="studioEnhancedLabel">✨ AURORA SSR Q1024</span>
+          </div>
+
+          <div class="studio-screen-osd" id="studioOsd">✨ QUANTUM SSR ACTIVE</div>
+        </div>
+
+        <div class="studio-transport-row">
+          <div class="studio-now-info">
+            <b id="studioChName">Ready for broadcast</b>
+            <small id="studioStreamMeta">1080p FHD • Direct Hardware DAC</small>
+          </div>
+          <div class="actions">
+            <button class="btn small" onclick="togglePlay()">⏯ Play</button>
+            <button class="btn small" onclick="resync()">🔄 Re-Sync</button>
+            <button class="btn small" onclick="toggleMute()">🔇 Mute</button>
+            <button class="btn small" onclick="resetStudioSplit()">⇥ 50/50 Split</button>
+          </div>
+        </div>
+
+        <div class="studio-airplay-card">
+          <div class="studio-airplay-header">
+            <span>📶 AirPlay Output Mode: <b id="studioAirPlayState">SOURCE OUTPUT</b></span>
+            <button class="btn small primary" onclick="startAirPlay()">Launch AirPlay</button>
+          </div>
+          <div class="studio-airplay-modes">
+            <label><input type="radio" name="apMode" value="auto" checked onchange="setAirPlayRoutingMode('auto')"> Smart Dynamic (Auto Processed / Direct 4K)</label>
+            <label><input type="radio" name="apMode" value="mirror" onchange="setAirPlayRoutingMode('mirror')"> TV Clean Screen Mirroring (Equalized)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANE: PICTURE MODES & RESOLUTION EQUALIZER SLIDERS -->
+      <div class="studio-controls-col">
+        <!-- Graphic Spectrum Visualizer -->
+        <div class="eq-visualizer" id="eqVisualizer">
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarSSR" style="height:65%"></div><span>SSR</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarAcutance" style="height:70%"></div><span>ACU</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarDenoise" style="height:20%"></div><span>DEN</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarContrast" style="height:60%"></div><span>CONT</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarBrightness" style="height:52%"></div><span>LUMA</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarSaturation" style="height:62%"></div><span>SAT</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarTint" style="height:50%"></div><span>TINT</span></div>
+          <div class="eq-bar-wrap"><div class="eq-bar" id="eqBarTemp" style="height:50%"></div><span>TEMP</span></div>
+        </div>
+
+        <!-- Picture Mode Presets -->
+        <div class="preset-grid">
+          <button class="preset-btn active" id="pbtn_auto" onclick="applyPicturePreset('auto')">🤖 Auto AI Dynamic</button>
+          <button class="preset-btn" id="pbtn_ssr_ultra" onclick="applyPicturePreset('ssr_ultra')">🔮 Quantum SSR 4K</button>
+          <button class="preset-btn" id="pbtn_acutance" onclick="applyPicturePreset('acutance')">⚡ High Acutance</button>
+          <button class="preset-btn" id="pbtn_denoise" onclick="applyPicturePreset('denoise')">🧼 Clean Denoise</button>
+          <button class="preset-btn" id="pbtn_vivid" onclick="applyPicturePreset('vivid')">🌟 Dynamic Vivid HDR+</button>
+          <button class="preset-btn" id="pbtn_cinema" onclick="applyPicturePreset('cinema')">🎬 Cinema Master</button>
+          <button class="preset-btn" id="pbtn_sports" onclick="applyPicturePreset('sports')">🏟 Live Sports</button>
+          <button class="preset-btn" id="pbtn_bypass" onclick="applyPicturePreset('bypass')">⚪ RAW Bypass</button>
+        </div>
+
+        <!-- Canonical Sliders -->
+        <div class="dialog-grid studio-sliders">
+          <!-- 1. Spatial Super-Resolution (SSR/VSR) -->
+          <div class="dialog-card">
+            <label>Spatial Super-Resolution (SSR) <b id="valSSR">130%</b></label>
+            <input type="range" id="eqSSR" min="0" max="200" step="5" value="130" oninput="setPictureSetting('sharpness', this.value)">
+            <div class="slider-subtext">Spatial sub-pixel pixel reconstruction and 4K upscaling.</div>
+          </div>
+
+          <!-- 2. High-Frequency Edge Enhancement / Acutance -->
+          <div class="dialog-card">
+            <label>Edge Acutance (Sharpening) <b id="valAcutance">+4.2 dB</b></label>
+            <input type="range" id="eqAcutance" min="0" max="200" step="5" value="140" oninput="setPictureSetting('detailRecovery', this.value)">
+            <div class="slider-subtext">Micro-contrast boundary sharpening for text and contours.</div>
+          </div>
+
+          <!-- 3. Artifact & Spatiotemporal Denoising -->
+          <div class="dialog-card">
+            <label>Spatiotemporal Denoising <b id="valDenoise">20%</b></label>
+            <input type="range" id="eqDenoise" min="0" max="100" step="5" value="20" oninput="setPictureSetting('noiseReduction', this.value)">
+            <div class="slider-subtext">Filters compression macroblocks and mosquito noise.</div>
+          </div>
+
+          <!-- 4. Color Tint / Chromatic Alignment -->
+          <div class="dialog-card">
+            <label>Color Tint / Hue Alignment <b id="valTint">0° (Neutral)</b></label>
+            <input type="range" id="eqTint" min="-180" max="180" step="5" value="0" oninput="setPictureSetting('tint', this.value)">
+            <div class="slider-subtext">Chromatic phase: -180° Turf Green to +180° Skin Magenta.</div>
+          </div>
+
+          <!-- 5. White Balance / Color Temperature -->
+          <div class="dialog-card">
+            <label>Color Temperature <b id="valTemp">0 (D65 Neutral)</b></label>
+            <input type="range" id="eqTemp" min="-50" max="50" step="5" value="0" oninput="setPictureSetting('temperature', this.value)">
+            <div class="slider-subtext">Shifts Kelvin temperature: negative is cool, positive is warm.</div>
+          </div>
+
+          <!-- 6. Quantum Chroma Saturation -->
+          <div class="dialog-card">
+            <label>Quantum Chroma Saturation <b id="valSaturation">125%</b></label>
+            <input type="range" id="eqSaturation" min="0" max="250" step="5" value="125" oninput="setPictureSetting('saturation', this.value)">
+            <div class="slider-subtext">Wide color volume from monochrome (0%) to technicolor (250%).</div>
+          </div>
+
+          <!-- 7. Dynamic Contrast (HDR+ Curve) -->
+          <div class="dialog-card">
+            <label>Dynamic Contrast (HDR+ Curve) <b id="valContrast">1.20x</b></label>
+            <input type="range" id="eqContrast" min="50" max="200" step="5" value="120" oninput="setPictureSetting('contrast', this.value)">
+            <div class="slider-subtext">HDR-style tone mapping expands dynamic range highlights.</div>
+          </div>
+
+          <!-- 8. Peak Brightness & Black Level -->
+          <div class="dialog-card">
+            <label>Peak Brightness & Luma <b id="valBrightness">103%</b></label>
+            <input type="range" id="eqBrightness" min="60" max="140" step="2" value="103" oninput="setPictureSetting('brightness', this.value)">
+            <div class="slider-subtext">Fine-tunes black-floor floor-lift and dynamic peak nit delivery.</div>
+          </div>
+        </div>
+
+        <div class="quick-row" style="margin-top:12px;">
+          <button class="btn primary" onclick="resetPictureModeToDefaults()">Reset Defaults</button>
+          <button class="btn" onclick="saveCustomPictureProfile()">💾 Save Custom</button>
+          <button class="btn" onclick="closeModal('pictureModal')">Close Studio</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEDICATED AIRPLAY PROCESSED STREAM VIDEO BRIDGE (HIDDEN) -->
+<video
+  id="auroraAirPlayVideo"
+  style="display:none;position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+  autoplay
+  playsinline
+  webkit-playsinline
+  x-webkit-airplay="allow"
+  airplay="allow">
+</video>
+
+<!-- SOURCE MODAL -->
+<div class="modal" id="sourceModal" onclick="handleBackdropClick(event, 'sourceModal')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head">
+      <h2>➕ Source & Playlist Ingest</h2>
+      <button class="btn icon" onclick="closeModal('sourceModal')">✕</button>
+    </div>
+    <p>Add public M3U/M3U8 playlists or import a local playlist file directly into browser memory.</p>
+
+    <div class="dialog-card">
+      <label>Playlist URL</label>
+      <div class="source-row">
+        <span>🌐</span>
+        <input id="sourceUrl" placeholder="https://example.com/playlist.m3u">
+        <button class="btn primary" onclick="addSource()">Fetch</button>
+      </div>
+    </div>
+
+    <div class="quick-row">
+      <button class="btn" onclick="document.getElementById('fileInput').click()">📁 Import M3U</button>
+      <input id="fileInput" type="file" accept=".m3u,.m3u8,.txt" hidden onchange="importFile(this.files[0])">
+    </div>
+
+    <div class="drop" id="drop" onclick="document.getElementById('fileInput').click()">
+      Drop an M3U/M3U8 playlist here or click to browse
+    </div>
+
+    <div id="sourceList" class="source-list"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settingsModal" onclick="handleBackdropClick(event, 'settingsModal')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head">
+      <h2>⚙️ Broadcast Station Settings</h2>
+      <button class="btn icon" onclick="closeModal('settingsModal')">✕</button>
+    </div>
+
+    <div class="dialog-grid">
+      <div class="dialog-card">
+        <label>Audio Routing Engine</label>
+        <select id="settingAudio">
+          <option value="direct" selected>Direct Hardware DAC (Nvidia Shield & TV Safe)</option>
+          <option value="dialogue">Dialogue Clarity (Vocal EQ)</option>
+          <option value="bass">Bass Punch (Cinema Low-end)</option>
+        </select>
+      </div>
+
+      <div class="dialog-card">
+        <label>AirPlay Delivery Mode</label>
+        <select id="settingAirPlayMode">
+          <option value="auto" selected>Smart Dynamic (Auto Processed / Direct 4K)</option>
+          <option value="direct">Force 4K AV-Direct Master Stream Lock</option>
+          <option value="mirror">Clean TV Screen Mirroring (Equalized)</option>
+        </select>
+      </div>
+
+      <div class="dialog-card">
+        <label>Playback recovery</label>
+        <select id="settingRecovery">
+          <option value="on" selected>On — Recommended</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+
+      <div class="dialog-card">
+        <label>Watchdog sensitivity</label>
+        <select id="settingWatchdog">
+          <option value="2">Aggressive (2s)</option>
+          <option value="4" selected>Balanced (4s)</option>
+          <option value="8">Conservative (8s)</option>
+        </select>
+      </div>
+
+      <div class="dialog-card">
+        <label>Default view</label>
+        <select id="settingView">
+          <option value="list" selected>List (Spacious Titles)</option>
+          <option value="grid">Grid (Tiles)</option>
+        </select>
+      </div>
+
+      <div class="dialog-card">
+        <label>History size</label>
+        <select id="settingHistory">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="250">250</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="quick-row" style="margin-top:14px;">
+      <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+      <button class="btn" onclick="exportBackup()">Export Backup</button>
+      <button class="btn" onclick="document.getElementById('restoreInput').click()">Restore Backup</button>
+      <input id="restoreInput" type="file" accept="application/json" hidden onchange="restoreBackup(this.files[0])">
+      <button class="btn danger" onclick="clearStation()">Reset Station</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIAGNOSTICS MODAL -->
+<div class="modal" id="diagnosticsModal" onclick="handleBackdropClick(event, 'diagnosticsModal')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head">
+      <h2>📊 Station & Aurora Diagnostics</h2>
+      <button class="btn icon" onclick="closeModal('diagnosticsModal')">✕</button>
+    </div>
+
+    <div class="dialog-grid">
+      <div class="dialog-card">
+        <label>Pipeline Architecture</label>
+        <strong style="color:var(--cyan)">ALLX Spatial 2.0 & Aurora Authoritative Canvas</strong>
+      </div>
+      <div class="dialog-card">
+        <label>Active Picture Preset</label>
+        <strong id="dxAuroraPrecision" style="color:var(--aurora-purple)">Auto AI Dynamic Super-Resolution</strong>
+      </div>
+      <div class="dialog-card">
+        <label>Audio Passthrough</label>
+        <strong id="dxAudioEngine" style="color:var(--green)">Direct Hardware DAC (Universal Safe)</strong>
+      </div>
+      <div class="dialog-card">
+        <label>Total channel records</label>
+        <strong id="dxChannels">0</strong>
+      </div>
+      <div class="dialog-card">
+        <label>AirPlay Pipeline Status</label>
+        <strong id="dxAirPlayState">Disconnected (Local Display)</strong>
+      </div>
+      <div class="dialog-card full">
+        <label>Current broadcast stream</label>
+        <div id="dxCurrent">No channel selected.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHORTCUTS MODAL -->
+<div class="modal" id="shortcutsModal" onclick="handleBackdropClick(event, 'shortcutsModal')">
+  <div class="dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head">
+      <h2>⌨️ Remote & Command Shortcuts</h2>
+      <button class="btn icon" onclick="closeModal('shortcutsModal')">✕</button>
+    </div>
+
+    <div class="dialog-grid">
+      <div class="dialog-card"><span class="kbd">Space / OK</span> Play / Pause</div>
+      <div class="dialog-card"><span class="kbd">P</span> Open Picture Settings & Studio Equalizer</div>
+      <div class="dialog-card"><span class="kbd">S</span> Toggle Main Screen Split Compare</div>
+      <div class="dialog-card"><span class="kbd">B</span> Hold / Toggle Raw Source Bypass</div>
+      <div class="dialog-card"><span class="kbd">A</span> Cycle Picture Mode Presets</div>
+      <div class="dialog-card"><span class="kbd">M</span> Mute / Unmute</div>
+      <div class="dialog-card"><span class="kbd">F</span> Fullscreen</div>
+      <div class="dialog-card"><span class="kbd">T</span> Theater Mode</div>
+      <div class="dialog-card"><span class="kbd">R</span> Live Edge Re-Sync</div>
+      <div class="dialog-card"><span class="kbd">Z</span> Random Channel Zap</div>
+      <div class="dialog-card"><span class="kbd">← →</span> or <span class="kbd">P / N</span> Previous / Next Channel</div>
+      <div class="dialog-card"><span class="kbd">0-9</span> Direct Channel Number Tuning</div>
+      <div class="dialog-card"><span class="kbd">/</span> Search Focus</div>
+      <div class="dialog-card"><span class="kbd">C</span> Captions</div>
+      <div class="dialog-card"><span class="kbd">Esc</span> Close Modals / Return</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   CANONICAL CONSTANTS & AURORA STATE OBJECT
+   ========================================================= */
+
+const STORAGE = {
+  channels: 'sat_pro_channels_v10',
+  favorites: 'sat_pro_favorites_v10',
+  history: 'sat_pro_history_v10',
+  sources: 'sat_pro_sources_v10',
+  settings: 'sat_pro_settings_v10',
+  cache: 'sat_pro_playlist_cache_v10',
+  health: 'sat_pro_health_v10',
+  view: 'sat_pro_view_v10',
+  pictureSettings: 'sat_pro_picture_settings_v10'
+};
+
+const DEFAULT_SETTINGS = {
+  recovery: 'on',
+  watchdog: '4',
+  view: 'list',
+  history: '50',
+  cache: '60',
+  playback: 'auto',
+  audio: 'direct',
+  airplayMode: 'auto'
+};
+
+/* Master canonical picture settings state object */
+const pictureSettings = {
+  preset: "auto",
+  brightness: 103, // 60 to 140
+  contrast: 120,   // 50 to 200
+  saturation: 125, // 0 to 250
+  sharpness: 130,  // 0 to 200 (SSR Gain)
+  detailRecovery: 140, // 0 to 200 (Acutance Gain)
+  noiseReduction: 20,  // 0 to 100
+  gamma: 1.0,
+  temperature: 0,  // -50 to +50
+  tint: 0,         // -180 to +180 deg
+  localContrast: 15,
+  quantumSSR: true,
+  auroraHDR: true,
+  auroraDeblock: true,
+  auroraDenoise: true,
+  auroraEnabled: true,
+  rawBypass: false
+};
+
+const PICTURE_PRESETS = {
+  auto: { preset: 'auto', brightness: 103, contrast: 120, saturation: 125, sharpness: 130, detailRecovery: 140, noiseReduction: 20, temperature: 0, tint: 0, label: 'Auto AI Dynamic Super-Resolution', badge: '✨ AUTO AI SSR' },
+  ssr_ultra: { preset: 'ssr_ultra', brightness: 104, contrast: 124, saturation: 132, sharpness: 175, detailRecovery: 155, noiseReduction: 15, temperature: 0, tint: 0, label: 'Ultra 4K Spatial Super-Resolution', badge: '🔮 4K SSR ULTRA' },
+  acutance: { preset: 'acutance', brightness: 102, contrast: 122, saturation: 118, sharpness: 155, detailRecovery: 185, noiseReduction: 5, temperature: -5, tint: 0, label: 'High-Frequency Edge Acutance Boost', badge: '⚡ ACUTANCE BOOST' },
+  denoise: { preset: 'denoise', brightness: 101, contrast: 114, saturation: 112, sharpness: 95, detailRecovery: 95, noiseReduction: 60, temperature: 0, tint: 0, label: 'Studio Artifact Denoising & Deblock', badge: '🧼 CLEAN STUDIO' },
+  vivid: { preset: 'vivid', brightness: 106, contrast: 134, saturation: 155, sharpness: 145, detailRecovery: 145, noiseReduction: 15, temperature: -10, tint: 8, label: 'Dynamic Vivid HDR+ Contrast & Chroma', badge: '🌟 VIVID HDR+' },
+  cinema: { preset: 'cinema', brightness: 100, contrast: 115, saturation: 110, sharpness: 110, detailRecovery: 110, noiseReduction: 10, temperature: 20, tint: 0, label: 'Cinema Master / D65 Warm Film Curve', badge: '🎬 CINEMA MASTER' },
+  sports: { preset: 'sports', brightness: 106, contrast: 128, saturation: 140, sharpness: 160, detailRecovery: 170, noiseReduction: 10, temperature: -15, tint: -12, label: 'Live Sports Turf & Acutance Clarity', badge: '🏟 SPORTS CLARITY' },
+  bypass: { preset: 'bypass', brightness: 100, contrast: 100, saturation: 100, sharpness: 0, detailRecovery: 0, noiseReduction: 0, temperature: 0, tint: 0, label: 'Unprocessed Broadcast Stream', badge: '⚪ RAW UNPROCESSED' }
+};
+
+const TAXONOMY = [
+  { id: 'all', name: '🌐 All Channels', subs: [] },
+  { id: 'news', name: '📰 News & Business', subs: ['News', 'Business', 'Weather'] },
+  { id: 'sports', name: '🏟 Sports', subs: ['Sports', 'Motorsports', 'Outdoor'] },
+  { id: 'movies', name: '🎬 Movies & Series', subs: ['Movies', 'Series', 'Classic'] },
+  { id: 'entertainment', name: '🎭 Entertainment', subs: ['Entertainment', 'Comedy', 'Reality', 'Talk'] },
+  { id: 'kids', name: '🧸 Kids & Animation', subs: ['Kids', 'Animation', 'Anime'] },
+  { id: 'docs', name: '🔬 Science & Docs', subs: ['Documentary', 'Science', 'Nature', 'Travel'] },
+  { id: 'music', name: '🎵 Music & Radio', subs: ['Music', 'Concerts', 'Radio'] },
+  { id: 'lifestyle', name: '🍳 Lifestyle', subs: ['Food', 'Lifestyle', 'Fashion', 'Home'] },
+  { id: 'international', name: '🌎 International', subs: ['Europe', 'Asia', 'Middle East', 'Latin America', 'Africa'] }
+];
+
+const STARTER_CHANNELS = [
+  { name: "NASA TV UHD & Science", url: "https://ntv.akamaized.net/hls/live/2013499/NASA-NTV-Public/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg", category: "Science", country: "US", language: "English", quality: "4K UHD" },
+  { name: "Bloomberg Television USA", url: "https://liveproduseast.global.ssl.fastly.net/us/Channel-HD-AWS-virginia-1/live.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/5/53/Bloomberg_Television_logo.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "Sky News Live HD", url: "https://skynews-live.akamaized.net/hls/live/sky_news/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/3/30/Sky_News_logo_2018.svg", category: "News", country: "GB", language: "English", quality: "1080p FHD" },
+  { name: "France 24 English HD", url: "https://uvotv-aniview.global.ssl.fastly.net/hls/live/2120684/france24english/playlist.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/6/65/France_24_logo.svg", category: "News", country: "FR", language: "English", quality: "1080p FHD" },
+  { name: "DW News English", url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/7/75/Deutsche_Welle_symbol_2012.svg", category: "News", country: "DE", language: "English", quality: "1080p FHD" },
+  { name: "Al Jazeera English HD", url: "https://live-hls-web-aje.getaj.net/AJE/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/f/f2/Al_Jazeera_English_logo.svg", category: "News", country: "QA", language: "English", quality: "1080p FHD" },
+  { name: "Euronews English Live", url: "https://euronews-euronews-world-1-au.samsung.wurl.tv/playlist.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/c/c5/Euronews_2016_logo.svg", category: "News", country: "EU", language: "English", quality: "1080p FHD" },
+  { name: "Red Bull TV Live Sports", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/f/f5/Red_Bull_TV_logo.svg", category: "Sports", country: "AT", language: "English", quality: "1080p FHD" },
+  { name: "WeatherNation Live HD", url: "https://weathernation.akamaized.net/hls/live/2021111/wnlive/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f6/WeatherNation_logo.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "ABC News Live HD", url: "https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/2/2a/ABC_News_logo_2021.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "CBS News 24/7", url: "https://cbsn-us-cedexis.cbsnstream.cbsnews.com/out/v1/55a8648e8f134e82a470f83d562deeca/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/1/19/CBS_News_logo_2020.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "NBC News NOW HD", url: "https://nbcnewshls-i.akamaihd.net/hls/live/1005170/nnn_live1/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/3/30/NBC_News_NOW_logo.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "Cheddar Big Business", url: "https://melive.chdrstatic.com/cheddar-42620/CheddarOwnedStream/cheddar/primary.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/5/52/Cheddar_Logo_2018.svg", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "NHK World Japan HD", url: "https://b-nhkworld.akamaized.net/hls/live/2013838/nhkworld-tv/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/7/79/NHK_World-Japan.svg", category: "News", country: "JP", language: "English", quality: "1080p FHD" },
+  { name: "Retro Cinema Classics", url: "https://stream.ecable.tv/retrotv/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Retro_Television_Network_logo.svg", category: "Movies", country: "US", language: "English", quality: "720p HD" },
+  { name: "FilmStream Feature Movies", url: "https://amg01448-cinedigm-filmstream-samsungus-3a789.amagi.tv/playlist/amg01448-cinedigm-filmstream-samsungus/playlist.m3u8", logo: "", category: "Movies", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "CineLife Entertainment Hub", url: "https://amg01448-cinedigm-cinelife-samsungus-e9b3e.amagi.tv/playlist/amg01448-cinedigm-cinelife-samsungus/playlist.m3u8", logo: "", category: "Movies", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "Real Stories Documentaries", url: "https://amg01448-cinedigm-realstories-samsungus-eecb7.amagi.tv/playlist/amg01448-cinedigm-realstories-samsungus/playlist.m3u8", logo: "", category: "Documentary", country: "GB", language: "English", quality: "1080p FHD" },
+  { name: "Clubbing TV Dance Live", url: "https://stream.clubbingtv.com/clubbingtv/live/chunks.m3u8", logo: "", category: "Music", country: "FR", language: "English", quality: "1080p FHD" },
+  { name: "Stingray CMusic Classics", url: "https://lightning-stingraycmusic-samsungau.amagi.tv/playlist.m3u8", logo: "", category: "Music", country: "CA", language: "English", quality: "1080p FHD" },
+  { name: "Motorvision TV Live", url: "https://motorvision-klowdtv.amagi.tv/playlist.m3u8", logo: "", category: "Sports", country: "DE", language: "English", quality: "1080p FHD" },
+  { name: "World Poker Tour Live", url: "https://wpt-samsung.amagi.tv/playlist.m3u8", logo: "", category: "Sports", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "Outdoor America HD", url: "https://outdooramerica-samsung.amagi.tv/playlist.m3u8", logo: "", category: "Sports", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "Newsmax TV Live", url: "https://nmxlive.akamaized.net/hls/live/529965/Live_1/index.m3u8", logo: "", category: "News", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "NASA Media Feed", url: "https://ntv.akamaized.net/hls/live/2013500/NASA-NTV-Media/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg", category: "Science", country: "US", language: "English", quality: "1080p FHD" },
+  { name: "RTVE 24h Noticias España", url: "https://rtvelivestream.akamaized.net/rtvesec/24h/24h_main_500.m3u8", logo: "", category: "News", country: "ES", language: "Spanish", quality: "720p HD" },
+  { name: "DW Deutsch Nachrichten", url: "https://dwamdstream104.akamaized.net/hls/live/2015527/dwstream104/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/7/75/Deutsche_Welle_symbol_2012.svg", category: "News", country: "DE", language: "German", quality: "1080p FHD" },
+  { name: "Al Jazeera Arabic Live", url: "https://live-hls-web-aja.getaj.net/AJA/index.m3u8", logo: "", category: "News", country: "QA", language: "Arabic", quality: "1080p FHD" },
+  { name: "TVP World English", url: "https://stream.tvp.pl/live/tvpworld/index.m3u8", logo: "", category: "News", country: "PL", language: "English", quality: "1080p FHD" }
+];
+
+const SOURCES = {
+  freetv: { label: '📡 Free-TV Global Master', url: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8' },
+  news: { label: '📰 Global News', url: 'https://iptv-org.github.io/iptv/categories/news.m3u' },
+  sports: { label: '🏟 Live Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
+  movies: { label: '🎬 Feature Movies', url: 'https://iptv-org.github.io/iptv/categories/movies.m3u' },
+  series: { label: '📺 TV Series', url: 'https://iptv-org.github.io/iptv/categories/series.m3u' },
+  entertainment: { label: '🎭 Entertainment', url: 'https://iptv-org.github.io/iptv/categories/entertainment.m3u' },
+  music: { label: '🎵 Music & Hits', url: 'https://iptv-org.github.io/iptv/categories/music.m3u' },
+  documentary: { label: '🔬 Documentaries', url: 'https://iptv-org.github.io/iptv/categories/documentary.m3u' },
+  science: { label: '🧪 Science & Tech', url: 'https://iptv-org.github.io/iptv/categories/science.m3u' },
+  kids: { label: '🧸 Kids & Family', url: 'https://iptv-org.github.io/iptv/categories/kids.m3u' },
+  animation: { label: '🎨 Cartoons & Anime', url: 'https://iptv-org.github.io/iptv/categories/animation.m3u' },
+  comedy: { label: '😂 Comedy Hub', url: 'https://iptv-org.github.io/iptv/categories/comedy.m3u' },
+  classic: { label: '📼 Classic Cinema', url: 'https://iptv-org.github.io/iptv/categories/classic.m3u' },
+  business: { label: '💼 Business & Finance', url: 'https://iptv-org.github.io/iptv/categories/business.m3u' },
+  travel: { label: '✈️ Travel & Explore', url: 'https://iptv-org.github.io/iptv/categories/travel.m3u' },
+  weather: { label: '🌤 Weather Radar', url: 'https://iptv-org.github.io/iptv/categories/weather.m3u' },
+  us: { label: '🇺🇸 United States', url: 'https://iptv-org.github.io/iptv/countries/us.m3u' },
+  ca: { label: '🇨🇦 Canada', url: 'https://iptv-org.github.io/iptv/countries/ca.m3u' },
+  gb: { label: '🇬🇧 United Kingdom', url: 'https://iptv-org.github.io/iptv/countries/gb.m3u' },
+  au: { label: '🇦🇺 Australia', url: 'https://iptv-org.github.io/iptv/countries/au.m3u' },
+  de: { label: '🇩🇪 Germany', url: 'https://iptv-org.github.io/iptv/countries/de.m3u' },
+  fr: { label: '🇫🇷 France', url: 'https://iptv-org.github.io/iptv/countries/fr.m3u' },
+  es: { label: '🇪🇸 Spain', url: 'https://iptv-org.github.io/iptv/countries/es.m3u' },
+  it: { label: '🇮🇹 Italy', url: 'https://iptv-org.github.io/iptv/countries/it.m3u' },
+  jp: { label: '🇯🇵 Japan', url: 'https://iptv-org.github.io/iptv/countries/jp.m3u' },
+  master: { label: '🌐 Worldwide Master Mega', url: 'https://iptv-org.github.io/iptv/index.category.m3u' }
+};
+
+const PRESETS = {
+  quick: { label: '⚡ Quick Sync', keys: ['freetv', 'news', 'sports', 'movies', 'documentary'] },
+  usa: { label: '🇺🇸 USA + Canada', keys: ['us', 'ca'] },
+  world: { label: '🌐 Global Master', keys: ['master', 'freetv'] },
+  entertainment: { label: '🎭 Entertainment Pack', keys: ['entertainment', 'comedy', 'classic', 'series'] },
+  science: { label: '🔬 Science Pack', keys: ['science', 'documentary', 'travel', 'weather'] },
+  kids: { label: '🧸 Kids Pack', keys: ['kids', 'animation'] },
+  international: { label: '🌎 Europe & World', keys: ['gb', 'de', 'fr', 'es', 'it', 'jp'] }
+};
+
+const CORS_PROXIES = [
+  (u) => u,
+  (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+];
+
+/* =========================================================
+   APPLICATION STATE
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+
+let channels = [];
+let filtered = [];
+let favorites = [];
+let history = [];
+let sources = [];
+let health = {};
+let sourceStatus = {};
+
+let mainCat = 'all';
+let subCat = 'all';
+let page = 0;
+let pageSize = 60;
+let grid = false;
+let favOnly = false;
+
+let isMainSplitActive = false;
+let isStudioOpen = false;
+let mainSplitPos = 50;
+let studioSplitPos = 50;
+let isDraggingMainSplit = false;
+let isDraggingStudioSplit = false;
+
+let audioEngineMode = 'direct';
+let currentVariants = [];
+
+let hls = null;
+let current = null;
+let sessionToken = 0;
+let scanActive = false;
+
+let retry = 0;
+let retryTimer = null;
+let watchdog = 0;
+let lastTime = -1;
+let recoveryCount = 0;
+
+let isAirPlayActive = false;
+let airPlayAvailable = false;
+let isChannelTuning = false;
+
+let cc = false;
+let lowLatency = false;
+let debounceTimer = null;
+let telemetryTimer = null;
+let osdTimer = null;
+let video = null;
+let auroraCanvas = null;
+let auroraCtx = null;
+let auroraProcessedCanvas = null;
+let auroraProcessedCtx = null;
+let auroraAirPlayVideo = null;
+let outputTarget = 'local'; // local | airplay | lg | mirror
+
+let numBuffer = '';
+let numTimer = null;
+
+/* =========================================================
+   STORAGE HELPERS
+   ========================================================= */
+
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn('Storage failure', e);
+  }
+}
+
+function loadSettings() {
+  return Object.assign({}, DEFAULT_SETTINGS, load(STORAGE.settings, {}));
+}
+
+let settings = loadSettings();
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
+function esc(value = '') {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function initials(value = 'TV') {
+  const words = String(value).replace(/[^a-z0-9 ]/gi, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return 'TV';
+  return ((words[0][0] || 'T') + (words[1]?.[0] || words[0][1] || 'V')).toUpperCase();
+}
+
+function flag(country) {
+  const c = String(country || '').toUpperCase();
+  if (c.length !== 2) return '🌐';
+  return [...c].map(x => String.fromCodePoint(x.charCodeAt(0) + 127397)).join('');
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function timeAgo(timestamp) {
+  const seconds = Math.max(0, (Date.now() - Number(timestamp || Date.now())) / 1000);
+  if (seconds < 60) return 'now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function toast(message) {
+  const el = $('toast');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function triggerOSD(text) {
+  const osd = $('auroraOsd');
+  if (osd) {
+    osd.textContent = text;
+    osd.classList.add('show');
+    clearTimeout(osdTimer);
+    osdTimer = setTimeout(() => osd.classList.remove('show'), 2200);
+  }
+  const sOsd = $('studioOsd');
+  if (sOsd) sOsd.textContent = text;
+}
+
+function updateStatus(message) {
+  const el = $('status');
+  if (el) el.innerHTML = message;
+}
+
+function shieldNotify(message) {
+  recoveryCount++;
+  const shieldPill = $('shieldPill');
+  if (shieldPill) shieldPill.textContent = `🛡️ Recovery ${recoveryCount}`;
+
+  const hudToast = $('hudToast');
+  if (hudToast) {
+    hudToast.textContent = `🛡️ ${message}`;
+    hudToast.classList.add('show');
+    clearTimeout(hudToast._timer);
+    hudToast._timer = setTimeout(() => hudToast.classList.remove('show'), 2700);
+  }
+  renderDiag();
+}
+
+function setLoading(show, text = 'Tuning channel…') {
+  const txt = $('loadingText');
+  const sc = $('loadingScreen');
+  if (txt) txt.textContent = text;
+  if (sc) sc.classList.toggle('show', show);
+}
+
+function openModal(id) {
+  const el = $(id);
+  if (el) el.classList.add('show');
+  if (id === 'pictureModal') {
+    isStudioOpen = true;
+    syncEqualizerUiInputs();
+    renderStudioLoop();
+    updateStudioMeta();
+  }
+}
+
+function closeModal(id) {
+  const el = $(id);
+  if (el) el.classList.remove('show');
+  if (id === 'pictureModal') {
+    isStudioOpen = false;
+  }
+}
+
+function handleBackdropClick(event, id) {
+  if (event.target.id === id) {
+    closeModal(id);
+  }
+}
+
+/* =========================================================
+   CANONICAL PICTURE SETTINGS & AURORA PIPELINE
+   ========================================================= */
+
+function isPictureProcessingActive() {
+  const s = pictureSettings;
+  return s.auroraEnabled && !s.rawBypass && (
+    s.brightness !== 100 ||
+    s.contrast !== 100 ||
+    s.saturation !== 100 ||
+    s.sharpness !== 0 ||
+    s.detailRecovery !== 0 ||
+    s.noiseReduction !== 0 ||
+    s.tint !== 0 ||
+    s.temperature !== 0
+  );
+}
+
+function setPictureSetting(name, value) {
+  if (!Object.prototype.hasOwnProperty.call(pictureSettings, name)) return;
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return;
+
+  pictureSettings[name] = numericValue;
+
+  if (pictureSettings.preset !== 'bypass') {
+    pictureSettings.preset = 'custom';
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  syncEqualizerUiInputs();
+  updateAuroraPipeline();
+  save(STORAGE.pictureSettings, pictureSettings);
+
+  const messages = {
+    brightness: `☀️ Brightness: ${numericValue}%`,
+    contrast: `🌟 Contrast: ${(numericValue / 100).toFixed(2)}×`,
+    saturation: `🎨 Saturation: ${numericValue}%`,
+    tint: `🎨 Tint: ${numericValue}°`,
+    temperature: `🌡 Temperature: ${numericValue}`,
+    sharpness: `🔮 Aurora SSR: ${numericValue}%`,
+    detailRecovery: `⚡ Aurora Acutance: ${numericValue}%`,
+    noiseReduction: `🧼 Aurora Denoise: ${numericValue}%`
+  };
+  if (messages[name]) triggerOSD(messages[name]);
+}
+
+function applyPicturePreset(name) {
+  const preset = PICTURE_PRESETS[name];
+  if (!preset) return;
+  Object.assign(pictureSettings, preset);
+  pictureSettings.rawBypass = name === 'bypass';
+
+  syncEqualizerUiInputs();
+  updateAuroraPipeline();
+  save(STORAGE.pictureSettings, pictureSettings);
+
+  triggerOSD(`🎨 Picture Mode: ${preset.badge}`);
+  toast(`Picture preset switched to ${preset.label}`);
+}
+
+function setBypass(active) {
+  pictureSettings.rawBypass = Boolean(active);
+  if (pictureSettings.rawBypass) pictureSettings.preset = 'bypass';
+  else if (pictureSettings.preset === 'bypass') pictureSettings.preset = 'auto';
+  updateAuroraPipeline();
+  save(STORAGE.pictureSettings, pictureSettings);
+  triggerOSD(active ? '⚪ RAW BROADCAST — PIPELINE BYPASSED' : `✨ AURORA RESTORED (${pictureSettings.preset.toUpperCase()})`);
+  const bBtn = $('bypassBtn');
+  if (bBtn) bBtn.classList.toggle('active', active);
+}
+
+/*
+ * IMPORTANT SAFARI FIX
+ * --------------------
+ * Safari/WebKit can ignore or inconsistently apply CanvasRenderingContext2D.filter
+ * while a video is being copied into a canvas.  The authoritative frame buffer
+ * therefore remains RAW.  Picture processing is applied to a second presentation
+ * canvas with the normal CSS filter pipeline, which WebKit renders reliably.
+ */
+function buildCanvasFilterString(s) {
+  if (!s || s.rawBypass || !s.auroraEnabled) return 'none';
+
+  const brightness = Math.max(0.10, Math.min(2.50, Number(s.brightness ?? 100) / 100));
+  const contrastBase = Math.max(0.10, Math.min(3.00, Number(s.contrast ?? 100) / 100));
+  const saturationBase = Math.max(0.00, Math.min(3.00, Number(s.saturation ?? 100) / 100));
+  const tint = Number(s.tint ?? 0);
+  const temperature = Number(s.temperature ?? 0);
+  const sharpness = Math.max(0, Math.min(200, Number(s.sharpness ?? 0)));
+  const acutance = Math.max(0, Math.min(200, Number(s.detailRecovery ?? 0)));
+  const denoise = Math.max(0, Math.min(100, Number(s.noiseReduction ?? 0)));
+
+  /*
+   * CSS has no native sharpen/denoise primitive.  We map those controls to
+   * conservative contrast/saturation/brightness adjustments so every slider
+   * has a visible, deterministic effect without pretending to perform a
+   * GPU convolution that Safari may not execute.
+   */
+  const edgeLift = (sharpness * 0.0018) + (acutance * 0.0010);
+  const denoiseCompression = denoise * 0.0015;
+  const contrast = Math.max(0.10, Math.min(3.00, contrastBase + edgeLift - denoiseCompression));
+  const saturation = Math.max(0.00, Math.min(3.00, saturationBase - denoise * 0.0010));
+
+  const filters = [
+    `brightness(${brightness})`,
+    `contrast(${contrast})`,
+    `saturate(${saturation})`
+  ];
+
+  if (Math.abs(tint) > 0.01) filters.push(`hue-rotate(${tint}deg)`);
+
+  if (temperature > 0) {
+    filters.push(`sepia(${Math.min(35, temperature * 0.70)}%)`);
+    filters.push(`hue-rotate(${-temperature * 0.12}deg)`);
+  } else if (temperature < 0) {
+    filters.push(`hue-rotate(${temperature * 0.22}deg)`);
+    filters.push(`saturate(${1 + Math.abs(temperature) * 0.004})`);
+  }
+
+  return filters.join(' ');
+}
+
+function getPictureFilter(s = pictureSettings) {
+  return buildCanvasFilterString(s);
+}
+
+function syncProcessedCanvasGeometry(canvas, w, h) {
+  if (!canvas) return;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+}
+
+function applyAuroraPresentationState() {
+  const screen = $('playerScreen');
+  const active = Boolean(pictureSettings.auroraEnabled && !pictureSettings.rawBypass);
+  const filter = active ? getPictureFilter() : 'none';
+
+  /* The raw canvas is the stable visible framebuffer. CSS filtering happens
+     after rasterization, so cross-origin streams cannot make the player blank. */
+  if (auroraCanvas) {
+    auroraCanvas.style.filter = (!isMainSplitActive && active) ? filter : 'none';
+  }
+  if (auroraProcessedCanvas) {
+    auroraProcessedCanvas.style.filter = filter;
+    auroraProcessedCanvas.style.display = 'block';
+  }
+  if (video) {
+    const fallback = Boolean(screen?.classList.contains('canvas-fallback'));
+    video.style.filter = fallback && active ? filter : 'none';
+  }
+
+  if (screen) {
+    screen.classList.toggle('full-processing', active && !isMainSplitActive);
+    screen.classList.toggle('split-processing', active && isMainSplitActive);
+  }
+
+  const bBtn = $('bypassBtn');
+  if (bBtn) bBtn.classList.toggle('active', pictureSettings.rawBypass);
+
+  const header = $('auroraHeaderBtn');
+  if (header) header.classList.toggle('active', pictureSettings.auroraEnabled && !pictureSettings.rawBypass);
+
+  const hud = $('hudAurora');
+  if (hud) hud.textContent = active ? '✨ AURORA Q1024 • ACTIVE' : '⚪ RAW SOURCE';
+
+  const pill = $('auroraPill');
+  if (pill) pill.textContent = active ? `✨ Aurora: ${pictureSettings.preset.toUpperCase()}` : '⚪ Aurora: BYPASS';
+}
+
+function updateAuroraPipeline() {
+  syncEqualizerUiInputs();
+  syncEqualizerLabels(pictureSettings);
+  updateVisualizer(pictureSettings);
+  updateResolutionTelemetry();
+  updateAirPlayStatus();
+  applyAuroraPresentationState();
+}
+
+function updateVisualizer(p) {
+  const setH = (id, pct) => {
+    const el = $(id);
+    if (el) el.style.height = `${Math.min(100, Math.max(8, pct))}%`;
+  };
+  setH('eqBarSSR', (p.sharpness / 200) * 100);
+  setH('eqBarAcutance', (p.detailRecovery / 200) * 100);
+  setH('eqBarDenoise', p.noiseReduction);
+  setH('eqBarContrast', (p.contrast / 200) * 100);
+  setH('eqBarBrightness', ((p.brightness - 60) / 80) * 100);
+  setH('eqBarSaturation', (p.saturation / 250) * 100);
+  setH('eqBarTint', ((p.tint + 180) / 360) * 100);
+  setH('eqBarTemp', ((p.temperature + 50) / 100) * 100);
+}
+
+function syncEqualizerLabels(p) {
+  if ($('valSSR')) $('valSSR').textContent = `${p.sharpness}% (${p.sharpness >= 150 ? 'Ultra 4K' : (p.sharpness >= 110 ? 'High' : 'Standard')})`;
+  if ($('valAcutance')) $('valAcutance').textContent = `${p.detailRecovery >= 100 ? 'High' : 'Standard'} ${p.detailRecovery}%`;
+  if ($('valDenoise')) $('valDenoise').textContent = `${p.noiseReduction}%`;
+  if ($('valTint')) $('valTint').textContent = `${p.tint}°`;
+  if ($('valTemp')) $('valTemp').textContent = `${p.temperature > 0 ? '+' : ''}${p.temperature}`;
+  if ($('valSaturation')) $('valSaturation').textContent = `${p.saturation}%`;
+  if ($('valContrast')) $('valContrast').textContent = `${p.contrast}%`;
+  if ($('valBrightness')) $('valBrightness').textContent = `${p.brightness}%`;
+}
+
+function syncEqualizerUiInputs() {
+  const p = pictureSettings;
+  const pairs = [
+    ['eqSSR', p.sharpness], ['eqAcutance', p.detailRecovery], ['eqDenoise', p.noiseReduction],
+    ['eqTint', p.tint], ['eqTemp', p.temperature], ['eqSaturation', p.saturation],
+    ['eqContrast', p.contrast], ['eqBrightness', p.brightness]
+  ];
+  pairs.forEach(([id, value]) => { const el = $(id); if (el) el.value = value; });
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.toggle('active', btn.id === `pbtn_${p.preset}`));
+  syncEqualizerLabels(p);
+}
+
+function resetPictureModeToDefaults() {
+  applyPicturePreset('auto');
+  toast('Picture settings reset to Auto AI Dynamic');
+}
+
+function saveCustomPictureProfile() {
+  save(STORAGE.pictureSettings, pictureSettings);
+  toast('Custom picture equalizer profile saved');
+}
+
+/* =========================================================
+   AUTHORITATIVE FRAME-BUFFER RENDERING LOOP
+   ========================================================= */
+function renderAuroraMasterFrame() {
+  if (!video || !auroraCanvas || !auroraCtx) {
+    requestAnimationFrame(renderAuroraMasterFrame);
+    return;
+  }
+
+  if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+    requestAnimationFrame(renderAuroraMasterFrame);
+    return;
+  }
+
+  const w = video.videoWidth || 1280;
+  const h = video.videoHeight || 720;
+  syncProcessedCanvasGeometry(auroraCanvas, w, h);
+  syncProcessedCanvasGeometry(auroraProcessedCanvas, w, h);
+
+  /* Always copy the decoder's unmodified frame. Never use ctx.filter here. */
+  try {
+    auroraCtx.save();
+    auroraCtx.filter = 'none';
+    auroraCtx.globalCompositeOperation = 'copy';
+    auroraCtx.clearRect(0, 0, w, h);
+    auroraCtx.drawImage(video, 0, 0, w, h);
+    auroraCtx.restore();
+    $('playerScreen')?.classList.remove('canvas-fallback');
+  } catch (err) {
+    /* Cross-origin HLS without CORS can taint a canvas. Never let that kill
+       playback or the Picture Settings UI on a TV browser. */
+    console.warn('Aurora canvas unavailable for this stream:', err);
+    $('playerScreen')?.classList.add('canvas-fallback');
+    requestAnimationFrame(renderAuroraMasterFrame);
+    return;
+  }
+
+  if (auroraProcessedCtx && auroraProcessedCanvas) {
+    /*
+      The visible processed layer uses CSS filters for Safari reliability.
+      The export buffer additionally tries the standard Canvas 2D filter API
+      so a MediaStream capture can contain baked picture changes on engines
+      that implement CanvasRenderingContext2D.filter.
+    */
+    const active = pictureSettings.auroraEnabled && !pictureSettings.rawBypass;
+
+    auroraProcessedCtx.save();
+    auroraProcessedCtx.globalCompositeOperation = 'copy';
+    auroraProcessedCtx.clearRect(0, 0, w, h);
+
+    try {
+      auroraProcessedCtx.filter = active ? getPictureFilter() : 'none';
+    } catch {
+      auroraProcessedCtx.filter = 'none';
+    }
+
+    try {
+      auroraProcessedCtx.drawImage(video, 0, 0, w, h);
+      window.__auroraProcessedFrameReady = true;
+    } catch (err) {
+      /* Export/cast buffer failure must never hide the local picture. */
+      window.__auroraProcessedFrameReady = false;
+      console.warn('Processed export canvas unavailable:', err);
+    }
+    auroraProcessedCtx.restore();
+
+    auroraProcessedCanvas.style.filter = active ? getPictureFilter() : 'none';
+  }
+
+  applyAuroraPresentationState();
+  requestAnimationFrame(renderAuroraMasterFrame);
+}
+
+/* =========================================================
+   STUDIO SPLIT-SCREEN WORKBENCH
+   ========================================================= */
+
+function renderStudioLoop() {
+  if (!isStudioOpen) return;
+  const canvas = $('studioCanvas');
+  const processed = $('studioProcessedCanvas');
+  if (canvas && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    if (processed && (processed.width !== w || processed.height !== h)) {
+      processed.width = w;
+      processed.height = h;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const pctx = processed ? processed.getContext('2d') : null;
+    try {
+      if (ctx) {
+        ctx.save();
+        ctx.filter = 'none';
+        ctx.globalCompositeOperation = 'copy';
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(video, 0, 0, w, h);
+        ctx.restore();
+      }
+      if (pctx && processed) {
+        pctx.save();
+        pctx.filter = 'none';
+        pctx.globalCompositeOperation = 'copy';
+        pctx.clearRect(0, 0, w, h);
+        pctx.drawImage(video, 0, 0, w, h);
+        pctx.restore();
+        processed.style.filter = getPictureFilter();
+      }
+    } catch (err) {
+      console.warn('Studio canvas unavailable; keeping controls alive:', err);
+      const screen = $('playerScreen');
+      if (screen) screen.classList.add('canvas-fallback');
+    }
+    if (pctx && processed) {
+      processed.style.clipPath = pictureSettings.rawBypass || !pictureSettings.auroraEnabled
+        ? 'inset(0 0 0 100%)'
+        : `inset(0 0 0 ${Math.max(0, Math.min(100, studioSplitPos))}%)`;
+    }
+  }
+  requestAnimationFrame(renderStudioLoop);
+}
+
+function resetStudioSplit() {
+  studioSplitPos = 50;
+  document.documentElement.style.setProperty('--studio-split-x', '50%');
+}
+
+function toggleSplitScreen() {
+  isMainSplitActive = !isMainSplitActive;
+  const bar = $('splitBar');
+  const labels = $('splitLabels');
+  const btn = $('splitBtn');
+
+  if (bar) bar.classList.toggle('active', isMainSplitActive);
+  if (labels) labels.classList.toggle('active', isMainSplitActive);
+  if (btn) btn.classList.toggle('active', isMainSplitActive);
+  applyAuroraPresentationState();
+
+  triggerOSD(isMainSplitActive ? '↔ A/B Split Compare: Left RAW / Right AURORA' : '↔ Main Split Compare Disabled');
+}
+
+function setupDraggers() {
+  // Studio Screen Split Divider
+  const studioWrap = $('studioScreenWrap');
+  if (studioWrap) {
+    const onStudioMove = (e) => {
+      if (!isDraggingStudioSplit) return;
+      const rect = studioWrap.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const pct = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+      studioSplitPos = pct;
+      document.documentElement.style.setProperty('--studio-split-x', `${pct}%`);
+    };
+
+    const onStudioEnd = () => {
+      isDraggingStudioSplit = false;
+      window.removeEventListener('mousemove', onStudioMove);
+      window.removeEventListener('touchmove', onStudioMove);
+      window.removeEventListener('mouseup', onStudioEnd);
+      window.removeEventListener('touchend', onStudioEnd);
+    };
+
+    studioWrap.addEventListener('mousedown', (e) => {
+      if (e.target.id === 'studioSplitBar' || e.target.closest('#studioSplitBar')) {
+        isDraggingStudioSplit = true;
+        window.addEventListener('mousemove', onStudioMove);
+        window.addEventListener('mouseup', onStudioEnd);
+      }
+    });
+
+    studioWrap.addEventListener('touchstart', (e) => {
+      if (e.target.id === 'studioSplitBar' || e.target.closest('#studioSplitBar')) {
+        isDraggingStudioSplit = true;
+        window.addEventListener('touchmove', onStudioMove);
+        window.addEventListener('touchend', onStudioEnd);
+      }
+    }, { passive: true });
+  }
+
+  // Main Player Screen Split Divider
+  const mainScreen = $('playerScreen');
+  if (mainScreen) {
+    const onMainMove = (e) => {
+      if (!isDraggingMainSplit || !isMainSplitActive) return;
+      const rect = mainScreen.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const pct = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+      mainSplitPos = pct;
+      document.documentElement.style.setProperty('--split-x', `${pct}%`);
+    };
+
+    const onMainEnd = () => {
+      isDraggingMainSplit = false;
+      window.removeEventListener('mousemove', onMainMove);
+      window.removeEventListener('touchmove', onMainMove);
+      window.removeEventListener('mouseup', onMainEnd);
+      window.removeEventListener('touchend', onMainEnd);
+    };
+
+    mainScreen.addEventListener('mousedown', (e) => {
+      if (e.target.id === 'splitBar' || e.target.closest('#splitBar')) {
+        isDraggingMainSplit = true;
+        window.addEventListener('mousemove', onMainMove);
+        window.addEventListener('mouseup', onStudioEnd);
+      }
+    });
+
+    mainScreen.addEventListener('touchstart', (e) => {
+      if (e.target.id === 'splitBar' || e.target.closest('#splitBar')) {
+        isDraggingMainSplit = true;
+        window.addEventListener('touchmove', onMainMove);
+        window.addEventListener('touchend', onStudioEnd);
+      }
+    }, { passive: true });
+  }
+}
+
+/* =========================================================
+   UNIVERSAL CROSS-DEVICE PROCESSED CAST (WebRTC / PeerJS)
+   ========================================================= */
+let castPeer = null;
+let castPeerId = '';
+let castCalls = new Set();
+let receiverCall = null;
+let receiverFilter = { brightness:100, contrast:100, saturate:100, sharpness:0 };
+
+function makeCastCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function castPeerName(code) {
+  return `aurora-tv-${code}`;
+}
+
+function ensurePeerForCast(code = makeCastCode()) {
+  if (!window.Peer) throw new Error('WebRTC library did not load');
+  if (castPeer && !castPeer.destroyed) return { peer:castPeer, code:castPeerId.replace(/^aurora-tv-/,'') };
+  const peer = new Peer(castPeerName(code), {
+    debug: 0,
+    config: { iceServers: [{ urls:'stun:stun.l.google.com:19302' }] }
+  });
+  castPeer = peer;
+  castPeerId = castPeerName(code);
+  peer.on('open', id => {
+    castPeerId = id;
+    const actual = id.replace(/^aurora-tv-/,'');
+    const el = $('castCode'); if (el) el.textContent = actual;
+    const st = $('castStatus'); if (st) st.textContent = `🟢 Ready • code ${actual} • ${navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'}`;
+  });
+  peer.on('call', call => {
+    /* The receiver initiates a one-way call with no local media. The sender
+       answers with the processed Aurora canvas stream. */
+    const stream = window.__auroraCastStream || (() => {
+      try { return getProcessedCastStream(); } catch { return null; }
+    })();
+    if (!stream) { call.close(); return; }
+    castCalls.add(call);
+    call.answer(stream);
+    call.on('close', () => { castCalls.delete(call); if ($('castStatus')) $('castStatus').textContent='Receiver disconnected'; });
+    call.on('error', err => { if ($('castStatus')) $('castStatus').textContent=`Cast error: ${err.message || err}`; });
+  });
+  peer.on('error', err => {
+    console.warn('PeerJS:', err);
+    const st = $('castStatus'); if (st) st.textContent = `⚠️ ${err.type || err.message || 'WebRTC error'}`;
+  });
+  return { peer, code };
+}
+
+function getProcessedCastStream() {
+  const canvas = auroraProcessedCanvas;
+  if (!canvas || typeof canvas.captureStream !== 'function') {
+    throw new Error('This browser cannot capture a processed canvas. Use native AirPlay for source video or Safari/macOS screen mirroring.');
+  }
+  if (!canvas.width || !canvas.height) throw new Error('Picture pipeline is not ready yet. Start a channel first.');
+  if (window.__auroraProcessedFrameReady === false) {
+    throw new Error('This stream blocks canvas export (usually a CORS-protected channel). Native AirPlay can still send the source, but browser-only processed casting cannot read its pixels.');
+  }
+  if (window.__auroraCastStream) {
+    try {
+      const tracks = window.__auroraCastStream.getVideoTracks();
+      if (tracks.length && tracks[0].readyState === 'live') return window.__auroraCastStream;
+    } catch {}
+  }
+  const stream = canvas.captureStream(30);
+  try {
+    if (typeof video.captureStream === 'function') {
+      const audioTracks = video.captureStream().getAudioTracks();
+      audioTracks.forEach(t => { if (t.readyState === 'live') stream.addTrack(t); });
+    }
+  } catch {}
+  window.__auroraCastStream = stream;
+  return stream;
+}
+
+async function openUniversalCast(autoReceiverHint = false) {
+  try {
+    openModal('universalCastModal');
+    if (!castPeer || castPeer.destroyed) ensurePeerForCast();
+    setOutputBanner('PROCESSED TV CAST • Aurora picture settings are baked into the outgoing video stream.', true);
+    const status = $('castStatus');
+    if (status) status.textContent = 'Preparing processed video stream…';
+    const stream = getProcessedCastStream();
+    if (status) status.textContent = `🟢 Ready • ${stream.getVideoTracks().length ? 'video' : 'no video'} • ${stream.getAudioTracks().length ? 'audio' : 'video only'} • code appears when signaling is ready`;
+    const code = castPeerId.replace(/^aurora-tv-/,'');
+    const hint = $('receiverCode');
+    if (autoReceiverHint && hint && !hint.value && code) hint.value = code;
+    return true;
+  } catch (err) {
+    toast(err.message || 'Processed TV Cast unavailable');
+    setOutputBanner(`CAST ERROR • ${err.message || err}`, false);
+    return false;
+  }
+}
+
+function refreshCastCode() {
+  stopUniversalCast();
+  try { ensurePeerForCast(makeCastCode()); openUniversalCast(); } catch (e) { toast(e.message); }
+}
+
+async function connectUniversalReceiver() {
+  const input = $('receiverCode');
+  const code = String(input?.value || '').replace(/\D/g,'').slice(0,6);
+  if (code.length !== 6) { toast('Enter the 6-digit TV code'); return; }
+  if (!window.Peer) { toast('WebRTC library unavailable on this browser'); return; }
+  try {
+    if (!castPeer || castPeer.destroyed) {
+      castPeer = new Peer({debug:0, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]}});
+      castPeer.on('error', err => { const st=$('castStatus'); if(st) st.textContent=`⚠️ ${err.type || err.message}`; });
+      await new Promise((resolve,reject)=>{
+        const t=setTimeout(()=>reject(new Error('Receiver signaling timed out')),8000);
+        castPeer.once('open',()=>{clearTimeout(t);resolve();});
+        castPeer.once('error',e=>{clearTimeout(t);reject(e);});
+      });
+    }
+    const call = castPeer.call(castPeerName(code), null);
+    receiverCall = call;
+    openModal('universalCastModal');
+    const st=$('castStatus'); if(st) st.textContent='📡 Connecting to TV…';
+    call.on('stream', stream => { showReceiverStream(stream); if(st) st.textContent='🟢 Connected • Live processed Aurora stream'; });
+    call.on('close',()=>{if(st)st.textContent='Receiver connection closed';});
+    call.on('error',e=>{if(st)st.textContent=`⚠️ ${e.message || e}`;});
+  } catch (err) { toast(`Could not connect: ${err.message || err}`); }
+}
+
+function showReceiverStream(stream) {
+  const stage=$('receiverStage'), rv=$('receiverVideo');
+  if (!rv) return;
+  rv.srcObject=stream;
+  rv.muted=false;
+  if(stage) stage.style.display='block';
+  rv.play().catch(()=>{});
+  outputTarget='mirror';
+  setOutputBanner('UNIVERSAL CAST CONNECTED • Processed picture is now playing on the receiver.', true);
+}
+
+function openReceiverMode() {
+  openModal('universalCastModal');
+  const stage=$('receiverStage'); if(stage) stage.style.display='block';
+  const st=$('castStatus'); if(st) st.textContent='Enter the sender’s 6-digit code.';
+}
+
+function stopUniversalCast() {
+  castCalls.forEach(c=>{try{c.close();}catch{}}); castCalls.clear();
+  if (receiverCall) { try{receiverCall.close();}catch{} receiverCall=null; }
+  if (window.__auroraCastStream) {
+    try { window.__auroraCastStream.getTracks().forEach(t=>t.stop()); } catch {}
+    window.__auroraCastStream=null;
+  }
+}
+
+function setReceiverFilter(name,value) {
+  receiverFilter[name]=Number(value);
+  const sharp=receiverFilter.sharpness/100;
+  const blur=Math.max(0, (1-sharp)*1.2);
+  const rv=$('receiverVideo');
+  if(rv) rv.style.filter=`brightness(${receiverFilter.brightness}%) contrast(${receiverFilter.contrast}%) saturate(${receiverFilter.saturate}%) blur(${blur.toFixed(2)}px)`;
+}
+
+function callAllReceivers() {
+  const stream=window.__auroraCastStream;
+  if(!stream || !castPeer) return;
+  castCalls.forEach(c=>{try{c.close();}catch{}}); castCalls.clear();
+}
+
+/* =========================================================
+   UNIVERSAL AIRPLAY 2 / MAC SCREEN MIRROR / LG TV OUTPUT
+   =========================================================
+   Important browser boundary:
+   - Native AirPlay can hand the source media to an AirPlay receiver.
+   - Browser JavaScript cannot invoke macOS Control Center's Screen
+     Mirroring command.
+   - Therefore the processed Aurora picture is guaranteed for Mac
+     window/screen mirroring because the Mac displays the processed
+     canvas. Native AirPlay uses the source-media path.
+   - The application exposes both paths explicitly instead of pretending
+     that a browser can turn a canvas into a guaranteed native AirPlay
+     encoded stream.
+*/
+
+function setVideoRemotePlaybackAllowed(allowed) {
+  if (!video) return;
+  try {
+    video.disableRemotePlayback = !allowed;
+  } catch {}
+  if (allowed) {
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('airplay', 'allow');
+    video.removeAttribute('disableRemotePlayback');
+  } else {
+    /* Keep Safari's native AirPlay route available unless the caller is
+       intentionally disabling remote playback. */
+    video.setAttribute('x-webkit-airplay', 'allow');
+    video.setAttribute('airplay', 'allow');
+    video.removeAttribute('disableRemotePlayback');
+  }
+}
+
+function setAirPlayBridgeRemotePlaybackAllowed(allowed) {
+  if (!auroraAirPlayVideo) return;
+  try {
+    auroraAirPlayVideo.disableRemotePlayback = !allowed;
+  } catch {}
+  if (allowed) {
+    auroraAirPlayVideo.setAttribute('x-webkit-airplay', 'allow');
+    auroraAirPlayVideo.setAttribute('airplay', 'allow');
+  } else {
+    auroraAirPlayVideo.setAttribute('x-webkit-airplay', 'deny');
+    auroraAirPlayVideo.setAttribute('disableRemotePlayback', '');
+  }
+}
+
+function setOutputBanner(message, persistent = false) {
+  let banner = $('tvOutputBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'tvOutputBanner';
+    banner.className = 'tv-output-banner';
+    const screen = $('playerScreen');
+    if (screen) screen.appendChild(banner);
+  }
+  banner.textContent = message;
+  banner.classList.add('show');
+  clearTimeout(window.__tvOutputBannerTimer);
+  if (!persistent) {
+    window.__tvOutputBannerTimer = setTimeout(() => {
+      banner.classList.remove('show');
+    }, 5200);
+  }
+}
+
+function getOutputCapabilities() {
+  const nativePicker = typeof video?.webkitShowPlaybackTargetPicker === 'function';
+  const remoteApi = Boolean(video?.remote && typeof video.remote.prompt === 'function');
+  const mediaStream = Boolean(auroraCanvas?.captureStream);
+  const fullscreenApi = Boolean(document.documentElement?.requestFullscreen || $('playerPanel')?.requestFullscreen);
+
+  return {
+    nativePicker,
+    remoteApi,
+    mediaStream,
+    fullscreenApi,
+    safariAirPlay: nativePicker || remoteApi
+  };
+}
+
+function updateOutputButtons() {
+  const caps = getOutputCapabilities();
+  const air = $('airplayBtn');
+  const lg = $('lgTvBtn');
+  const mirror = $('mirrorBtn');
+
+  if (air) {
+    air.classList.toggle('active', isAirPlayActive && settings.airplayMode !== 'mirror');
+    air.textContent = isAirPlayActive ? '📶 AirPlay Active' : '📺 AirPlay';
+    air.title = caps.safariAirPlay
+      ? 'Open the native AirPlay receiver picker'
+      : 'Native AirPlay picker is unavailable in this browser';
+  }
+
+  if (lg) {
+    lg.classList.toggle('active', outputTarget === 'lg');
+    lg.textContent = outputTarget === 'lg' ? '🟣 LG Active' : '🟣 LG TV';
+  }
+
+  if (mirror) {
+    mirror.classList.toggle('active', outputTarget === 'mirror');
+    mirror.textContent = outputTarget === 'mirror' ? '🖥️ Mirror Ready' : '🖥️ Mirror TV';
+  }
+
+  const local = $('localScreenBtn');
+  if (local) local.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+
+  const fa = $('floatingAirPlayBtn');
+  const fm = $('floatingMirrorBtn');
+  const fl = $('floatingLocalBtn');
+  if (fa) fa.classList.toggle('active', isAirPlayActive && outputTarget !== 'mirror');
+  if (fm) fm.classList.toggle('active', outputTarget === 'mirror');
+  if (fl) fl.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+}
+
+function updateAirPlayStatus() {
+  const active = isPictureProcessingActive();
+  let label = active ? 'AURORA PROCESSED' : 'SOURCE NATIVE';
+
+  if (outputTarget === 'mirror') label = 'MAC MIRROR • AURORA';
+  if (outputTarget === 'lg') label = active ? 'LG / AURORA MIRROR' : 'LG / AIRPLAY 2';
+
+  if ($('mAirPlay')) $('mAirPlay').textContent = label;
+  if ($('studioAirPlayState')) {
+    $('studioAirPlayState').textContent =
+      isAirPlayActive ? `🟢 Connected (${label})` : `Ready (${label})`;
+  }
+  if ($('dxAirPlayState')) {
+    $('dxAirPlayState').textContent =
+      isAirPlayActive ? `🟢 Connected (${label})` : `Disconnected (${label})`;
+  }
+
+  updateOutputButtons();
+}
+
+function setAirPlayRoutingMode(mode) {
+  settings.airplayMode = mode;
+  save(STORAGE.settings, settings);
+  updateAirPlayStatus();
+  toast(
+    mode === 'mirror'
+      ? 'Output mode: processed Mac Screen Mirroring'
+      : 'Output mode: native AirPlay 2 source delivery'
+  );
+}
+
+async function openNativeAirPlayPicker(targetLabel = 'AirPlay') {
+  if (!video) return false;
+
+  /* Native AirPlay must operate on the actual HTMLMediaElement and a
+     network-addressable HLS/MP4 URL. Do NOT enter fullscreen here. */
+  setVideoRemotePlaybackAllowed(true);
+  outputTarget = targetLabel.toLowerCase().includes('lg') ? 'lg' : 'airplay';
+  settings.airplayMode = 'direct';
+  save(STORAGE.settings, settings);
+  updateAirPlayStatus();
+
+  /* If the current player is using hls.js/MSE, switch the element back to
+     its direct HLS URL first. Apple documents that MSE/MMS blob playback is
+     not AirPlay-compatible; AirPlay needs a shareable media URL. */
+  if (current?.url) {
+    const nativeCapable = isNativeHls();
+    if (nativeCapable) {
+      try {
+        destroyHls();
+        video.removeAttribute('src');
+        video.src = current.url;
+        video.load();
+        await new Promise(resolve => {
+          if (video.readyState >= 1) return resolve();
+          const done = () => { video.removeEventListener('loadedmetadata', done); resolve(); };
+          video.addEventListener('loadedmetadata', done, { once:true });
+          setTimeout(resolve, 1800);
+        });
+        await video.play().catch(() => {});
+      } catch (err) {
+        console.warn('Native AirPlay source preparation failed:', err);
+      }
+    }
+  }
+
+  if (typeof video.webkitShowPlaybackTargetPicker === 'function') {
+    try {
+      video.webkitShowPlaybackTargetPicker();
+      setOutputBanner(
+        targetLabel === 'LG'
+          ? 'AIRPLAY READY • Select your LG TV in the device picker. Video streams directly to the TV.'
+          : 'AIRPLAY READY • Select Apple TV or any AirPlay 2 TV. Video streams directly to the receiver.'
+      , true);
+      return true;
+    } catch (err) {
+      console.warn('WebKit AirPlay picker failed:', err);
+    }
+  }
+
+  if (video.remote && typeof video.remote.prompt === 'function') {
+    try {
+      await video.remote.prompt();
+      setOutputBanner(`REMOTE PLAYBACK READY • ${targetLabel}`, true);
+      return true;
+    } catch (err) {
+      console.warn('Remote Playback prompt failed:', err);
+    }
+  }
+
+  setOutputBanner(
+    'This browser does not expose a native TV picker. Open the page in Safari on macOS and use the AirPlay button in the player.'
+  );
+  return false;
+}
+
+function startNativeSourceAirPlay() {
+  return openNativeAirPlayPicker('AirPlay');
+}
+
+async function startAirPlay() {
+  /* A browser cannot turn a CSS-filtered/canvas MediaStream into a native
+     AirPlay URL. Apple documents that AirPlay requires a network-addressable
+     media URL. Therefore processed mode uses our WebRTC receiver path; raw
+     mode uses the real native AirPlay picker. */
+  if (isPictureProcessingActive()) {
+    toast('Aurora processing is active — opening Processed TV Cast so the picture settings travel with the video.');
+    return openUniversalCast(true);
+  }
+  return startNativeSourceAirPlay();
+}
+
+async function startLGTVOutput() {
+  if (isPictureProcessingActive()) {
+    outputTarget = 'lg';
+    toast('Aurora processing is active — opening the LG-compatible Processed TV receiver.');
+    return openUniversalCast(true);
+  }
+  outputTarget = 'lg';
+  settings.airplayMode = 'direct';
+  save(STORAGE.settings, settings);
+  return openNativeAirPlayPicker('LG');
+}
+
+async function startScreenMirroring(target = 'TV') {
+  /* Universal browser-to-browser casting works on Windows, macOS, Linux and
+     compatible TV browsers. It sends the processed Aurora canvas rather than
+     pretending a webpage can control the host OS screen-mirroring menu. */
+  return openUniversalCast();
+}
+
+function connectTV() {
+  return startAirPlay();
+}
+
+function toggleAirPlayPicker() {
+  return startAirPlay();
+}
+
+function disconnectAirPlay() {
+  try {
+    if (video) video.pause();
+  } catch {}
+
+  setVideoRemotePlaybackAllowed(true);
+  setAirPlayBridgeRemotePlaybackAllowed(false);
+
+  if (auroraAirPlayVideo) {
+    try { auroraAirPlayVideo.pause(); } catch {}
+    try { auroraAirPlayVideo.srcObject = null; } catch {}
+  }
+
+  isAirPlayActive = false;
+  outputTarget = 'local';
+
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.().catch?.(() => {});
+  }
+
+  const screen = $('playerScreen');
+  if (screen) screen.classList.remove('mirror-ready');
+
+  onAirPlayStateChange(false);
+  shieldNotify('Playback Returned to Local Screen');
+  video?.play?.().catch?.(() => {});
+}
+
+function setupAirPlayIntegration() {
+  if (!video) return;
+
+  /*
+    Native Safari/WebKit AirPlay availability.
+  */
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    video.addEventListener('webkitplaybacktargetavailabilitychanged', (event) => {
+      airPlayAvailable = event.availability === 'available';
+      updateOutputButtons();
+    });
+  }
+
+  if (video.remote && typeof video.remote.watchAvailability === 'function') {
+    video.remote.watchAvailability((available) => {
+      airPlayAvailable = Boolean(available);
+      updateOutputButtons();
+    }).catch(() => {});
+  }
+
+  const onAirPlayWirelessChanged = () => {
+    const sourceWireless = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
+    const bridgeWireless = Boolean(
+      auroraAirPlayVideo &&
+      auroraAirPlayVideo.webkitCurrentPlaybackTargetIsWireless
+    );
+
+    isAirPlayActive = sourceWireless || bridgeWireless;
+    if (isAirPlayActive) {
+      outputTarget = outputTarget === 'lg' ? 'lg' : 'airplay';
+    }
+    onAirPlayStateChange(isAirPlayActive);
+  };
+
+  video.addEventListener(
+    'webkitcurrentplaybacktargetiswirelesschanged',
+    onAirPlayWirelessChanged
+  );
+
+  if (auroraAirPlayVideo) {
+    auroraAirPlayVideo.addEventListener(
+      'webkitcurrentplaybacktargetiswirelesschanged',
+      onAirPlayWirelessChanged
+    );
+  }
+
+  if (video.remote) {
+    video.remote.addEventListener('connect', () => onAirPlayStateChange(true));
+    video.remote.addEventListener('disconnect', () => onAirPlayStateChange(false));
+  }
+
+  updateOutputButtons();
+}
+
+function onAirPlayStateChange(connected) {
+  isAirPlayActive = Boolean(connected);
+
+  const apBtn = $('airplayBtn');
+  const lsBtn = $('localScreenBtn');
+
+  if (apBtn) {
+    apBtn.classList.toggle('active', isAirPlayActive);
+    apBtn.textContent = isAirPlayActive ? '📶 AirPlay Active' : '📺 AirPlay';
+  }
+
+  if (lsBtn) {
+    lsBtn.style.display = isAirPlayActive ? 'inline-flex' : 'none';
+  }
+
+  updateAirPlayStatus();
+  updateStudioMeta();
+
+  if (isAirPlayActive) {
+    setState('live', 'AIRPLAY LIVE');
+    shieldNotify(
+      outputTarget === 'lg'
+        ? 'LG TV AirPlay 2 Connected'
+        : 'AirPlay Connected'
+    );
+    triggerOSD(
+      outputTarget === 'lg'
+        ? '🟣 LG TV • AIRPLAY 2 CONNECTED'
+        : '📶 AIRPLAY 2 CONNECTED'
+    );
+
+    if ($('unmuteBtn')) $('unmuteBtn').style.display = 'none';
+    if ($('hudLeft')) {
+      $('hudLeft').textContent =
+        '📶 ' + (outputTarget === 'lg' ? 'LG TV' : 'AIRPLAY') +
+        ' • ' + (current?.name || 'CHANNEL');
+    }
+  } else {
+    setState('live', 'LIVE ON AIR');
+    if ($('hudLeft')) {
+      $('hudLeft').textContent =
+        outputTarget === 'mirror'
+          ? '🖥️ MIRROR READY • ' + (current?.name || 'CHANNEL')
+          : '● LIVE AIR • ' + (current?.name || 'CHANNEL');
+    }
+  }
+
+  updateMetrics();
+}
+
+/* =========================================================
+   M3U8 VARIANT STREAM PARSER
+   ========================================================= */
+
+function parseMasterVariants(text, baseUrl) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const variants = [];
+  let pending = null;
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('#EXT-X-STREAM-INF')) {
+      const resMatch = line.match(/RESOLUTION=(\d+)x(\d+)/i);
+      const bwMatch = line.match(/BANDWIDTH=(\d+)/i);
+      const w = resMatch ? parseInt(resMatch[1], 10) : 0;
+      const h = resMatch ? parseInt(resMatch[2], 10) : 0;
+      const bw = bwMatch ? parseInt(bwMatch[1], 10) : 0;
+      pending = { width: w, height: h, bitrate: bw };
+    } else if (pending && !line.startsWith('#')) {
+      try {
+        pending.url = new URL(line, baseUrl).toString();
+      } catch {
+        pending.url = line;
+      }
+      variants.push(pending);
+      pending = null;
+    }
+  }
+  return variants.sort((a, b) => (b.height || 0) - (a.height || 0) || (b.bitrate || 0) - (a.bitrate || 0));
+}
+
+function populateQualityNative(variants) {
+  const select = $('qualitySelect');
+  if (!select) return;
+  select.innerHTML = `
+    <option value="max">🏆 Maximum Available Quality (4K / FHD Lock)</option>
+    <option value="auto">⚡ Adaptive Auto</option>
+  `;
+
+  variants.forEach((v, idx) => {
+    const opt = document.createElement('option');
+    opt.value = `variant_${idx}`;
+    const mbps = v.bitrate ? ` ${(v.bitrate / 1e6).toFixed(2)} Mbps` : '';
+    opt.textContent = `📺 ${v.height || '?'}p${mbps}`;
+    select.appendChild(opt);
+  });
+}
+
+function updateStudioMeta() {
+  if ($('studioChName')) $('studioChName').textContent = current?.name || 'Live Broadcast';
+  const res = video?.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : (current?.quality || 'HD');
+  if ($('studioStreamMeta')) $('studioStreamMeta').textContent = `${res} • Stereo Hardware DAC • Authoritative Framebuffer`;
+  updateAirPlayStatus();
+}
+
+function updateResolutionTelemetry() {
+  const w = video?.videoWidth || 0;
+  const h = video?.videoHeight || 0;
+  let baseRes = (w && h) ? `${w}×${h}` : (current?.quality || 'HD');
+  
+  let displayRes = baseRes;
+  if (!pictureSettings.rawBypass && pictureSettings.sharpness > 0) {
+    if (pictureSettings.sharpness >= 150) displayRes = `${baseRes} ➔ 4K Ultra SSR`;
+    else if (pictureSettings.sharpness >= 110) displayRes = `${baseRes} ➔ Q1024 SSR`;
+  }
+
+  if (isAirPlayActive) displayRes = `📶 ${displayRes}`;
+
+  if ($('resPill')) $('resPill').textContent = `Resolution ${displayRes}`;
+  if ($('overlayResolution')) $('overlayResolution').textContent = displayRes;
+}
+
+/* =========================================================
+   UNIVERSAL DIRECT HARDWARE AUDIO ENGINE
+   ========================================================= */
+
+function unlockAudio() {
+  if (video) {
+    video.muted = false;
+    video.volume = Number($('volumeSlider')?.value || 1.0);
+    const unmuteBtn = $('unmuteBtn');
+    if (unmuteBtn) unmuteBtn.style.display = 'none';
+  }
+}
+
+function setVolume(val) {
+  if (!video) return;
+  video.volume = parseFloat(val);
+  video.muted = (video.volume === 0);
+  const volVal = $('volumeVal');
+  if (volVal) volVal.textContent = `${Math.round(video.volume * 100)}%`;
+  const unmuteBtn = $('unmuteBtn');
+  if (unmuteBtn) unmuteBtn.style.display = video.muted ? 'block' : 'none';
+}
+
+function cycleAudioMode() {
+  if (audioEngineMode === 'direct') {
+    audioEngineMode = 'dialogue';
+    toast('Audio Mode: Dialogue Clarity (Vocal Enhancement)');
+  } else if (audioEngineMode === 'dialogue') {
+    audioEngineMode = 'bass';
+    toast('Audio Mode: Cinema Bass Boost');
+  } else {
+    audioEngineMode = 'direct';
+    toast('Audio Mode: Direct Hardware Passthrough (Lossless / TV Safe)');
+  }
+
+  const btn = $('audioModeBtn');
+  if (btn) {
+    btn.textContent = audioEngineMode === 'direct'
+      ? '🔊 Audio: Direct Hardware (TV Safe)'
+      : (audioEngineMode === 'dialogue' ? '🗣 Audio: Dialogue Clarity' : '🎸 Audio: Cinema Bass');
+  }
+
+  const mAudio = $('mAudio');
+  if (mAudio) mAudio.textContent = audioEngineMode.toUpperCase();
+  renderDiag();
+}
+
+function toggleMute() {
+  video.muted = !video.muted;
+  const unmuteBtn = $('unmuteBtn');
+  if (unmuteBtn) unmuteBtn.style.display = video.muted ? 'block' : 'none';
+  const volVal = $('volumeVal');
+  if (volVal) volVal.textContent = video.muted ? '0%' : `${Math.round(video.volume * 100)}%`;
+}
+
+function unmute() {
+  unlockAudio();
+  video.play().catch(() => {});
+}
+
+/* =========================================================
+   CHANNEL NORMALIZATION & MERGING
+   ========================================================= */
+
+function inferCategory(text = '') {
+  const s = String(text).toLowerCase();
+  const rules = [
+    ['Sports', ['sport', 'espn', 'soccer', 'football', 'nba', 'nfl', 'racing', 'motor', 'golf', 'tennis', 'ufc', 'mma', 'cricket', 'rugby', 'boxing', 'hockey', 'stadium', 'wrestling']],
+    ['News', ['news', 'cnn', 'bbc', 'sky news', 'euronews', 'france 24', 'dw ', 'al jazeera', 'headline', 'weather', 'bloomberg', 'cnbc', 'noticia']],
+    ['Movies', ['movie', 'film', 'cinema', 'cine', 'classic', 'blockbuster']],
+    ['Series', ['series', 'drama', 'soap', 'telenovela']],
+    ['Animation', ['cartoon', 'animation', 'anime', 'toon', 'nick', 'disney']],
+    ['Kids', ['kids', 'junior', 'preschool', 'baby', 'family']],
+    ['Documentary', ['documentary', 'documental', 'discovery', 'nature', 'wildlife', 'history']],
+    ['Science', ['science', 'nasa', 'space', 'astronomy', 'tech']],
+    ['Music', ['music', 'concert', 'radio', 'mtv', 'vh1', 'jazz', 'dance', 'club', 'stingray']],
+    ['Lifestyle', ['food', 'cooking', 'travel', 'fashion', 'home', 'garden', 'lifestyle']],
+    ['Business', ['business', 'finance', 'market', 'markets', 'economy']],
+    ['Comedy', ['comedy', 'comed', 'humor', 'humour']]
+  ];
+
+  for (const [category, words] of rules) {
+    if (words.some(word => s.includes(word))) return category;
+  }
+  return 'Entertainment';
+}
+
+function inferQuality(text = '') {
+  const s = String(text).toLowerCase();
+  if (/4k|uhd|2160/.test(s)) return '4K UHD';
+  if (/1080|fhd/.test(s)) return '1080p FHD';
+  if (/720|hd/.test(s)) return '720p HD';
+  return 'HD';
+}
+
+function mainCategory(channel) {
+  const category = String(channel.category || channel.group || '').toLowerCase();
+  const country = String(channel.country || '').toUpperCase();
+
+  if (category.includes('news') || category.includes('business') || category.includes('weather')) return 'news';
+  if (category.includes('sport') || category.includes('motor') || category.includes('outdoor')) return 'sports';
+  if (category.includes('movie') || category.includes('series') || category.includes('classic')) return 'movies';
+  if (category.includes('kid') || category.includes('anim')) return 'kids';
+  if (category.includes('doc') || category.includes('science') || category.includes('nature') || category.includes('travel')) return 'docs';
+  if (category.includes('music') || category.includes('radio')) return 'music';
+  if (category.includes('food') || category.includes('life') || category.includes('fashion')) return 'lifestyle';
+  if (!['US', 'CA', 'GB', 'DE', 'FR', 'ES', 'IT'].includes(country)) return 'international';
+  return 'entertainment';
+}
+
+function normalizeChannel(channel) {
+  const c = Object.assign({}, channel);
+  c.name = String(c.name || 'Unknown Channel').trim();
+  c.url = String(c.url || '').trim();
+  c.country = String(c.country || 'Global').toUpperCase();
+  c.language = String(c.language || '').trim();
+  c.group = String(c.group || c.category || 'General').trim();
+  c.category = String(c.category || inferCategory(c.name + ' ' + c.group)).trim();
+  c.quality = String(c.quality || inferQuality(c.name + ' ' + c.group));
+  c.main = c.main || mainCategory(c);
+  c.id = String(c.id || c.tvgId || `${c.name}|${c.country}`);
+  c.source = String(c.source || 'Public Broadcast');
+  return c;
+}
+
+function normalizeUrl(url) {
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    return u.toString();
+  } catch {
+    return String(url || '').trim();
+  }
+}
+
+function channelKey(channel) {
+  const c = normalizeChannel(channel);
+  const tvg = String(c.tvgId || c.id || '').trim().toLowerCase();
+  const url = normalizeUrl(c.url);
+  if (tvg && tvg !== 'unknown channel|global') return 'tvg:' + tvg;
+  return 'url:' + url;
+}
+
+function mergeChannels(list) {
+  const map = new Map();
+  for (const existing of channels) {
+    map.set(channelKey(existing), existing);
+  }
+
+  let added = 0;
+  let updated = 0;
+
+  for (const raw of list) {
+    const c = normalizeChannel(raw);
+    if (!c.url || (!/^https?:\/\//i.test(c.url) && !/^rtmp:\/\//i.test(c.url))) continue;
+
+    const key = channelKey(c);
+    if (!map.has(key)) {
+      c.id = c.tvgId || c.id || 'c_' + Math.random().toString(36).slice(2);
+      map.set(key, c);
+      added++;
+    } else {
+      const old = map.get(key);
+      const merged = Object.assign({}, old, c);
+      for (const k of ['logo', 'language', 'country', 'group', 'category', 'quality']) {
+        if ((!merged[k] || merged[k] === '') && old[k]) merged[k] = old[k];
+      }
+      map.set(key, merged);
+      updated++;
+    }
+  }
+
+  channels = [...map.values()];
+  save(STORAGE.channels, channels);
+  return { added, updated };
+}
+
+/* =========================================================
+   M3U PARSER
+   ========================================================= */
+
+function parseAttributes(line) {
+  const attrs = {};
+  const regex = /([\w-]+)=("[^"]*"|'[^']*'|[^\s,]+)/g;
+  let match;
+  while ((match = regex.exec(line))) {
+    let value = match[2] || '';
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    attrs[match[1].toLowerCase()] = value;
+  }
+  return attrs;
+}
+
+function parseM3U(text, source = 'Imported') {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const result = [];
+  let pending = null;
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    if (line.startsWith('#EXTINF')) {
+      const comma = line.indexOf(',');
+      const title = comma >= 0 ? line.slice(comma + 1).trim() : 'Unknown Channel';
+      const attrs = parseAttributes(line);
+
+      pending = {
+        name: title,
+        tvgId: attrs['tvg-id'] || attrs['tvgid'] || '',
+        logo: attrs['tvg-logo'] || attrs['logo'] || '',
+        group: attrs['group-title'] || attrs['group'] || '',
+        country: attrs['tvg-country'] || attrs['country'] || 'Global',
+        language: attrs['tvg-language'] || attrs['language'] || '',
+        quality: attrs['quality'] || attrs['resolution'] || '',
+        source
+      };
+      continue;
+    }
+
+    if (/^https?:\/\//i.test(line) || /^rtmp:\/\//i.test(line)) {
+      if (pending) {
+        pending.url = line;
+        pending.category = pending.group || inferCategory(pending.name);
+        pending.quality = pending.quality || inferQuality(pending.name + ' ' + pending.group);
+        result.push(normalizeChannel(pending));
+        pending = null;
+      }
+    }
+  }
+  return result;
+}
+
+/* =========================================================
+   PLAYLIST FETCHING & PROXY ROTATION
+   ========================================================= */
+
+function cacheGet(url) {
+  const cache = load(STORAGE.cache, {});
+  const item = cache[url];
+  if (!item) return null;
+  const age = Date.now() - Number(item.time || 0);
+  const ttl = Number(settings.cache || 60) * 60 * 1000;
+  if (age > ttl) {
+    delete cache[url];
+    save(STORAGE.cache, cache);
+    return null;
+  }
+  return item.text || null;
+}
+
+function cachePut(url, text) {
+  const cache = load(STORAGE.cache, {});
+  cache[url] = { time: Date.now(), text };
+  const entries = Object.entries(cache).sort((a, b) => b[1].time - a[1].time).slice(0, 10);
+  save(STORAGE.cache, Object.fromEntries(entries));
+}
+
+function proxyUrl(url, index) {
+  if (index === 1) return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  if (index === 2) return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  if (index === 3) return `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+  return url;
+}
+
+async function fetchText(url, options = {}) {
+  const cached = cacheGet(url);
+  if (cached) return { text: cached, cached: true, via: 'cache' };
+
+  const strategies = [0, 1, 2, 3];
+  let lastError = null;
+
+  for (const strategy of strategies) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), options.timeout || 18000);
+      const target = proxyUrl(url, strategy);
+
+      const response = await fetch(target, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+
+      clearTimeout(timer);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = await response.text();
+      if (!text.trim()) throw new Error('Empty playlist response');
+
+      cachePut(url, text);
+      return {
+        text,
+        cached: false,
+        via: strategy === 0 ? 'direct' : (strategy === 1 ? 'corsproxy' : (strategy === 2 ? 'allorigins' : 'codetabs'))
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('Failed to fetch playlist across all proxies');
+}
+
+async function fetchPlaylist(url, key = 'custom') {
+  sourceStatus[url] = { state: 'loading', count: 0 };
+  renderSources();
+
+  try {
+    const result = await fetchText(url);
+    const parsed = parseM3U(result.text, SOURCES[key]?.label || key || 'Custom Source');
+    sourceStatus[url] = { state: 'online', count: parsed.length, via: result.via, cached: result.cached };
+    renderSources();
+    return parsed;
+  } catch (error) {
+    sourceStatus[url] = { state: 'error', count: 0, error: String(error.message || error) };
+    renderSources();
+    throw error;
+  }
+}
+
+/* =========================================================
+   SCAN PRESETS & PLAYLIST SYNC
+   ========================================================= */
+
+async function scanPreset(key) {
+  if (scanActive) {
+    toast('A playlist scan is already running');
+    return;
+  }
+
+  const preset = PRESETS[key];
+  if (!preset) return;
+
+  scanActive = true;
+  updateStatus(`<span class="spinner"></span> ${esc(preset.label)}: initiating multi-feed sync…`);
+
+  let totalAdded = 0;
+  let totalParsed = 0;
+  let completed = 0;
+  const queue = [...preset.keys.map(k => SOURCES[k]).filter(Boolean)];
+
+  try {
+    for (const source of queue) {
+      completed++;
+      updateStatus(`<span class="spinner"></span> ${esc(preset.label)} ${completed}/${queue.length} • Syncing ${esc(source.label)}…`);
+
+      try {
+        const parsed = await fetchPlaylist(source.url, Object.keys(SOURCES).find(k => SOURCES[k] === source) || 'source');
+        totalParsed += parsed.length;
+        const result = mergeChannels(parsed);
+        totalAdded += result.added;
+      } catch (error) {
+        console.warn('Playlist fetch failed for', source.url, error);
+      }
+      await sleep(40);
+    }
+  } finally {
+    scanActive = false;
+  }
+
+  refreshEverything();
+  updateStatus(`✅ ${esc(preset.label)} sync complete • ${totalParsed.toLocaleString()} streams read • +${totalAdded.toLocaleString()} new stations added • ${channels.length.toLocaleString()} total channels`);
+  toast(`${preset.label}: +${totalAdded.toLocaleString()} channels synchronized!`);
+}
+
+function refreshEverything() {
+  populateCountries();
+  populateLanguages();
+  renderTabs();
+  applyFilters();
+  updateMetrics();
+  renderSources();
+}
+
+/* =========================================================
+   UI RENDERING
+   ========================================================= */
+
+function renderPacks() {
+  const packs = $('packs');
+  if (!packs) return;
+  const entries = [
+    ['quick', '⚡ Quick Sync (1.5k+)'],
+    ['usa', '🇺🇸 USA & Canada'],
+    ['world', '🌐 World Mega (8k+)'],
+    ['entertainment', '🎭 Entertainment'],
+    ['science', '🔬 Science & Docs'],
+    ['kids', '🧸 Kids & Cartoons'],
+    ['international', '🌎 Europe & Languages']
+  ];
+  packs.innerHTML = entries.map(([key, label]) => `<button class="pack" onclick="scanPreset('${key}')">${label}</button>`).join('');
+}
+
+function renderTabs() {
+  const tabs = $('mainTabs');
+  if (!tabs) return;
+  tabs.innerHTML = TAXONOMY.map(item => `
+    <button class="tab ${mainCat === item.id ? 'active' : ''}" onclick="selectMain('${item.id}')">
+      ${item.name}
+    </button>
+  `).join('');
+  renderSubs();
+}
+
+function renderSubs() {
+  const subcats = $('subcats');
+  if (!subcats) return;
+
+  const taxonomy = TAXONOMY.find(item => item.id === mainCat);
+  let subs = taxonomy?.subs || [];
+
+  if (mainCat === 'all') {
+    subs = [...new Set(channels.map(c => c.category).filter(Boolean))].sort();
+    subs = subs.filter(sub => channels.some(c => c.category === sub));
+  }
+
+  subcats.innerHTML = `
+    <button class="sub ${subCat === 'all' ? 'active' : ''}" onclick="selectSub('all')">
+      All
+    </button>
+  ` + subs.map(sub => {
+    const count = channels.filter(c => c.category === sub).length;
+    return `
+      <button class="sub ${subCat === sub ? 'active' : ''}" onclick="selectSub(${JSON.stringify(sub)})">
+        ${esc(sub)} <small style="opacity:0.65">(${count.toLocaleString()})</small>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectMain(id) {
+  mainCat = id;
+  subCat = 'all';
+  favOnly = false;
+  renderTabs();
+  applyFilters();
+}
+
+function selectSub(value) {
+  subCat = value;
+  renderSubs();
+  applyFilters();
+}
+
+function populateCountries() {
+  const select = $('country');
+  if (!select) return;
+  const old = select.value;
+  const countries = [...new Set(channels.map(c => c.country).filter(Boolean))].sort();
+
+  select.innerHTML = `<option value="all">🌍 All Countries (${countries.length})</option>` +
+    countries.map(c => `<option value="${esc(c)}">${flag(c)} ${esc(c)}</option>`).join('');
+
+  if (countries.includes(old)) select.value = old;
+}
+
+function populateLanguages() {
+  const select = $('language');
+  if (!select) return;
+  const old = select.value;
+  const languages = [...new Set(channels.map(c => c.language).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  select.innerHTML = `<option value="all">🗣 All Languages (${languages.length})</option>` +
+    languages.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+
+  if (languages.includes(old)) select.value = old;
+}
+
+function qualityRank(channel) {
+  const value = `${channel.quality} ${channel.name}`.toLowerCase();
+  if (/4k|uhd|2160/.test(value)) return 4;
+  if (/1080|fhd/.test(value)) return 3;
+  if (/720|hd/.test(value)) return 2;
+  return 1;
+}
+
+function matchesQuality(channel, filter) {
+  if (filter === 'all') return true;
+  const rank = qualityRank(channel);
+  if (filter === '4k') return rank === 4;
+  if (filter === 'fhd') return rank === 3;
+  if (filter === 'hd') return rank === 2;
+  if (filter === 'sd') return rank === 1;
+  return true;
+}
+
+function applyFilters() {
+  let list = favOnly ? favorites.map(normalizeChannel) : [...channels];
+  const query = ($('search')?.value || '').toLowerCase().trim();
+  const country = $('country')?.value || 'all';
+  const language = $('language')?.value || 'all';
+  const quality = $('qualityFilter')?.value || 'all';
+
+  if (!favOnly && mainCat !== 'all') {
+    list = list.filter(channel => channel.main === mainCat);
+  }
+
+  if (subCat !== 'all') {
+    list = list.filter(channel => String(channel.category).toLowerCase() === String(subCat).toLowerCase());
+  }
+
+  if (country !== 'all') {
+    list = list.filter(channel => channel.country === country);
+  }
+
+  if (language !== 'all') {
+    list = list.filter(channel => channel.language === language);
+  }
+
+  if (quality !== 'all') {
+    list = list.filter(channel => matchesQuality(channel, quality));
+  }
+
+  if (query) {
+    list = list.filter(channel => {
+      const haystack = [
+        channel.name,
+        channel.country,
+        channel.language,
+        channel.group,
+        channel.category,
+        channel.quality,
+        channel.source,
+        channel.tvgId
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  const sort = $('sort')?.value || 'default';
+  if (sort === 'az') list.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sort === 'za') list.sort((a, b) => b.name.localeCompare(a.name));
+  else if (sort === 'quality') list.sort((a, b) => qualityRank(b) - qualityRank(a));
+  else if (sort === 'country') list.sort((a, b) => a.country.localeCompare(b.country));
+  else if (sort === 'language') list.sort((a, b) => a.language.localeCompare(b.language));
+  else if (sort === 'category') list.sort((a, b) => a.category.localeCompare(b.category));
+  else if (sort === 'default') {
+    list.sort((a, b) => {
+      const af = favorites.some(x => x.url === a.url) ? 1 : 0;
+      const bf = favorites.some(x => x.url === b.url) ? 1 : 0;
+      if (af !== bf) return bf - af;
+      const aq = qualityRank(a);
+      const bq = qualityRank(b);
+      if (aq !== bq) return bq - aq;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  filtered = list;
+  page = 0;
+  renderPage();
+  updateMetrics();
+}
+
+function cardHTML(channel, index) {
+  const favorite = favorites.some(item => item.url === channel.url);
+  const playing = current?.url === channel.url;
+  const h = health[channel.url];
+  const quality = channel.quality || 'HD';
+  const globalIdx = page * pageSize + index;
+
+  let healthTag = '';
+  if (h?.state === 'online') healthTag = '<span class="tag live">ONLINE</span>';
+  else if (h?.state === 'offline') healthTag = '<span class="tag off">OFFLINE</span>';
+  else if (h?.state === 'testing') healthTag = '<span class="tag warn">TESTING</span>';
+
+  const number = globalIdx + 1;
+
+  return `
+    <article class="channel ${playing ? 'playing' : ''} ${h?.state === 'offline' ? 'offline' : ''}" tabindex="0" onclick="playByIndex(${globalIdx})" onkeydown="if(event.key==='Enter'||event.key===' '){playByIndex(${globalIdx});}">
+      <div class="channel-number">#${number}</div>
+      <div class="ch-logo">
+        ${channel.logo ? `<img src="${esc(channel.logo)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}
+        <span>${esc(initials(channel.name))}</span>
+      </div>
+      <div class="ch-body">
+        <div class="ch-name" title="${esc(channel.name)}">${esc(channel.name)}</div>
+        <div class="ch-meta">
+          <span>${flag(channel.country)} ${esc(channel.country)}</span>
+          <span>•</span>
+          <span>${esc(channel.category)}</span>
+          ${channel.language ? `<span>•</span><span>${esc(channel.language)}</span>` : ''}
+          <span class="tag hd">${esc(quality)}</span>
+          ${healthTag}
+        </div>
+      </div>
+      <div class="ch-actions" onclick="event.stopPropagation()">
+        <button class="play-mini" title="Play Broadcast" onclick="playByIndex(${globalIdx})">▶</button>
+        <button class="star ${favorite ? 'fav' : ''}" title="Save to Favorites" onclick="toggleFavByIndex(event, ${globalIdx})">★</button>
+      </div>
+    </article>
+  `;
+}
+
+function playByIndex(idx) {
+  const ch = filtered[idx];
+  if (ch) play(ch);
+}
+
+function toggleFavByIndex(event, idx) {
+  if (event) event.stopPropagation();
+  const ch = filtered[idx];
+  if (ch) toggleFavorite(ch.url);
+}
+
+function renderPage() {
+  const box = $('channels');
+  if (!box) return;
+
+  const start = page * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+
+  if (!items.length) {
+    box.innerHTML = `
+      <div class="empty">
+        <div>
+          <div style="font-size:38px">📡</div>
+          <strong>No channels match your selection</strong>
+          <span>Try selecting "All Channels" or another country/category.</span><br>
+          <button class="btn small" style="margin-top:12px" onclick="resetFilters()">Reset Filters</button>
+        </div>
+      </div>
+    `;
+  } else {
+    box.innerHTML = items.map(cardHTML).join('');
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  if (page >= totalPages) page = Math.max(0, totalPages - 1);
+
+  const visibleStart = filtered.length ? start + 1 : 0;
+  const visibleEnd = Math.min(start + pageSize, filtered.length);
+
+  const pageInfo = $('pageInfo');
+  if (pageInfo) {
+    pageInfo.textContent = filtered.length
+      ? `${visibleStart.toLocaleString()}–${visibleEnd.toLocaleString()} of ${filtered.length.toLocaleString()} • Page ${page + 1}/${totalPages}`
+      : '0 channels';
+  }
+
+  const prevBtn = $('prevBtn');
+  const nextBtn = $('nextBtn');
+  if (prevBtn) prevBtn.disabled = (page === 0);
+  if (nextBtn) nextBtn.disabled = (start + pageSize >= filtered.length);
+}
+
+function pageSizeChanged() {
+  pageSize = Number($('pageSize')?.value) || 60;
+  page = 0;
+  renderPage();
+}
+
+function prevPage() {
+  if (page > 0) {
+    page--;
+    renderPage();
+    $('channels').scrollTop = 0;
+  }
+}
+
+function nextPage() {
+  if ((page + 1) * pageSize < filtered.length) {
+    page++;
+    renderPage();
+    $('channels').scrollTop = 0;
+  }
+}
+
+function toggleView() {
+  grid = !grid;
+  $('channels').classList.toggle('list', !grid);
+  const btn = $('viewBtn');
+  if (btn) btn.textContent = grid ? '☷ List' : '▦ Grid';
+  settings.view = grid ? 'grid' : 'list';
+  save(STORAGE.settings, settings);
+}
+
+function resetFilters() {
+  $('search').value = '';
+  $('country').value = 'all';
+  $('language').value = 'all';
+  $('qualityFilter').value = 'all';
+  $('sort').value = 'default';
+  mainCat = 'all';
+  subCat = 'all';
+  favOnly = false;
+
+  renderTabs();
+  applyFilters();
+  toast('Filters reset to default');
+}
+
+function debouncedFilter() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(applyFilters, 120);
+}
+
+function toggleFavs() {
+  favOnly = !favOnly;
+  if (favOnly) {
+    mainCat = 'all';
+    subCat = 'all';
+  }
+  renderTabs();
+  applyFilters();
+  toast(favOnly ? 'Showing Favorites playlist' : 'Showing All Channels');
+}
+
+function toggleFavorite(url) {
+  const channel = channels.find(c => c.url === url) || favorites.find(c => c.url === url);
+  if (!channel) return;
+
+  const index = favorites.findIndex(c => c.url === url);
+  if (index >= 0) {
+    favorites.splice(index, 1);
+    toast(`${channel.name} removed from favorites`);
+  } else {
+    favorites.unshift(normalizeChannel(channel));
+    toast(`${channel.name} added to favorites`);
+  }
+
+  save(STORAGE.favorites, favorites);
+  renderPage();
+  renderFavs();
+  updateMetrics();
+}
+
+function addHistory(channel) {
+  const clean = normalizeChannel(channel);
+  history = history.filter(item => item.url !== clean.url);
+  history.unshift({ ...clean, seen: Date.now() });
+  history = history.slice(0, Number(settings.history) || 50);
+
+  save(STORAGE.history, history);
+  renderHistory();
+  updateMetrics();
+}
+
+function clearHistory() {
+  history = [];
+  save(STORAGE.history, history);
+  renderHistory();
+  updateMetrics();
+  toast('Viewing history cleared');
+}
+
+function renderHistory() {
+  const list = $('historyList');
+  if (!list) return;
+  if (!history.length) {
+    list.innerHTML = `<div class="mini"><small>No viewing history yet.</small></div>`;
+    return;
+  }
+  list.innerHTML = history.slice(0, 15).map((channel, i) => `
+    <div class="mini">
+      <div class="mini-main">
+        <strong>${esc(channel.name)}</strong>
+        <small>${flag(channel.country)} ${esc(channel.country)} • ${timeAgo(channel.seen)}</small>
+      </div>
+      <button class="btn small" onclick="playHistory(${i})">Play</button>
+    </div>
+  `).join('');
+}
+
+function playHistory(i) {
+  const ch = history[i];
+  if (ch) play(ch);
+}
+
+function renderFavs() {
+  const list = $('favList');
+  if (!list) return;
+  if (!favorites.length) {
+    list.innerHTML = `<div class="mini"><small>Star a channel to pin it here.</small></div>`;
+    return;
+  }
+  list.innerHTML = favorites.slice(0, 15).map((channel, i) => `
+    <div class="mini">
+      <div class="mini-main">
+        <strong>${esc(channel.name)}</strong>
+        <small>${flag(channel.country)} ${esc(channel.country)} • ${esc(channel.quality || 'HD')}</small>
+      </div>
+      <button class="btn small" onclick="playFavorite(${i})">Play</button>
+    </div>
+  `).join('');
+}
+
+function playFavorite(i) {
+  const ch = favorites[i];
+  if (ch) play(ch);
+}
+
+function renderDiag() {
+  const diagList = $('diagList');
+  if (diagList) {
+    diagList.innerHTML = `
+      <div class="mini"><div class="mini-main"><strong>Aurora Engine Architecture</strong><small>Authoritative Framebuffer</small></div><b style="color:var(--aurora-purple)">ACTIVE CANVAS</b></div>
+      <div class="mini"><div class="mini-main"><strong>Audio Pipeline</strong><small>Universal Direct Hardware Routing</small></div><b style="color:var(--green)">${audioEngineMode.toUpperCase()} (Shield Safe)</b></div>
+      <div class="mini"><div class="mini-main"><strong>AirPlay Target State</strong><small>Active Router Branch</small></div><b>${isAirPlayActive ? '🟢 Connected' : '⚪ Local Screen'}</b></div>
+      <div class="mini"><div class="mini-main"><strong>Library Records</strong><small>Active station matrix</small></div><b>${channels.length.toLocaleString()}</b></div>
+    `;
+  }
+
+  if ($('dxChannels')) $('dxChannels').textContent = channels.length.toLocaleString();
+  if ($('dxUrls')) $('dxUrls').textContent = new Set(channels.map(c => normalizeUrl(c.url))).size.toLocaleString();
+  if ($('dxAuroraPrecision')) $('dxAuroraPrecision').textContent = `${pictureSettings.preset.toUpperCase()} (${isPictureProcessingActive() ? 'Processed Engine' : 'Raw Bypass'})`;
+  if ($('dxAudioEngine')) $('dxAudioEngine').textContent = `${audioEngineMode.toUpperCase()} Hardware Direct`;
+  if ($('dxAirPlayState')) $('dxAirPlayState').textContent = isAirPlayActive ? '🟢 AirPlay Connected' : '⚪ Local Display';
+  if ($('dxCurrent')) $('dxCurrent').textContent = current ? `${current.name} • ${current.url}` : 'No channel tuned.';
+}
+
+function updateMetrics() {
+  if ($('mTotal')) $('mTotal').textContent = channels.length.toLocaleString();
+  if ($('mVisible')) $('mVisible').textContent = filtered.length.toLocaleString();
+  if ($('mFavs')) $('mFavs').textContent = favorites.length.toLocaleString();
+  if ($('mPicMode')) $('mPicMode').textContent = pictureSettings.preset.toUpperCase();
+  updateAirPlayStatus();
+  renderDiag();
+}
+
+function renderSources() {
+  const list = $('sourceList');
+  if (!list) return;
+  const entries = Object.entries(sourceStatus);
+  if (!entries.length) {
+    list.innerHTML = `<small style="color:var(--dim)">No external playlists loaded yet.</small>`;
+    return;
+  }
+  list.innerHTML = entries.map(([url, info]) => `
+    <div class="mini">
+      <div class="mini-main">
+        <strong class="source-url">${esc(url)}</strong>
+        <small>${info.state === 'online' ? `✅ ${info.count.toLocaleString()} channels` : (info.state === 'loading' ? '🔄 Fetching...' : `❌ ${info.error || 'Failed'}`)}</small>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* =========================================================
+   PLAYBACK ENGINE & HYBRID STREAM LOADER
+   ========================================================= */
+
+function playChannelByUrl(url) {
+  const channel = channels.find(c => c.url === url) || favorites.find(c => c.url === url);
+  if (channel) play(channel);
+}
+
+function play(channel) {
+  if (!channel) return;
+  const token = ++sessionToken;
+
+  current = { ...normalizeChannel(channel) };
+  currentVariants = [];
+  addHistory(current);
+
+  $('nowTitle').textContent = current.name;
+  $('nowMeta').textContent = `${flag(current.country)} ${current.country} • ${current.category} • ${current.quality || 'HD'} • ${current.source}`;
+
+  if (current.logo) {
+    $('nowLogo').innerHTML = `<img src="${esc(current.logo)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`;
+  } else {
+    $('nowLogo').innerHTML = `<b>${esc(initials(current.name))}</b>`;
+  }
+
+  setState('connecting', isAirPlayActive ? 'CONNECTING AIRPLAY...' : 'CONNECTING');
+  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + current.name.toUpperCase() : '● TUNING • ' + current.name.toUpperCase();
+  $('livePill').textContent = '● Signal CONNECTING';
+  $('hudRight').textContent = '🛡️ RECOVERY READY';
+
+  retry = 0;
+  watchdog = 0;
+  lastTime = -1;
+  isChannelTuning = true;
+
+  setLoading(true, `Tuning ${current.name}…`);
+  loadStream(current, 0, token);
+  updateStudioMeta();
+}
+
+function destroyHls() {
+  if (hls) {
+    try { hls.destroy(); } catch {}
+    hls = null;
+  }
+}
+
+function isNativeHls() {
+  return Boolean(video.canPlayType('application/vnd.apple.mpegurl'));
+}
+
+function shouldUseNative() {
+  if (settings.playback === 'native') return true;
+  if (settings.playback === 'hlsjs') return false;
+  return isNativeHls() || isAirPlayActive;
+}
+
+function loadStream(channel, attempt = 0, token = sessionToken) {
+  if (!channel || token !== sessionToken) return;
+
+  clearTimeout(retryTimer);
+  destroyHls();
+
+  const native = shouldUseNative();
+  const pIdx = attempt % CORS_PROXIES.length;
+  const isDirect = (native || isAirPlayActive) && attempt === 0;
+  const targetUrl = isDirect ? channel.url : CORS_PROXIES[pIdx](channel.url);
+
+  console.log(`[Playback Engine] Tuning: "${channel.name}" (Attempt ${attempt}, Native: ${native}, Target: ${targetUrl})`);
+
+  if (native || isAirPlayActive) {
+    fetchText(channel.url).then(res => {
+      if (token !== sessionToken) return;
+      currentVariants = parseMasterVariants(res.text, channel.url);
+      if (currentVariants.length > 0) {
+        populateQualityNative(currentVariants);
+        updateAuroraPipeline();
+      }
+    }).catch(() => {});
+  }
+
+  const startPlayback = () => {
+    if (token !== sessionToken) return;
+    applyCC();
+    unlockAudio();
+    updateAuroraPipeline();
+    video.play()
+      .then(() => live(token))
+      .catch(() => handleAutoplayFailure(token));
+  };
+
+  if (native || isAirPlayActive) {
+    video.src = targetUrl;
+    if (video.readyState >= 1) {
+      startPlayback();
+    } else {
+      video.addEventListener('loadedmetadata', startPlayback, { once: true });
+      video.addEventListener('canplay', startPlayback, { once: true });
+      setTimeout(() => {
+        if (video.paused && current && current.url === channel.url) {
+          startPlayback();
+        }
+      }, 1000);
+    }
+    return;
+  }
+
+  if (!window.Hls || !Hls.isSupported()) {
+    video.src = targetUrl;
+    if (video.readyState >= 1) {
+      startPlayback();
+    } else {
+      video.addEventListener('loadedmetadata', startPlayback, { once: true });
+    }
+    return;
+  }
+
+  class DynamicProxyLoader extends Hls.DefaultConfig.loader {
+    constructor(config) {
+      super(config);
+      const originalLoad = this.load.bind(this);
+      this.load = function(context, cfg, callbacks) {
+        if (pIdx > 0 && context && context.url) {
+          context.url = CORS_PROXIES[pIdx](context.url);
+        }
+        return originalLoad(context, cfg, callbacks);
+      };
+    }
+  }
+
+  hls = new Hls({
+    loader: DynamicProxyLoader,
+    enableWorker: true,
+    lowLatencyMode: lowLatency,
+    liveSyncDurationCount: lowLatency ? 2 : 4,
+    liveMaxLatencyDurationCount: lowLatency ? 5 : 8,
+    backBufferLength: 30,
+    maxBufferLength: lowLatency ? 18 : 45,
+    maxMaxBufferLength: 75,
+    maxBufferSize: 80 * 1024 * 1024,
+    maxBufferHole: 0.45,
+    capLevelToPlayerSize: false,
+    nudgeOffset: 0.25,
+    nudgeMaxRetry: 6,
+    fragLoadingTimeOut: 16000,
+    manifestLoadingTimeOut: 16000,
+    levelLoadingTimeOut: 16000,
+    fragLoadingMaxRetry: 4,
+    manifestLoadingMaxRetry: 4,
+    levelLoadingMaxRetry: 4,
+    xhrSetup: xhr => { xhr.withCredentials = false; }
+  });
+
+  hls.loadSource(channel.url);
+  hls.attachMedia(video);
+
+  hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+    if (token !== sessionToken) return;
+    populateQuality(data.levels || []);
+    updateAuroraPipeline();
+    startPlayback();
+  });
+
+  hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+    const level = hls?.levels?.[data.level];
+    if (level) resolution(level.width, level.height, level.bitrate);
+    updateAuroraPipeline();
+  });
+
+  hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => applyCC());
+
+  hls.on(Hls.Events.ERROR, (_, data) => {
+    if (token !== sessionToken) return;
+
+    if (data.fatal) {
+      shieldNotify(`Recovering ${String(data.type || 'stream').replaceAll('_', ' ')}`);
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        try { hls.recoverMediaError(); return; } catch {}
+      } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        try { hls.startLoad(); return; } catch {}
+      }
+      scheduleContinuousReconnect('Stream Media Interrupted');
+    } else if (/frag.*error/i.test(String(data.details || ''))) {
+      shieldNotify('Auto-Healed Media Segment');
+      if (hls && typeof hls.nudgeStream === 'function') hls.nudgeStream();
+    }
+  });
+}
+
+function handleAutoplayFailure(token) {
+  if (token !== sessionToken) return;
+  video.muted = true;
+  const unmuteBtn = $('unmuteBtn');
+  if (unmuteBtn) unmuteBtn.style.display = 'block';
+
+  video.play()
+    .then(() => live(token))
+    .catch(() => {
+      setLoading(false);
+      setState('error', 'CLICK PLAY');
+      isChannelTuning = false;
+    });
+}
+
+function live(token = sessionToken) {
+  if (token !== sessionToken) return;
+  setLoading(false);
+  setState('live', isAirPlayActive ? 'AIRPLAY LIVE' : 'LIVE ON AIR');
+
+  $('hudLeft').textContent = isAirPlayActive ? '📶 AIRPLAY • ' + (current?.name || 'CHANNEL') : '● LIVE AIR • ' + (current?.name || 'CHANNEL');
+  $('livePill').textContent = isAirPlayActive ? '📶 Signal AIRPLAY' : '● Signal LOCKED';
+
+  const unmuteBtn = $('unmuteBtn');
+  if (unmuteBtn) unmuteBtn.style.display = video.muted ? 'block' : 'none';
+
+  retry = 0;
+  isChannelTuning = false;
+
+  if (current) {
+    health[current.url] = { state: 'online', time: Date.now(), mode: 'playback' };
+    save(STORAGE.health, health);
+  }
+  renderPage();
+  updateMetrics();
+  updateResolutionTelemetry();
+  updateAuroraPipeline();
+  updateStudioMeta();
+}
+
+function setState(type, text) {
+  const element = $('state');
+  if (!element) return;
+  element.className = 'state ' + (type === 'connecting' ? 'connecting' : (type === 'error' ? 'error' : ''));
+  element.textContent = text;
+}
+
+function scheduleContinuousReconnect(reason = 'Signal Interrupted') {
+  if (settings.recovery === 'off' || !current) {
+    setLoading(false);
+    return;
+  }
+
+  clearTimeout(retryTimer);
+  retry++;
+  const delay = Math.min(1200 * Math.min(retry, 5), 6000);
+
+  setState('connecting', `RETRY ${retry}`);
+  setLoading(true, `${reason} • Attempt ${retry}`);
+  shieldNotify(`${reason} — Auto-Reconnecting (${retry})…`);
+
+  retryTimer = setTimeout(() => {
+    if (current) {
+      loadStream(current, retry, sessionToken);
+    }
+  }, delay);
+}
+
+function resync() {
+  if (!current) return;
+  shieldNotify('Refreshing transmission to live edge');
+  retry = 0;
+
+  const base = current.url;
+  const ts = Date.now();
+  current.url = base.includes('?') ? `${base}&_ep=${ts}` : `${base}?_ep=${ts}`;
+  loadStream(current, 0, sessionToken);
+}
+
+function togglePlay() {
+  unlockAudio();
+  if (video.paused) {
+    video.play().catch(() => handleAutoplayFailure(sessionToken));
+  } else {
+    video.pause();
+  }
+}
+
+function maxQuality() {
+  if (hls && hls.levels && hls.levels.length) {
+    let best = 0;
+    let score = -1;
+    hls.levels.forEach((level, index) => {
+      const value = (level.width || 0) * (level.height || 0) + (level.bitrate || 0) / 1000;
+      if (value > score) {
+        score = value;
+        best = index;
+      }
+    });
+    hls.currentLevel = best;
+  }
+}
+
+function populateQuality(levels) {
+  const select = $('qualitySelect');
+  if (!select) return;
+  select.innerHTML = `
+    <option value="max">🏆 Maximum Available Quality</option>
+    <option value="auto">⚡ Adaptive Auto</option>
+  `;
+
+  levels.map((level, index) => ({ level, index }))
+    .sort((a, b) => (b.level.height || 0) - (a.level.height || 0))
+    .forEach(item => {
+      const opt = document.createElement('option');
+      const mbps = item.level.bitrate ? ` ${(item.level.bitrate / 1e6).toFixed(2)} Mbps` : '';
+      opt.value = item.index;
+      opt.textContent = `📺 ${item.level.height || '?'}p${mbps}`;
+      select.appendChild(opt);
+    });
+
+  select.value = 'max';
+}
+
+function qualityChanged() {
+  const value = $('qualitySelect').value;
+  if (hls && hls.levels && hls.levels.length) {
+    if (value === 'max') maxQuality();
+    else if (value === 'auto') hls.currentLevel = -1;
+    else hls.currentLevel = Number(value);
+  } else if (current && (isNativeHls() || isAirPlayActive)) {
+    if (value === 'max' && currentVariants.length) {
+      video.src = currentVariants[0].url;
+      video.play().catch(() => {});
+    } else if (value === 'auto') {
+      video.src = current.url;
+      video.play().catch(() => {});
+    } else if (value.startsWith('variant_')) {
+      const idx = parseInt(value.replace('variant_', ''), 10);
+      if (currentVariants[idx]) {
+        video.src = currentVariants[idx].url;
+        video.play().catch(() => {});
+      }
+    }
+  }
+  updateResolutionTelemetry();
+  updateAuroraPipeline();
+}
+
+function resolution(width, height, bitrate) {
+  const resolutionText = width && height ? `${width}×${height}` : 'Auto';
+  if ($('resPill')) $('resPill').textContent = `Resolution ${resolutionText}`;
+  if ($('overlayResolution')) $('overlayResolution').textContent = resolutionText;
+
+  const bitText = bitrate ? `Bitrate ${(bitrate / 1e6).toFixed(2)} Mbps` : 'Bitrate —';
+  if ($('bitPill')) $('bitPill').textContent = bitText;
+  if ($('overlayBitrate')) $('overlayBitrate').textContent = bitrate ? `${(bitrate / 1e6).toFixed(2)} Mbps` : '—';
+}
+
+function aspectChanged() {
+  const value = $('aspectSelect').value;
+  auroraCanvas.className = 'aurora-display-canvas';
+
+  auroraCanvas.style.aspectRatio = '16/9';
+  if (value === 'crt') auroraCanvas.classList.add('crt');
+  if (value === 'cinema') auroraCanvas.classList.add('cinema');
+  if (value === 'fill') auroraCanvas.classList.add('fill');
+  if (value === 'stretch') auroraCanvas.classList.add('stretch');
+}
+
+function toggleCC() {
+  cc = !cc;
+  applyCC();
+  const btn = $('ccBtn');
+  if (btn) {
+    btn.textContent = cc ? '💬 CC On' : '💬 CC Off';
+    btn.classList.toggle('active', cc);
+  }
+}
+
+function applyCC() {
+  if (video.textTracks) {
+    for (const track of video.textTracks) {
+      track.mode = cc ? 'showing' : 'disabled';
+    }
+  }
+  if (hls && 'subtitleTrack' in hls) {
+    hls.subtitleTrack = cc ? 0 : -1;
+  }
+}
+
+function toggleLowLatency() {
+  lowLatency = !lowLatency;
+  const btn = $('latencyBtn');
+  if (btn) btn.textContent = lowLatency ? '⚡ Low Latency' : '⚡ Normal Latency';
+  if (current) resync();
+}
+
+function togglePIP() {
+  if (document.pictureInPictureElement) {
+    document.exitPictureInPicture();
+    return;
+  }
+  if (video.requestPictureInPicture) {
+    video.requestPictureInPicture().catch(() => toast('Picture-in-Picture unavailable'));
+  } else {
+    toast('Picture-in-Picture is unavailable on this device');
+  }
+}
+
+function fullscreen() {
+  const target = $('playerPanel');
+  if (!document.fullscreenElement) {
+    target.requestFullscreen?.().catch(() => toast('Fullscreen unavailable'));
+  } else {
+    document.exitFullscreen?.();
+  }
+}
+
+function toggleTheater() {
+  const layout = $('layout');
+  if (!layout) return;
+  layout.classList.toggle('theater');
+  toast(layout.classList.contains('theater') ? 'Theater mode enabled' : 'Theater mode disabled');
+}
+
+function nextChannel() {
+  if (!filtered.length) return;
+  const index = current ? filtered.findIndex(c => c.url === current.url) : -1;
+  const next = filtered[(index + 1 + filtered.length) % filtered.length];
+  if (next) play(next);
+}
+
+function prevChannel() {
+  if (!filtered.length) return;
+  const index = current ? filtered.findIndex(c => c.url === current.url) : 0;
+  const previous = filtered[(index - 1 + filtered.length) % filtered.length];
+  if (previous) play(previous);
+}
+
+function zap() {
+  if (!filtered.length) {
+    toast('No channels available to zap');
+    return;
+  }
+  const pool = filtered.filter(c => health[c.url]?.state !== 'offline');
+  const candidates = pool.length ? pool : filtered;
+  const channel = candidates[Math.floor(Math.random() * candidates.length)];
+  play(channel);
+}
+
+/* =========================================================
+   VIDEO EVENTS & WATCHDOG HEALING
+   ========================================================= */
+
+function setupVideo() {
+  video.addEventListener('playing', () => {
+    clearTimeout(video._stallTimer);
+    clearTimeout(retryTimer);
+    retry = 0;
+    watchdog = 0;
+    isChannelTuning = false;
+    live(sessionToken);
+  });
+
+  video.addEventListener('waiting', () => {
+    if (!current) return;
+    setState('connecting', 'BUFFERING');
+
+    clearTimeout(video._stallTimer);
+    if (isAirPlayActive) {
+      shieldNotify('AirPlay Remote Buffer Syncing…');
+      return;
+    }
+
+    video._stallTimer = setTimeout(() => {
+      if (video.readyState < 3 && current && !isAirPlayActive && !isChannelTuning) {
+        shieldNotify('Auto-Nudging Past Ad Break (+0.5s)');
+        video.currentTime += 0.5;
+        setTimeout(() => {
+          if (video.readyState < 3 && !isAirPlayActive) {
+            scheduleContinuousReconnect('Buffer Stall');
+          }
+        }, 1000);
+      }
+    }, 2500);
+  });
+
+  video.addEventListener('error', () => {
+    if (current) {
+      scheduleContinuousReconnect('Media Transmission Lost');
+    }
+  });
+
+  video.addEventListener('ended', () => {
+    if (current) {
+      shieldNotify('Episode Concluded — Auto-Advancing Next Show…');
+      isChannelTuning = true;
+      setTimeout(() => {
+        resync();
+      }, 1000);
+    }
+  });
+
+  video.addEventListener('loadedmetadata', () => {
+    resolution(video.videoWidth, video.videoHeight, 0);
+    updateResolutionTelemetry();
+    updateAuroraPipeline();
+    updateStudioMeta();
+  });
+
+  video.addEventListener('resize', () => {
+    updateResolutionTelemetry();
+    updateAuroraPipeline();
+  });
+
+  setInterval(() => {
+    if (current && !video.paused && !video.ended && !isChannelTuning) {
+      if (isAirPlayActive) {
+        if (video.currentTime === lastTime) {
+          watchdog++;
+          if (watchdog >= 14) {
+            scheduleContinuousReconnect('AirPlay Remote Edge Dropped');
+            watchdog = 0;
+          }
+        } else {
+          lastTime = video.currentTime;
+          watchdog = 0;
+        }
+        return;
+      }
+
+      if (video.currentTime === lastTime) {
+        watchdog++;
+        if (watchdog >= Number(settings.watchdog || 4)) {
+          shieldNotify('Auto-Healing Ad Transition Stall');
+          video.currentTime += 0.5;
+          setTimeout(() => {
+            if (video.currentTime === lastTime && !isAirPlayActive) {
+              scheduleContinuousReconnect('Ad Break Frozen');
+            }
+          }, 1000);
+          watchdog = 0;
+        }
+      } else {
+        lastTime = video.currentTime;
+        watchdog = 0;
+      }
+    }
+  }, 1000);
+}
+
+/* =========================================================
+   TELEMETRY TIMERS & CLOCK
+   ========================================================= */
+
+function setupTelemetryTimer() {
+  clearInterval(telemetryTimer);
+  telemetryTimer = setInterval(() => {
+    const clock = $('clockMetric');
+    if (clock) {
+      const now = new Date();
+      clock.textContent = `LOCAL ${now.toLocaleTimeString()}`;
+    }
+
+    if (video && video.buffered && video.buffered.length > 0) {
+      const cur = video.currentTime;
+      let bufEnd = 0;
+      for (let i = 0; i < video.buffered.length; i++) {
+        if (video.buffered.start(i) <= cur && cur <= video.buffered.end(i)) {
+          bufEnd = video.buffered.end(i);
+          break;
+        }
+      }
+      const headroomSecs = Math.max(0, bufEnd - cur);
+      const pct = Math.min(100, Math.round((headroomSecs / 30) * 100));
+
+      const bufBar = $('bufferBar');
+      const bufPct = $('bufferPct');
+      const bufPill = $('bufPill');
+      const ovBuffer = $('overlayBuffer');
+
+      if (bufBar) bufBar.style.width = `${pct}%`;
+      if (bufPct) bufPct.textContent = `${pct}% (${headroomSecs.toFixed(1)}s)`;
+      if (bufPill) bufPill.textContent = `Buffer ${headroomSecs.toFixed(1)}s`;
+      if (ovBuffer) ovBuffer.textContent = `${headroomSecs.toFixed(1)}s`;
+    }
+  }, 1000);
+}
+
+/* =========================================================
+   HEALTH SCANNING
+   ========================================================= */
+
+async function healthScanVisible() {
+  const start = page * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+  if (!items.length) {
+    toast('No visible channels to test');
+    return;
+  }
+
+  toast(`Probing ${items.length} visible streams…`);
+  updateStatus(`<span class="spinner"></span> Testing health of ${items.length} visible stations…`);
+
+  for (const ch of items) {
+    health[ch.url] = { state: 'testing', time: Date.now() };
+  }
+  renderPage();
+
+  for (let i = 0; i < items.length; i += 5) {
+    const batch = items.slice(i, i + 5);
+    await Promise.allSettled(batch.map(async (ch) => {
+      try {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 6000);
+        await fetch(ch.url, { method: 'HEAD', signal: controller.signal, mode: 'no-cors' });
+        clearTimeout(t);
+        health[ch.url] = { state: 'online', time: Date.now() };
+      } catch {
+        health[ch.url] = { state: 'offline', time: Date.now() };
+      }
+    }));
+    renderPage();
+    updateMetrics();
+  }
+
+  save(STORAGE.health, health);
+  updateStatus(`✅ Health probe complete for ${items.length} stations`);
+  toast('Channel health scan complete');
+}
+
+/* =========================================================
+   MODAL ACTIONS, SOURCES & FILE INGESTION
+   ========================================================= */
+
+function addSource() {
+  const input = $('sourceUrl');
+  const url = input?.value.trim();
+  if (!url) {
+    toast('Please enter a valid playlist URL');
+    return;
+  }
+
+  updateStatus(`<span class="spinner"></span> Ingesting custom playlist: ${url}…`);
+  fetchPlaylist(url, 'custom').then(parsed => {
+    if (!sources.includes(url)) {
+      sources.push(url);
+      save(STORAGE.sources, sources);
+    }
+    const result = mergeChannels(parsed);
+    refreshEverything();
+    closeModal('sourceModal');
+    updateStatus(`✅ Imported ${parsed.length.toLocaleString()} streams (+${result.added} new)`);
+    toast(`Added ${result.added.toLocaleString()} new stations from custom URL`);
+    if (input) input.value = '';
+  }).catch(err => {
+    toast('Failed to ingest playlist: ' + err.message);
+  });
+}
+
+function importFile(file) {
+  if (!file) return;
+  updateStatus(`<span class="spinner"></span> Ingesting local file: ${file.name}…`);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const parsed = parseM3U(text, file.name);
+    if (parsed.length > 0) {
+      const result = mergeChannels(parsed);
+      refreshEverything();
+      closeModal('sourceModal');
+      updateStatus(`✅ Imported ${parsed.length.toLocaleString()} channels from local file (+${result.added} new)`);
+      toast(`Imported ${result.added.toLocaleString()} new channels from ${file.name}`);
+    } else {
+      toast('No valid M3U streams found in file');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setupDragAndDrop() {
+  const drop = $('drop');
+  if (!drop) return;
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      importFile(e.dataTransfer.files[0]);
+    }
+  });
+}
+
+function exportM3U() {
+  if (!favorites.length) {
+    toast('Star some channels before exporting favorites');
+    return;
+  }
+  let m3u = '#EXTM3U\n';
+  for (const c of favorites) {
+    m3u += `#EXTINF:-1 tvg-logo="${c.logo || ''}" group-title="${c.category || 'Favorites'}" tvg-country="${c.country || 'Global'}",${c.name}\n${c.url}\n`;
+  }
+  const blob = new Blob([m3u], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'SmartAntenna_Favorites.m3u';
+  a.click();
+  toast('Favorites playlist exported (.m3u)');
+}
+
+function exportBackup() {
+  const backup = { channels, favorites, history, sources, settings, pictureSettings, date: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'SmartAntenna_Backup.json';
+  a.click();
+  toast('Station backup exported (.json)');
+}
+
+function restoreBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (backup.channels) channels = backup.channels;
+      if (backup.favorites) favorites = backup.favorites;
+      if (backup.history) history = backup.history;
+      if (backup.sources) sources = backup.sources;
+      if (backup.settings) settings = Object.assign({}, DEFAULT_SETTINGS, backup.settings);
+      if (backup.pictureSettings) Object.assign(pictureSettings, backup.pictureSettings);
+      save(STORAGE.channels, channels);
+      save(STORAGE.favorites, favorites);
+      save(STORAGE.history, history);
+      save(STORAGE.sources, sources);
+      save(STORAGE.settings, settings);
+      save(STORAGE.pictureSettings, pictureSettings);
+      refreshEverything();
+      updateAuroraPipeline();
+      closeModal('settingsModal');
+      toast('Station successfully restored from backup');
+    } catch {
+      toast('Failed to parse backup JSON');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearStation() {
+  if (confirm('Reset entire broadcast station and clear stored channel databases?')) {
+    localStorage.clear();
+    channels = STARTER_CHANNELS.map(normalizeChannel);
+    favorites = [];
+    history = [];
+    sources = [];
+    settings = Object.assign({}, DEFAULT_SETTINGS);
+    Object.assign(pictureSettings, PICTURE_PRESETS.auto);
+    save(STORAGE.channels, channels);
+    refreshEverything();
+    updateAuroraPipeline();
+    closeModal('settingsModal');
+    toast('Station reset to starter channels');
+  }
+}
+
+function saveSettings() {
+  settings.recovery = $('settingRecovery')?.value || 'on';
+  settings.watchdog = $('settingWatchdog')?.value || '4';
+  settings.view = $('settingView')?.value || 'list';
+  settings.history = $('settingHistory')?.value || '50';
+  settings.cache = $('settingCache')?.value || '60';
+  settings.audio = $('settingAudio')?.value || 'direct';
+  settings.airplayMode = $('settingAirPlayMode')?.value || 'auto';
+
+  save(STORAGE.settings, settings);
+  closeModal('settingsModal');
+  toast('Station settings saved');
+}
+
+/* =========================================================
+   KEYBOARD & TV REMOTE SHORTCUTS
+   ========================================================= */
+
+function setupKeyboardShortcuts() {
+  const userInteractionUnlock = () => {
+    unlockAudio();
+    window.removeEventListener('click', userInteractionUnlock);
+    window.removeEventListener('keydown', userInteractionUnlock);
+    window.removeEventListener('touchstart', userInteractionUnlock);
+  };
+  window.addEventListener('click', userInteractionUnlock);
+  window.addEventListener('keydown', userInteractionUnlock);
+  window.addEventListener('touchstart', userInteractionUnlock);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      ['sourceModal', 'settingsModal', 'diagnosticsModal', 'shortcutsModal', 'pictureModal'].forEach(closeModal);
+      return;
+    }
+
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+    if (/^[0-9]$/.test(e.key)) {
+      numBuffer += e.key;
+      clearTimeout(numTimer);
+      toast(`Tuning Channel #${numBuffer}…`);
+      numTimer = setTimeout(() => {
+        const targetNum = parseInt(numBuffer, 10);
+        numBuffer = '';
+        if (targetNum > 0 && targetNum <= filtered.length) {
+          playByIndex(targetNum - 1);
+        } else {
+          toast(`Channel #${targetNum} out of range`);
+        }
+      }, 1200);
+      return;
+    }
+
+    if (e.code === 'Space' || e.key === 'MediaPlayPause' || e.key === 'MediaPlay' || e.key === 'MediaPause') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'p' || e.key === 'P') {
+      openModal('pictureModal');
+    } else if (e.key === 's' || e.key === 'S') {
+      toggleSplitScreen();
+    } else if (e.key === 'b' || e.key === 'B') {
+      setBypass(!pictureSettings.rawBypass);
+    } else if (e.key === 'a' || e.key === 'A') {
+      const keys = Object.keys(PICTURE_PRESETS);
+      let idx = keys.indexOf(pictureSettings.preset);
+      idx = (idx + 1) % keys.length;
+      applyPicturePreset(keys[idx]);
+    } else if (e.key === 'f' || e.key === 'F') {
+      fullscreen();
+    } else if (e.key === 'm' || e.key === 'M') {
+      toggleMute();
+    } else if (e.key === 't' || e.key === 'T') {
+      toggleTheater();
+    } else if (e.key === 'c' || e.key === 'C') {
+      toggleCC();
+    } else if (e.key === 'z' || e.key === 'Z') {
+      zap();
+    } else if (e.key === 'r' || e.key === 'R') {
+      resync();
+    } else if (e.key === 'n' || e.key === 'N' || e.key === ']' || e.key === 'MediaTrackNext' || e.key === 'ChannelUp') {
+      nextChannel();
+    } else if (e.key === '[' || e.key === 'MediaTrackPrevious' || e.key === 'ChannelDown') {
+      prevChannel();
+    } else if (e.key === '/' || (e.ctrlKey && e.key === 'k')) {
+      e.preventDefault();
+      const s = $('search');
+      if (s) s.focus();
+    } else if (e.key === '?') {
+      openModal('shortcutsModal');
+    }
+  });
+}
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+function init() {
+  video = $('video');
+  auroraCanvas = $('auroraCanvas');
+  auroraProcessedCanvas = $('auroraProcessedCanvas');
+  auroraCtx = auroraCanvas ? auroraCanvas.getContext('2d', { alpha: false, desynchronized: true }) : null;
+  auroraProcessedCtx = auroraProcessedCanvas ? auroraProcessedCanvas.getContext('2d', { alpha: false, desynchronized: true }) : null;
+  window.__auroraProcessedFrameReady = false;
+  if (video) { video.style.display = 'block'; video.style.visibility = 'visible'; video.style.opacity = '1'; video.style.filter = 'none'; }
+  auroraAirPlayVideo = $('auroraAirPlayVideo');
+  // WebKit / Web Video API routing defaults: keep the source local until
+  // the user explicitly chooses native AirPlay.
+  setVideoRemotePlaybackAllowed(false);
+  setAirPlayBridgeRemotePlaybackAllowed(false);
+
+
+  const storedChannels = load(STORAGE.channels, null);
+  if (storedChannels && Array.isArray(storedChannels) && storedChannels.length > 0) {
+    channels = storedChannels.map(normalizeChannel);
+  } else {
+    channels = STARTER_CHANNELS.map(normalizeChannel);
+    save(STORAGE.channels, channels);
+  }
+
+  favorites = load(STORAGE.favorites, []).map(normalizeChannel);
+  history = load(STORAGE.history, []).map(normalizeChannel);
+  sources = load(STORAGE.sources, []);
+  health = load(STORAGE.health, {});
+
+  const savedPicture = load(STORAGE.pictureSettings, null);
+  if (savedPicture) Object.assign(pictureSettings, savedPicture);
+
+  outputTarget = settings.airplayMode === 'mirror' ? 'mirror' : 'local';
+
+  grid = (settings.view === 'grid');
+  $('channels').classList.toggle('list', !grid);
+  const viewBtn = $('viewBtn');
+  if (viewBtn) viewBtn.textContent = grid ? '☷ List' : '▦ Grid';
+
+  updateAuroraPipeline();
+  renderPacks();
+  renderTabs();
+  populateCountries();
+  populateLanguages();
+  applyFilters();
+  renderHistory();
+  renderFavs();
+  updateMetrics();
+  renderSources();
+
+  setupVideo();
+  setupAirPlayIntegration();
+  setupDraggers();
+  setupTelemetryTimer();
+  setupKeyboardShortcuts();
+  setupDragAndDrop();
+
+  // Launch Authoritative Framebuffer Rendering Loop
+  requestAnimationFrame(renderAuroraMasterFrame);
+
+  updateStatus(`📡 Ready • <strong>${channels.length.toLocaleString()}</strong> live broadcast channels initialized • Authoritative Aurora Canvas Active`);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
   --shadow:0 22px 70px rgba(0,0,0,.48);
   --glow:0 0 30px rgba(0,229,255,.14);
   --radius:15px;
