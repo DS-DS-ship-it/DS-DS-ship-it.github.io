@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>AN/PVS-31 NVG // PRO OPTICS</title>
+  <style>
+    :root {
+      --nvg-green: #39ff14;
+      --nvg-dim-green: rgba(57, 255, 20, 0.4);
+      --hud-alert: #ff3344;
+      --hud-font: 'SF Mono', 'Courier New', Courier, monospace;
+      --safe-top: env(safe-area-inset-top, 44px);
+      --safe-bottom: env(safe-area-inset-bottom, 34px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: var(--hud-font);
+      color: var(--nvg-green);
+    }
+
+    #viewport-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    canvas#glCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      z-index: 1;
+    }
+
+    video#camFeed {
+      display: none;
+    }
+
+    /* Tube Vignette / Optic Housing */
+    .tube-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px 30px rgba(0, 0, 0, 0.95);
+      transition: opacity 0.3s ease;
+    }
+
+    .tube-mask-active {
+      background: radial-gradient(circle at center, transparent 58%, rgba(0, 5, 0, 0.98) 72%, #000 100%);
+    }
+
+    /* Tactical HUD Overlay */
+    .hud-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: calc(var(--safe-top) + 6px) 16px calc(var(--safe-bottom) + 8px) 16px;
+      text-shadow: 0 0 4px var(--nvg-dim-green);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .hud-stat-box {
+      background: rgba(0, 20, 0, 0.65);
+      border: 1px solid var(--nvg-dim-green);
+      padding: 4px 8px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-title {
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .compass-container {
+      width: 130px;
+      text-align: center;
+    }
+
+    .compass-val {
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    /* Calibration Bar */
+    .calib-bar {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 6px;
+      pointer-events: auto;
+    }
+
+    .calib-btn {
+      background: rgba(0, 25, 0, 0.75);
+      border: 1px solid var(--nvg-dim-green);
+      color: var(--nvg-green);
+      font-family: var(--hud-font);
+      font-size: 10px;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .calib-btn:active {
+      background: var(--nvg-green);
+      color: #000;
+    }
+
+    /* Center Reticle */
+    .center-reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 250px;
+      height: 250px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .reticle-svg {
+      width: 100%;
+      height: 100%;
+      stroke: var(--nvg-green);
+      fill: none;
+      stroke-width: 1.2;
+      opacity: 0.75;
+    }
+
+    .horizon-ladder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 180px;
+      height: 180px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.05s linear;
+    }
+
+    /* Controls Layer */
+    .hud-controls-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding-bottom: calc(var(--safe-bottom) + 10px);
+    }
+
+    .interactive-element {
+      pointer-events: auto;
+    }
+
+    /* Lateral Sliders */
+    .slider-rail {
+      position: absolute;
+      top: 32%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 15, 0, 0.65);
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--nvg-dim-green);
+    }
+
+    .slider-rail.left { left: 10px; }
+    .slider-rail.right { right: 10px; }
+
+    .slider-rail input[type="range"] {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 24px;
+      height: 130px;
+      accent-color: var(--nvg-green);
+      background: transparent;
+    }
+
+    .slider-label {
+      font-size: 9px;
+      font-weight: bold;
+    }
+
+    /* Cockpit Bottom */
+    .hud-cockpit {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    .mode-bar {
+      display: flex;
+      gap: 5px;
+      background: rgba(0, 15, 0, 0.8);
+      padding: 4px;
+      border-radius: 20px;
+      border: 1px solid var(--nvg-dim-green);
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--nvg-dim-green);
+      font-family: var(--hud-font);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 11px;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .mode-btn.active {
+      background: var(--nvg-green);
+      color: #000;
+      box-shadow: 0 0 10px var(--nvg-green);
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .hud-btn {
+      background: rgba(0, 20, 0, 0.7);
+      border: 1px solid var(--nvg-dim-green);
+      color: var(--nvg-green);
+      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .hud-btn:active {
+      transform: scale(0.92);
+      filter: brightness(1.5);
+    }
+
+    .hud-btn.shutter {
+      width: 66px;
+      height: 66px;
+      border: 3px solid var(--nvg-green);
+      box-shadow: 0 0 12px var(--nvg-dim-green);
+    }
+
+    .hud-btn.shutter-inner {
+      width: 50px;
+      height: 50px;
+      background: var(--nvg-green);
+      border-radius: 50%;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--nvg-green);
+      border-radius: 50%;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.3; }
+      to { opacity: 1; }
+    }
+
+    #start-screen {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .start-btn {
+      background: var(--nvg-green);
+      color: #000;
+      border: none;
+      font-family: var(--hud-font);
+      font-weight: 900;
+      font-size: 15px;
+      padding: 16px 36px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 20px var(--nvg-green);
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Startup Screen -->
+  <div id="start-screen">
+    <div style="font-size: 26px; font-weight: 900; letter-spacing: 2px;">AN/PVS-31A</div>
+    <div style="font-size: 12px; color: var(--nvg-dim-green); max-width: 280px; line-height: 1.5;">
+      MIL-SPEC OPTIC INITIALIZATION<br>
+      ORIENTATION & SENSOR CALIBRATED
+    </div>
+    <button class="start-btn" id="btn-init">ACTIVATE SYSTEM</button>
+  </div>
+
+  <div id="viewport-container">
+    <video id="camFeed" playsinline autoplay muted></video>
+    <canvas id="glCanvas"></canvas>
+    <div class="tube-overlay tube-mask-active" id="tube-mask"></div>
+  </div>
+
+  <!-- HUD Layer -->
+  <div class="hud-layer">
+    <div>
+      <div class="hud-header">
+        <div class="hud-stat-box">
+          <div class="system-status">
+            <div class="status-dot"></div>
+            <span class="hud-title">GEN 3+ AG</span>
+          </div>
+          <div id="fps-stat" style="margin-top:2px;">FPS: 60.0</div>
+          <div id="orient-stat" style="font-size:9px; opacity:0.8;">ROT: 90° | INV</div>
+        </div>
+
+        <div class="hud-stat-box compass-container">
+          <div style="font-size: 9px; opacity:0.7;">AZIMUTH</div>
+          <div class="compass-val" id="compass-readout">342° NNW</div>
+        </div>
+
+        <div class="hud-stat-box" style="text-align: right;">
+          <div>EXP: <span id="lux-stat">+21 dB</span></div>
+          <div>IR: <span id="torch-stat">OFF</span></div>
+          <div id="batt-stat">BAT: 98%</div>
+        </div>
+      </div>
+
+      <!-- Quick Tactical Alignment Controls -->
+      <div class="calib-bar">
+        <button class="calib-btn" id="btn-rot">↺ ROT 90°</button>
+        <button class="calib-btn" id="btn-flip-v">⇕ FLIP V</button>
+        <button class="calib-btn" id="btn-flip-h">⇄ FLIP H</button>
+        <button class="calib-btn" id="btn-auto-calib">AUTO FIX</button>
+      </div>
+    </div>
+
+    <!-- Center Reticle Graphic -->
+    <div class="center-reticle">
+      <svg class="reticle-svg" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="80" stroke-dasharray="4 6" opacity="0.4"/>
+        <circle cx="100" cy="100" r="30" opacity="0.6"/>
+        <line x1="100" y1="20" x2="100" y2="90" />
+        <line x1="100" y1="110" x2="100" y2="180" />
+        <line x1="20" y1="100" x2="90" y2="100" />
+        <line x1="110" y1="100" x2="180" y2="100" />
+        <circle cx="100" cy="60" r="1.5" fill="currentColor"/>
+        <circle cx="100" cy="40" r="1.5" fill="currentColor"/>
+        <circle cx="60" cy="100" r="1.5" fill="currentColor"/>
+        <circle cx="140" cy="100" r="1.5" fill="currentColor"/>
+        <circle cx="100" cy="100" r="1.5" fill="currentColor"/>
+      </svg>
+    </div>
+
+    <!-- Gyro-Stabilized Pitch Ladder -->
+    <div class="horizon-ladder" id="horizonLadder">
+      <svg viewBox="0 0 100 100" style="width:100%; height:100%; stroke: var(--nvg-dim-green); fill:none; stroke-width:1;">
+        <path d="M 20 45 L 35 45 L 35 50" />
+        <path d="M 80 45 L 65 45 L 65 50" />
+        <line x1="45" y1="50" x2="55" y2="50" stroke="var(--nvg-green)" />
+      </svg>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <div>
+        <div>GRID: 34°03'21"N 118°14'35"W</div>
+        <div>ELEV: 242 M MSL</div>
+      </div>
+      <div id="timestamp-stat">00:00:00 UTC</div>
+    </div>
+  </div>
+
+  <!-- Control Sliders and Bottom Bar -->
+  <div class="hud-controls-layer">
+    <div class="slider-rail left interactive-element">
+      <span class="slider-label">GAIN</span>
+      <input type="range" id="gainSlider" min="1.0" max="6.0" step="0.1" value="2.8">
+    </div>
+
+    <div class="slider-rail right interactive-element">
+      <span class="slider-label">ZOOM</span>
+      <input type="range" id="zoomSlider" min="1.0" max="4.0" step="0.1" value="1.0">
+    </div>
+
+    <div class="hud-cockpit">
+      <div class="mode-bar interactive-element">
+        <button class="mode-btn active" data-mode="0">P43 GREEN</button>
+        <button class="mode-btn" data-mode="1">P45 WHITE</button>
+        <button class="mode-btn" data-mode="2">FLIR THERMAL</button>
+        <button class="mode-btn" data-mode="3">ULTRA-IR</button>
+      </div>
+
+      <div class="action-row interactive-element">
+        <button class="hud-btn" id="btn-torch" title="Illuminator">⚡</button>
+        <button class="hud-btn" id="btn-mask" title="Tube Housing">◎</button>
+        <button class="hud-btn shutter" id="btn-capture" title="Shutter">
+          <div class="hud-btn shutter-inner"></div>
+        </button>
+        <button class="hud-btn" id="btn-flip" title="Switch Lens">⟲</button>
+        <button class="hud-btn" id="btn-audio" title="Audio Hum">🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WebGL Shaders with Proper Coordinate Normalization -->
+  <script id="vs" type="x-shader/x-vertex">
+    attribute vec2 a_pos;
+    varying vec2 v_uv;
+    void main() {
+      // Direct pass-through quad
+      v_uv = (a_pos + 1.0) * 0.5;
+      gl_Position = vec4(a_pos, 0.0, 1.0);
+    }
+  </script>
+
+  <script id="fs" type="x-shader/x-fragment">
+    precision highp float;
+    varying vec2 v_uv;
+    uniform sampler2D u_tex;
+    uniform int u_mode;
+    uniform float u_gain;
+    uniform float u_zoom;
+    uniform float u_time;
+    uniform vec2 u_resolution;
+
+    // Geometric Calibration Uniforms
+    uniform vec2 u_scale;
+    uniform vec2 u_flip;
+    uniform float u_angle;
+
+    float rand(vec2 co) {
+      return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    vec3 ironbow(float t) {
+      t = clamp(t, 0.0, 1.0);
+      vec3 c0 = vec3(0.0, 0.0, 0.05);
+      vec3 c1 = vec3(0.15, 0.0, 0.5);
+      vec3 c2 = vec3(0.85, 0.15, 0.1);
+      vec3 c3 = vec3(1.0, 0.8, 0.0);
+      vec3 c4 = vec3(1.0, 1.0, 0.95);
+      if (t < 0.25) return mix(c0, c1, t * 4.0);
+      if (t < 0.50) return mix(c1, c2, (t - 0.25) * 4.0);
+      if (t < 0.75) return mix(c2, c3, (t - 0.50) * 4.0);
+      return mix(c3, c4, (t - 0.75) * 4.0);
+    }
+
+    // Transform Screen UV to Optical Sensor Coordinates
+    vec2 transformSensorUV(vec2 coord) {
+      vec2 p = coord - vec2(0.5);
+      
+      // Aspect ratio fill & Digital Zoom
+      p = p * u_scale / u_zoom;
+
+      // Rotation
+      float c = cos(u_angle);
+      float s = sin(u_angle);
+      p = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+
+      // Inversion / Flip Axis
+      p *= u_flip;
+
+      return p + vec2(0.5);
+    }
+
+    void main() {
+      vec2 uv = transformSensorUV(v_uv);
+
+      // Clamp edges cleanly
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+      }
+
+      vec4 src = texture2D(u_tex, uv);
+
+      // Microchannel Luminance Amplification
+      float lum = dot(src.rgb, vec3(0.299, 0.587, 0.114));
+      float amplified = clamp(pow(lum * u_gain, 0.82), 0.0, 1.0);
+
+      // Scintillation Noise
+      float grain = (rand(uv + vec2(u_time * 0.2, u_time * 0.4)) - 0.5) * 0.18;
+      amplified = clamp(amplified + grain, 0.0, 1.0);
+
+      vec3 outputColor;
+
+      if (u_mode == 0) {
+        // P43 Green Phosphor (Mil-Spec 545nm)
+        outputColor = vec3(amplified * 0.22, amplified * 1.0, amplified * 0.28);
+        float scanline = sin(v_uv.y * u_resolution.y * 1.5) * 0.025;
+        outputColor -= scanline;
+      } 
+      else if (u_mode == 1) {
+        // P45 White Phosphor
+        outputColor = vec3(amplified * 0.9, amplified * 0.96, amplified * 1.05);
+      } 
+      else if (u_mode == 2) {
+        // FLIR Thermal Ironbow
+        outputColor = ironbow(amplified);
+      } 
+      else {
+        // Ultra-Gain Amber IR
+        outputColor = vec3(amplified * 1.0, amplified * 0.72, amplified * 0.15);
+      }
+
+      gl_FragColor = vec4(outputColor, 1.0);
+    }
+  </script>
+
+  <script>
+    // State Configuration
+    const state = {
+      mode: 0,
+      gain: 2.8,
+      zoom: 1.0,
+      torch: false,
+      mask: true,
+      audio: true,
+      facingMode: "environment",
+      rot: 90,        // Default iOS rear sensor landscape-to-portrait compensation
+      flipX: 1.0,     // Horizontal Normal
+      flipY: -1.0,    // Vertical Inverted (Fixes WebGL texture upside-down mapping)
+      stream: null,
+      track: null
+    };
+
+    const video = document.getElementById('camFeed');
+    const canvas = document.getElementById('glCanvas');
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+    const tubeMask = document.getElementById('tube-mask');
+    const horizonLadder = document.getElementById('horizonLadder');
+    const compassReadout = document.getElementById('compass-readout');
+    const fpsStat = document.getElementById('fps-stat');
+    const luxStat = document.getElementById('lux-stat');
+    const torchStat = document.getElementById('torch-stat');
+    const timestampStat = document.getElementById('timestamp-stat');
+    const orientStat = document.getElementById('orient-stat');
+
+    let audioCtx = null;
+    let nvgHumOsc = null;
+    let nvgGainNode = null;
+
+    let program, texture;
+    let uMode, uGain, uZoom, uTime, uRes;
+    let uScale, uFlip, uAngle;
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+
+    function initWebGL() {
+      const vsSource = document.getElementById('vs').text;
+      const fsSource = document.getElementById('fs').text;
+
+      function createShader(gl, type, source) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, source);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          console.error(gl.getShaderInfoLog(s));
+          gl.deleteShader(s);
+          return null;
+        }
+        return s;
+      }
+
+      const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+      const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+      program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+
+      const quad = new Float32Array([
+        -1, -1,
+         1, -1,
+        -1,  1,
+        -1,  1,
+         1, -1,
+         1,  1
+      ]);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+
+      const aPos = gl.getAttribLocation(program, 'a_pos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      // Program Uniforms
+      uMode = gl.getUniformLocation(program, 'u_mode');
+      uGain = gl.getUniformLocation(program, 'u_gain');
+      uZoom = gl.getUniformLocation(program, 'u_zoom');
+      uTime = gl.getUniformLocation(program, 'u_time');
+      uRes = gl.getUniformLocation(program, 'u_resolution');
+      uScale = gl.getUniformLocation(program, 'u_scale');
+      uFlip = gl.getUniformLocation(program, 'u_flip');
+      uAngle = gl.getUniformLocation(program, 'u_angle');
+
+      texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+
+    function initTacticalAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+
+        nvgHumOsc = audioCtx.createOscillator();
+        nvgGainNode = audioCtx.createGain();
+
+        nvgHumOsc.type = 'sine';
+        nvgHumOsc.frequency.setValueAtTime(1850, audioCtx.currentTime);
+
+        nvgGainNode.gain.setValueAtTime(0.015, audioCtx.currentTime);
+        nvgHumOsc.connect(nvgGainNode);
+        nvgGainNode.connect(audioCtx.destination);
+        nvgHumOsc.start();
+      } catch (e) {
+        console.warn('AudioContext unsupported', e);
+      }
+    }
+
+    function playTacticalClick() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function updateOrientationDisplay() {
+      const vText = state.flipY < 0 ? "V:INV" : "V:NORM";
+      const hText = state.flipX < 0 ? "H:MIRR" : "H:NORM";
+      orientStat.innerText = `ROT: ${state.rot}° | ${vText} | ${hText}`;
+    }
+
+    // Auto-align based on display and hardware feed orientation
+    function autoCalibrateOrientation() {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const isLandscapeFeed = (video.videoWidth || 1920) > (video.videoHeight || 1080);
+
+      if (state.facingMode === "environment") {
+        state.rot = (isPortrait && isLandscapeFeed) ? 90 : 0;
+        state.flipX = 1.0;
+        state.flipY = -1.0; // Invert WebGL row order so it is right-side up
+      } else {
+        state.rot = (isPortrait && isLandscapeFeed) ? 270 : 0;
+        state.flipX = -1.0; // Mirror front camera selfie feed
+        state.flipY = -1.0;
+      }
+      updateOrientationDisplay();
+    }
+
+    async function startCamera() {
+      if (state.stream) {
+        state.stream.getTracks().forEach(t => t.stop());
+      }
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: state.facingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      };
+
+      try {
+        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = state.stream;
+        await video.play();
+
+        state.track = state.stream.getVideoTracks()[0];
+        autoCalibrateOrientation();
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+      } catch (err) {
+        alert("Camera error: " + err.name + " (Ensure camera permission is granted over HTTPS).");
+      }
+    }
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    // Aspect-ratio cover calculation
+    function getAspectScale() {
+      const sW = canvas.width || window.innerWidth;
+      const sH = canvas.height || window.innerHeight;
+      let vW = video.videoWidth || 1920;
+      let vH = video.videoHeight || 1080;
+
+      if (state.rot === 90 || state.rot === 270) {
+        const tmp = vW;
+        vW = vH;
+        vH = tmp;
+      }
+
+      const sAspect = sW / sH;
+      const vAspect = vW / vH;
+
+      let scaleX = 1.0;
+      let scaleY = 1.0;
+
+      if (sAspect > vAspect) {
+        scaleY = vAspect / sAspect;
+      } else {
+        scaleX = sAspect / vAspect;
+      }
+
+      return [scaleX, scaleY];
+    }
+
+    // Render Loop
+    function render(now) {
+      if (video.readyState >= video.HAVE_CURRENT_DATA) {
+        gl.useProgram(program);
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+        const [scaleX, scaleY] = getAspectScale();
+
+        gl.uniform1i(uMode, state.mode);
+        gl.uniform1f(uGain, state.gain);
+        gl.uniform1f(uZoom, state.zoom);
+        gl.uniform1f(uTime, now * 0.001);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+
+        // Upload Transform Uniforms
+        gl.uniform2f(uScale, scaleX, scaleY);
+        gl.uniform2f(uFlip, state.flipX, state.flipY);
+        gl.uniform1f(uAngle, (state.rot * Math.PI) / 180.0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        frameCount++;
+        if (now - lastFrameTime >= 1000) {
+          fpsStat.innerText = `FPS: ${frameCount.toFixed(1)}`;
+          frameCount = 0;
+          lastFrameTime = now;
+        }
+      }
+      requestAnimationFrame(render);
+    }
+
+    // Gyroscope / Avionics
+    function setupOrientation() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission().then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        }).catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+    }
+
+    function handleOrientation(e) {
+      const pitch = e.beta || 0;
+      const roll = e.gamma || 0;
+      const heading = e.webkitCompassHeading || (360 - (e.alpha || 0));
+
+      horizonLadder.style.transform = `translate(-50%, -50%) rotate(${-roll}deg) translateY(${pitch * 0.8}px)`;
+
+      if (heading) {
+        const deg = Math.round(heading);
+        let cardinal = "N";
+        if (deg > 22 && deg <= 67) cardinal = "NE";
+        else if (deg > 67 && deg <= 112) cardinal = "E";
+        else if (deg > 112 && deg <= 157) cardinal = "SE";
+        else if (deg > 157 && deg <= 202) cardinal = "S";
+        else if (deg > 202 && deg <= 247) cardinal = "SW";
+        else if (deg > 247 && deg <= 292) cardinal = "W";
+        else if (deg > 292 && deg <= 337) cardinal = "NW";
+
+        compassReadout.innerText = `${deg.toString().padStart(3, '0')}° ${cardinal}`;
+      }
+    }
+
+    // Battery Indicator
+    if (navigator.getBattery) {
+      navigator.getBattery().then(bat => {
+        const updateBat = () => {
+          document.getElementById('batt-stat').innerText = `BAT: ${Math.round(bat.level * 100)}%`;
+        };
+        updateBat();
+        bat.addEventListener('levelchange', updateBat);
+      });
+    }
+
+    setInterval(() => {
+      const d = new Date();
+      timestampStat.innerText = d.toTimeString().split(' ')[0] + " UTC";
+    }, 1000);
+
+    // Tactical Alignment Handlers
+    document.getElementById('btn-rot').addEventListener('click', () => {
+      playTacticalClick();
+      state.rot = (state.rot + 90) % 360;
+      updateOrientationDisplay();
+    });
+
+    document.getElementById('btn-flip-v').addEventListener('click', () => {
+      playTacticalClick();
+      state.flipY = -state.flipY;
+      updateOrientationDisplay();
+    });
+
+    document.getElementById('btn-flip-h').addEventListener('click', () => {
+      playTacticalClick();
+      state.flipX = -state.flipX;
+      updateOrientationDisplay();
+    });
+
+    document.getElementById('btn-auto-calib').addEventListener('click', () => {
+      playTacticalClick();
+      autoCalibrateOrientation();
+    });
+
+    // Phosphor Mode Selector
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        playTacticalClick();
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        state.mode = parseInt(e.target.dataset.mode);
+        if (navigator.vibrate) navigator.vibrate(20);
+      });
+    });
+
+    document.getElementById('gainSlider').addEventListener('input', (e) => {
+      state.gain = parseFloat(e.target.value);
+      luxStat.innerText = `+${Math.round(state.gain * 7.5)} dB`;
+    });
+
+    document.getElementById('zoomSlider').addEventListener('input', (e) => {
+      state.zoom = parseFloat(e.target.value);
+    });
+
+    document.getElementById('btn-torch').addEventListener('click', async () => {
+      playTacticalClick();
+      if (!state.track) return;
+      try {
+        const caps = state.track.getCapabilities();
+        if (caps.torch) {
+          state.torch = !state.torch;
+          await state.track.applyConstraints({ advanced: [{ torch: state.torch }] });
+          torchStat.innerText = state.torch ? "ON" : "OFF";
+          document.getElementById('btn-torch').style.color = state.torch ? "#fff" : "var(--nvg-green)";
+        } else {
+          alert("Hardware IR Torch unavailable on this lens.");
+        }
+      } catch (err) {
+        console.warn("Torch constraint failed", err);
+      }
+    });
+
+    document.getElementById('btn-mask').addEventListener('click', () => {
+      playTacticalClick();
+      state.mask = !state.mask;
+      tubeMask.className = state.mask ? "tube-overlay tube-mask-active" : "tube-overlay";
+    });
+
+    document.getElementById('btn-flip').addEventListener('click', () => {
+      playTacticalClick();
+      state.facingMode = (state.facingMode === "environment") ? "user" : "environment";
+      startCamera();
+    });
+
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      playTacticalClick();
+      state.audio = !state.audio;
+      if (nvgGainNode) {
+        nvgGainNode.gain.setValueAtTime(state.audio ? 0.015 : 0.0, audioCtx.currentTime);
+      }
+      document.getElementById('btn-audio').innerText = state.audio ? "🔊" : "🔇";
+    });
+
+    document.getElementById('btn-capture').addEventListener('click', () => {
+      playTacticalClick();
+      if (navigator.vibrate) navigator.vibrate([30, 40]);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const link = document.createElement('a');
+      link.download = `NVG_CAPTURE_${Date.now()}.jpg`;
+      link.href = dataUrl;
+      link.click();
+    });
+
+    document.getElementById('btn-init').addEventListener('click', () => {
+      document.getElementById('start-screen').style.display = 'none';
+      initTacticalAudio();
+      initWebGL();
+      startCamera();
+      setupOrientation();
+      requestAnimationFrame(render);
+    });
+  </script>
+</body>
+</html>
