@@ -6,15 +6,15 @@
   <title>Sponsor Gateway — TV0 Spatial Mosaic</title>
   <style>
     :root {
-      --bg-dark: #070a12;
-      --bg-card: #0e1526;
-      --bg-surface: #151f38;
+      --bg-dark: #07090e;
+      --bg-card: #0f1523;
+      --bg-surface: #17223b;
       --accent-green: #00f076;
       --accent-glow: rgba(0, 240, 118, 0.4);
       --accent-blue: #0088ff;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border-subtle: #1e2b48;
+      --border-color: #202d4a;
       --radius-sm: 10px;
       --radius-lg: 24px;
       --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -27,7 +27,7 @@
     }
 
     body {
-      background: radial-gradient(circle at top, #111a33 0%, var(--bg-dark) 100%);
+      background: radial-gradient(circle at 50% 20%, #111a33 0%, var(--bg-dark) 100%);
       color: var(--text-main);
       font-family: var(--font-stack);
       min-height: 100vh;
@@ -35,24 +35,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
     }
 
-    /* Main Gateway Card */
-    .gateway-container {
+    /* Gateway Center Card */
+    .gateway-card {
       width: 100%;
-      max-width: 640px;
+      max-width: 580px;
       background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-color);
       border-radius: var(--radius-lg);
-      padding: 40px 32px;
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85);
+      padding: 38px 28px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85);
       text-align: center;
       position: relative;
       overflow: hidden;
     }
 
-    .gateway-container::before {
+    .gateway-card::before {
       content: '';
       position: absolute;
       top: 0;
@@ -62,8 +62,8 @@
       background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
     }
 
-    /* Header & Badge */
-    .badge-bar {
+    /* Sponsor Badge */
+    .badge-wrap {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -74,62 +74,61 @@
       font-size: 0.78rem;
       font-weight: 800;
       color: var(--accent-green);
-      margin-bottom: 20px;
+      margin-bottom: 22px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .pulse-dot {
+    .live-dot {
       width: 8px;
       height: 8px;
       background: var(--accent-green);
       border-radius: 50%;
       box-shadow: 0 0 10px var(--accent-green);
-      animation: pulseDot 1.4s infinite;
+      animation: blinkDot 1.4s infinite;
     }
 
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
     h1 {
-      font-size: 1.8rem;
+      font-size: 1.7rem;
       font-weight: 800;
       letter-spacing: -0.5px;
       margin-bottom: 10px;
-      line-height: 1.25;
     }
 
     .subtitle {
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       color: var(--text-muted);
-      margin-bottom: 28px;
+      margin-bottom: 26px;
       line-height: 1.5;
     }
 
-    /* Verification Box */
+    /* Verification Box & Countdown */
     .timer-panel {
       background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
       padding: 24px;
       margin-bottom: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
     .counter-display {
-      font-size: 2.8rem;
+      font-size: 3rem;
       font-weight: 900;
       color: var(--accent-green);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
 
-    .counter-label {
+    .counter-status {
       font-size: 0.88rem;
       color: var(--text-muted);
       font-weight: 600;
@@ -138,7 +137,7 @@
     .progress-bar-wrap {
       width: 100%;
       height: 8px;
-      background: #0d1424;
+      background: #090e18;
       border-radius: 20px;
       overflow: hidden;
       border: 1px solid #1a253d;
@@ -152,7 +151,7 @@
     }
 
     /* Main Action Button */
-    .btn-unlock {
+    .btn-action {
       width: 100%;
       padding: 18px 24px;
       border-radius: var(--radius-sm);
@@ -170,526 +169,181 @@
       text-decoration: none;
     }
 
-    .btn-unlock.ready {
+    .btn-action.ready {
       background: linear-gradient(135deg, var(--accent-green), #00c853);
       color: #03140a;
       cursor: pointer;
       box-shadow: 0 0 30px var(--accent-glow);
-      animation: pulseButton 1.8s infinite;
+      animation: pulseAction 1.8s infinite;
     }
 
-    @keyframes pulseButton {
+    @keyframes pulseAction {
       0% { transform: scale(1); }
       50% { transform: scale(1.02); }
       100% { transform: scale(1); }
     }
 
-    /* Clear Guidance Modal */
-    #redirection-modal {
+    /* Redirection Confirmation Area */
+    #forwarder-box {
       display: none;
-      margin-top: 20px;
+      margin-top: 18px;
+      padding: 16px;
       background: rgba(0, 240, 118, 0.08);
       border: 1px solid var(--accent-green);
       border-radius: var(--radius-sm);
-      padding: 18px;
       text-align: left;
     }
 
-    #redirection-modal h4 {
+    #forwarder-box h4 {
       color: var(--accent-green);
       font-size: 0.95rem;
       margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
-    #redirection-modal p {
+    #forwarder-box p {
       font-size: 0.85rem;
       color: #e2e8f0;
       line-height: 1.5;
     }
 
-    .direct-link-manual {
+    .manual-link {
       display: inline-block;
-      margin-top: 10px;
+      margin-top: 8px;
       color: var(--accent-green);
       font-weight: 800;
       text-decoration: underline;
       font-size: 0.88rem;
     }
 
-    /* Footer Meta */
-    .meta-footer {
+    .meta-bar {
       margin-top: 24px;
       font-size: 0.78rem;
       color: var(--text-muted);
       display: flex;
       justify-content: space-between;
-      border-top: 1px solid var(--border-subtle);
-      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 14px;
     }
   </style>
 </head>
 <body>
 
-  <div class="gateway-container">
+  <div class="gateway-card">
     
-    <!-- Sponsor Status Badge -->
-    <div class="badge-bar">
-      <div class="pulse-dot"></div>
+    <!-- Verified Header -->
+    <div class="badge-wrap">
+      <div class="live-dot"></div>
       <span>Adsterra Commercial Monetizer Active</span>
     </div>
 
     <h1>Access TV0 Spatial Mosaic</h1>
     <p class="subtitle">
-      This session is sponsored by our ad partner. Please allow the verification countdown to complete to unlock your destination.
+      This session is sponsored by our ad network partner. The verification countdown will unlock your destination automatically.
     </p>
 
     <!-- 5-Second Verification Engine -->
     <div class="timer-panel">
-      <div class="counter-display" id="secondsNum">5</div>
-      <div class="counter-label" id="statusLabel">Verifying commercial session...</div>
+      <div class="counter-display" id="secondsCounter">5</div>
+      <div class="counter-status" id="timerStatus">Verifying commercial session...</div>
       
       <div class="progress-bar-wrap">
-        <div class="progress-bar-fill" id="progressFill"></div>
+        <div class="progress-bar-fill" id="progressBar"></div>
       </div>
     </div>
 
-    <!-- The Single Action Button -->
-    <button id="unlockActionBtn" class="btn-unlock" onclick="handleUnlockAndProceed()">
-      <span>⏳ Waiting for commercial timer...</span>
+    <!-- Single Action Button (Guaranteed to open TV0) -->
+    <button id="mainActionButton" class="btn-action" onclick="unlockAndNavigate()">
+      <span>⏳ Commercial verification in progress...</span>
     </button>
 
-    <!-- Clear Guidance Screen upon click -->
-    <div id="redirection-modal">
-      <h4>✓ Verification Complete!</h4>
+    <!-- Guidance message when clicked -->
+    <div id="forwarder-box">
+      <h4>✓ Opening TV0 Spatial Mosaic...</h4>
       <p>
-        <strong>1.</strong> The sponsor offer has opened in a new tab to credit your ad payout.<br />
-        <strong>2.</strong> Your <strong>TV0 App</strong> is loading right now in this tab.
+        Your sponsor session has been verified and opened in a separate tab to credit your earnings.
       </p>
-      <a id="manualLink" href="#" class="direct-link-manual">👉 Click here if TV0.html doesn't open automatically</a>
+      <a id="manualDirectLink" href="#" class="manual-link">👉 Click here if TV0 doesn't open automatically</a>
     </div>
 
-    <!-- Live Parameters Footer -->
-    <div class="meta-footer">
+    <div class="meta-bar">
       <span>Key: <code>473d6c40...</code></span>
-      <span>Destination: <strong>TV0.html</strong></span>
+      <span>Target: <strong>TV0.html</strong></span>
     </div>
 
   </div>
 
   <script>
-    // HARDCODED DESTINATIONS
-    const ADSTERRA_SMARTLINK = "https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac";
+    // YOUR VERIFIED URLS
+    const ADSTERRA_DIRECT_LINK = "https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac";
     const TARGET_DESTINATION = "https://ds-ds-ship-it.github.io/iphone-html-terminal/mvx-spatial-mosaic-v3/TV0.html";
 
-    const TOTAL_SECONDS = 5;
-    let secondsRemaining = TOTAL_SECONDS;
-    let countdownInterval = null;
+    const COUNTDOWN_SECONDS = 5;
+    let secondsLeft = COUNTDOWN_SECONDS;
+    let intervalTimer = null;
 
     window.addEventListener("DOMContentLoaded", () => {
       startCountdown();
     });
 
     /* ========================================================
-       5-SECOND COUNTDOWN VERIFICATION
+       5-SECOND VERIFICATION COUNTDOWN
        ======================================================== */
     function startCountdown() {
-      const numEl = document.getElementById("secondsNum");
-      const labelEl = document.getElementById("statusLabel");
-      const fillEl = document.getElementById("progressFill");
-      const btnEl = document.getElementById("unlockActionBtn");
+      const counterEl = document.getElementById("secondsCounter");
+      const statusEl = document.getElementById("timerStatus");
+      const progressEl = document.getElementById("progressBar");
+      const btnEl = document.getElementById("mainActionButton");
 
-      countdownInterval = setInterval(() => {
-        secondsRemaining--;
+      intervalTimer = setInterval(() => {
+        secondsLeft--;
 
-        if (numEl) numEl.textContent = secondsRemaining;
+        if (counterEl) counterEl.textContent = secondsLeft;
 
-        // Progress bar percentage
-        const pct = Math.round(((TOTAL_SECONDS - secondsRemaining) / TOTAL_SECONDS) * 100);
-        if (fillEl) fillEl.style.width = pct + "%";
+        const progressPercent = Math.round(((COUNTDOWN_SECONDS - secondsLeft) / COUNTDOWN_SECONDS) * 100);
+        if (progressEl) progressEl.style.width = progressPercent + "%";
 
-        if (secondsRemaining <= 0) {
-          clearInterval(countdownInterval);
+        if (secondsLeft <= 0) {
+          clearInterval(intervalTimer);
 
-          // Unlock UI
-          if (numEl) numEl.textContent = "✓";
-          if (labelEl) labelEl.textContent = "Commercial verified! Ready to launch.";
-          
+          if (counterEl) counterEl.textContent = "✓";
+          if (statusEl) statusEl.textContent = "Commercial verified! Ready to launch.";
+
           btnEl.classList.add("ready");
-          btnEl.innerHTML = "👉 UNLOCK & LAUNCH TV0 MOSAIC ➔";
+          btnEl.innerHTML = "👉 CONTINUE TO TV0 SPATIAL MOSAIC ➔";
         }
       }, 1000);
     }
 
     /* ========================================================
-       DUAL-ROUTE EXECUTION: EARN ON ADSTERRA & OPEN TV0
+       DUAL ACTION: CREDITS ADSTERRA & OPENS TV0.HTML
        ======================================================== */
-    function handleUnlockAndProceed() {
-      if (secondsRemaining > 0) return; // Still locked
+    function unlockAndNavigate() {
+      if (secondsLeft > 0) return; // Still locked
 
-      const modal = document.getElementById("redirection-modal");
-      const manualLink = document.getElementById("manualLink");
-      const btnEl = document.getElementById("unlockActionBtn");
+      const box = document.getElementById("forwarder-box");
+      const manualLink = document.getElementById("manualDirectLink");
+      const btnEl = document.getElementById("mainActionButton");
 
-      modal.style.display = "block";
+      box.style.display = "block";
       manualLink.href = TARGET_DESTINATION;
       btnEl.style.display = "none";
 
-      // 1. Open the real Adsterra Smartlink in a separate tab (registers payout)
+      // 1. Open the Adsterra direct link in a new tab (registers impression and credits account)
       try {
-        window.open(ADSTERRA_SMARTLINK, "_blank");
-      } catch (e) {
-        console.warn("Popup blocked, continuing...", e);
+        window.open(ADSTERRA_DIRECT_LINK, "_blank");
+      } catch (err) {
+        console.warn("Popup notice:", err);
       }
 
-      // 2. Immediately navigate THIS window to TV0.html
+      // 2. Immediately forward this window to TV0.html
       setTimeout(() => {
         window.location.replace(TARGET_DESTINATION);
-      }, 400);
+      }, 300);
 
       // 3. Fallback: Force location update if browser stalls
       setTimeout(() => {
         window.location.href = TARGET_DESTINATION;
       }, 1200);
-    }
-  </script>
-</body>
-</html>    /* ========================================================
-       TOP PERSISTENT CONTROL BAR (NEVER DISAPPEARS)
-       ======================================================== */
-    #ad-control-bar {
-      height: 68px;
-      width: 100%;
-      background: rgba(15, 22, 38, 0.98);
-      border-bottom: 2px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      z-index: 9999999;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(14px);
-    }
-
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .live-dot {
-      width: 10px;
-      height: 10px;
-      background: var(--accent-green);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent-green);
-      animation: blink 1.5s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .status-meta h1 {
-      font-size: 0.92rem;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .status-meta p {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-    }
-
-    .progress-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      min-width: 200px;
-    }
-
-    .timer-text {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .progress-track {
-      width: 100%;
-      max-width: 220px;
-      height: 6px;
-      background: #1e293b;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
-      transition: width 1s linear;
-    }
-
-    /* The Main Action Button: Takes User Directly to TV0.html */
-    .btn-destination {
-      background: #1c2638;
-      color: #64748b;
-      border: 1px solid #2a374f;
-      padding: 12px 24px;
-      border-radius: 30px;
-      font-weight: 800;
-      font-size: 0.92rem;
-      cursor: not-allowed;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.25s ease;
-      white-space: nowrap;
-    }
-
-    .btn-destination.ready {
-      background: linear-gradient(135deg, var(--accent-green), #00c853);
-      color: #03140a;
-      border-color: var(--accent-green);
-      cursor: pointer;
-      box-shadow: 0 0 25px var(--accent-glow);
-      animation: pulseGreen 1.8s infinite;
-    }
-
-    @keyframes pulseGreen {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.03); }
-      100% { transform: scale(1); }
-    }
-
-    /* ========================================================
-       MAIN REAL COMMERCIAL STAGE (Direct Adsterra Smartlink)
-       ======================================================== */
-    #ad-stage {
-      flex: 1;
-      width: 100%;
-      height: calc(100% - 68px);
-      position: relative;
-      background: #000;
-    }
-
-    /* Sandboxed iFrame containing your exact live Adsterra Link */
-    #adsterra-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      background: #000;
-    }
-
-    /* Fallback Card if Browser Blocks iFrame Embedding */
-    #ad-fallback-card {
-      position: absolute;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 30px;
-      background: #0a0f1d;
-      text-align: center;
-      z-index: 10;
-    }
-
-    .fallback-box {
-      max-width: 520px;
-      background: #121a2d;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 32px 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    }
-
-    .fallback-box h2 {
-      font-size: 1.25rem;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-
-    .fallback-box p {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    .btn-ad-direct {
-      display: inline-block;
-      background: #2563eb;
-      color: #fff;
-      text-decoration: none;
-      padding: 12px 22px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- ==============================================
-       TOP CONTROLLER WITH TIMER & SKIP BUTTON
-       ============================================== -->
-  <header id="ad-control-bar">
-    
-    <div class="brand-group">
-      <div class="live-dot"></div>
-      <div class="status-meta">
-        <h1>SPONSORED COMMERCIAL <span style="color: var(--accent-green); font-size: 0.7rem; background: rgba(0,240,118,0.15); padding: 2px 6px; border-radius: 4px;">ACTIVE</span></h1>
-        <p>Dest: <strong>TV0 Spatial Mosaic</strong></p>
-      </div>
-    </div>
-
-    <!-- Countdown & Progress Indicator -->
-    <div class="progress-center">
-      <div class="timer-text" id="timerLabel">Please wait <span id="secDisplay">5</span>s to get paid...</div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progressBar"></div>
-      </div>
-    </div>
-
-    <!-- DIRECT ACTION BUTTON TO TV0.HTML -->
-    <div>
-      <a 
-        id="continueBtn" 
-        class="btn-destination" 
-        href="javascript:void(0);" 
-        onclick="goToTVApp();"
-      >
-        Waiting (<span id="btnTimer">5</span>s)
-      </a>
-    </div>
-
-  </header>
-
-  <!-- ==============================================
-       MAIN STAGE: REAL ADSTERRA ADVERTISEMENT
-       ============================================== -->
-  <main id="ad-stage">
-    
-    <!-- 
-      Loads your real Adsterra Smartlink directly.
-      Sandboxed so the ad CANNOT hijack your top bar or prevent you from reaching TV0.html
-    -->
-    <iframe 
-      id="adsterra-frame"
-      src="https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac"
-      sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
-      allow="autoplay; fullscreen"
-    ></iframe>
-
-    <!-- Browser Fallback Screen in case Safari blocks third-party iframe embedding -->
-    <div id="ad-fallback-card">
-      <div class="fallback-box">
-        <h2>⚡ Verified Sponsor Broadcast</h2>
-        <p>
-          Your browser is running the monetization sequence for this session. The commercial has been initialized.
-        </p>
-        <a 
-          href="https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac" 
-          target="_blank" 
-          class="btn-ad-direct"
-        >
-          View Full Advertiser Offer ↗
-        </a>
-        <div style="font-size: 0.78rem; color: var(--text-muted);">
-          Your button at the top will unlock automatically.
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <script>
-    // HARDCODED CONSTANTS
-    const TARGET_TV_APP = "https://ds-ds-ship-it.github.io/iphone-html-terminal/mvx-spatial-mosaic-v3/TV0.html";
-    const ADSTERRA_LINK = "https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac";
-    
-    const TOTAL_SECONDS = 5;
-    let secondsLeft = TOTAL_SECONDS;
-    let countdownInterval = null;
-
-    window.addEventListener("DOMContentLoaded", () => {
-      startMonetizationCountdown();
-      checkIframeDisplay();
-    });
-
-    /* ========================================================
-       5-SECOND COUNTDOWN ENGINE
-       ======================================================== */
-    function startMonetizationCountdown() {
-      const btn = document.getElementById("continueBtn");
-      const secDisplay = document.getElementById("secDisplay");
-      const btnTimer = document.getElementById("btnTimer");
-      const progressBar = document.getElementById("progressBar");
-      const timerLabel = document.getElementById("timerLabel");
-
-      countdownInterval = setInterval(() => {
-        secondsLeft--;
-        
-        // Update countdown text
-        if (secDisplay) secDisplay.textContent = secondsLeft;
-        if (btnTimer) btnTimer.textContent = secondsLeft;
-
-        // Progress bar percentage calculation
-        const percent = Math.round(((TOTAL_SECONDS - secondsLeft) / TOTAL_SECONDS) * 100);
-        if (progressBar) progressBar.style.width = percent + "%";
-
-        // When countdown completes
-        if (secondsLeft <= 0) {
-          clearInterval(countdownInterval);
-
-          // Unlock the button
-          btn.classList.add("ready");
-          btn.innerHTML = "👉 SKIP AD & OPEN TV APP ➔";
-          btn.href = TARGET_TV_APP; // Direct browser anchor
-          
-          timerLabel.innerHTML = "<span style='color:var(--accent-green); font-weight:800;'>✓ Impression Verified! Click to open TV App:</span>";
-        }
-      }, 1000);
-    }
-
-    /* ========================================================
-       DESTINATION NAVIGATION: 100% RELIABLE TO TV0.HTML
-       ======================================================== */
-    function goToTVApp() {
-      if (secondsLeft > 0) return; // Still locked
-
-      // Navigate immediately and permanently to TV0.html
-      window.location.href = TARGET_TV_APP;
-    }
-
-    /* ========================================================
-       SAFARI / BROWSER IFRAME COMPLIANCE CHECK
-       ======================================================== */
-    function checkIframeDisplay() {
-      const frame = document.getElementById("adsterra-frame");
-      
-      // If a browser blocks third-party iframe loading due to strict headers,
-      // reveal the fallback card so the user is never left with an empty void
-      setTimeout(() => {
-        try {
-          if (!frame || frame.offsetHeight === 0) {
-            document.getElementById("ad-fallback-card").style.display = "flex";
-          }
-        } catch(e) {
-          // Cross-origin check
-        }
-      }, 1500);
     }
   </script>
 </body>
