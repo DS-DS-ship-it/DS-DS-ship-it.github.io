@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIOM: The Matrix Duality</title>
+<style>
+  :root {
+    --bg-dark: #070913;
+    --alpha-red: #ff2a5f;
+    --alpha-glow: rgba(255, 42, 95, 0.45);
+    --omega-cyan: #00f0ff;
+    --omega-glow: rgba(0, 240, 255, 0.45);
+    --gold: #ffd000;
+    --gold-glow: rgba(255, 208, 0, 0.5);
+    --cell-bg: rgba(14, 20, 38, 0.8);
+    --cell-border: rgba(70, 90, 140, 0.35);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: #e2e8f0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  canvas#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HUD HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 1200px;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(13, 18, 36, 0.95) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .logo {
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: 5px;
+    background: linear-gradient(90deg, var(--alpha-red), #fff, var(--omega-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
+  }
+
+  .turn-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(15, 23, 42, 0.85);
+    padding: 8px 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  }
+
+  .turn-indicator {
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ap-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ap-gem {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #334155;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .ap-gem.active-red {
+    background: var(--alpha-red);
+    box-shadow: 0 0 12px var(--alpha-red);
+    transform: scale(1.25);
+  }
+
+  .ap-gem.active-cyan {
+    background: var(--omega-cyan);
+    box-shadow: 0 0 12px var(--omega-cyan);
+    transform: scale(1.25);
+  }
+
+  .hud-btn {
+    background: rgba(30, 41, 59, 0.75);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .hud-btn:hover {
+    background: rgba(51, 65, 85, 0.95);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255,255,255,0.25);
+  }
+
+  /* MAIN PLAY AREA */
+  main {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 20px;
+    padding: 16px 20px;
+    flex: 1;
+  }
+
+  @media (max-width: 1024px) {
+    main {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+  }
+
+  /* SIDE PANELS */
+  .side-panel {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+
+  .player-title {
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    font-size: 1.1rem;
+  }
+
+  .player-alpha .player-title { color: var(--alpha-red); text-shadow: 0 0 12px var(--alpha-glow); }
+  .player-omega .player-title { color: var(--omega-cyan); text-shadow: 0 0 12px var(--omega-glow); }
+
+  .metric-box {
+    background: rgba(10, 15, 30, 0.75);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .metric-value {
+    font-weight: 700;
+  }
+
+  .log-box {
+    flex: 1;
+    min-height: 180px;
+    max-height: 220px;
+    background: rgba(7, 10, 20, 0.9);
+    border-radius: 10px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .log-entry {
+    color: #94a3b8;
+    line-height: 1.35;
+    border-left: 2px solid #334155;
+    padding-left: 6px;
+  }
+
+  .log-entry.red { border-left-color: var(--alpha-red); color: #fca5a5; }
+  .log-entry.cyan { border-left-color: var(--omega-cyan); color: #a5f3fc; }
+  .log-entry.gold { border-left-color: var(--gold); color: #fef08a; }
+
+  /* THE MATRIX BOARD */
+  .board-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .matrix-wrapper {
+    position: relative;
+    padding: 26px;
+    background: radial-gradient(circle at center, rgba(30, 45, 80, 0.4) 0%, rgba(10, 14, 28, 0.92) 75%);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.85);
+  }
+
+  .col-scores-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 84px);
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-left: 44px;
+  }
+
+  .col-score-tag {
+    text-align: center;
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--omega-cyan);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+  }
+
+  .matrix-grid-container {
+    display: flex;
+    gap: 12px;
+  }
+
+  .row-scores-bar {
+    display: grid;
+    grid-template-rows: repeat(4, 116px);
+    gap: 12px;
+    align-items: center;
+  }
+
+  .row-score-tag {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-align: center;
+    background: rgba(255, 42, 95, 0.08);
+    border: 1px solid rgba(255, 42, 95, 0.3);
+    border-radius: 6px;
+    padding: 6px 4px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--alpha-red);
+    box-shadow: 0 0 10px rgba(255, 42, 95, 0.1);
+    height: 116px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 84px);
+    grid-template-rows: repeat(4, 116px);
+    gap: 12px;
+  }
+
+  .cell {
+    background: var(--cell-bg);
+    border: 1px solid var(--cell-border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    perspective: 800px;
+  }
+
+  .cell:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(30, 45, 80, 0.85);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+  }
+
+  .cell.target-valid {
+    border-color: var(--gold);
+    background: rgba(255, 208, 0, 0.12);
+    box-shadow: 0 0 15px var(--gold-glow);
+    animation: targetPulse 1.2s infinite alternate;
+  }
+
+  .cell.target-override {
+    border-color: #ff8800;
+    background: rgba(255, 136, 0, 0.22);
+    box-shadow: 0 0 18px rgba(255, 136, 0, 0.7);
+    animation: overridePulse 0.9s infinite alternate;
+  }
+
+  @keyframes targetPulse {
+    0% { transform: scale(0.98); box-shadow: 0 0 8px var(--gold-glow); }
+    100% { transform: scale(1.02); box-shadow: 0 0 18px var(--gold); }
+  }
+
+  @keyframes overridePulse {
+    0% { transform: scale(0.98); box-shadow: 0 0 10px rgba(255, 136, 0, 0.5); }
+    100% { transform: scale(1.03); box-shadow: 0 0 24px rgba(255, 136, 0, 0.9); }
+  }
+
+  /* Shift Controls */
+  .shift-controls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .shift-btn {
+    pointer-events: auto;
+    position: absolute;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--omega-cyan);
+    color: var(--omega-cyan);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--omega-glow);
+    transition: all 0.2s;
+  }
+
+  .shift-btn:hover {
+    background: var(--omega-cyan);
+    color: #000;
+    transform: scale(1.25);
+  }
+
+  /* CARD GRAPHICS */
+  .card-node {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px;
+    font-weight: 800;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    transition: transform 0.35s ease, box-shadow 0.3s ease;
+  }
+
+  .card-node.red {
+    background: linear-gradient(135deg, #2a0b16 0%, #160812 100%);
+    border: 1.5px solid var(--alpha-red);
+    color: var(--alpha-red);
+    box-shadow: inset 0 0 12px rgba(255, 42, 95, 0.25), 0 4px 15px rgba(0,0,0,0.7);
+  }
+
+  .card-node.black {
+    background: linear-gradient(135deg, #091a28 0%, #061019 100%);
+    border: 1.5px solid var(--omega-cyan);
+    color: var(--omega-cyan);
+    box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.25), 0 4px 15px rgba(0,0,0,0.7);
+  }
+
+  .card-node.superposed {
+    background: repeating-linear-gradient(45deg, #0f172a, #0f172a 8px, #1e1b4b 8px, #1e1b4b 16px);
+    border: 1.5px dashed var(--gold);
+    color: var(--gold);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .superposed-glyph {
+    font-size: 1.8rem;
+    animation: rotateGlyph 8s linear infinite;
+    text-shadow: 0 0 15px var(--gold-glow);
+  }
+
+  @keyframes rotateGlyph {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .card-center {
+    align-self: center;
+    font-size: 1.6rem;
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  .card-bot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    transform: rotate(180deg);
+    line-height: 1;
+  }
+
+  /* ACTION DRAWER & HAND CONTAINER */
+  .hand-and-actions {
+    position: relative;
+    z-index: 5;
+    width: 100%;
+    max-width: 1200px;
+    padding: 10px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.3s ease;
+  }
+
+  .hand-and-actions.locked {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: grayscale(0.5);
+  }
+
+  .action-deck-shelf {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .action-btn {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  }
+
+  .action-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 15px var(--gold-glow);
+    transform: translateY(-2px);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .action-btn.active-action {
+    background: var(--gold);
+    color: #070913;
+    box-shadow: 0 0 20px var(--gold);
+  }
+
+  .hand-rack {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    min-height: 130px;
+    padding: 6px;
+    flex-wrap: wrap;
+  }
+
+  .hand-card-wrapper {
+    width: 86px;
+    height: 124px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .hand-card-wrapper:hover {
+    transform: translateY(-16px) scale(1.08);
+    z-index: 10;
+  }
+
+  .hand-card-wrapper.selected {
+    transform: translateY(-22px) scale(1.12);
+    filter: drop-shadow(0 0 16px var(--gold));
+    z-index: 20;
+  }
+
+  /* MODAL STYLING */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-card {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    max-width: 650px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    position: relative;
+  }
+
+  .modal-card h2 {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--alpha-red), var(--gold), var(--omega-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .modal-card p, .modal-card li {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #cbd5e1;
+    margin-bottom: 10px;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 18px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  /* PROBE MODAL */
+  .probe-card {
+    max-width: 420px;
+    text-align: center;
+  }
+
+  .probe-options {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+
+  .probe-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.2s;
+  }
+
+  .probe-btn.even { background: rgba(0, 240, 255, 0.2); color: var(--omega-cyan); border-color: var(--omega-cyan); }
+  .probe-btn.odd { background: rgba(255, 42, 95, 0.2); color: var(--alpha-red); border-color: var(--alpha-red); }
+  .probe-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+
+  /* VICTORY OVERLAY */
+  .singularity-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(2, 6, 23, 0.98) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+
+  .singularity-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .singularity-title {
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: 6px;
+    text-align: center;
+  }
+
+  .singularity-subtitle {
+    font-size: 1.2rem;
+    max-width: 500px;
+    text-align: center;
+    color: #94a3b8;
+  }
+
+  .play-again-btn {
+    margin-top: 16px;
+    background: linear-gradient(90deg, var(--alpha-red), var(--omega-cyan));
+    border: none;
+    color: #fff;
+    font-weight: 800;
+    padding: 14px 36px;
+    border-radius: 999px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    letter-spacing: 2px;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+    transition: transform 0.2s;
+  }
+
+  .play-again-btn:hover {
+    transform: scale(1.08);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<header>
+  <div class="logo">AXIOM</div>
+
+  <div class="turn-banner" id="turn-banner">
+    <div class="turn-indicator" id="turn-indicator">
+      <span id="turn-dot">●</span>
+      <span id="turn-player-name">ALPHA INITIATIVE</span>
+    </div>
+    <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.2);"></div>
+    <div class="ap-container" title="Action Points Remaining">
+      <span style="font-size: 0.75rem; color:#94a3b8; font-weight:700;">AP:</span>
+      <div class="ap-gem active-red" id="ap-gem-1"></div>
+      <div class="ap-gem active-red" id="ap-gem-2"></div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 8px;">
+    <button class="hud-btn" id="sound-btn" onclick="soundEngine.toggleSound()">AUDIO: ON</button>
+    <button class="hud-btn" onclick="openModal('rules')">CODEX</button>
+    <button class="hud-btn" onclick="toggleMode()">MODE: <span id="mode-label">VS AI</span></button>
+  </div>
+</header>
+
+<main>
+  <!-- ALPHA PANEL (RED / ROWS) -->
+  <aside class="side-panel player-alpha">
+    <div class="player-header">
+      <div class="player-title">ALPHA (RED)</div>
+      <div style="font-size: 0.8rem; color: #fda4af;">ROW MASTER</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-row"><span>Total Eigen-Score:</span><span class="metric-value" id="alpha-score-total">0</span></div>
+      <div class="metric-row"><span>Rows Dominated:</span><span class="metric-value" id="alpha-rows-won">0 / 4</span></div>
+      <div class="metric-row"><span>Deck In Reserve:</span><span class="metric-value" id="alpha-deck-count">21</span></div>
+      <div class="metric-row"><span>Discharged Cards:</span><span class="metric-value" id="alpha-discard-count">0</span></div>
+    </div>
+    <div style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">DISCIPLINARY OPERATORS:</div>
+    <div style="font-size: 0.75rem; color: #fda4af; line-height: 1.4;">
+      <b>♥ Hearts:</b> Permutation (Swap 2 in Row)<br>
+      <b>♦ Diamonds:</b> Superposition (Phase Flip)
+    </div>
+    <div style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-top: 6px;">QUANTUM CHRONICLE:</div>
+    <div class="log-box" id="event-log"></div>
+  </aside>
+
+  <!-- MATRIX FIELD -->
+  <section class="board-center">
+    <div class="matrix-wrapper">
+      <!-- Col Score Trackers (Omega) -->
+      <div class="col-scores-bar">
+        <div class="col-score-tag" id="col-tag-0">C0: 0</div>
+        <div class="col-score-tag" id="col-tag-1">C1: 0</div>
+        <div class="col-score-tag" id="col-tag-2">C2: 0</div>
+        <div class="col-score-tag" id="col-tag-3">C3: 0</div>
+      </div>
+
+      <div class="matrix-grid-container">
+        <!-- Row Score Trackers (Alpha) -->
+        <div class="row-scores-bar">
+          <div class="row-score-tag" id="row-tag-0">R0: 0</div>
+          <div class="row-score-tag" id="row-tag-1">R1: 0</div>
+          <div class="row-score-tag" id="row-tag-2">R2: 0</div>
+          <div class="row-score-tag" id="row-tag-3">R3: 0</div>
+        </div>
+
+        <!-- 4x4 Grid -->
+        <div class="matrix-grid" id="matrix-grid"></div>
+      </div>
+
+      <!-- Arrow overlay for shift controls -->
+      <div class="shift-controls" id="shift-controls" style="display: none;"></div>
+    </div>
+  </section>
+
+  <!-- OMEGA PANEL (BLACK / COLUMNS) -->
+  <aside class="side-panel player-omega">
+    <div class="player-header">
+      <div class="player-title">OMEGA (BLACK)</div>
+      <div style="font-size: 0.8rem; color: #a5f3fc;">COLUMN MASTER</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-row"><span>Total Eigen-Score:</span><span class="metric-value" id="omega-score-total">0</span></div>
+      <div class="metric-row"><span>Cols Dominated:</span><span class="metric-value" id="omega-cols-won">0 / 4</span></div>
+      <div class="metric-row"><span>Deck In Reserve:</span><span class="metric-value" id="omega-deck-count">21</span></div>
+      <div class="metric-row"><span>Discharged Cards:</span><span class="metric-value" id="omega-discard-count">0</span></div>
+    </div>
+    <div style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">DISCIPLINARY OPERATORS:</div>
+    <div style="font-size: 0.75rem; color: #a5f3fc; line-height: 1.4;">
+      <b>♣ Clubs:</b> Cyclic Translation (Shift Line)<br>
+      <b>♠ Spades:</b> Annihilation (Banish ≤ Rank)
+    </div>
+    <div style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; margin-top: 6px;">MATRIX RESONANCE:</div>
+    <div class="metric-box" style="font-size: 0.75rem; line-height: 1.5; color: #cbd5e1;">
+      Diagonal \ : <span id="diag-1-score">0</span><br>
+      Diagonal / : <span id="diag-2-score">0</span>
+    </div>
+  </aside>
+</main>
+
+<!-- HAND & ACTIONS RACK -->
+<div class="hand-and-actions" id="hand-and-actions">
+  <div class="action-deck-shelf">
+    <button class="action-btn active-action" id="act-play" onclick="selectAction('PLAY')">✦ DEPLOY / OVERRIDE</button>
+    <button class="action-btn" id="act-superpose" onclick="selectAction('SUPERPOSE')">◈ SUPERPOSE (FACE-DOWN)</button>
+    <button class="action-btn" id="act-operate" onclick="selectAction('OPERATE')">⚡ SUIT OPERATOR</button>
+    <button class="action-btn" id="act-recharge" onclick="doRecharge()">⟳ RECHARGE (DRAW)</button>
+    <button class="action-btn" id="act-pass" onclick="doPass()">⊘ PASS AP</button>
+  </div>
+
+  <div class="hand-rack" id="hand-rack"></div>
+</div>
+
+<!-- MODAL: CODEX / RULES -->
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal-card">
+    <button class="modal-close-btn" onclick="closeModal('rules')">&times;</button>
+    <h2>AXIOM: THE MATRIX DUALITY</h2>
+    <p><b>AXIOM</b> is a mathematically complete zero-luck game of linear transformations and group theory played on a 4x4 matrix using a single 52-card deck.</p>
+    
+    <h3 style="color:var(--gold); margin-top:14px; margin-bottom:6px;">THE DUALITY</h3>
+    <li><b>Alpha (Red Arsenal):</b> Holds 13 Hearts + 13 Diamonds. Dominates <b>Rows</b>.</li>
+    <li><b>Omega (Black Arsenal):</b> Holds 13 Spades + 13 Clubs. Dominates <b>Columns</b>.</li>
+
+    <h3 style="color:var(--gold); margin-top:14px; margin-bottom:6px;">ACTIONS (2 AP PER TURN)</h3>
+    <li><b>DEPLOY & AUTO-OVERRIDE:</b> Select any card in hand. Click an empty cell to place it, OR click directly on any lower card to automatically <b>Transcend</b> and override it! (Ace can override any King: the <i>Ouroboros Strike</i>).</li>
+    <li><b>SUPERPOSE:</b> Place card face-down on an empty cell. Contributes 0 points until observed.</li>
+    <li><b>OPERATE:</b> Discard a card from hand to trigger its mathematical suit action:
+      <ul style="margin-left:20px; margin-top:4px;">
+        <li><b>♥ Heart:</b> Swap any 2 cards within the same row.</li>
+        <li><b>♦ Diamond:</b> Flip any card on the matrix (Face-Up ↔ Face-Down).</li>
+        <li><b>♣ Club:</b> Shift any row or column cyclically (toroidal wrap).</li>
+        <li><b>♠ Spade:</b> Banish any face-down card or opponent's card of rank ≤ Spade rank.</li>
+      </ul>
+    </li>
+    <li><b>PROBE:</b> Click on a face-down card to guess its parity (Even/Odd). Correct guess banishes it and draws a card.</li>
+    <li><b>AUTOMATIC TURN ADVANCEMENT:</b> If you have no cards left in hand, the turn automatically passes so you never have to manually skip turns.</li>
+
+    <h3 style="color:var(--gold); margin-top:14px; margin-bottom:6px;">VICTORY</h3>
+    <li><b>Eigen-Harmonic Sweep:</b> Control all 4 of your domain lines with at least one Pure Line (all 4 of your color).</li>
+    <li><b>Sovereign Convergence:</b> Control all 4 Kings face-up simultaneously.</li>
+    <li><b>Terminal Evaluation:</b> Highest total score when card decks deplete.</li>
+  </div>
+</div>
+
+<!-- MODAL: PROBE PARITY -->
+<div class="modal-overlay" id="probe-modal">
+  <div class="modal-card probe-card">
+    <h2>QUANTUM OBSERVATION</h2>
+    <p>Declare your probabilistic parity prediction for this Superposed coordinate:</p>
+    <div class="probe-options">
+      <button class="probe-btn even" onclick="resolveProbeGuess('EVEN')">EVEN PARITY</button>
+      <button class="probe-btn odd" onclick="resolveProbeGuess('ODD')">ODD PARITY</button>
+    </div>
+  </div>
+</div>
+
+<!-- VICTORY OVERLAY -->
+<div class="singularity-overlay" id="singularity-overlay">
+  <div class="singularity-title" id="vic-title">SINGULARITY ACHIEVED</div>
+  <div class="singularity-subtitle" id="vic-subtitle">The tensor continuum has collapsed into absolute alignment.</div>
+  <button class="play-again-btn" onclick="resetGame()">INITIATE NEW CONTINUUM</button>
+</div>
+
+<script>
+/* ==========================================================================
+   WEB AUDIO SYNTHESIZER
+   ========================================================================== */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioContext();
+    }
+  }
+
+  toggleSound() {
+    this.enabled = !this.enabled;
+    document.getElementById('sound-btn').innerText = `AUDIO: ${this.enabled ? 'ON' : 'OFF'}`;
+  }
+
+  playTone(freq, type = 'sine', duration = 0.2, slide = 0, vol = 0.2) {
+    if (!this.enabled) return;
+    this.init();
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      if (slide !== 0) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(10, freq + slide), this.ctx.currentTime + duration);
+      }
+      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  cardPlay() { this.playTone(320, 'triangle', 0.12, 180, 0.18); }
+  superpose() {
+    this.playTone(220, 'sine', 0.35, -80, 0.25);
+    setTimeout(() => this.playTone(440, 'sine', 0.25, 40, 0.15), 80);
+  }
+  transcend() {
+    this.playTone(180, 'sawtooth', 0.25, 260, 0.22);
+    this.playTone(90, 'sine', 0.35, -30, 0.3);
+  }
+  operate() {
+    this.playTone(550, 'sawtooth', 0.15, -200, 0.15);
+    setTimeout(() => this.playTone(720, 'square', 0.2, -100, 0.12), 60);
+  }
+  annihilate() {
+    this.playTone(120, 'sawtooth', 0.4, -60, 0.3);
+    this.playTone(60, 'sine', 0.45, -20, 0.4);
+  }
+  probe(success) {
+    if (success) {
+      this.playTone(523.25, 'triangle', 0.12, 0, 0.2);
+      setTimeout(() => this.playTone(659.25, 'triangle', 0.2, 0, 0.2), 100);
+      setTimeout(() => this.playTone(783.99, 'triangle', 0.3, 0, 0.25), 200);
+    } else {
+      this.playTone(180, 'sawtooth', 0.3, -40, 0.25);
+    }
+  }
+  victory() {
+    [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+      setTimeout(() => this.playTone(freq, 'triangle', 0.4, 0, 0.25), idx * 110);
+    });
+  }
+}
+
+const soundEngine = new SoundEngine();
+
+/* ==========================================================================
+   PARTICLE CANVAS BACKDROP
+   ========================================================================== */
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * bgCanvas.width;
+    this.y = Math.random() * bgCanvas.height;
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    this.radius = Math.random() * 1.8 + 0.6;
+    this.color = Math.random() > 0.5 ? 'rgba(255, 42, 95,' : 'rgba(0, 240, 255,';
+    this.alpha = Math.random() * 0.6 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < 0 || this.x > bgCanvas.width || this.y < 0 || this.y > bgCanvas.height) {
+      this.reset();
+    }
+  }
+  draw() {
+    bgCtx.beginPath();
+    bgCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    bgCtx.fillStyle = `${this.color}${this.alpha})`;
+    bgCtx.fill();
+  }
+}
+
+for (let i = 0; i < 70; i++) particles.push(new Particle());
+
+function renderBg() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(renderBg);
+}
+renderBg();
+
+/* ==========================================================================
+   GAME ENGINE: CORE STATE & RULES
+   ========================================================================== */
+const SUIT_SYMBOLS = {'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣'};
+const RANK_NAMES = {1: 'A', 11: 'J', 12: 'Q', 13: 'K'};
+
+class Card {
+  constructor(rank, suit) {
+    this.rank = rank;
+    this.suit = suit;
+    this.color = (suit === 'H' || suit === 'D') ? 'RED' : 'BLACK';
+    this.faceUp = true;
+    this.id = Math.random().toString(36).substr(2, 9);
+  }
+
+  get rankStr() {
+    return RANK_NAMES[this.rank] || this.rank.toString();
+  }
+}
+
+class GameState {
+  constructor() {
+    this.vsAI = true;
+    this.isAIBusy = false;
+    this.grid = Array(4).fill(null).map(() => Array(4).fill(null));
+    
+    // Alpha = 26 Red; Omega = 26 Black
+    this.alphaDeck = [];
+    ['H', 'D'].forEach(s => { for(let r=1; r<=13; r++) this.alphaDeck.push(new Card(r, s)); });
+    this.omegaDeck = [];
+    ['S', 'C'].forEach(s => { for(let r=1; r<=13; r++) this.omegaDeck.push(new Card(r, s)); });
+
+    this.shuffle(this.alphaDeck);
+    this.shuffle(this.omegaDeck);
+
+    this.alphaHand = this.alphaDeck.splice(0, 5);
+    this.omegaHand = this.omegaDeck.splice(0, 5);
+    this.alphaDiscard = [];
+    this.omegaDiscard = [];
+
+    this.currentPlayer = 'ALPHA';
+    this.ap = 2;
+    this.turn = 1;
+    this.consecutivePasses = 0;
+    this.gameOver = false;
+
+    // Interaction State
+    this.selectedHandIdx = null;
+    this.currentAction = 'PLAY';
+    this.operateStage = null;
+    this.pendingProbeCoord = null;
+  }
+
+  shuffle(deck) {
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+  }
+
+  evaluateLine(cards, targetColor) {
+    let myRanks = [];
+    let oppRanks = [];
+
+    cards.forEach(c => {
+      if (!c || !c.faceUp) return;
+      if (c.color === targetColor) myRanks.push(c.rank);
+      else oppRanks.push(c.rank);
+    });
+
+    const mySum = myRanks.reduce((a, b) => a + b, 0);
+    const oppSum = oppRanks.reduce((a, b) => a + b, 0);
+    const net = mySum - oppSum;
+    if (net <= 0) return { score: 0, pure: false, run: false };
+
+    let bonus = 0;
+    let pure = false;
+    let run = false;
+
+    if (myRanks.length === 4) {
+      bonus += 15;
+      pure = true;
+    }
+
+    const sorted = Array.from(new Set(myRanks)).sort((a,b) => a - b);
+    let streak = 1, maxStreak = 1;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i+1] === sorted[i] + 1) {
+        streak++;
+        maxStreak = Math.max(maxStreak, streak);
+      } else streak = 1;
+    }
+    if (maxStreak >= 3) {
+      bonus += maxStreak * 5;
+      run = true;
+    }
+
+    const counts = {};
+    myRanks.forEach(r => counts[r] = (counts[r] || 0) + 1);
+    Object.values(counts).forEach(cnt => {
+      if (cnt === 2) bonus += 5;
+      else if (cnt >= 3) bonus += 12;
+    });
+
+    return { score: net + bonus, pure, run };
+  }
+
+  getMetrics() {
+    const alphaRows = [];
+    for (let r = 0; r < 4; r++) {
+      alphaRows.push(this.evaluateLine(this.grid[r], 'RED'));
+    }
+
+    const omegaCols = [];
+    for (let c = 0; c < 4; c++) {
+      const colCards = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]];
+      omegaCols.push(this.evaluateLine(colCards, 'BLACK'));
+    }
+
+    const diag1 = [this.grid[0][0], this.grid[1][1], this.grid[2][2], this.grid[3][3]];
+    const diag2 = [this.grid[0][3], this.grid[1][2], this.grid[2][1], this.grid[3][0]];
+
+    const d1A = this.evaluateLine(diag1, 'RED').score;
+    const d1O = this.evaluateLine(diag1, 'BLACK').score;
+    const d2A = this.evaluateLine(diag2, 'RED').score;
+    const d2O = this.evaluateLine(diag2, 'BLACK').score;
+
+    const alphaTotal = alphaRows.reduce((acc, r) => acc + r.score, 0) + d1A + d2A;
+    const omegaTotal = omegaCols.reduce((acc, c) => acc + c.score, 0) + d1O + d2O;
+
+    return {
+      alphaRows,
+      omegaCols,
+      alphaTotal,
+      omegaTotal,
+      diag1: Math.abs(d1A - d1O),
+      diag2: Math.abs(d2A - d2O)
+    };
+  }
+
+  checkInstantWin() {
+    const metrics = this.getMetrics();
+
+    let redKings = 0, blackKings = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const card = this.grid[r][c];
+        if (card && card.faceUp && card.rank === 13) {
+          if (card.color === 'RED') redKings++;
+          else blackKings++;
+        }
+      }
+    }
+    if (redKings === 4) return { winner: 'ALPHA', reason: 'SOVEREIGN CONVERGENCE: All 4 Kings Manifested!' };
+    if (blackKings === 4) return { winner: 'OMEGA', reason: 'SOVEREIGN CONVERGENCE: All 4 Kings Manifested!' };
+
+    const allAlphaRowsActive = metrics.alphaRows.every(r => r.score > 0);
+    const hasAlphaPure = metrics.alphaRows.some(r => r.pure);
+    if (allAlphaRowsActive && hasAlphaPure) {
+      return { winner: 'ALPHA', reason: 'EIGEN-HARMONIC SWEEP: Complete Row Dominance + Pure State!' };
+    }
+
+    const allOmegaColsActive = metrics.omegaCols.every(c => c.score > 0);
+    const hasOmegaPure = metrics.omegaCols.some(c => c.pure);
+    if (allOmegaColsActive && hasOmegaPure) {
+      return { winner: 'OMEGA', reason: 'EIGEN-HARMONIC SWEEP: Complete Column Dominance + Pure State!' };
+    }
+
+    return null;
+  }
+}
+
+let G = new GameState();
+let autoPassTimeout = null;
+
+/* ==========================================================================
+   AI ENGINE (OMEGA CONTROLLER)
+   ========================================================================== */
+const AIEngine = {
+  startTurn() {
+    if (G.gameOver || G.currentPlayer !== 'OMEGA') return;
+    G.isAIBusy = true;
+    updateUI();
+    log("Omega AI calculating tensor vectors...", "cyan");
+    setTimeout(() => this.runStep(), 750);
+  },
+
+  runStep() {
+    if (G.gameOver || G.currentPlayer !== 'OMEGA' || G.ap <= 0) {
+      this.finishTurn();
+      return;
+    }
+
+    const action = this.computeBestAction();
+    this.executeAction(action);
+
+    const win = G.checkInstantWin();
+    if (win) {
+      triggerVictory(win.winner, win.reason);
+      return;
+    }
+
+    G.ap--;
+    updateUI();
+
+    if (G.ap > 0) {
+      log(`Omega preparing second action vector [AP: ${G.ap}]...`, "cyan");
+      setTimeout(() => this.runStep(), 850);
+    } else {
+      setTimeout(() => this.finishTurn(), 600);
+    }
+  },
+
+  finishTurn() {
+    G.isAIBusy = false;
+    endTurn();
+  },
+
+  computeBestAction() {
+    const hand = G.omegaHand;
+
+    if (hand.length === 0) {
+      if (G.omegaDeck.length > 0) return { type: 'RECHARGE' };
+      return { type: 'PASS' };
+    }
+
+    for (let h = 0; h < hand.length; h++) {
+      const card = hand[h];
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const target = G.grid[r][c];
+          if (target && target.faceUp && target.color === 'RED') {
+            if (card.rank > target.rank || (card.rank === 1 && target.rank === 13)) {
+              return { type: 'TRANSCEND', h, r, c, score: 30 + target.rank };
+            }
+          }
+        }
+      }
+    }
+
+    for (let h = 0; h < hand.length; h++) {
+      const card = hand[h];
+      if (card.suit === 'S') {
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            const target = G.grid[r][c];
+            if (target && target.color === 'RED' && target.faceUp && target.rank <= card.rank) {
+              return { type: 'OPERATE_S', h, r, c, score: 25 + target.rank };
+            }
+          }
+        }
+      }
+    }
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const target = G.grid[r][c];
+        if (target && !target.faceUp) {
+          const oddCount = G.alphaDiscard.filter(cd => cd.rank % 2 !== 0).length;
+          const guess = oddCount >= 4 ? 'EVEN' : 'ODD';
+          return { type: 'PROBE', r, c, guess };
+        }
+      }
+    }
+
+    let bestManifold = null;
+    let maxMetric = -1;
+    for (let h = 0; h < hand.length; h++) {
+      const card = hand[h];
+      for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 4; r++) {
+          if (G.grid[r][c] === null) {
+            const val = card.rank + (c * 2);
+            if (val > maxMetric) {
+              maxMetric = val;
+              bestManifold = { type: 'MANIFOLD', h, r, c };
+            }
+          }
+        }
+      }
+    }
+    if (bestManifold) return bestManifold;
+
+    if (G.omegaDeck.length > 0 && hand.length < 7) {
+      return { type: 'RECHARGE' };
+    }
+    return { type: 'PASS' };
+  },
+
+  executeAction(act) {
+    const hand = G.omegaHand;
+    const discard = G.omegaDiscard;
+
+    if (act.type === 'PASS') {
+      G.consecutivePasses++;
+      log("Omega AI passed action point.", "cyan");
+      return;
+    }
+
+    if (act.type === 'RECHARGE') {
+      if (G.omegaDeck.length > 0 && hand.length < 7) {
+        hand.push(G.omegaDeck.pop());
+        soundEngine.cardPlay();
+        log("Omega AI recharged 1 card from reserve.", "cyan");
+      }
+      return;
+    }
+
+    if (act.type === 'TRANSCEND') {
+      const card = hand.splice(act.h, 1)[0];
+      const target = G.grid[act.r][act.c];
+      G.alphaDiscard.push(target);
+      card.faceUp = true;
+      G.grid[act.r][act.c] = card;
+      soundEngine.transcend();
+      log(`Omega AI OVERRODE [${act.r}, ${act.c}] with ${card.rankStr}${SUIT_SYMBOLS[card.suit]}!`, "cyan");
+      return;
+    }
+
+    if (act.type === 'OPERATE_S') {
+      const spCard = hand.splice(act.h, 1)[0];
+      discard.push(spCard);
+      const target = G.grid[act.r][act.c];
+      if (target.color === 'RED') G.alphaDiscard.push(target);
+      else G.omegaDiscard.push(target);
+      G.grid[act.r][act.c] = null;
+      soundEngine.annihilate();
+      log(`Omega AI invoked ♠ SPADE: Annihilated ${target.rankStr} at [${act.r}, ${act.c}]!`, "cyan");
+      return;
+    }
+
+    if (act.type === 'PROBE') {
+      const target = G.grid[act.r][act.c];
+      target.faceUp = true;
+      const isEven = (target.rank % 2 === 0);
+      const correct = (act.guess === 'EVEN' && isEven) || (act.guess === 'ODD' && !isEven);
+      soundEngine.probe(correct);
+      if (correct) {
+        G.alphaDiscard.push(target);
+        G.grid[act.r][act.c] = null;
+        if (G.omegaDeck.length > 0) G.omegaHand.push(G.omegaDeck.pop());
+        log(`Omega AI probed [${act.r}, ${act.c}] correctly (${act.guess})! Card banished.`, "cyan");
+      } else {
+        log(`Omega AI probed [${act.r}, ${act.c}] incorrectly. Card remains face-up.`, "cyan");
+      }
+      return;
+    }
+
+    if (act.type === 'MANIFOLD') {
+      const card = hand.splice(act.h, 1)[0];
+      card.faceUp = true;
+      G.grid[act.r][act.c] = card;
+      soundEngine.cardPlay();
+      log(`Omega AI manifested ${card.rankStr}${SUIT_SYMBOLS[card.suit]} at [${act.r}, ${act.c}].`, "cyan");
+      return;
+    }
+  }
+};
+
+/* ==========================================================================
+   USER ACTION SELECTION & EXECUTION (WITH AUTOMATIC EMPTY-HAND ADVANCE)
+   ========================================================================== */
+function selectAction(act) {
+  if (G.isAIBusy) return;
+  soundEngine.init();
+  G.currentAction = act;
+  G.operateStage = null;
+  updateActionButtons();
+  renderGrid();
+}
+
+function updateActionButtons() {
+  document.getElementById('act-play').classList.toggle('active-action', G.currentAction === 'PLAY');
+  document.getElementById('act-superpose').classList.toggle('active-action', G.currentAction === 'SUPERPOSE');
+  document.getElementById('act-operate').classList.toggle('active-action', G.currentAction === 'OPERATE');
+}
+
+function doRecharge() {
+  if (G.ap <= 0 || G.gameOver || G.isAIBusy) return;
+  const deck = G.currentPlayer === 'ALPHA' ? G.alphaDeck : G.omegaDeck;
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+
+  if (deck.length === 0) {
+    log("Recharge failed: Deck exhausted!", "gold");
+    return;
+  }
+  if (hand.length >= 7) {
+    log("Recharge failed: Hand limit reached (7)!", "gold");
+    return;
+  }
+
+  soundEngine.cardPlay();
+  hand.push(deck.pop());
+  log(`${G.currentPlayer} recharged 1 card from reserve.`, G.currentPlayer === 'ALPHA' ? 'red' : 'cyan');
+  spendAP();
+}
+
+function doPass() {
+  if (G.gameOver || G.isAIBusy) return;
+  log(`${G.currentPlayer} passes remaining action points.`, 'gold');
+  G.consecutivePasses++;
+  G.ap = 0;
+  checkTurnEnd();
+}
+
+function spendAP(amount = 1) {
+  G.ap -= amount;
+  G.consecutivePasses = 0;
+  G.selectedHandIdx = null;
+
+  const win = G.checkInstantWin();
+  if (win) {
+    triggerVictory(win.winner, win.reason);
+    return;
+  }
+
+  checkTurnEnd();
+}
+
+function checkTurnEnd() {
+  updateUI();
+  if (G.ap <= 0) {
+    setTimeout(() => {
+      endTurn();
+    }, 450);
+  } else {
+    // If player has Action Points remaining but has NO cards in hand, auto-pass!
+    checkAutoPass();
+  }
+}
+
+/* AUTOMATIC ADVANCE WHEN PLAYER HAS NO CARDS TO PLAY */
+function checkAutoPass() {
+  if (G.gameOver || G.isAIBusy) return;
+  if (autoPassTimeout) clearTimeout(autoPassTimeout);
+
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const deck = G.currentPlayer === 'ALPHA' ? G.alphaDeck : G.omegaDeck;
+
+  // Trigger auto-pass whenever active player has NO cards in hand
+  if (hand.length === 0 && G.ap > 0) {
+    document.getElementById('hand-and-actions').classList.add('locked');
+
+    if (deck.length === 0) {
+      log(`${G.currentPlayer} has no cards in hand or reserve: Auto-passing turn...`, "gold");
+    } else {
+      log(`${G.currentPlayer} hand empty: Auto-passing to next phase...`, "gold");
+    }
+
+    autoPassTimeout = setTimeout(() => {
+      if (G.gameOver) return;
+      G.consecutivePasses++;
+      G.ap = 0;
+      checkTurnEnd();
+    }, 600);
+  }
+}
+
+function endTurn() {
+  if (G.gameOver) return;
+
+  const totalCardsLeft = G.alphaDeck.length + G.omegaDeck.length + G.alphaHand.length + G.omegaHand.length;
+  if (totalCardsLeft === 0 || G.consecutivePasses >= 4) {
+    const metrics = G.getMetrics();
+    if (metrics.alphaTotal > metrics.omegaTotal) {
+      triggerVictory('ALPHA', `TERMINAL METRIC DOMINANCE: ${metrics.alphaTotal} vs ${metrics.omegaTotal}`);
+    } else if (metrics.omegaTotal > metrics.alphaTotal) {
+      triggerVictory('OMEGA', `TERMINAL METRIC DOMINANCE: ${metrics.omegaTotal} vs ${metrics.alphaTotal}`);
+    } else {
+      triggerVictory('OMEGA', `TIE-BREAK SECOND-MOVER RESOLUTION: Omega claims parity.`);
+    }
+    return;
+  }
+
+  G.currentPlayer = G.currentPlayer === 'ALPHA' ? 'OMEGA' : 'ALPHA';
+  G.ap = 2;
+  G.turn++;
+  G.currentAction = 'PLAY';
+  G.selectedHandIdx = null;
+  G.operateStage = null;
+
+  // Auto-draw 1 card at start of turn
+  const deck = G.currentPlayer === 'ALPHA' ? G.alphaDeck : G.omegaDeck;
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  if (deck.length > 0 && hand.length < 7) {
+    hand.push(deck.pop());
+  }
+
+  updateActionButtons();
+  updateUI();
+
+  log(`--- Turn ${G.turn}: ${G.currentPlayer}'s Wave Induction ---`, G.currentPlayer === 'ALPHA' ? 'red' : 'cyan');
+
+  // If Omega AI turn
+  if (G.currentPlayer === 'OMEGA' && G.vsAI) {
+    AIEngine.startTurn();
+    return;
+  }
+
+  // If human player starts turn with no cards in hand (and empty deck), auto-pass!
+  checkAutoPass();
+}
+
+/* ==========================================================================
+   GRID CELL CLICK LOGIC (SEAMLESS DEPLOY & AUTO-OVERRIDE)
+   ========================================================================== */
+function onCellClick(r, c) {
+  if (G.gameOver || G.isAIBusy) return;
+  if (G.currentPlayer === 'OMEGA' && G.vsAI) return;
+  soundEngine.init();
+
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const targetCell = G.grid[r][c];
+
+  // 1. PROBE A FACE-DOWN CARD
+  if (targetCell && !targetCell.faceUp && G.currentAction !== 'OPERATE') {
+    openProbeModal(r, c);
+    return;
+  }
+
+  // 2. HEART SWAP OPERATION
+  if (G.operateStage && G.operateStage.type === 'HEART_SWAP') {
+    handleHeartSwapClick(r, c);
+    return;
+  }
+
+  // Standard Action Hand Requirement
+  if (G.selectedHandIdx === null) {
+    log("Select a card from your hand first!", "gold");
+    return;
+  }
+
+  const card = hand[G.selectedHandIdx];
+
+  // SMART DEPLOY & AUTO-OVERRIDE
+  if (G.currentAction === 'PLAY') {
+    // Case A: Empty cell -> Standard placement
+    if (targetCell === null) {
+      hand.splice(G.selectedHandIdx, 1);
+      card.faceUp = true;
+      G.grid[r][c] = card;
+      soundEngine.cardPlay();
+      log(`${G.currentPlayer} manifested ${card.rankStr}${SUIT_SYMBOLS[card.suit]} at [${r}, ${c}].`, G.currentPlayer === 'ALPHA' ? 'red' : 'cyan');
+      spendAP();
+      return;
+    }
+
+    // Case B: Occupied cell -> Auto-Override if rank is higher (or Ace over King)
+    if (targetCell.faceUp) {
+      const isAceOverKing = (card.rank === 1 && targetCell.rank === 13);
+      if (card.rank > targetCell.rank || isAceOverKing) {
+        hand.splice(G.selectedHandIdx, 1);
+        if (targetCell.color === 'RED') G.alphaDiscard.push(targetCell);
+        else G.omegaDiscard.push(targetCell);
+
+        card.faceUp = true;
+        G.grid[r][c] = card;
+        soundEngine.transcend();
+        log(`OVERRIDE: ${card.rankStr}${SUIT_SYMBOLS[card.suit]} transcended ${targetCell.rankStr} at [${r}, ${c}]!`, 'gold');
+        spendAP();
+        return;
+      } else {
+        log(`Cannot override: ${card.rankStr} is not higher than ${targetCell.rankStr}!`, "gold");
+        soundEngine.playTone(150, 'sawtooth', 0.2, -40, 0.2);
+        return;
+      }
+    } else {
+      log("Superposed (face-down) coordinates cannot be directly overridden. Probe or reveal them first!", "gold");
+      return;
+    }
+  }
+
+  // SUPERPOSE (Place Face-Down)
+  else if (G.currentAction === 'SUPERPOSE') {
+    if (targetCell !== null) {
+      log("Superposition requires an empty coordinate.", "gold");
+      return;
+    }
+    hand.splice(G.selectedHandIdx, 1);
+    card.faceUp = false;
+    G.grid[r][c] = card;
+    soundEngine.superpose();
+    log(`${G.currentPlayer} collapsed a wave into Superposition at [${r}, ${c}].`, G.currentPlayer === 'ALPHA' ? 'red' : 'cyan');
+    spendAP();
+  }
+
+  // OPERATE TARGETING
+  else if (G.currentAction === 'OPERATE') {
+    handleOperateGridTarget(r, c);
+  }
+}
+
+function handleOperateGridTarget(r, c) {
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const discard = G.currentPlayer === 'ALPHA' ? G.alphaDiscard : G.omegaDiscard;
+  const opCard = hand[G.selectedHandIdx];
+  const target = G.grid[r][c];
+
+  if (opCard.suit === 'D') {
+    if (!target) return;
+    hand.splice(G.selectedHandIdx, 1);
+    discard.push(opCard);
+    target.faceUp = !target.faceUp;
+    soundEngine.superpose();
+    log(`${G.currentPlayer} invoked DIAMOND: Phase-shifted card at [${r}, ${c}].`, 'gold');
+    spendAP();
+  }
+  else if (opCard.suit === 'S') {
+    if (!target) return;
+    const canBanish = (!target.faceUp) || (target.color !== opCard.color && target.rank <= opCard.rank);
+    if (!canBanish) {
+      log(`Spade operator requires target rank ≤ ${opCard.rankStr}!`, "gold");
+      return;
+    }
+    hand.splice(G.selectedHandIdx, 1);
+    discard.push(opCard);
+    if (target.color === 'RED') G.alphaDiscard.push(target);
+    else G.omegaDiscard.push(target);
+    G.grid[r][c] = null;
+    soundEngine.annihilate();
+    log(`ANNIHILATION: ${opCard.rankStr}♠ vaporized card at [${r}, ${c}]!`, 'cyan');
+    spendAP();
+  }
+}
+
+function handleHeartSwapClick(r, c) {
+  const stage = G.operateStage;
+  if (r !== stage.row) {
+    log("Hearts can only swap two cards in the SAME row!", "gold");
+    return;
+  }
+  if (!G.grid[r][c]) {
+    log("Both chosen cells must have cards to swap!", "gold");
+    return;
+  }
+
+  if (stage.firstCol === null) {
+    stage.firstCol = c;
+    log(`Heart Swap: Card at [${r}, ${c}] selected. Choose second card in Row ${r}.`, "red");
+    renderGrid();
+  } else {
+    if (stage.firstCol === c) return;
+    const c1 = stage.firstCol;
+    const c2 = c;
+
+    const hand = G.alphaHand;
+    const opCard = hand.splice(stage.handIdx, 1)[0];
+    G.alphaDiscard.push(opCard);
+
+    const temp = G.grid[r][c1];
+    G.grid[r][c1] = G.grid[r][c2];
+    G.grid[r][c2] = temp;
+
+    soundEngine.operate();
+    log(`HEART OPERATOR: Swapped [${r}, ${c1}] and [${r}, ${c2}]!`, "red");
+    G.operateStage = null;
+    spendAP();
+  }
+}
+
+function openProbeModal(r, c) {
+  if (G.ap <= 0 || G.isAIBusy) return;
+  G.pendingProbeCoord = { r, c };
+  openModal('probe');
+}
+
+function resolveProbeGuess(guess) {
+  closeModal('probe');
+  if (!G.pendingProbeCoord) return;
+  const { r, c } = G.pendingProbeCoord;
+  G.pendingProbeCoord = null;
+
+  const target = G.grid[r][c];
+  if (!target || target.faceUp) return;
+
+  target.faceUp = true;
+  const isEven = (target.rank % 2 === 0);
+  const correct = (guess === 'EVEN' && isEven) || (guess === 'ODD' && !isEven);
+
+  soundEngine.probe(correct);
+
+  if (correct) {
+    log(`PROBE SUCCESSFUL: Guessed ${guess}! Card was ${target.rankStr}${SUIT_SYMBOLS[target.suit]}. Banished!`, "gold");
+    if (target.color === 'RED') G.alphaDiscard.push(target);
+    else G.omegaDiscard.push(target);
+    G.grid[r][c] = null;
+
+    const deck = G.currentPlayer === 'ALPHA' ? G.alphaDeck : G.omegaDeck;
+    const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+    if (deck.length > 0 && hand.length < 7) {
+      hand.push(deck.pop());
+      log(`${G.currentPlayer} gained 1 bonus discovery card.`, "gold");
+    }
+  } else {
+    log(`PROBE FAILED: Guessed ${guess}, but card collapsed as ${target.rankStr}${SUIT_SYMBOLS[target.suit]}!`, "gold");
+  }
+
+  spendAP();
+}
+
+/* ==========================================================================
+   UI RENDERING & CONTROLS
+   ========================================================================== */
+function renderGrid() {
+  const gridEl = document.getElementById('matrix-grid');
+  gridEl.innerHTML = '';
+
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const selCard = G.selectedHandIdx !== null ? hand[G.selectedHandIdx] : null;
+
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const node = G.grid[r][c];
+
+      if (selCard && !G.gameOver && !G.isAIBusy) {
+        if (G.currentAction === 'PLAY') {
+          if (node === null) {
+            cell.classList.add('target-valid');
+          } else if (node.faceUp) {
+            const isAceOverKing = (selCard.rank === 1 && node.rank === 13);
+            if (selCard.rank > node.rank || isAceOverKing) {
+              cell.classList.add('target-override');
+            }
+          }
+        } else if (G.currentAction === 'SUPERPOSE') {
+          if (node === null) cell.classList.add('target-valid');
+        } else if (G.currentAction === 'OPERATE') {
+          if (selCard.suit === 'D' && node !== null) cell.classList.add('target-valid');
+          if (selCard.suit === 'S' && node !== null) {
+            if (!node.faceUp || (node.color !== selCard.color && node.rank <= selCard.rank)) cell.classList.add('target-override');
+          }
+        }
+      }
+
+      if (G.operateStage && G.operateStage.type === 'HEART_SWAP' && r === G.operateStage.row && node !== null) {
+        cell.classList.add('target-valid');
+      }
+
+      if (node) {
+        const cardDiv = document.createElement('div');
+        if (!node.faceUp) {
+          cardDiv.className = 'card-node superposed';
+          cardDiv.innerHTML = `<div class="superposed-glyph">◈</div>`;
+        } else {
+          cardDiv.className = `card-node ${node.color.toLowerCase()}`;
+          const sym = SUIT_SYMBOLS[node.suit];
+          cardDiv.innerHTML = `
+            <div class="card-top"><span>${node.rankStr}</span><span>${sym}</span></div>
+            <div class="card-center">${sym}</div>
+            <div class="card-bot"><span>${node.rankStr}</span><span>${sym}</span></div>
+          `;
+        }
+        cell.appendChild(cardDiv);
+      }
+
+      cell.onclick = () => onCellClick(r, c);
+      gridEl.appendChild(cell);
+    }
+  }
+
+  renderShiftButtons();
+}
+
+function renderShiftButtons() {
+  const container = document.getElementById('shift-controls');
+  container.innerHTML = '';
+
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const selCard = G.selectedHandIdx !== null ? hand[G.selectedHandIdx] : null;
+
+  if (selCard && selCard.suit === 'C' && G.currentAction === 'OPERATE' && !G.gameOver && !G.isAIBusy) {
+    container.style.display = 'block';
+
+    for (let c = 0; c < 4; c++) {
+      const btn = document.createElement('div');
+      btn.className = 'shift-btn';
+      btn.style.top = '6px';
+      btn.style.left = `${74 + c * 96}px`;
+      btn.innerHTML = '↓';
+      btn.onclick = () => executeToroidalShift('COL', c, 1);
+      container.appendChild(btn);
+    }
+
+    for (let r = 0; r < 4; r++) {
+      const btn = document.createElement('div');
+      btn.className = 'shift-btn';
+      btn.style.left = '6px';
+      btn.style.top = `${68 + r * 128}px`;
+      btn.innerHTML = '→';
+      btn.onclick = () => executeToroidalShift('ROW', r, 1);
+      container.appendChild(btn);
+    }
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+function executeToroidalShift(axis, idx, direction) {
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+  const discard = G.currentPlayer === 'ALPHA' ? G.alphaDiscard : G.omegaDiscard;
+  const opCard = hand.splice(G.selectedHandIdx, 1)[0];
+  discard.push(opCard);
+
+  soundEngine.operate();
+
+  if (axis === 'ROW') {
+    const row = [G.grid[idx][0], G.grid[idx][1], G.grid[idx][2], G.grid[idx][3]];
+    const shifted = direction === 1 ? [row[3], row[0], row[1], row[2]] : [row[1], row[2], row[3], row[0]];
+    for (let c = 0; c < 4; c++) G.grid[idx][c] = shifted[c];
+    log(`${G.currentPlayer} shifted Row ${idx} toroidally.`, 'cyan');
+  } else {
+    const col = [G.grid[0][idx], G.grid[1][idx], G.grid[2][idx], G.grid[3][idx]];
+    const shifted = direction === 1 ? [col[3], col[0], col[1], col[2]] : [col[1], col[2], col[3], col[0]];
+    for (let r = 0; r < 4; r++) G.grid[r][idx] = shifted[r];
+    log(`${G.currentPlayer} shifted Column ${idx} toroidally.`, 'cyan');
+  }
+
+  spendAP();
+}
+
+function renderHand() {
+  const rack = document.getElementById('hand-rack');
+  rack.innerHTML = '';
+  const hand = G.currentPlayer === 'ALPHA' ? G.alphaHand : G.omegaHand;
+
+  hand.forEach((card, idx) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = `hand-card-wrapper ${G.selectedHandIdx === idx ? 'selected' : ''}`;
+
+    const cardDiv = document.createElement('div');
+    cardDiv.className = `card-node ${card.color.toLowerCase()}`;
+    const sym = SUIT_SYMBOLS[card.suit];
+    cardDiv.innerHTML = `
+      <div class="card-top"><span>${card.rankStr}</span><span>${sym}</span></div>
+      <div class="card-center">${sym}</div>
+      <div class="card-bot"><span>${card.rankStr}</span><span>${sym}</span></div>
+    `;
+
+    wrapper.onclick = () => {
+      if (G.isAIBusy) return;
+      soundEngine.init();
+      if (G.selectedHandIdx === idx) {
+        G.selectedHandIdx = null;
+      } else {
+        G.selectedHandIdx = idx;
+        soundEngine.cardPlay();
+
+        if (card.suit === 'H' && G.currentAction === 'OPERATE') {
+          const rowInput = prompt("Enter row index (0-3) to swap two cards within:", "0");
+          const r = Math.min(3, Math.max(0, parseInt(rowInput) || 0));
+          G.operateStage = { type: 'HEART_SWAP', handIdx: idx, row: r, firstCol: null };
+          log(`Heart Operator: Row ${r} selected. Click two cards in Row ${r} to swap.`, "red");
+        }
+      }
+      renderHand();
+      renderGrid();
+    };
+
+    wrapper.appendChild(cardDiv);
+    rack.appendChild(wrapper);
+  });
+}
+
+function updateUI() {
+  const m = G.getMetrics();
+  document.getElementById('alpha-score-total').innerText = m.alphaTotal;
+  document.getElementById('omega-score-total').innerText = m.omegaTotal;
+
+  let alphaRowsCount = 0;
+  for (let r = 0; r < 4; r++) {
+    const tag = document.getElementById(`row-tag-${r}`);
+    tag.innerText = `R${r}: ${m.alphaRows[r].score}`;
+    if (m.alphaRows[r].score > 0) alphaRowsCount++;
+  }
+  document.getElementById('alpha-rows-won').innerText = `${alphaRowsCount} / 4`;
+
+  let omegaColsCount = 0;
+  for (let c = 0; c < 4; c++) {
+    const tag = document.getElementById(`col-tag-${c}`);
+    tag.innerText = `C${c}: ${m.omegaCols[c].score}`;
+    if (m.omegaCols[c].score > 0) omegaColsCount++;
+  }
+  document.getElementById('omega-cols-won').innerText = `${omegaColsCount} / 4`;
+
+  document.getElementById('diag-1-score').innerText = m.diag1;
+  document.getElementById('diag-2-score').innerText = m.diag2;
+
+  document.getElementById('alpha-deck-count').innerText = G.alphaDeck.length;
+  document.getElementById('omega-deck-count').innerText = G.omegaDeck.length;
+  document.getElementById('alpha-discard-count').innerText = G.alphaDiscard.length;
+  document.getElementById('omega-discard-count').innerText = G.omegaDiscard.length;
+
+  const turnDot = document.getElementById('turn-dot');
+  const turnText = document.getElementById('turn-player-name');
+  const handShelf = document.getElementById('hand-and-actions');
+
+  if (G.currentPlayer === 'ALPHA') {
+    turnDot.style.color = 'var(--alpha-red)';
+    turnText.innerText = 'ALPHA INITIATIVE (RED)';
+    turnText.style.color = 'var(--alpha-red)';
+    if (!G.isAIBusy) handShelf.classList.remove('locked');
+  } else {
+    turnDot.style.color = 'var(--omega-cyan)';
+    if (G.vsAI) {
+      turnText.innerText = G.isAIBusy ? 'OMEGA COMPUTING VECTOR...' : 'OMEGA AI TURN';
+      handShelf.classList.add('locked');
+    } else {
+      turnText.innerText = 'OMEGA INITIATIVE (BLACK)';
+      if (!G.isAIBusy) handShelf.classList.remove('locked');
+    }
+    turnText.style.color = 'var(--omega-cyan)';
+  }
+
+  const gem1 = document.getElementById('ap-gem-1');
+  const gem2 = document.getElementById('ap-gem-2');
+  gem1.className = 'ap-gem';
+  gem2.className = 'ap-gem';
+  const colorClass = G.currentPlayer === 'ALPHA' ? 'active-red' : 'active-cyan';
+  if (G.ap >= 1) gem1.classList.add(colorClass);
+  if (G.ap >= 2) gem2.classList.add(colorClass);
+
+  renderGrid();
+  renderHand();
+}
+
+function log(msg, type = '') {
+  const box = document.getElementById('event-log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.innerText = msg;
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+}
+
+function triggerVictory(winner, reason) {
+  G.gameOver = true;
+  soundEngine.victory();
+
+  const overlay = document.getElementById('singularity-overlay');
+  const title = document.getElementById('vic-title');
+  const subtitle = document.getElementById('vic-subtitle');
+
+  title.innerText = `${winner} DOMINATES THE MATRIX`;
+  title.style.color = winner === 'ALPHA' ? 'var(--alpha-red)' : 'var(--omega-cyan)';
+  subtitle.innerText = reason;
+  overlay.classList.add('show');
+}
+
+function resetGame() {
+  if (autoPassTimeout) clearTimeout(autoPassTimeout);
+  document.getElementById('singularity-overlay').classList.remove('show');
+  document.getElementById('event-log').innerHTML = '';
+  G = new GameState();
+  updateUI();
+  log("Continuum initialized. Ready for Wave Collapse.", "gold");
+}
+
+function toggleMode() {
+  G.vsAI = !G.vsAI;
+  document.getElementById('mode-label').innerText = G.vsAI ? 'VS AI' : '2-PLAYER';
+  log(`Mode switched: ${G.vsAI ? 'Solo vs Omega AI' : '2-Player Local Duel'}`, 'gold');
+  updateUI();
+}
+
+function openModal(id) { document.getElementById(`${id}-modal`).classList.add('open'); }
+function closeModal(id) { document.getElementById(`${id}-modal`).classList.remove('open'); }
+
+window.onload = () => {
+  updateUI();
+  updateActionButtons();
+  log("Continuum online. Red (Alpha/Rows) vs Black (Omega/Cols).", "gold");
+};
+</script>
+</body>
+</html>
