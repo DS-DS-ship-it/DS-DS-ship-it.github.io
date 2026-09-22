@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Commercial Gateway — Supported by Adsterra</title>
+  <title>Sponsor Gateway — TV0 Spatial Mosaic</title>
   <style>
     :root {
-      --bg-dark: #080c14;
-      --bg-bar: #0f1626;
+      --bg-dark: #070a12;
+      --bg-card: #0e1526;
+      --bg-surface: #151f38;
       --accent-green: #00f076;
       --accent-glow: rgba(0, 240, 118, 0.4);
       --accent-blue: #0088ff;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border-color: #1e293b;
+      --border-subtle: #1e2b48;
+      --radius-sm: 10px;
+      --radius-lg: 24px;
       --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
@@ -23,18 +26,337 @@
       padding: 0;
     }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: var(--bg-dark);
+    body {
+      background: radial-gradient(circle at top, #111a33 0%, var(--bg-dark) 100%);
       color: var(--text-main);
       font-family: var(--font-stack);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* Main Gateway Card */
+    .gateway-container {
+      width: 100%;
+      max-width: 640px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gateway-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+    }
+
+    /* Header & Badge */
+    .badge-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 240, 118, 0.1);
+      border: 1px solid rgba(0, 240, 118, 0.3);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--accent-green);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulseDot 1.4s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      line-height: 1.25;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* Verification Box */
+    .timer-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .counter-display {
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--accent-green);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .counter-label {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 8px;
+      background: #0d1424;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #1a253d;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+      transition: width 1s linear;
+    }
+
+    /* Main Action Button */
+    .btn-unlock {
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-weight: 800;
+      font-size: 1.05rem;
+      cursor: not-allowed;
+      background: #1c273c;
+      color: #64748b;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .btn-unlock.ready {
+      background: linear-gradient(135deg, var(--accent-green), #00c853);
+      color: #03140a;
+      cursor: pointer;
+      box-shadow: 0 0 30px var(--accent-glow);
+      animation: pulseButton 1.8s infinite;
+    }
+
+    @keyframes pulseButton {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    /* Clear Guidance Modal */
+    #redirection-modal {
+      display: none;
+      margin-top: 20px;
+      background: rgba(0, 240, 118, 0.08);
+      border: 1px solid var(--accent-green);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      text-align: left;
+    }
+
+    #redirection-modal h4 {
+      color: var(--accent-green);
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #redirection-modal p {
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .direct-link-manual {
+      display: inline-block;
+      margin-top: 10px;
+      color: var(--accent-green);
+      font-weight: 800;
+      text-decoration: underline;
+      font-size: 0.88rem;
+    }
+
+    /* Footer Meta */
+    .meta-footer {
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="gateway-container">
+    
+    <!-- Sponsor Status Badge -->
+    <div class="badge-bar">
+      <div class="pulse-dot"></div>
+      <span>Adsterra Commercial Monetizer Active</span>
+    </div>
+
+    <h1>Access TV0 Spatial Mosaic</h1>
+    <p class="subtitle">
+      This session is sponsored by our ad partner. Please allow the verification countdown to complete to unlock your destination.
+    </p>
+
+    <!-- 5-Second Verification Engine -->
+    <div class="timer-panel">
+      <div class="counter-display" id="secondsNum">5</div>
+      <div class="counter-label" id="statusLabel">Verifying commercial session...</div>
+      
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- The Single Action Button -->
+    <button id="unlockActionBtn" class="btn-unlock" onclick="handleUnlockAndProceed()">
+      <span>⏳ Waiting for commercial timer...</span>
+    </button>
+
+    <!-- Clear Guidance Screen upon click -->
+    <div id="redirection-modal">
+      <h4>✓ Verification Complete!</h4>
+      <p>
+        <strong>1.</strong> The sponsor offer has opened in a new tab to credit your ad payout.<br />
+        <strong>2.</strong> Your <strong>TV0 App</strong> is loading right now in this tab.
+      </p>
+      <a id="manualLink" href="#" class="direct-link-manual">👉 Click here if TV0.html doesn't open automatically</a>
+    </div>
+
+    <!-- Live Parameters Footer -->
+    <div class="meta-footer">
+      <span>Key: <code>473d6c40...</code></span>
+      <span>Destination: <strong>TV0.html</strong></span>
+    </div>
+
+  </div>
+
+  <script>
+    // HARDCODED DESTINATIONS
+    const ADSTERRA_SMARTLINK = "https://www.profitableratecpmnetwork.com/f0mvh66h1?key=473d6c4019bb37302ba67c76fb9894ac";
+    const TARGET_DESTINATION = "https://ds-ds-ship-it.github.io/iphone-html-terminal/mvx-spatial-mosaic-v3/TV0.html";
+
+    const TOTAL_SECONDS = 5;
+    let secondsRemaining = TOTAL_SECONDS;
+    let countdownInterval = null;
+
+    window.addEventListener("DOMContentLoaded", () => {
+      startCountdown();
+    });
+
+    /* ========================================================
+       5-SECOND COUNTDOWN VERIFICATION
+       ======================================================== */
+    function startCountdown() {
+      const numEl = document.getElementById("secondsNum");
+      const labelEl = document.getElementById("statusLabel");
+      const fillEl = document.getElementById("progressFill");
+      const btnEl = document.getElementById("unlockActionBtn");
+
+      countdownInterval = setInterval(() => {
+        secondsRemaining--;
+
+        if (numEl) numEl.textContent = secondsRemaining;
+
+        // Progress bar percentage
+        const pct = Math.round(((TOTAL_SECONDS - secondsRemaining) / TOTAL_SECONDS) * 100);
+        if (fillEl) fillEl.style.width = pct + "%";
+
+        if (secondsRemaining <= 0) {
+          clearInterval(countdownInterval);
+
+          // Unlock UI
+          if (numEl) numEl.textContent = "✓";
+          if (labelEl) labelEl.textContent = "Commercial verified! Ready to launch.";
+          
+          btnEl.classList.add("ready");
+          btnEl.innerHTML = "👉 UNLOCK & LAUNCH TV0 MOSAIC ➔";
+        }
+      }, 1000);
     }
 
     /* ========================================================
+       DUAL-ROUTE EXECUTION: EARN ON ADSTERRA & OPEN TV0
+       ======================================================== */
+    function handleUnlockAndProceed() {
+      if (secondsRemaining > 0) return; // Still locked
+
+      const modal = document.getElementById("redirection-modal");
+      const manualLink = document.getElementById("manualLink");
+      const btnEl = document.getElementById("unlockActionBtn");
+
+      modal.style.display = "block";
+      manualLink.href = TARGET_DESTINATION;
+      btnEl.style.display = "none";
+
+      // 1. Open the real Adsterra Smartlink in a separate tab (registers payout)
+      try {
+        window.open(ADSTERRA_SMARTLINK, "_blank");
+      } catch (e) {
+        console.warn("Popup blocked, continuing...", e);
+      }
+
+      // 2. Immediately navigate THIS window to TV0.html
+      setTimeout(() => {
+        window.location.replace(TARGET_DESTINATION);
+      }, 400);
+
+      // 3. Fallback: Force location update if browser stalls
+      setTimeout(() => {
+        window.location.href = TARGET_DESTINATION;
+      }, 1200);
+    }
+  </script>
+</body>
+</html>    /* ========================================================
        TOP PERSISTENT CONTROL BAR (NEVER DISAPPEARS)
        ======================================================== */
     #ad-control-bar {
