@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Congressional Debate Arena &bull; Zero-Latency Pipelined Engine</title>
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --card-bg: rgba(14, 20, 34, 0.88);
+      --senator-blue: #00d2ff;
+      --senator-glow: rgba(0, 210, 255, 0.3);
+      --congress-red: #ff3b69;
+      --congress-glow: rgba(255, 59, 105, 0.3);
+      --accent-gold: #f59e0b;
+      --text-main: #f1f5f9;
+      --text-muted: #8899ac;
+      --border-color: #1e293f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 40%, rgba(0, 210, 255, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 90% 40%, rgba(255, 59, 105, 0.08) 0%, transparent 45%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem 1.25rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--senator-blue), #ffffff, var(--congress-red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    /* Configuration Panel */
+    .config-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      max-width: 1280px;
+      margin: 0 auto 1rem auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      align-items: end;
+      backdrop-filter: blur(12px);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .form-group label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      background: #0b101c;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--senator-blue);
+    }
+
+    /* Genre Banner */
+    .genre-banner {
+      max-width: 1280px;
+      margin: 0 auto 0.85rem auto;
+      width: 100%;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .genre-badge {
+      background: var(--accent-gold);
+      color: #000;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .genre-desc {
+      color: #fde68a;
+      flex: 1;
+    }
+
+    /* Arena Grid: Dual Debater Cards */
+    .arena-grid {
+      display: grid;
+      grid-template-columns: 1fr 130px 1fr;
+      gap: 1.2rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Mobile Responsive Stacking */
+    @media (max-width: 820px) {
+      body {
+        padding: 0.6rem;
+      }
+      .arena-grid {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+      }
+      .arena-center {
+        flex-direction: row !important;
+        justify-content: space-around;
+        padding: 0.35rem 0;
+      }
+      .vs-badge {
+        display: none !important;
+      }
+      .speech-bubble {
+        max-height: 220px !important;
+      }
+    }
+
+    .fighter-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(12px);
+    }
+
+    .fighter-card.senator-pro {
+      border-top: 4px solid var(--senator-blue);
+    }
+
+    .fighter-card.congress-con {
+      border-top: 4px solid var(--congress-red);
+    }
+
+    .fighter-card.active-speaker.senator-pro {
+      border-color: var(--senator-blue);
+      box-shadow: 0 0 25px var(--senator-glow);
+    }
+
+    .fighter-card.active-speaker.congress-con {
+      border-color: var(--congress-red);
+      box-shadow: 0 0 25px var(--congress-glow);
+    }
+
+    .fighter-card.thinking-ahead {
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
+    }
+
+    .fighter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.65rem;
+    }
+
+    .tag-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .fighter-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .senator-pro .fighter-tag {
+      background: rgba(0, 210, 255, 0.15);
+      color: var(--senator-blue);
+      border: 1px solid var(--senator-blue);
+    }
+
+    .congress-con .fighter-tag {
+      background: rgba(255, 59, 105, 0.15);
+      color: var(--congress-red);
+      border: 1px solid var(--congress-red);
+    }
+
+    .voice-control-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.65rem;
+      background: rgba(0,0,0,0.25);
+      padding: 0.35rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .voice-control-row label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .voice-control-row select {
+      flex: 1;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .btn-test-voice {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      background: #1e293f;
+      color: var(--text-main);
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .speech-bubble {
+      flex: 1;
+      background: #090e1a;
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.93rem;
+      line-height: 1.6;
+      border: 1px solid rgba(255,255,255,0.04);
+      overflow-y: auto;
+      max-height: 350px;
+      white-space: pre-wrap;
+    }
+
+    /* Central Stats */
+    .arena-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .round-indicator {
+      text-align: center;
+    }
+
+    .round-number {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .round-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .vs-badge {
+      font-weight: 900;
+      font-size: 1.1rem;
+      background: #141c2c;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      max-width: 1280px;
+      margin: 1rem auto 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .intervention-bar {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      padding: 0.6rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .intervention-bar input {
+      flex: 1;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.65rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      transition: all 0.2s;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #00d2ff, #0077ff);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-stop {
+      background: #ff3b69;
+      color: #fff;
+    }
+
+    .btn-stop:disabled, .btn-start:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-aux {
+      background: #172134;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .meta-learning-hub {
+      background: #05080e;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+    }
+
+    .meta-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .meta-log {
+      max-height: 80px;
+      overflow-y: auto;
+      color: #38bdf8;
+      line-height: 1.45;
+    }
+
+    .pulsing-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.4; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Dolphin-Mistral Debate Arena</h1>
+    <p>Zero-Latency Pipelined Concurrency &bull; Live Chamber Debate</p>
+  </header>
+
+  <!-- Configuration Bar -->
+  <section class="config-panel">
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="debateTopic">Motion on the Floor</label>
+      <input type="text" id="debateTopic" value="Artificial Intelligence must be granted full legal human rights." />
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="ollamaUrl">Mac Ollama Endpoint</label>
+      <input type="text" id="ollamaUrl" value="http://192.168.4.22:11434/api/generate" />
+    </div>
+
+    <div class="form-group">
+      <label for="modelName">Model</label>
+      <input type="text" id="modelName" value="dolphin-mistral" />
+    </div>
+
+    <div class="form-group">
+      <label for="genreMode">Music Genre Delivery</label>
+      <select id="genreMode" onchange="updateGenreBanner()">
+        <option value="hiphop" selected>Hip-Hop (Rapping &amp; Rhymes)</option>
+        <option value="classical">Classical (Mozart Opera)</option>
+        <option value="pop">Pop (Catchy Hooks)</option>
+        <option value="rock">Rock (Gritty Anthem)</option>
+        <option value="jazz">Jazz (New Orleans Swing)</option>
+        <option value="country">Country (Acoustic Folk)</option>
+        <option value="edm">Electronic / EDM (Synthesizer Drop)</option>
+        <option value="none">Parliamentary (Formal Speech)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="roundModeSelect">Rounds Mode</label>
+      <select id="roundModeSelect">
+        <option value="unlimited" selected>Unlimited (Continuous &infin;)</option>
+        <option value="4">4 Rounds</option>
+        <option value="6">6 Rounds</option>
+        <option value="10">10 Rounds</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Voice Audio</label>
+      <select id="ttsEnabled">
+        <option value="true" selected>Enabled</option>
+        <option value="false">Mute</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Active Genre Banner -->
+  <div class="genre-banner" id="genreBanner">
+    <span class="genre-badge" id="genreBadgeText">Hip-Hop Mode</span>
+    <span class="genre-desc" id="genreDescText">Rhythmic speech and battle rap combined with heavy cadence, punchy bars, and internal rhymes.</span>
+  </div>
+
+  <!-- Arena Grid: Both Debater Cards Visible Side-by-Side -->
+  <main class="arena-grid">
+    <!-- Senator Card (Pro) -->
+    <article class="fighter-card senator-pro" id="cardSenator">
+      <div class="fighter-header">
+        <div class="tag-group">
+          <span class="fighter-tag">Senator &bull; PRO</span>
+          <h2 style="font-size: 1.05rem;">The Senator</h2>
+        </div>
+        <span class="status-badge" id="statusSenator" style="font-size: 0.75rem; color: var(--text-muted);">Ready</span>
+      </div>
+
+      <div class="voice-control-row">
+        <label for="voiceSelectSenator">Voice:</label>
+        <select id="voiceSelectSenator"></select>
+        <button class="btn-test-voice" onclick="previewVoice('Senator')">Preview</button>
+      </div>
+
+      <div class="speech-bubble" id="speechSenator">Awaiting the call to order...</div>
+    </article>
+
+    <!-- Center Stage Status -->
+    <div class="arena-center">
+      <div class="round-indicator">
+        <div class="round-number" id="currentRoundDisplay">1</div>
+        <div class="round-label" id="roundLimitLabel">Round (Unlimited &infin;)</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <span id="globalState" style="font-size: 0.72rem; color: var(--text-muted); text-align: center;">Chamber Adjourned</span>
+    </div>
+
+    <!-- Congressperson Card (Con) -->
+    <article class="fighter-card congress-con" id="cardCongress">
+      <div class="fighter-header">
+        <div class="tag-group">
+          <span class="fighter-tag">Congressperson &bull; CON</span>
+          <h2 style="font-size: 1.05rem;">The Congressperson</h2>
+        </div>
+        <span class="status-badge" id="statusCongress" style="font-size: 0.75rem; color: var(--text-muted);">Ready</span>
+      </div>
+
+      <div class="voice-control-row">
+        <label for="voiceSelectCongress">Voice:</label>
+        <select id="voiceSelectCongress"></select>
+        <button class="btn-test-voice" onclick="previewVoice('Congressperson')">Preview</button>
+      </div>
+
+      <div class="speech-bubble" id="speechCongress">Awaiting the call to order...</div>
+    </article>
+  </main>
+
+  <!-- Controls Panel -->
+  <footer class="controls-panel">
+    <div class="intervention-bar">
+      <input type="text" id="interventionInput" placeholder="Chamber intervention: Inject an amendment or steer the debate..." />
+      <button class="btn-aux" onclick="submitIntervention()">Inject Order</button>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-start" id="btnStart" onclick="startDebate()">Begin Debate</button>
+      <button class="btn-stop" id="btnStop" onclick="stopDebate()" disabled>Adjourn / Stop</button>
+      <button class="btn-aux" onclick="testMobileSound()">🔊 Test Sound</button>
+      <button class="btn-aux" onclick="exportTelemetry()">Export Telemetry (JSON)</button>
+    </div>
+
+    <div class="meta-learning-hub">
+      <div class="meta-header">
+        <span>[PIPELINED CONCURRENT ENGINE &bull; TELEMETRY STREAM]</span>
+        <span id="telemetryCount">Events: 0</span>
+      </div>
+      <div class="meta-log" id="metaLog">
+        Chamber initialized. Persistent audio engine ready.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // --- State Variables ---
+    let isRunning = false;
+    let currentRound = 1;
+    let pendingIntervention = "";
+    let debateTranscript = [];
+    let telemetryEvents = [];
+    let systemVoices = [];
+    let backgroundAudioElement = null;
+
+    const GENRE_CONFIGS = {
+      hiphop: {
+        label: "Hip-Hop Mode",
+        desc: "Rhythmic speech and battle rap with heavy cadence, punchy bars, and internal rhymes.",
+        rateMod: 1.08,
+        instruction: "You are in a live rap battle. You NEVER speak in plain prose. You MUST write your response as exactly 4 rhyming lines of punchy battle rap. Every single line MUST rhyme (AABB or ABAB). Do not use formal titles like Senator or Congressperson. Do not output stage directions.",
+        callToAction: "Spit exactly 4 punchy rhyming battle rap bars now (pure lyrics, every line must rhyme):"
+      },
+      classical: {
+        label: "Classical Mode",
+        desc: "Dramatic operatic recitative in the style of Mozart and Beethoven with grand poetic meter.",
+        rateMod: 0.94,
+        instruction: "You are an opera singer in a grand classical opera by Mozart or Beethoven. You NEVER speak in plain prose. You MUST write your response as 4 grand, dramatic, rhyming operatic lines with sweeping classical meter. Do not repeat formal titles.",
+        callToAction: "Sing your 4-line classical operatic verse now (poetic classical rhymes, pure lyrics):"
+      },
+      rock: {
+        label: "Rock Anthem Mode",
+        desc: "Raw energy, gritty rock-and-roll attitude, and driving anthem lyrics.",
+        rateMod: 1.05,
+        instruction: "You are a raw, gritty rock frontman singing a high-energy rock anthem. You NEVER speak in plain prose. You MUST write your response as 4 lines of hard-hitting, rhyming rock lyrics with heavy attitude and driving rhythm. Do not use formal titles.",
+        callToAction: "Sing your 4-line gritty rock anthem lyrics now (punchy rock rhymes, pure lyrics):"
+      },
+      pop: {
+        label: "Pop Music Mode",
+        desc: "Catchy, upbeat songs with radio-friendly hooks and melodic rhyming couplets.",
+        rateMod: 1.06,
+        instruction: "You are an upbeat pop star performing a chart-topping hit. You NEVER speak in plain prose. You MUST write your response as 4 catchy, bouncy, rhyming pop song lines with radio-friendly hooks. Do not use formal titles.",
+        callToAction: "Sing your 4-line upbeat pop song verse now (catchy rhymes, pure lyrics):"
+      },
+      jazz: {
+        label: "New Orleans Jazz Mode",
+        desc: "Swing rhythm, musical improvisation, and cool bebop syncopated cadence.",
+        rateMod: 0.96,
+        instruction: "You are a cool New Orleans jazz singer. You NEVER speak in plain prose. You MUST write your response as 4 smooth, syncopated swing-jazz lines with scat phrasing ('yeah', 'dig it') and cool rhymes. Do not repeat formal titles.",
+        callToAction: "Sing your 4-line smooth swing-jazz verse now (scat phrasing, cool jazz rhymes):"
+      },
+      country: {
+        label: "Country & Western Mode",
+        desc: "Acoustic-driven storytelling ballads with folk twang and soulful down-home rhyme.",
+        rateMod: 0.95,
+        instruction: "You are an acoustic country folk singer with a guitar. You NEVER speak in plain prose. You MUST write your response as 4 lines of heartfelt country storytelling song lyrics with down-home folk rhymes. Do not use formal titles.",
+        callToAction: "Sing your 4-line acoustic country storytelling verse now (down-home folk rhymes, pure lyrics):"
+      },
+      edm: {
+        label: "Electronic (EDM) Mode",
+        desc: "Synthesizer-pulsed staccato, build-up cadence, and rapid-fire techno delivery.",
+        rateMod: 1.12,
+        instruction: "You are an electronic festival vocalist hyping the crowd. You NEVER speak in plain prose. You MUST write your response as 4 rapid-fire, synthesizer-pulsed staccato chant lines building up to an explosive drop. Do not use formal titles.",
+        callToAction: "Chant your 4-line synthesizer-pulsed EDM festival drop lyrics now (rapid-fire techno rhythm):"
+      },
+      none: {
+        label: "Parliamentary Mode",
+        desc: "Organic parliamentary discourse with sharp rhetoric and zero robotic title repetition.",
+        rateMod: 1.0,
+        instruction: "You are a sharp, eloquent debater. Avoid repeating titles like 'Senator' or 'Congressperson' every sentence. Speak naturally, organically, and sharply. Keep your rebuttal strictly under 3 sentences.",
+        callToAction: "Deliver your direct debate rebuttal now (under 3 punchy sentences):"
+      }
+    };
+
+    function updateGenreBanner() {
+      const modeKey = document.getElementById("genreMode").value;
+      const g = GENRE_CONFIGS[modeKey] || GENRE_CONFIGS.none;
+      document.getElementById("genreBadgeText").innerText = g.label;
+      document.getElementById("genreDescText").innerText = g.desc;
+    }
+
+    // --- Voice Discovery & Robust Loading (Fixed for iOS Safari) ---
+    const synth = window.speechSynthesis;
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+
+      systemVoices = all.filter(v => v.lang.startsWith("en"));
+      if (!systemVoices.length) systemVoices = all;
+
+      const selSenator = document.getElementById("voiceSelectSenator");
+      const selCongress = document.getElementById("voiceSelectCongress");
+
+      selSenator.innerHTML = "";
+      selCongress.innerHTML = "";
+
+      systemVoices.forEach((voice, index) => {
+        const optA = document.createElement("option");
+        optA.value = index;
+        optA.textContent = `${voice.name} (${voice.lang})`;
+        selSenator.appendChild(optA);
+
+        const optB = document.createElement("option");
+        optB.value = index;
+        optB.textContent = `${voice.name} (${voice.lang})`;
+        selCongress.appendChild(optB);
+      });
+
+      let defaultSenatorIdx = systemVoices.findIndex(v => /samantha|karen|victoria|ava/i.test(v.name));
+      let defaultCongressIdx = systemVoices.findIndex(v => /daniel|alex|oliver|tom/i.test(v.name));
+
+      if (defaultSenatorIdx === -1) defaultSenatorIdx = 0;
+      if (defaultCongressIdx === -1) defaultCongressIdx = systemVoices.length > 1 ? 1 : 0;
+
+      selSenator.value = defaultSenatorIdx;
+      selCongress.value = defaultCongressIdx;
+    }
+
+    // iOS Safari Voices Polling Loop
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) {
+        synth.onvoiceschanged = populateVoices;
+      }
+      let voiceRetries = 0;
+      const voiceInterval = setInterval(() => {
+        voiceRetries++;
+        if (synth.getVoices().length > 0 || voiceRetries > 10) {
+          clearInterval(voiceInterval);
+          populateVoices();
+        }
+      }, 300);
+    }
+
+    // --- Synchronous Audio Unlock for Mobile Devices ---
+    // Must be triggered synchronously inside the tap event to satisfy iOS Safari
+    function unlockMobileSpeech(textToSpeak = null) {
+      if (!synth) return;
+      if (synth.paused) synth.resume();
+
+      // AudioContext unlock
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        try {
+          const ctx = new AudioCtx();
+          ctx.resume();
+        } catch (e) {}
+      }
+
+      // Audible initial speak permanently opens the iOS SpeechSynthesis gate!
+      const phrase = textToSpeak || "The chamber is called to order.";
+      const u = new SpeechSynthesisUtterance(phrase);
+      u.lang = "en-US";
+      u.rate = 1.05;
+      if (systemVoices.length) u.voice = systemVoices[0];
+      synth.speak(u);
+    }
+
+    function testMobileSound() {
+      unlockMobileSpeech("Sound check. The audio system is active.");
+    }
+
+    function initMediaSessionKeepAlive() {
+      try {
+        if (!backgroundAudioElement) {
+          backgroundAudioElement = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+          backgroundAudioElement.loop = true;
+          backgroundAudioElement.volume = 0.05;
+        }
+        backgroundAudioElement.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function cleanModelOutput(raw) {
+      if (!raw) return "";
+      let text = raw.trim();
+      text = text.replace(/^\[.*?\]\s*/i, "").replace(/^\(.*?\)\s*/i, "");
+      text = text.replace(/^(the\s+)?(senator|congressperson|representative|debater\s+[ab])\s*:\s*/i, "");
+      text = text.replace(/\*/g, "");
+      text = text.replace(/^["'“‘]+/, "").replace(/["'”’]+$/, "");
+      return text.trim();
+    }
+
+    function previewVoice(role) {
+      if (!synth) return;
+      initMediaSessionKeepAlive();
+
+      const isSenator = role === "Senator";
+      const sel = document.getElementById(isSenator ? "voiceSelectSenator" : "voiceSelectCongress");
+      const selectedVoice = systemVoices[parseInt(sel.value)] || systemVoices[0];
+
+      const sample = isSenator 
+        ? "I yield my time to the opposition." 
+        : "I strongly oppose that flawed assertion.";
+
+      const utter = new SpeechSynthesisUtterance(sample);
+      utter.lang = "en-US";
+      if (selectedVoice) utter.voice = selectedVoice;
+      utter.rate = 1.0;
+      utter.pitch = 1.0;
+      synth.speak(utter);
+    }
+
+    // --- Vocal Speech Engine ---
+    function speakText(text, isSenator) {
+      return new Promise((resolve) => {
+        const enabled = document.getElementById("ttsEnabled").value === "true";
+        if (!enabled || !synth) {
+          setTimeout(resolve, 800);
+          return;
+        }
+
+        if (synth.paused) synth.resume();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US"; // Mandatory fallback on iOS
+
+        const selId = isSenator ? "voiceSelectSenator" : "voiceSelectCongress";
+        const voiceIdx = parseInt(document.getElementById(selId).value);
+        const selectedVoice = systemVoices[voiceIdx] || systemVoices[0];
+
+        if (selectedVoice) utterance.voice = selectedVoice;
+
+        const genreKey = document.getElementById("genreMode").value;
+        const genreMod = (GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none).rateMod || 1.0;
+
+        utterance.pitch = isSenator ? 1.05 : 0.95;
+        utterance.rate = 1.0 * genreMod;
+
+        let hasResolved = false;
+        const done = () => {
+          if (!hasResolved) {
+            hasResolved = true;
+            resolve();
+          }
+        };
+
+        utterance.onend = done;
+        utterance.onerror = done;
+
+        // Fallback watchdog prevents hanging
+        const wordCount = text.split(/\s+/).length;
+        const maxAllowed = Math.max(3500, (wordCount / 90) * 60 * 1000 + 4000);
+        setTimeout(() => {
+          if (!hasResolved) done();
+        }, maxAllowed);
+
+        synth.speak(utterance);
+      });
+    }
+
+    // --- Ollama API Query ---
+    async function queryOllama(speakerTitle, isSenator, opponentSpokenText = null) {
+      let endpoint = document.getElementById("ollamaUrl").value.trim();
+      const model = document.getElementById("modelName").value.trim();
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+
+      if (!endpoint.endsWith("/api/generate") && !endpoint.endsWith("/api/chat")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/api/generate";
+      }
+
+      const stance = isSenator 
+        ? "IN FAVOR of the motion" 
+        : "AGAINST the motion";
+
+      let prompt = 
+        `You are The ${isSenator ? 'Senator' : 'Congressperson'}.\n` +
+        `YOUR STANCE: You argue ${stance}.\n` +
+        `MOTION ON THE FLOOR: "${topic}"\n\n` +
+        `STYLE INSTRUCTION: ${genre.instruction}\n\n`;
+
+      if (opponentSpokenText) {
+        prompt += `THE OPPONENT IS CURRENTLY ARGUING:\n"${opponentSpokenText}"\n\n`;
+        prompt += `Directly counter what they are saying in your ${genre.label} style.\n`;
+      } else if (debateTranscript.length > 0) {
+        const lastEntry = debateTranscript[debateTranscript.length - 1];
+        prompt += `THE OPPONENT JUST SAID:\n"${lastEntry.text}"\n\n`;
+        prompt += `Directly counter what they just said in your ${genre.label} style.\n`;
+      } else {
+        prompt += `OPENING ROUND: Kick off the debate on this topic in your ${genre.label} style.\n`;
+      }
+
+      if (pendingIntervention) {
+        prompt += `[CHAMBER INTERVENTION FROM AUDIENCE]: "${pendingIntervention}"\nIncorporate or counter this in your lines!\n`;
+        logTelemetry("INTERVENTION_CONSUMED", { speaker: speakerTitle, intervention: pendingIntervention });
+        pendingIntervention = "";
+      }
+
+      prompt += `\n${genre.callToAction}`;
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.88
+            }
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        const cleanedResponse = cleanModelOutput(data.response);
+
+        logTelemetry("PREFETCH_STATEMENT_READY", {
+          speaker: speakerTitle,
+          genre: genreKey,
+          round: currentRound,
+          durationMs: duration
+        });
+
+        return cleanedResponse;
+      } catch (err) {
+        logTelemetry("API_ERROR", { speaker: speakerTitle, error: err.message });
+        throw err;
+      }
+    }
+
+    // --- Pipelined Zero-Downtime Loop ---
+    async function startDebate() {
+      if (isRunning) return;
+
+      // 1. Instantly vocalize the opening to lock iOS audio permissions permanently!
+      unlockMobileSpeech("The chamber is called to order. The Senator has the floor.");
+      initMediaSessionKeepAlive();
+
+      isRunning = true;
+      currentRound = 1;
+      debateTranscript = [];
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnStop").disabled = false;
+      document.getElementById("debateTopic").disabled = true;
+
+      const roundMode = document.getElementById("roundModeSelect").value;
+      const isUnlimited = roundMode === "unlimited";
+      const maxRounds = isUnlimited ? Infinity : parseInt(roundMode);
+
+      document.getElementById("roundLimitLabel").innerText = isUnlimited 
+        ? "Round (Unlimited ∞)" 
+        : `Round of ${maxRounds}`;
+
+      logTelemetry("DEBATE_COMMENCED", {
+        topic: document.getElementById("debateTopic").value,
+        genre: document.getElementById("genreMode").value,
+        unlimited: isUnlimited
+      });
+
+      try {
+        setCardState("cardSenator", "statusSenator", "thinking", "The Senator");
+        document.getElementById("globalState").innerText = "The Senator Composing Opening";
+
+        let currentText = await queryOllama("The Senator", true);
+        if (!isRunning) return;
+
+        updateBubble("speechSenator", currentText);
+        recordTranscript("The Senator", currentText);
+
+        let currentSpeakerTitle = "The Senator";
+        let isSenatorCurrent = true;
+
+        while (isRunning && (isUnlimited || currentRound <= maxRounds)) {
+          document.getElementById("currentRoundDisplay").innerText = currentRound;
+
+          const currentCardId = isSenatorCurrent ? "cardSenator" : "cardCongress";
+          const currentStatusId = isSenatorCurrent ? "statusSenator" : "statusCongress";
+
+          const nextSpeakerTitle = isSenatorCurrent ? "The Congressperson" : "The Senator";
+          const nextIsSenator = !isSenatorCurrent;
+          const nextCardId = nextIsSenator ? "cardSenator" : "cardCongress";
+          const nextStatusId = nextIsSenator ? "statusSenator" : "statusCongress";
+          const nextSpeechId = nextIsSenator ? "speechSenator" : "speechCongress";
+
+          // Pre-fetch opponent response in parallel while current speaker speaks aloud
+          setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle);
+          const nextGenerationPromise = queryOllama(nextSpeakerTitle, nextIsSenator, currentText);
+
+          setCardState(currentCardId, currentStatusId, "speaking", currentSpeakerTitle);
+          document.getElementById("globalState").innerText = `${currentSpeakerTitle} Speaking • ${nextSpeakerTitle} Pre-Thinking`;
+
+          await speakText(currentText, isSenatorCurrent);
+
+          while (synth && synth.speaking) {
+            await new Promise(r => setTimeout(r, 60));
+          }
+
+          setCardState(currentCardId, currentStatusId, "idle", currentSpeakerTitle);
+          if (!isRunning) break;
+
+          document.getElementById("globalState").innerText = "Fluent Transition";
+          const preloadedNextText = await nextGenerationPromise;
+          if (!isRunning) break;
+
+          await new Promise(r => setTimeout(r, 150));
+
+          updateBubble(nextSpeechId, preloadedNextText);
+          recordTranscript(nextSpeakerTitle, preloadedNextText);
+
+          currentText = preloadedNextText;
+          currentSpeakerTitle = nextSpeakerTitle;
+          isSenatorCurrent = nextIsSenator;
+
+          if (isSenatorCurrent) {
+            currentRound++;
+          }
+        }
+      } catch (e) {
+        console.error("Debate runtime interrupted:", e);
+      } finally {
+        stopDebate();
+      }
+    }
+
+    function setCardState(cardId, statusId, state, speakerTitle) {
+      const card = document.getElementById(cardId);
+      const status = document.getElementById(statusId);
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+
+      if (state === "speaking") {
+        card.classList.remove("thinking-ahead");
+        card.classList.add("active-speaker");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#22c55e;"></span>Performing...`;
+      } else if (state === "thinking") {
+        card.classList.remove("active-speaker");
+        card.classList.add("thinking-ahead");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#f59e0b;"></span>Formulating ${genre.label}...`;
+      } else {
+        card.classList.remove("active-speaker");
+        card.classList.remove("thinking-ahead");
+        status.innerText = "Yielded Time";
+      }
+    }
+
+    function updateBubble(speechId, text) {
+      document.getElementById(speechId).innerText = text;
+    }
+
+    function recordTranscript(speaker, text) {
+      debateTranscript.push({
+        speaker: speaker,
+        text: text,
+        round: currentRound,
+        genre: document.getElementById("genreMode").value,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    function stopDebate() {
+      isRunning = false;
+      if (synth) synth.cancel();
+
+      if (backgroundAudioElement) backgroundAudioElement.pause();
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnStop").disabled = true;
+      document.getElementById("debateTopic").disabled = false;
+
+      ["cardSenator", "cardCongress"].forEach(id => {
+        const c = document.getElementById(id);
+        c.classList.remove("active-speaker");
+        c.classList.remove("thinking-ahead");
+      });
+
+      document.getElementById("statusSenator").innerText = "Ready";
+      document.getElementById("statusCongress").innerText = "Ready";
+      document.getElementById("globalState").innerText = "Chamber Adjourned";
+
+      logTelemetry("DEBATE_ADJOURNED", { totalRoundsCompleted: currentRound - 1 });
+    }
+
+    function submitIntervention() {
+      const input = document.getElementById("interventionInput");
+      const val = input.value.trim();
+      if (!val) return;
+
+      pendingIntervention = val;
+      input.value = "";
+      const logEl = document.getElementById("metaLog");
+      logEl.innerHTML = `[INTERVENTION QUEUED FOR IN-FLIGHT SPEAKER]: "${val}"\n` + logEl.innerHTML;
+    }
+
+    function logTelemetry(eventType, metadata = {}) {
+      const entry = {
+        timestamp: new Date().toISOString(),
+        event: eventType,
+        metadata: metadata
+      };
+      telemetryEvents.push(entry);
+
+      const logContainer = document.getElementById("metaLog");
+      const countContainer = document.getElementById("telemetryCount");
+      const logLine = `[${entry.timestamp.split("T")[1].slice(0, 8)}] [${eventType}] ${JSON.stringify(metadata)}`;
+      logContainer.innerText = `${logLine}\n${logContainer.innerText}`;
+      countContainer.innerText = `Events: ${telemetryEvents.length}`;
+    }
+
+    function flagFailure(reason) {
+      logTelemetry("FAILURE_CASE_FLAGGED", {
+        reason: reason,
+        round: currentRound,
+        lastStatements: debateTranscript.slice(-2)
+      });
+      alert("Debate anomaly recorded into telemetry memory for Architect prompt revision.");
+    }
+
+    function exportTelemetry() {
+      const exportPayload = {
+        architecture: "Autonomous Coding Agent Loop - Pipelined Debate Arena",
+        engine: "dolphin-mistral",
+        topic: document.getElementById("debateTopic").value,
+        genre: document.getElementById("genreMode").value,
+        totalRoundsCompleted: currentRound - 1,
+        officialTranscript: debateTranscript,
+        telemetryFeed: telemetryEvents
+      };
+
+      const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+      const link = document.createElement("a");
+      link.setAttribute("href", dataUri);
+      link.setAttribute("download", `debate_chamber_telemetry_${Date.now()}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    updateGenreBanner();
+  </script>
+</body>
+</html>
