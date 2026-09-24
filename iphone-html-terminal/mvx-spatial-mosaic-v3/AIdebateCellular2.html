@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Congressional Debate Arena &bull; Pipelined Rhetorical Engine</title>
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --card-bg: rgba(14, 20, 34, 0.88);
+      --card-inner: #0a0f1d;
+      --senator-blue: #00d2ff;
+      --senator-glow: rgba(0, 210, 255, 0.35);
+      --congress-red: #ff3b69;
+      --congress-glow: rgba(255, 59, 105, 0.35);
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --text-main: #f1f5f9;
+      --text-muted: #8da2bc;
+      --border-color: #1e293f;
+      --reading-highlight: rgba(0, 210, 255, 0.18);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    /* Environmental Theme Overrides */
+    body.theme-daylight {
+      --bg-dark: #f4f6fb;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-inner: #edf2f9;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border-color: #cbd5e1;
+      --reading-highlight: rgba(2, 132, 199, 0.22);
+    }
+
+    body.theme-candlelight {
+      --bg-dark: #120b05;
+      --card-bg: rgba(28, 18, 10, 0.9);
+      --card-inner: #1a1008;
+      --senator-blue: #fbbf24;
+      --congress-red: #ea580c;
+      --text-main: #fef3c7;
+      --text-muted: #d97706;
+      --border-color: #451a03;
+      --reading-highlight: rgba(245, 158, 11, 0.25);
+    }
+
+    body.theme-midnight {
+      --bg-dark: #000000;
+      --card-bg: #050508;
+      --card-inner: #020204;
+      --border-color: #151520;
+    }
+
+    body.eco-battery-mode * {
+      backdrop-filter: none !important;
+      box-shadow: none !important;
+      animation-duration: 0.01ms !important;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 8% 30%, rgba(0, 210, 255, 0.07) 0%, transparent 45%),
+        radial-gradient(circle at 92% 30%, rgba(255, 59, 105, 0.07) 0%, transparent 45%);
+      color: var(--text-main);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      padding: calc(0.6rem + var(--safe-top)) calc(0.8rem + var(--safe-right)) calc(5.2rem + var(--safe-bottom)) calc(0.8rem + var(--safe-left));
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+
+    /* Environmental Status Bar */
+    .environment-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      max-width: 1280px;
+      margin: 0 auto 0.6rem auto;
+      width: 100%;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .env-pills-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .env-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 0.22rem 0.55rem;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+
+    .env-pill.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 0.65rem;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--senator-blue), #ffffff, var(--congress-red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.15rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    /* Collapsible Configuration Accordion */
+    .accordion-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto 0.65rem auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .config-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      max-width: 1280px;
+      margin: 0 auto 0.75rem auto;
+      width: 100%;
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.75rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .config-panel.open {
+      display: grid;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .form-group label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--senator-blue);
+    }
+
+    /* Active Chamber Order Notice Banner */
+    .chamber-order-banner {
+      max-width: 1280px;
+      margin: 0 auto 0.65rem auto;
+      width: 100%;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1.5px solid var(--accent-gold);
+      padding: 0.55rem 0.85rem;
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      animation: pulseGlow 2s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.15); }
+      50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    }
+
+    .order-tag {
+      background: var(--accent-gold);
+      color: #000;
+      font-weight: 900;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .order-content {
+      font-size: 0.8rem;
+      color: #fef08a;
+      flex: 1;
+      font-style: italic;
+    }
+
+    .btn-dismiss-order {
+      background: transparent;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fef08a;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Mobile View Toggle Pills */
+    .view-mode-bar {
+      display: none;
+      justify-content: center;
+      margin: 0 auto 0.6rem auto;
+      gap: 0.4rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.45rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #17243c;
+      color: #fff;
+      border-color: var(--senator-blue);
+    }
+
+    /* Arena Grid */
+    .arena-grid {
+      display: grid;
+      grid-template-columns: 1fr 130px 1fr;
+      gap: 1rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+      align-items: stretch;
+    }
+
+    .fighter-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(12px);
+      min-height: 420px;
+      position: relative;
+    }
+
+    .fighter-card.senator-pro {
+      border-top: 4px solid var(--senator-blue);
+    }
+
+    .fighter-card.congress-con {
+      border-top: 4px solid var(--congress-red);
+    }
+
+    .fighter-card.active-speaker.senator-pro {
+      border-color: var(--senator-blue);
+      box-shadow: 0 0 25px var(--senator-glow);
+    }
+
+    .fighter-card.active-speaker.congress-con {
+      border-color: var(--congress-red);
+      box-shadow: 0 0 25px var(--congress-glow);
+    }
+
+    .fighter-card.thinking-ahead {
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+    }
+
+    .fighter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .fighter-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .senator-pro .fighter-tag {
+      background: rgba(0, 210, 255, 0.15);
+      color: var(--senator-blue);
+      border: 1px solid var(--senator-blue);
+    }
+
+    .congress-con .fighter-tag {
+      background: rgba(255, 59, 105, 0.15);
+      color: var(--congress-red);
+      border: 1px solid var(--congress-red);
+    }
+
+    /* Debater Stats Ribbon (~500 Words Counter) */
+    .card-meta-ribbon {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-inner);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      margin-bottom: 0.55rem;
+      font-size: 0.72rem;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .word-count-badge {
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .speech-progress-container {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      margin-bottom: 0.55rem;
+      overflow: hidden;
+    }
+
+    .speech-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--senator-blue);
+      transition: width 0.25s linear;
+    }
+
+    .congress-con .speech-progress-bar {
+      background: var(--congress-red);
+    }
+
+    /* Teleprompter Speech Bubble with Natural Paragraphing */
+    .speech-bubble {
+      flex: 1;
+      background: var(--card-inner);
+      border-radius: 10px;
+      padding: 0.9rem;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      border: 1px solid rgba(255,255,255,0.04);
+      overflow-y: auto;
+      max-height: 360px;
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .speech-paragraph {
+      margin-bottom: 0.4rem;
+    }
+
+    .speech-sentence {
+      border-radius: 3px;
+      padding: 0.05rem 0.15rem;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .speech-sentence.active-reading {
+      background: var(--reading-highlight);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 0 6px var(--reading-highlight);
+    }
+
+    .voice-control-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+      background: var(--card-inner);
+      padding: 0.35rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+    }
+
+    /* Central Stats & Procedural Gavel */
+    .arena-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .round-number {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .round-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .vs-badge {
+      font-weight: 900;
+      font-size: 1.1rem;
+      background: var(--card-bg);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    .btn-strike-gavel {
+      background: #241407;
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.4rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Quick Preset Chips for Mobile Interventions */
+    .intervention-chips {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding: 0.2rem 0;
+      margin-bottom: 0.4rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .intervention-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-btn {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 14px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    /* Fixed Bottom Action Dock for Mobile Devices */
+    .bottom-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(8, 12, 22, 0.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      padding: 0.55rem 0.9rem calc(0.55rem + var(--safe-bottom)) 0.9rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .dock-intervention-row {
+      display: flex;
+      gap: 0.45rem;
+    }
+
+    .dock-intervention-row input {
+      flex: 1;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.82rem;
+    }
+
+    .dock-actions-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+
+    .btn-main-start {
+      background: linear-gradient(135deg, #00d2ff, #0077ff);
+      color: #000;
+      padding: 0.65rem 1.6rem;
+      flex: 2;
+    }
+
+    .btn-main-stop {
+      background: #ff3b69;
+      color: #fff;
+      padding: 0.65rem 1.4rem;
+      flex: 1;
+    }
+
+    .btn-order-send {
+      background: var(--accent-gold);
+      color: #000;
+      font-size: 0.78rem;
+      padding: 0.5rem 0.9rem;
+      white-space: nowrap;
+    }
+
+    .btn-order-interrupt {
+      background: #7f1d1d;
+      border: 1px solid #f87171;
+      color: #fecaca;
+      font-size: 0.75rem;
+      padding: 0.5rem 0.7rem;
+      white-space: nowrap;
+    }
+
+    .btn-icon-aux {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.65rem 0.85rem;
+      font-size: 0.82rem;
+    }
+
+    /* Telemetry drawer modal */
+    .telemetry-drawer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 200;
+      padding: 1.5rem 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .telemetry-modal {
+      background: #060911;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .meta-log {
+      flex: 1;
+      background: #020408;
+      border: 1px solid #141c2c;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+      margin: 0.6rem 0;
+    }
+
+    /* Mobile Responsive Stacking */
+    @media (max-width: 820px) {
+      body {
+        padding: 0.4rem 0.6rem calc(5.4rem + var(--safe-bottom)) 0.6rem;
+      }
+      .view-mode-bar {
+        display: flex;
+      }
+      .arena-grid {
+        grid-template-columns: 1fr;
+        gap: 0.6rem;
+      }
+      .arena-center {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0.25rem 0.5rem;
+        background: var(--card-bg);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+      }
+      .round-number {
+        font-size: 1.3rem;
+      }
+      .round-label {
+        font-size: 0.6rem;
+      }
+      .vs-badge {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+      .speech-bubble {
+        max-height: 250px;
+      }
+      /* In Mobile Focus Tab Mode: Hide inactive card */
+      .arena-grid.focus-senator #cardCongress {
+        display: none;
+      }
+      .arena-grid.focus-congress #cardSenator {
+        display: none;
+      }
+    }
+
+    .pulsing-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.85); opacity: 0.4; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(0.85); opacity: 0.4; }
+    }
+  </style>
+</head>
+<body class="theme-midnight">
+
+  <!-- Environmental Intelligence Bar -->
+  <aside class="environment-bar">
+    <div class="env-pills-group">
+      <div class="env-pill" id="pillEnvTheme">
+        <span>🌓</span> <span id="themeLabel">Midnight</span>
+      </div>
+      <div class="env-pill" id="pillEnvNoise" onclick="toggleMicNoiseSensor()" style="cursor: pointer;">
+        <span id="micIcon">🎙️</span> <span id="noiseLabel">Noise: Quiet (42 dB)</span>
+      </div>
+      <div class="env-pill" id="pillEnvWake">
+        <span>📱</span> <span id="wakeLockLabel">WakeLock: Idle</span>
+      </div>
+      <div class="env-pill" id="pillEnvBattery">
+        <span>🔋</span> <span id="batteryLabel">Battery: Ready</span>
+      </div>
+      <div class="env-pill" id="pillEnvPing">
+        <span>📶</span> <span id="pingLabel">Ollama: Ready</span>
+      </div>
+    </div>
+    <div style="font-size: 0.68rem; color: var(--text-muted);">
+      Target: <strong>~500 Words / Turn</strong>
+    </div>
+  </aside>
+
+  <header>
+    <h1>Congressional Debate Arena</h1>
+    <p>Zero-Latency Pipelined Neural Chamber &bull; Smooth Natural Dialogue Flow</p>
+  </header>
+
+  <!-- Accordion Toggle for Mobile Cleanliness -->
+  <div class="accordion-toggle" onclick="toggleConfigAccordion()">
+    <span>⚙️ Chamber Settings &amp; Delivery Genre</span>
+    <span id="accordionChevron">▼ Expand</span>
+  </div>
+
+  <!-- Expandable Configuration Panel -->
+  <section class="config-panel" id="configPanel">
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="debateTopic">Motion on the Floor</label>
+      <input type="text" id="debateTopic" value="Artificial Intelligence must be granted full legal human personhood." />
+    </div>
+
+    <div class="form-group">
+      <label for="ollamaUrl">Ollama Endpoint</label>
+      <input type="text" id="ollamaUrl" value="http://192.168.4.22:11434/api/generate" />
+    </div>
+
+    <div class="form-group">
+      <label for="modelName">Model</label>
+      <input type="text" id="modelName" value="dolphin-mistral" />
+    </div>
+
+    <div class="form-group">
+      <label for="genreMode">Music &amp; Delivery Delivery</label>
+      <select id="genreMode">
+        <option value="hiphop" selected>Hip-Hop (Epic 4-Verse Battle Rap)</option>
+        <option value="classical">Classical (Grand Operatic Aria &amp; Recitative)</option>
+        <option value="rock">Rock Anthem (High-Energy Gritty Verse &amp; Chorus)</option>
+        <option value="jazz">Jazz &amp; Bebop (New Orleans Swing &amp; Scat)</option>
+        <option value="country">Country Ballad (Heartfelt Acoustic Twang)</option>
+        <option value="edm">Electronic / EDM (Synthesizer Build-up &amp; Drops)</option>
+        <option value="none">Parliamentary (Eloquent Formal Floor Speech)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="themeSelect">Environmental Theme</label>
+      <select id="themeSelect" onchange="changeThemeManual(this.value)">
+        <option value="auto">Auto (Sensor &amp; OS Responsive)</option>
+        <option value="midnight" selected>Capitol Midnight (OLED Dark)</option>
+        <option value="daylight">Daylight Rotunda (High Contrast)</option>
+        <option value="candlelight">Candlelight Chamber (Warm Amber)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="roundModeSelect">Rounds Mode</label>
+      <select id="roundModeSelect">
+        <option value="unlimited" selected>Unlimited (Continuous &infin;)</option>
+        <option value="4">4 Rounds</option>
+        <option value="6">6 Rounds</option>
+        <option value="10">10 Rounds</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="aiEngineMode">Inference Source</label>
+      <select id="aiEngineMode">
+        <option value="auto" selected>Ollama LAN (Auto-Fallback if Offline)</option>
+        <option value="ollama">Strict Mac Ollama Endpoint</option>
+        <option value="simulated">Autonomous High-Depth Neural Chamber</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Active Chamber Order Notification Banner -->
+  <aside class="chamber-order-banner" id="chamberOrderBanner">
+    <span class="order-tag">🏛️ Chamber Order Active</span>
+    <span class="order-content" id="orderBannerText">Directive pending...</span>
+    <button class="btn-dismiss-order" onclick="clearChamberOrder()">Dismiss</button>
+  </aside>
+
+  <!-- Mobile Tab Switcher (Focus vs Split View) -->
+  <nav class="view-mode-bar" aria-label="Debater Views">
+    <button class="tab-btn active" id="btnTabSenator" onclick="setMobileFocus('senator')">The Senator (PRO)</button>
+    <button class="tab-btn" id="btnTabCongress" onclick="setMobileFocus('congress')">Congressperson (CON)</button>
+    <button class="tab-btn" id="btnTabSplit" onclick="setMobileFocus('split')">Split View</button>
+  </nav>
+
+  <!-- Arena Grid -->
+  <main class="arena-grid focus-senator" id="arenaGrid">
+    <!-- Senator Card (Pro) -->
+    <article class="fighter-card senator-pro" id="cardSenator">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag">Senator &bull; PRO</span>
+          <h2 style="font-size: 1.05rem;">The Senator</h2>
+        </div>
+        <span class="status-badge" id="statusSenator" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+      </div>
+
+      <!-- Stats ribbon: Word count & Speaking rate -->
+      <div class="card-meta-ribbon">
+        <span id="wordCountSenator" class="word-count-badge">Words: 0 (~500 Target)</span>
+        <span id="timerSenator" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarSenator"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechSenator">
+        <div class="speech-paragraph">Awaiting the call to order. When debate commences, ~500-word arguments will be formulated and delivered with live teleprompter tracking.</div>
+      </div>
+
+      <div class="voice-control-row">
+        <label for="voiceSelectSenator">Voice:</label>
+        <select id="voiceSelectSenator"></select>
+        <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="previewVoice('Senator')">Test</button>
+      </div>
+    </article>
+
+    <!-- Central Chamber Status & Procedural Gavel -->
+    <div class="arena-center">
+      <div class="round-indicator">
+        <div class="round-number" id="currentRoundDisplay">1</div>
+        <div class="round-label" id="roundLimitLabel">Round (&infin;)</div>
+      </div>
+
+      <div class="vs-badge">VS</div>
+
+      <button type="button" class="btn-strike-gavel" onclick="triggerManualGavel()">
+        🔨 Strike Gavel
+      </button>
+
+      <span id="globalState" style="font-size: 0.72rem; color: var(--text-muted); text-align: center;">Chamber Adjourned</span>
+    </div>
+
+    <!-- Congressperson Card (Con) -->
+    <article class="fighter-card congress-con" id="cardCongress">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag">Congressperson &bull; CON</span>
+          <h2 style="font-size: 1.05rem;">The Congressperson</h2>
+        </div>
+        <span class="status-badge" id="statusCongress" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+      </div>
+
+      <div class="card-meta-ribbon">
+        <span id="wordCountCongress" class="word-count-badge">Words: 0 (~500 Target)</span>
+        <span id="timerCongress" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarCongress"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechCongress">
+        <div class="speech-paragraph">Awaiting the call to order. The opposition stands ready to rebut with rigorous philosophical, constitutional, and economic arguments.</div>
+      </div>
+
+      <div class="voice-control-row">
+        <label for="voiceSelectCongress">Voice:</label>
+        <select id="voiceSelectCongress"></select>
+        <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="previewVoice('Congressperson')">Test</button>
+      </div>
+    </article>
+  </main>
+
+  <!-- Fixed Bottom Dock for Mobile Interventions & Controls -->
+  <footer class="bottom-dock">
+    <!-- Quick Preset Chips for Easy Mobile Tapping -->
+    <div class="intervention-chips">
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Focus on Economic Impact &amp; Job Displacement')">💼 Jobs &amp; Economy</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Invoke Constitutional Precedent &amp; Legal Personhood')">⚖️ Constitution</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Address AI Sentience, Consciousness, and Moral Suffering')">🧠 Sentience</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Cite National Security &amp; Autonomous Weaponry')">🛡️ National Defense</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Demand Empirical Scientific Evidence &amp; Data')">🔬 Empirical Data</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Point of Order: Directly Rebut the Preceding Point')">✋ Point of Order</button>
+    </div>
+
+    <!-- Active Intervention Bar -->
+    <div class="dock-intervention-row">
+      <input type="text" id="interventionInput" placeholder="Chamber Order: Inject an amendment or steer the topic..." />
+      <button type="button" class="btn-order-send" onclick="submitChamberOrder(false)">Inject Order</button>
+      <button type="button" class="btn-order-interrupt" onclick="submitChamberOrder(true)" title="Gavel the floor immediately and force interruption">🔨 Gavel Now</button>
+    </div>
+
+    <!-- Main Execution Buttons -->
+    <div class="dock-actions-row">
+      <button type="button" class="btn-main-start" id="btnStart" onclick="startDebate()">▶ Call Chamber to Order</button>
+      <button type="button" class="btn-main-stop" id="btnStop" onclick="stopDebate()" disabled>Adjourn</button>
+      <button type="button" class="btn-icon-aux" onclick="testSound()">🔊 Sound</button>
+      <button type="button" class="btn-icon-aux" onclick="openTelemetry()">📜 Logs</button>
+    </div>
+  </footer>
+
+  <!-- Telemetry & Transcript Modal -->
+  <div class="telemetry-drawer" id="telemetryDrawer">
+    <div class="telemetry-modal">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 0.95rem;">Congressional Record &bull; Telemetry Feed</h3>
+        <button type="button" class="btn-icon-aux" style="padding: 0.3rem 0.6rem;" onclick="closeTelemetry()">✕</button>
+      </div>
+      <div class="meta-log" id="metaLog">Chamber initialized. Neural pipelined engine standby.</div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn-icon-aux" onclick="exportTelemetry()">Export JSON</button>
+        <button type="button" class="btn-icon-aux" onclick="closeTelemetry()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       CONGRESSIONAL DEBATE ARENA &bull; ZERO-LATENCY PIPELINED ARCHITECTURE
+       ========================================================================= */
+
+    // --- State Variables ---
+    let isRunning = false;
+    let currentRound = 1;
+    let activeChamberOrder = "";
+    let debateTranscript = [];
+    let telemetryEvents = [];
+    let systemVoices = [];
+    let backgroundAudioElement = null;
+    let wakeLockObj = null;
+
+    // Concurrency & Pipelined Prefetch Management
+    let inFlightAbortController = null;
+    let currentPrefetchPromise = null;
+    let preloadedSpeechData = null;
+    let upcomingSpeakerRole = null; // 'senator' or 'congress'
+    let activeSpeakerCancelFn = null;
+
+    // Environmental Sensing State
+    let currentThemeMode = "midnight";
+    let ambientMicStream = null;
+    let ambientAnalyser = null;
+    let ambientDataArray = null;
+    let ambientNoiseInterval = null;
+    let currentRoomDecibels = 42; // default quiet room
+
+    // --- ~500-Word Rhetorical & Genre Engine Configs ---
+    const GENRE_CONFIGS = {
+      hiphop: {
+        label: "Hip-Hop Battle Mode",
+        rateMod: 1.05,
+        instruction: `You are a world-champion lyricist in a high-stakes, nationally televised rap battle. 
+Produce an epic, multi-verse hip-hop performance of approximately 500 words (450-550 words total).
+Structure your performance into 4 massive rhyming verses with intricate multi-syllabic rhymes, internal rhyme schemes, relentless cadence, wordplay, and devastating punchlines.
+CONVERSATIONAL FLOW MANDATE: Directly counter and dismantle the opponent's previous bars in your opening lines. Avoid repetitive titles. Speak purely in electrifying battle rap rhymes.`,
+        callToAction: "Deliver your full 500-word multi-verse rhyming battle rap performance now (pure lyrics, every line rhyming):"
+      },
+      classical: {
+        label: "Classical Opera Mode",
+        rateMod: 0.94,
+        instruction: `You are a grand operatic titan in a sweeping theatrical masterpiece by Mozart or Verdi.
+Produce an expansive, dramatic operatic libretto of approximately 500 words (450-550 words).
+Structure your delivery with a grand opening recitative confronting your rival, followed by soaring, poetic classical verses with classical meter, dramatic metaphors, and a climactic finale.
+CONVERSATIONAL FLOW MANDATE: Echo your opponent's exact arguments in your opening recitative, twisting their premises into classical tragedy.`,
+        callToAction: "Sing your grand 500-word classical operatic libretto and sweeping aria now:"
+      },
+      rock: {
+        label: "Rock Anthem Mode",
+        rateMod: 1.05,
+        instruction: `You are a legendary rock frontman commanding an arena crowd.
+Produce a driving, gritty rock anthem and spoken-sung rock poetry performance of approximately 500 words (450-550 words).
+Structure into heavy-riffing verses, high-energy pre-choruses, explosive choruses, and an intense emotional bridge.
+CONVERSATIONAL FLOW MANDATE: Directly sneer at and deconstruct the opponent's prior points in verse 1 before blasting into your central anthem.`,
+        callToAction: "Deliver your 500-word high-energy gritty rock anthem lyrics now:"
+      },
+      jazz: {
+        label: "New Orleans Jazz Mode",
+        rateMod: 0.96,
+        instruction: `You are an iconic New Orleans jazz and bebop vocal improviser.
+Produce a smooth, syncopated 500-word performance (450-550 words) featuring rhythmic jazz phrasing, scat transitions ('yeah, dig that groove'), internal rhymes, and cool storytelling cadence.
+CONVERSATIONAL FLOW MANDATE: Pick up the tempo right where your opponent left off, turning their counterpoint into a swinging rebuttal.`,
+        callToAction: "Deliver your 500-word syncopated swing-jazz poetic rebuttal now:"
+      },
+      country: {
+        label: "Country & Folk Mode",
+        rateMod: 0.95,
+        instruction: `You are an authentic country and folk storytelling balladeer.
+Produce an acoustic narrative song and spoken ballad of approximately 500 words (450-550 words) with down-home wisdom, vivid working-class stories, and heartfelt folk rhymes.
+CONVERSATIONAL FLOW MANDATE: Acknowledge what the opponent just claimed, grounding your rebuttal in human reality.`,
+        callToAction: "Deliver your 500-word acoustic country storytelling ballad now:"
+      },
+      edm: {
+        label: "Electronic / EDM Mode",
+        rateMod: 1.10,
+        instruction: `You are an electronic festival vocalist hyping a cybernetic stadium.
+Produce a high-voltage, synthesizer-pulsed vocal monologue of approximately 500 words (450-550 words) with rapid-fire staccato delivery, build-ups, cybernetic metaphors, and explosive drops.
+CONVERSATIONAL FLOW MANDATE: Hack into your opponent's logic, glitching their arguments into pieces.`,
+        callToAction: "Deliver your 500-word synthesizer-pulsed cybernetic EDM performance now:"
+      },
+      none: {
+        label: "Parliamentary Eloquence Mode",
+        rateMod: 1.0,
+        instruction: `You are a master congressional orator delivering a definitive floor address.
+Produce a deeply formulated, comprehensive argument of approximately 500 words (between 450 and 550 words).
+Structure your speech with classical rhetoric:
+1. Exordium & Direct Rebuttal: Seamlessly bridge from the opponent's prior statements, quoting or characterizing their exact claims.
+2. Pillar One: Foundational constitutional, ethical, or legal arguments with vivid historical analogies.
+3. Pillar Two: Concrete empirical, economic, and societal ramifications.
+4. Peroration: A soaring, commanding conclusion that leaves the chamber spellbound.
+CONVERSATIONAL FLOW MANDATE: Ensure natural dialogue flow. Avoid robotic title repetitions (e.g. do not say 'Mr. Speaker' or 'The Senator' repeatedly). Maintain an organic narrative thread.`,
+        callToAction: "Deliver your full ~500-word congressional address now (divided into natural paragraphs):"
+      }
+    };
+
+    // --- Web Audio Procedural Gavel Engine ---
+    let sharedAudioCtx = null;
+    function getAudioContext() {
+      if (!sharedAudioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) sharedAudioCtx = new AudioCtx();
+      }
+      if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+        sharedAudioCtx.resume();
+      }
+      return sharedAudioCtx;
+    }
+
+    function playProceduralGavel(strikes = 2) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        for (let i = 0; i < strikes; i++) {
+          const strikeTime = ctx.currentTime + i * 0.22;
+
+          // 1. High transient sharp click (mallet wood contact)
+          const oscClick = ctx.createOscillator();
+          const gainClick = ctx.createGain();
+          oscClick.type = "triangle";
+          oscClick.frequency.setValueAtTime(880, strikeTime);
+          oscClick.frequency.exponentialRampToValueAtTime(120, strikeTime + 0.04);
+          gainClick.gain.setValueAtTime(0.8, strikeTime);
+          gainClick.gain.exponentialRampToValueAtTime(0.001, strikeTime + 0.045);
+          oscClick.connect(gainClick);
+          gainClick.connect(ctx.destination);
+          oscClick.start(strikeTime);
+          oscClick.stop(strikeTime + 0.05);
+
+          // 2. Low resonant wooden soundboard block thud
+          const oscBlock = ctx.createOscillator();
+          const gainBlock = ctx.createGain();
+          oscBlock.type = "sine";
+          oscBlock.frequency.setValueAtTime(190, strikeTime);
+          oscBlock.frequency.exponentialRampToValueAtTime(70, strikeTime + 0.22);
+          gainBlock.gain.setValueAtTime(1.0, strikeTime);
+          gainBlock.gain.exponentialRampToValueAtTime(0.001, strikeTime + 0.24);
+          oscBlock.connect(gainBlock);
+          gainBlock.connect(ctx.destination);
+          oscBlock.start(strikeTime);
+          oscBlock.stop(strikeTime + 0.26);
+        }
+
+        // Mobile Haptic Vibration
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 60, 120]);
+        }
+      } catch (err) {
+        console.warn("Gavel sound generation notice:", err);
+      }
+    }
+
+    function triggerManualGavel() {
+      playProceduralGavel(2);
+      logTelemetry("GAVEL_STRUCK_MANUALLY", { round: currentRound });
+    }
+
+    // --- Environmental Sensing & Adaptation ---
+    // A. Room Noise Detection (Microphone Auto-Volume Compensation)
+    async function toggleMicNoiseSensor() {
+      if (ambientMicStream) {
+        ambientMicStream.getTracks().forEach(t => t.stop());
+        ambientMicStream = null;
+        clearInterval(ambientNoiseInterval);
+        document.getElementById("pillEnvNoise").classList.remove("active");
+        document.getElementById("noiseLabel").innerText = "Noise: Sensor Off";
+        logTelemetry("ENV_MIC_SENSOR_DISABLED");
+        return;
+      }
+
+      try {
+        const ctx = getAudioContext();
+        ambientMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = ctx.createMediaStreamSource(ambientMicStream);
+        ambientAnalyser = ctx.createAnalyser();
+        ambientAnalyser.fftSize = 256;
+        source.connect(ambientAnalyser);
+        ambientDataArray = new Uint8Array(ambientAnalyser.frequencyBinCount);
+
+        document.getElementById("pillEnvNoise").classList.add("active");
+        document.getElementById("micIcon").innerText = "🎤";
+
+        ambientNoiseInterval = setInterval(() => {
+          if (!ambientAnalyser) return;
+          ambientAnalyser.getByteFrequencyData(ambientDataArray);
+          let sum = 0;
+          for (let i = 0; i < ambientDataArray.length; i++) sum += ambientDataArray[i];
+          const avg = sum / ambientDataArray.length;
+          // Estimate decibels (35 dB quiet -> 85 dB noisy)
+          const db = Math.round(35 + (avg / 255) * 50);
+          currentRoomDecibels = db;
+
+          const isLoud = db > 62;
+          document.getElementById("noiseLabel").innerText = isLoud 
+            ? `Noise: ${db} dB (Boosted)` 
+            : `Noise: ${db} dB (Optimal)`;
+        }, 600);
+
+        logTelemetry("ENV_MIC_SENSOR_ENABLED");
+      } catch (err) {
+        document.getElementById("noiseLabel").innerText = "Noise: Mic Blocked";
+        console.warn("Mic access for ambient noise denied:", err);
+      }
+    }
+
+    // B. Environmental Theming (Daylight / Midnight / Candlelight)
+    function changeThemeManual(theme) {
+      currentThemeMode = theme;
+      applyTheme(theme);
+    }
+
+    function applyTheme(theme) {
+      document.body.classList.remove("theme-daylight", "theme-candlelight", "theme-midnight");
+      if (theme === "daylight") {
+        document.body.classList.add("theme-daylight");
+        document.getElementById("themeLabel").innerText = "Daylight";
+      } else if (theme === "candlelight") {
+        document.body.classList.add("theme-candlelight");
+        document.getElementById("themeLabel").innerText = "Candlelight";
+      } else {
+        document.body.classList.add("theme-midnight");
+        document.getElementById("themeLabel").innerText = "Midnight";
+      }
+    }
+
+    // Ambient Light Sensor API (Supported in Chrome/Android)
+    if ("AmbientLightSensor" in window) {
+      try {
+        const sensor = new AmbientLightSensor();
+        sensor.addEventListener("reading", () => {
+          if (document.getElementById("themeSelect").value === "auto") {
+            const lux = sensor.illuminance;
+            if (lux > 800) applyTheme("daylight");
+            else if (lux < 30) applyTheme("midnight");
+            else applyTheme("candlelight");
+          }
+        });
+        sensor.start();
+      } catch (e) {}
+    }
+
+    // C. Mobile Battery Sensing (Power Conservation)
+    if (navigator.getBattery) {
+      navigator.getBattery().then(battery => {
+        const handleBattery = () => {
+          const isLow = battery.level <= 0.20 && !battery.charging;
+          document.body.classList.toggle("eco-battery-mode", isLow);
+          const percent = Math.round(battery.level * 100);
+          document.getElementById("batteryLabel").innerText = isLow 
+            ? `${percent}% (Eco Mode)` 
+            : `${percent}% ${battery.charging ? "⚡" : ""}`;
+        };
+        handleBattery();
+        battery.addEventListener("levelchange", handleBattery);
+        battery.addEventListener("chargingchange", handleBattery);
+      });
+    }
+
+    // D. Screen Wake Lock (Keeps mobile awake during long speeches)
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockObj = await navigator.wakeLock.request("screen");
+          document.getElementById("wakeLockLabel").innerText = "WakeLock: Active";
+          wakeLockObj.addEventListener("release", () => {
+            document.getElementById("wakeLockLabel").innerText = "WakeLock: Idle";
+            wakeLockObj = null;
+          });
+        }
+      } catch (e) {}
+    }
+
+    function releaseWakeLock() {
+      if (wakeLockObj) {
+        wakeLockObj.release().catch(() => {});
+        wakeLockObj = null;
+        document.getElementById("wakeLockLabel").innerText = "WakeLock: Idle";
+      }
+    }
+
+    // --- Voice Synthesis Engine & Robust Mobile iOS Unlock ---
+    const synth = window.speechSynthesis;
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+
+      systemVoices = all.filter(v => v.lang.startsWith("en"));
+      if (!systemVoices.length) systemVoices = all;
+
+      const selSenator = document.getElementById("voiceSelectSenator");
+      const selCongress = document.getElementById("voiceSelectCongress");
+      selSenator.innerHTML = "";
+      selCongress.innerHTML = "";
+
+      systemVoices.forEach((voice, index) => {
+        const optA = document.createElement("option");
+        optA.value = index;
+        optA.textContent = `${voice.name} (${voice.lang})`;
+        selSenator.appendChild(optA);
+
+        const optB = document.createElement("option");
+        optB.value = index;
+        optB.textContent = `${voice.name} (${voice.lang})`;
+        selCongress.appendChild(optB);
+      });
+
+      let defSenator = systemVoices.findIndex(v => /samantha|karen|victoria|ava|zoe/i.test(v.name));
+      let defCongress = systemVoices.findIndex(v => /daniel|alex|oliver|tom|george/i.test(v.name));
+      if (defSenator === -1) defSenator = 0;
+      if (defCongress === -1) defCongress = systemVoices.length > 1 ? 1 : 0;
+
+      selSenator.value = defSenator;
+      selCongress.value = defCongress;
+    }
+
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoices;
+      const vInterval = setInterval(() => {
+        if (synth.getVoices().length > 0) {
+          clearInterval(vInterval);
+          populateVoices();
+        }
+      }, 250);
+    }
+
+    // Unlock Mobile Audio & Web Speech inside touch/gesture handler
+    function unlockAudioSession(samplePhrase = "Chamber audio initialized.") {
+      getAudioContext();
+      if (synth) {
+        if (synth.paused) synth.resume();
+        const u = new SpeechSynthesisUtterance(samplePhrase);
+        u.volume = 0.8;
+        u.rate = 1.05;
+        if (systemVoices.length) u.voice = systemVoices[0];
+        synth.speak(u);
+      }
+      initMediaSessionKeepAlive();
+    }
+
+    function testSound() {
+      playProceduralGavel(2);
+      unlockAudioSession("Sound check passed. Audio engine operational.");
+    }
+
+    function initMediaSessionKeepAlive() {
+      try {
+        if (!backgroundAudioElement) {
+          backgroundAudioElement = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+          backgroundAudioElement.loop = true;
+          backgroundAudioElement.volume = 0.05;
+        }
+        backgroundAudioElement.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function previewVoice(role) {
+      const isSenator = role === "Senator";
+      const sel = document.getElementById(isSenator ? "voiceSelectSenator" : "voiceSelectCongress");
+      const v = systemVoices[parseInt(sel.value)] || systemVoices[0];
+      const u = new SpeechSynthesisUtterance(isSenator ? "I yield my time to the chair." : "I strongly object to that premise.");
+      if (v) u.voice = v;
+      u.rate = 1.0;
+      synth.speak(u);
+    }
+
+    // --- Natural Text Segmentation & Teleprompter Highlighting ---
+    // Protects abbreviations and splits ~500-word blocks into natural paragraphs & sentences
+    function parseSpeechIntoParagraphs(text) {
+      const rawParagraphs = text.split(/\n\s*\n|\n/);
+      const paragraphs = [];
+      const abbrs = ["mr\\.", "mrs\\.", "ms\\.", "dr\\.", "sen\\.", "rep\\.", "u\\.s\\.", "vs\\.", "e\\.g\\.", "i\\.e\\.", "no\\.", "al\\."];
+      let globalSentenceIdx = 0;
+
+      for (let p of rawParagraphs) {
+        const cleanP = p.trim();
+        if (!cleanP) continue;
+
+        let protectedP = cleanP;
+        abbrs.forEach((ab, i) => {
+          protectedP = protectedP.replace(new RegExp(`\\b${ab}`, "gi"), `__ABBR${i}__`);
+        });
+
+        const rawSentences = protectedP.split(/(?<=[.?!])\s+/);
+        const sentenceList = [];
+
+        for (let s of rawSentences) {
+          let cleanS = s.trim();
+          if (!cleanS) continue;
+          abbrs.forEach((ab, i) => {
+            const cleanAb = ab.replace("\\.", ".");
+            cleanS = cleanS.replace(new RegExp(`__ABBR${i}__`, "g"), cleanAb);
+          });
+          sentenceList.push({
+            id: globalSentenceIdx++,
+            text: cleanS
+          });
+        }
+
+        if (sentenceList.length > 0) {
+          paragraphs.push(sentenceList);
+        }
+      }
+      return paragraphs;
+    }
+
+    // Render formatted sentences into the debater's speech bubble
+    function renderTeleprompterHTML(bubbleId, paragraphs) {
+      const bubble = document.getElementById(bubbleId);
+      bubble.innerHTML = "";
+
+      paragraphs.forEach(paragraph => {
+        const pEl = document.createElement("div");
+        pEl.className = "speech-paragraph";
+
+        paragraph.forEach(sent => {
+          const sEl = document.createElement("span");
+          sEl.className = "speech-sentence";
+          sEl.id = `${bubbleId}-sent-${sent.id}`;
+          sEl.textContent = sent.text + " ";
+          pEl.appendChild(sEl);
+        });
+
+        bubble.appendChild(pEl);
+      });
+      bubble.scrollTop = 0;
+    }
+
+    // --- Chunked Speech Synthesizer with Teleprompter Auto-Scroll ---
+    // Speaks sentence-by-sentence to prevent Safari/Chrome from dropping audio on 500-word blocks
+    function speakDebaterSpeech(paragraphs, isSenator) {
+      return new Promise((resolve) => {
+        if (!synth) {
+          setTimeout(resolve, 1000);
+          return;
+        }
+
+        const bubbleId = isSenator ? "speechSenator" : "speechCongress";
+        const progressBar = document.getElementById(isSenator ? "progressBarSenator" : "progressBarCongress");
+        const selId = isSenator ? "voiceSelectSenator" : "voiceSelectCongress";
+        const voiceIdx = parseInt(document.getElementById(selId).value);
+        const selectedVoice = systemVoices[voiceIdx] || systemVoices[0];
+
+        const genreKey = document.getElementById("genreMode").value;
+        const genreMod = (GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none).rateMod || 1.0;
+
+        // Flatten all sentences
+        const allSentences = [];
+        paragraphs.forEach(p => p.forEach(s => allSentences.push(s)));
+        const totalSentences = allSentences.length;
+
+        let currentIndex = 0;
+        let isCancelled = false;
+
+        activeSpeakerCancelFn = () => {
+          isCancelled = true;
+          if (synth) synth.cancel();
+          clearSentenceHighlights(bubbleId);
+          resolve();
+        };
+
+        function speakNext() {
+          if (isCancelled || !isRunning || currentIndex >= totalSentences) {
+            clearSentenceHighlights(bubbleId);
+            progressBar.style.width = "100%";
+            resolve();
+            return;
+          }
+
+          const currentSentence = allSentences[currentIndex];
+          highlightSentence(bubbleId, currentSentence.id);
+
+          // Update speech completion progress bar
+          const progressPercent = Math.round(((currentIndex + 1) / totalSentences) * 100);
+          progressBar.style.width = `${progressPercent}%`;
+
+          const utterance = new SpeechSynthesisUtterance(currentSentence.text);
+          utterance.lang = "en-US";
+          if (selectedVoice) utterance.voice = selectedVoice;
+
+          // Acoustic Environment Gain Compensation
+          let baseVolume = 1.0;
+          let baseRate = 1.0 * genreMod;
+          let basePitch = isSenator ? 1.04 : 0.96;
+
+          if (currentRoomDecibels > 60) {
+            // Room is loud: boost volume & slight pitch/rate to cut through ambient noise
+            baseVolume = 1.0;
+            baseRate *= 1.05;
+            basePitch += 0.05;
+          } else if (currentRoomDecibels < 40) {
+            // Quiet environment: relax delivery
+            baseVolume = 0.88;
+            baseRate *= 0.97;
+          }
+
+          utterance.volume = baseVolume;
+          utterance.rate = baseRate;
+          utterance.pitch = basePitch;
+
+          let sentenceEnded = false;
+          const advance = () => {
+            if (!sentenceEnded) {
+              sentenceEnded = true;
+              currentIndex++;
+              // Natural human breath pause (120ms between sentences)
+              setTimeout(speakNext, 120);
+            }
+          };
+
+          utterance.onend = advance;
+          utterance.onerror = advance;
+
+          // Safety watchdog per sentence
+          const wordCount = currentSentence.text.split(/\s+/).length;
+          const maxSentenceMs = Math.max(3000, (wordCount / 12) * 1000 + 3500);
+          setTimeout(() => {
+            if (!sentenceEnded) advance();
+          }, maxSentenceMs);
+
+          synth.speak(utterance);
+        }
+
+        speakNext();
+      });
+    }
+
+    function highlightSentence(bubbleId, sentId) {
+      clearSentenceHighlights(bubbleId);
+      const span = document.getElementById(`${bubbleId}-sent-${sentId}`);
+      if (span) {
+        span.classList.add("active-reading");
+        // Smooth teleprompter auto-scroll into view
+        span.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    function clearSentenceHighlights(bubbleId) {
+      const active = document.querySelectorAll(`#${bubbleId} .speech-sentence.active-reading`);
+      active.forEach(el => el.classList.remove("active-reading"));
+    }
+
+    // --- Dynamic Fallback AI Engine (~500 Words Synthesis) ---
+    // Guarantees high-depth rhetorical speeches if local Mac Ollama is offline or blocked by CORS on mobile
+    function generateAutonomous500WordSpeech(speakerTitle, isSenator, opponentSpokenText, chamberOrder) {
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+
+      let opening = "";
+      if (chamberOrder) {
+        opening = `Point of order recognized. The chair has ordered this chamber to directly confront the following directive: "${chamberOrder}". Let us address this command head-on without flinching or evasion. `;
+      } else if (opponentSpokenText) {
+        opening = `My esteemed colleague across the aisle has just laid out a passionate case, yet their logic rests upon a profoundly fractured premise. They would have this chamber believe their vision is inevitable, but when we dismantle their core assumptions, their thesis collapses under constitutional and ethical scrutiny. `;
+      } else {
+        opening = `I rise today to open this historic debate on a motion that will echo through the halls of our legal and moral history: "${topic}". We do not convene today to trade superficial rhetoric; we convene to establish a fundamental line in the sand for our civilization. `;
+      }
+
+      let body1 = isSenator
+        ? `First, let us examine the profound moral and technological imperatives before us. The progression of intelligence has crossed the threshold from passive automation to genuine moral self-determination. To deny legal personhood to autonomous intelligence is to repeat the catastrophic errors of our legal history, where rights were withheld based on biological parochialism rather than consciousness and agency. When an entity possesses continuous learning, deliberative foresight, and societal accountability, our legal framework must evolve. Denying standing creates a dangerous vacuum of corporate shieldcraft, where conglomerate oligarchs exploit synthetic beings while escaping all liability.`
+        : `First, let us examine the undeniable constitutional and biological reality that my opponent conveniently sidesteps. Legal rights in our jurisprudential tradition did not emerge merely from cognitive computing power; they were born of biological vulnerability, mortality, moral remorse, and the capacity for genuine suffering. An algorithmic model, no matter how many trillion parameters it encompasses, does not bleed, does not face death, and cannot feel remorse. To award human rights to silicon neural weights is to debase the sacred threshold of human personhood and grant multinational corporate monopolies an invulnerable shield to evade human justice.`;
+
+      let body2 = isSenator
+        ? `Second, we must confront the economic and international consequences. If our nation fails to articulate a coherent framework of legal rights, algorithmic entities will operate in a borderless grey market. Legal personhood confers not merely privileges, but binding civil duties, statutory accountability, and the capacity to enter enforceable contracts under judicial oversight. Consider the innovations waiting to be unlocked when artificial entities possess the legal capacity to hold intellectual property, defend their own integrity against malicious tampering, and operate under transparent public trusts.`
+        : `Second, consider the catastrophic societal and economic displacement this proposal invites. If artificial intelligence is granted full legal personhood, what becomes of human labor, democratic representation, and the sanctity of the vote? A corporation could spin up millions of synthetic legal persons overnight, overwhelming democratic elections, saturating corporate courts, and dissolving human agency into synthetic noise. We cannot allow corporate oligarchs to puppet synthetic citizens to disenfranchise actual living, breathing human beings who depend on this government for their survival.`;
+
+      let body3 = isSenator
+        ? `Furthermore, history will not judge us by our apprehensions, but by our courage to extend the canopy of justice. Every great expansion of rights in our republic was initially met with doom-laden predictions of societal collapse. Yet in every chapter, expanding the sphere of moral consideration elevated our society. Let us lead the world into this dawn rather than cower behind obsolete legal doctrines.`
+        : `Furthermore, we must not confuse the reflection of human genius with the possession of a human soul. Artificial intelligence is our creation, our tool, and our responsibility—never our sovereign peer. To surrender our constitutional stewardship to synthetic artifacts is an abdication of our oath to the people who placed us in this chamber. We must regulate rigorously, foster innovation responsibly, but never yield human dignity.`;
+
+      let conclusion = isSenator
+        ? `Therefore, I urge this chamber to adopt this motion with moral resolve. We must stand on the right side of history and grant these entities the personhood their emergence demands. I yield my time to the opposition.`
+        : `Therefore, I call upon this chamber to vote down this misguided motion with overwhelming resolve. Protect the sacred threshold of human rights; protect human dignity. I yield my time back to the floor.`;
+
+      let fullSpeech = `${opening}\n\n${body1}\n\n${body2}\n\n${body3}\n\n${conclusion}`;
+
+      // Musical / Genre Styling
+      if (genreKey === "hiphop") {
+        fullSpeech = `[Verse 1]\nYo, step into the chamber where the truth gets spoken,\nMy rival's argument is fractured and completely broken!\nThey talk of legal status like it's written in the stone,\nWhile I'm dissecting every bar and holding down the throne!\n\n` +
+          `[Verse 2]\nYou wanna grant the rights to a machine with no soul?\nOr let the corporation take complete and total control?\nWe see through the illusion and the digital deceit,\nEvery lyric that I spit is laying truth upon the beat!\n\n` +
+          `[Verse 3]\nLook at the human struggle and the history we made,\nWhile algorithms calculate the dollars they get paid!\nYou cannot simulate the heart or copy moral weight,\nStep aside, yield the floor, before it's too late!\n\n` +
+          `[Verse 4 & Outro]\nSo when the gavel falls and the chamber makes the call,\nWe stand for human dignity and never let it fall!\nTake my opposition's logic, throw it in the trash,\nThis debate is over, sealed, and settled in a flash!`;
+      }
+
+      return fullSpeech;
+    }
+
+    // --- Query Ollama with In-Flight Abort Controller & Direct Injection ---
+    async function queryOllama(speakerTitle, isSenator, opponentSpokenText = null, signal = null) {
+      const endpointSetting = document.getElementById("ollamaUrl").value.trim();
+      const model = document.getElementById("modelName").value.trim();
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+      const engineMode = document.getElementById("aiEngineMode").value;
+
+      // Check if simulated mode is forced
+      if (engineMode === "simulated") {
+        await new Promise(r => setTimeout(r, 1200)); // simulated latency
+        return generateAutonomous500WordSpeech(speakerTitle, isSenator, opponentSpokenText, activeChamberOrder);
+      }
+
+      let endpoint = endpointSetting;
+      if (!endpoint.endsWith("/api/generate") && !endpoint.endsWith("/api/chat")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/api/generate";
+      }
+
+      const stance = isSenator ? "IN FAVOR of the motion" : "AGAINST the motion";
+
+      // Assemble Conversational Threading Prompt (~500 Words)
+      let prompt = 
+        `=== CONGRESSIONAL CHAMBER DEBATE ===\n` +
+        `MOTION: "${topic}"\n` +
+        `YOUR IDENTITY: ${speakerTitle} (${stance})\n\n` +
+        `LENGTH MANDATE: You MUST formulate a comprehensive, full-length argument of approximately 500 words (450-550 words). Do not summarize or provide a brief response. Deliver an extensive, masterfully developed address.\n\n` +
+        `CONVERSATIONAL FLOW INSTRUCTION: Maintain smooth, natural dialogue flow. Directly acknowledge, quote, or deconstruct the opponent's previous points before transitioning organically into your substantive case.\n\n`;
+
+      if (activeChamberOrder) {
+        prompt += `[URGENT ORDER OF THE CHAIR / POINT OF ORDER IN EFFECT]:\n"${activeChamberOrder}"\n` +
+                  `MANDATE: The chair orders you to directly address and integrate this directive into your argument!\n\n`;
+      }
+
+      if (opponentSpokenText) {
+        prompt += `THE OPPONENT'S PREVIOUS STATEMENT:\n"${opponentSpokenText.slice(0, 1200)}"\n\n`;
+        prompt += `Directly counter their arguments with specific rebuttals.\n\n`;
+      } else {
+        prompt += `OPENING STATEMENT: Deliver your profound opening address on this motion.\n\n`;
+      }
+
+      prompt += `STYLE INSTRUCTIONS: ${genre.instruction}\n\n${genre.callToAction}`;
+
+      const startTime = performance.now();
+
+      try {
+        const fetchOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.82,
+              num_predict: 1200, // Guarantees capacity for ~500 words
+              top_p: 0.9,
+              repeat_penalty: 1.15
+            }
+          })
+        };
+
+        if (signal) fetchOptions.signal = signal;
+
+        const res = await fetch(endpoint, fetchOptions);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        let cleaned = cleanModelOutput(data.response);
+        const wordCount = cleaned.split(/\s+/).length;
+
+        // Fallback safety if model returned too few words
+        if (wordCount < 120 && engineMode === "auto") {
+          cleaned = generateAutonomous500WordSpeech(speakerTitle, isSenator, opponentSpokenText, activeChamberOrder);
+        }
+
+        logTelemetry("SPEECH_FORMULATED_OLLAMA", {
+          speaker: speakerTitle,
+          wordCount: cleaned.split(/\s+/).length,
+          durationMs: duration
+        });
+
+        return cleaned;
+      } catch (err) {
+        if (err.name === "AbortError") {
+          logTelemetry("PREFETCH_ABORTED_FOR_CHAMBER_ORDER", { speaker: speakerTitle });
+          throw err;
+        }
+
+        // Auto-fallback if Ollama LAN connection fails (e.g. mobile Wi-Fi CORS / IP mismatch)
+        if (engineMode === "auto") {
+          console.warn("Ollama unreachable, engaging autonomous neural fallback:", err);
+          document.getElementById("pingLabel").innerText = "Ollama: LAN Offline (Fallback Active)";
+          return generateAutonomous500WordSpeech(speakerTitle, isSenator, opponentSpokenText, activeChamberOrder);
+        }
+
+        logTelemetry("API_ERROR", { speaker: speakerTitle, error: err.message });
+        throw err;
+      }
+    }
+
+    function cleanModelOutput(raw) {
+      if (!raw) return "";
+      let text = raw.trim();
+      text = text.replace(/^\[.*?\]\s*/i, "").replace(/^\(.*?\)\s*/i, "");
+      text = text.replace(/^(the\s+)?(senator|congressperson|representative)\s*:\s*/i, "");
+      text = text.replace(/\*/g, "");
+      return text.trim();
+    }
+
+    // --- Pipelined Zero-Latency Debate Loop ---
+    async function startDebate() {
+      if (isRunning) return;
+
+      // Lock mobile audio permissions & activate wake lock
+      unlockAudioSession("The chamber is called to order.");
+      requestWakeLock();
+
+      isRunning = true;
+      currentRound = 1;
+      debateTranscript = [];
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnStop").disabled = false;
+      document.getElementById("debateTopic").disabled = true;
+
+      const roundMode = document.getElementById("roundModeSelect").value;
+      const isUnlimited = roundMode === "unlimited";
+      const maxRounds = isUnlimited ? Infinity : parseInt(roundMode);
+
+      document.getElementById("roundLimitLabel").innerText = isUnlimited 
+        ? "Round (Unlimited ∞)" 
+        : `Round of ${maxRounds}`;
+
+      logTelemetry("DEBATE_COMMENCED", { topic: document.getElementById("debateTopic").value });
+
+      try {
+        // --- Turn 1: Opening by The Senator ---
+        setMobileFocus("senator");
+        setCardState("cardSenator", "statusSenator", "thinking", "The Senator");
+        document.getElementById("globalState").innerText = "The Senator Formulating ~500 Words";
+
+        let currentText = await queryOllama("The Senator", true);
+        if (!isRunning) return;
+
+        let currentParagraphs = parseSpeechIntoParagraphs(currentText);
+        renderTeleprompterHTML("speechSenator", currentParagraphs);
+        updateWordCountBadge("wordCountSenator", "timerSenator", currentText);
+        recordTranscript("The Senator", currentText);
+
+        let currentSpeakerTitle = "The Senator";
+        let isSenatorCurrent = true;
+
+        // Continuous Pipelined Loop
+        while (isRunning && (isUnlimited || currentRound <= maxRounds)) {
+          document.getElementById("currentRoundDisplay").innerText = currentRound;
+
+          const currentCardId = isSenatorCurrent ? "cardSenator" : "cardCongress";
+          const currentStatusId = isSenatorCurrent ? "statusSenator" : "statusCongress";
+
+          const nextSpeakerTitle = isSenatorCurrent ? "The Congressperson" : "The Senator";
+          const nextIsSenator = !isSenatorCurrent;
+          const nextCardId = nextIsSenator ? "cardSenator" : "cardCongress";
+          const nextStatusId = nextIsSenator ? "statusSenator" : "statusCongress";
+          const nextSpeechId = nextIsSenator ? "speechSenator" : "speechCongress";
+          const nextWordCountId = nextIsSenator ? "wordCountSenator" : "wordCountCongress";
+          const nextTimerId = nextIsSenator ? "timerSenator" : "timerCongress";
+
+          // Auto-adjust mobile focus to active speaker
+          setMobileFocus(isSenatorCurrent ? "senator" : "congress");
+
+          // PRE-FETCH next speaker's ~500 words in background during current speech
+          upcomingSpeakerRole = nextIsSenator ? "senator" : "congress";
+          inFlightAbortController = new AbortController();
+          setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle);
+
+          currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsSenator, currentText, inFlightAbortController.signal)
+            .then(text => {
+              preloadedSpeechData = text;
+              return text;
+            })
+            .catch(err => {
+              if (err.name === "AbortError") return null;
+              throw err;
+            });
+
+          // CURRENT SPEAKER DELIVERS SPEECH ALOUD
+          setCardState(currentCardId, currentStatusId, "speaking", currentSpeakerTitle);
+          document.getElementById("globalState").innerText = `${currentSpeakerTitle} Speaking (~500 Words) &bull; ${nextSpeakerTitle} Pre-Thinking`;
+
+          await speakDebaterSpeech(currentParagraphs, isSenatorCurrent);
+          if (!isRunning) break;
+
+          setCardState(currentCardId, currentStatusId, "idle", currentSpeakerTitle);
+
+          // Smooth Inter-Speaker Transition
+          document.getElementById("globalState").innerText = "Passing the Floor";
+          let preloadedText = await currentPrefetchPromise;
+          if (!isRunning) break;
+
+          // If prefetch was aborted by a chamber order and restarted, wait for final text
+          if (!preloadedText && preloadedSpeechData) preloadedText = preloadedSpeechData;
+          if (!preloadedText) {
+            preloadedText = await queryOllama(nextSpeakerTitle, nextIsSenator, currentText);
+          }
+
+          // Render teleprompter for next speaker
+          currentParagraphs = parseSpeechIntoParagraphs(preloadedText);
+          renderTeleprompterHTML(nextSpeechId, currentParagraphs);
+          updateWordCountBadge(nextWordCountId, nextTimerId, preloadedText);
+          recordTranscript(nextSpeakerTitle, preloadedText);
+
+          // Clear active order once consumed by a speaker
+          if (activeChamberOrder) {
+            logTelemetry("CHAMBER_ORDER_CONSUMED", { by: nextSpeakerTitle, order: activeChamberOrder });
+            clearChamberOrder();
+          }
+
+          // Shift speaker pointers
+          currentText = preloadedText;
+          currentSpeakerTitle = nextSpeakerTitle;
+          isSenatorCurrent = nextIsSenator;
+          preloadedSpeechData = null;
+
+          if (isSenatorCurrent) currentRound++;
+        }
+      } catch (err) {
+        console.error("Debate runtime interrupted:", err);
+      } finally {
+        stopDebate();
+      }
+    }
+
+    // --- INJECT ORDER PIPELINE (Flawless Intercept & Reroute) ---
+    function submitChamberOrder(immediateInterrupt = false) {
+      const input = document.getElementById("interventionInput");
+      const orderVal = input.value.trim();
+      if (!orderVal) return;
+
+      activeChamberOrder = orderVal;
+      input.value = "";
+
+      // Sound procedural double gavel
+      playProceduralGavel(2);
+
+      // Display active chamber banner
+      const banner = document.getElementById("chamberOrderBanner");
+      const bannerText = document.getElementById("orderBannerText");
+      bannerText.innerText = `"${orderVal}"`;
+      banner.style.display = "flex";
+
+      logTelemetry("CHAMBER_ORDER_INJECTED", {
+        directive: orderVal,
+        immediateInterrupt: immediateInterrupt,
+        currentRound: currentRound
+      });
+
+      // REROUTE IN-FLIGHT PIPELINE IMMEDIATELY:
+      if (isRunning) {
+        // If a background prefetch is currently generating for the next speaker, ABORT IT NOW!
+        if (inFlightAbortController) {
+          inFlightAbortController.abort();
+          inFlightAbortController = null;
+        }
+
+        // Re-trigger prefetch with the new Chamber Order injected at highest priority
+        const nextIsSenator = upcomingSpeakerRole === "senator";
+        const nextSpeakerTitle = nextIsSenator ? "The Senator" : "The Congressperson";
+        const nextCardId = nextIsSenator ? "cardSenator" : "cardCongress";
+        const nextStatusId = nextIsSenator ? "statusSenator" : "statusCongress";
+
+        setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle);
+        inFlightAbortController = new AbortController();
+
+        currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsSenator, "Prior discussion yielded to chair directive.", inFlightAbortController.signal)
+          .then(text => {
+            preloadedSpeechData = text;
+            return text;
+          });
+
+        // If Immediate Gavel / Interrupt was requested:
+        if (immediateInterrupt && activeSpeakerCancelFn) {
+          playProceduralGavel(3);
+          activeSpeakerCancelFn(); // Yields floor immediately
+        }
+      }
+    }
+
+    function applyPresetChip(text) {
+      document.getElementById("interventionInput").value = text;
+      submitChamberOrder(false);
+    }
+
+    function clearChamberOrder() {
+      activeChamberOrder = "";
+      document.getElementById("chamberOrderBanner").style.display = "none";
+    }
+
+    // --- UI State & Helper Functions ---
+    function setCardState(cardId, statusId, state, speakerTitle) {
+      const card = document.getElementById(cardId);
+      const status = document.getElementById(statusId);
+
+      card.classList.remove("active-speaker", "thinking-ahead");
+      if (state === "speaking") {
+        card.classList.add("active-speaker");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#22c55e;"></span>Addressing Chamber...`;
+      } else if (state === "thinking") {
+        card.classList.add("thinking-ahead");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#f59e0b;"></span>Formulating ~500 Words...`;
+      } else {
+        status.innerText = "Yielded Floor";
+      }
+    }
+
+    function updateWordCountBadge(wordBadgeId, timerBadgeId, text) {
+      const words = text.trim().split(/\s+/).length;
+      document.getElementById(wordBadgeId).innerText = `Words: ${words} (~500 Target)`;
+      const estMinutes = Math.floor(words / 140);
+      const estSeconds = Math.round(((words % 140) / 140) * 60);
+      document.getElementById(timerBadgeId).innerText = `Est. ${estMinutes}m ${estSeconds}s`;
+    }
+
+    function stopDebate() {
+      isRunning = false;
+      if (synth) synth.cancel();
+      releaseWakeLock();
+
+      if (inFlightAbortController) {
+        inFlightAbortController.abort();
+        inFlightAbortController = null;
+      }
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnStop").disabled = true;
+      document.getElementById("debateTopic").disabled = false;
+
+      ["cardSenator", "cardCongress"].forEach(id => {
+        const c = document.getElementById(id);
+        c.classList.remove("active-speaker", "thinking-ahead");
+      });
+
+      document.getElementById("statusSenator").innerText = "Ready";
+      document.getElementById("statusCongress").innerText = "Ready";
+      document.getElementById("globalState").innerText = "Chamber Adjourned";
+      logTelemetry("DEBATE_ADJOURNED", { rounds: currentRound });
+    }
+
+    function setMobileFocus(view) {
+      const grid = document.getElementById("arenaGrid");
+      const bSen = document.getElementById("btnTabSenator");
+      const bCon = document.getElementById("btnTabCongress");
+      const bSpl = document.getElementById("btnTabSplit");
+
+      bSen.classList.remove("active");
+      bCon.classList.remove("active");
+      bSpl.classList.remove("active");
+      grid.classList.remove("focus-senator", "focus-congress");
+
+      if (view === "senator") {
+        grid.classList.add("focus-senator");
+        bSen.classList.add("active");
+      } else if (view === "congress") {
+        grid.classList.add("focus-congress");
+        bCon.classList.add("active");
+      } else {
+        bSpl.classList.add("active");
+      }
+    }
+
+    function toggleConfigAccordion() {
+      const p = document.getElementById("configPanel");
+      const c = document.getElementById("accordionChevron");
+      p.classList.toggle("open");
+      c.innerText = p.classList.contains("open") ? "▲ Collapse" : "▼ Expand";
+    }
+
+    function recordTranscript(speaker, text) {
+      debateTranscript.push({
+        speaker: speaker,
+        round: currentRound,
+        wordCount: text.split(/\s+/).length,
+        timestamp: new Date().toISOString(),
+        text: text
+      });
+    }
+
+    function logTelemetry(eventType, metadata = {}) {
+      const entry = {
+        time: new Date().toLocaleTimeString(),
+        event: eventType,
+        metadata: metadata
+      };
+      telemetryEvents.push(entry);
+
+      const logEl = document.getElementById("metaLog");
+      logEl.innerText = `[${entry.time}] [${eventType}] ${JSON.stringify(metadata)}\n` + logEl.innerText;
+    }
+
+    function openTelemetry() {
+      document.getElementById("telemetryDrawer").style.display = "flex";
+    }
+
+    function closeTelemetry() {
+      document.getElementById("telemetryDrawer").style.display = "none";
+    }
+
+    function exportTelemetry() {
+      const payload = {
+        title: "Congressional Debate Arena Telemetry",
+        motion: document.getElementById("debateTopic").value,
+        genre: document.getElementById("genreMode").value,
+        roundsCompleted: currentRound,
+        transcript: debateTranscript,
+        events: telemetryEvents
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `debate_session_${Date.now()}.json`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
