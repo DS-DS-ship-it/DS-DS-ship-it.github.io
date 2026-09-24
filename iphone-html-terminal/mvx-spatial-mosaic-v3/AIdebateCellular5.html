@@ -1,0 +1,2677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Debate Arena &bull; Dolphin-Mistral vs. Nous-Hermes-2-DPO</title>
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --card-bg: rgba(14, 20, 34, 0.88);
+      --card-inner: #0a0f1d;
+      --debater-one-blue: #00d2ff;
+      --debater-one-glow: rgba(0, 210, 255, 0.35);
+      --debater-two-red: #ff3b69;
+      --debater-two-glow: rgba(255, 59, 105, 0.35);
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-purple: #a855f7;
+      --text-main: #f1f5f9;
+      --text-muted: #8da2bc;
+      --border-color: #1e293f;
+      --reading-highlight: rgba(0, 210, 255, 0.20);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    html {
+      height: auto;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 8% 25%, rgba(0, 210, 255, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 92% 25%, rgba(255, 59, 105, 0.08) 0%, transparent 45%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: calc(0.6rem + var(--safe-top)) calc(0.8rem + var(--safe-right)) calc(240px + var(--safe-bottom)) calc(0.8rem + var(--safe-left));
+      transition: background-color 0.4s ease, color 0.4s ease;
+      overflow-x: hidden;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.theme-daylight {
+      --bg-dark: #f4f6fb;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-inner: #edf2f9;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border-color: #cbd5e1;
+      --reading-highlight: rgba(2, 132, 199, 0.22);
+    }
+
+    body.theme-candlelight {
+      --bg-dark: #120b05;
+      --card-bg: rgba(28, 18, 10, 0.9);
+      --card-inner: #1a1008;
+      --debater-one-blue: #fbbf24;
+      --debater-two-red: #ea580c;
+      --text-main: #fef3c7;
+      --text-muted: #d97706;
+      --border-color: #451a03;
+      --reading-highlight: rgba(245, 158, 11, 0.25);
+    }
+
+    body.theme-midnight {
+      --bg-dark: #000000;
+      --card-bg: #050508;
+      --card-inner: #020204;
+      --border-color: #151520;
+    }
+
+    body.eco-battery-mode * {
+      backdrop-filter: none !important;
+      box-shadow: none !important;
+      animation-duration: 0.01ms !important;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Environmental Intelligence Ribbon */
+    .environment-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      max-width: 1280px;
+      margin: 0 auto 0.6rem auto;
+      width: 100%;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .env-pills-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .env-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 0.22rem 0.55rem;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+
+    .env-pill.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 0.65rem;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--debater-one-blue), #ffffff, var(--debater-two-red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.15rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    /* Accordion Toggle (Uncollapsed by Default) */
+    .accordion-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px 10px 0 0;
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .config-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 0.85rem 1rem;
+      max-width: 1280px;
+      margin: 0 auto 0.85rem auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+
+    .config-panel.collapsed {
+      display: none;
+    }
+
+    /* Persona & Dual-Model Customizer */
+    .persona-customizer-box {
+      grid-column: 1 / -1;
+      background: var(--card-inner);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .persona-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .persona-box-header h3 {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent-gold);
+    }
+
+    .persona-row-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 720px) {
+      .persona-row-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .form-group label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    input, select, textarea {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      width: 100%;
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.45;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--debater-one-blue);
+    }
+
+    .preset-chips-row {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-top: 0.2rem;
+    }
+
+    .tiny-chip-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.65rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tiny-chip-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    /* Active Chamber Order Notice Banner */
+    .chamber-order-banner {
+      max-width: 1280px;
+      margin: 0 auto 0.65rem auto;
+      width: 100%;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1.5px solid var(--accent-gold);
+      padding: 0.55rem 0.85rem;
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      animation: pulseGlow 2s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.15); }
+      50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    }
+
+    .order-tag {
+      background: var(--accent-gold);
+      color: #000;
+      font-weight: 900;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .order-content {
+      font-size: 0.8rem;
+      color: #fef08a;
+      flex: 1;
+      font-style: italic;
+    }
+
+    .btn-dismiss-order {
+      background: transparent;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fef08a;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Mobile Focus View Pills */
+    .view-mode-bar {
+      display: none;
+      justify-content: center;
+      margin: 0 auto 0.6rem auto;
+      gap: 0.4rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.45rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-btn.active {
+      background: #17243c;
+      color: #fff;
+      border-color: var(--debater-one-blue);
+    }
+
+    /* Arena Grid */
+    .arena-grid {
+      display: grid;
+      grid-template-columns: 1fr 140px 1fr;
+      gap: 1rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .fighter-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(12px);
+      min-height: 480px;
+      position: relative;
+    }
+
+    .fighter-card.debater-one-card {
+      border-top: 4px solid var(--debater-one-blue);
+    }
+
+    .fighter-card.debater-two-card {
+      border-top: 4px solid var(--debater-two-red);
+    }
+
+    .fighter-card.active-speaker.debater-one-card {
+      border-color: var(--debater-one-blue);
+      box-shadow: 0 0 25px var(--debater-one-glow);
+    }
+
+    .fighter-card.active-speaker.debater-two-card {
+      border-color: var(--debater-two-red);
+      box-shadow: 0 0 25px var(--debater-two-glow);
+    }
+
+    .fighter-card.thinking-ahead {
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
+    }
+
+    .fighter-card.paused-state {
+      border-color: rgba(245, 158, 11, 0.8) !important;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.35) !important;
+    }
+
+    .fighter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .fighter-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .debater-one-card .fighter-tag {
+      background: rgba(0, 210, 255, 0.15);
+      color: var(--debater-one-blue);
+      border: 1px solid var(--debater-one-blue);
+    }
+
+    .debater-two-card .fighter-tag {
+      background: rgba(255, 59, 105, 0.15);
+      color: var(--debater-two-red);
+      border: 1px solid var(--debater-two-red);
+    }
+
+    /* LLM Engine Identification Badges */
+    .model-engine-badge {
+      font-size: 0.64rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      max-width: 190px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .debater-one-card .model-engine-badge {
+      background: rgba(0, 210, 255, 0.08);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      color: #7dd3fc;
+    }
+
+    .debater-two-card .model-engine-badge {
+      background: rgba(255, 59, 105, 0.08);
+      border: 1px solid rgba(255, 59, 105, 0.3);
+      color: #fda4af;
+    }
+
+    /* Debater Stats Ribbon */
+    .card-meta-ribbon {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-inner);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      margin-bottom: 0.55rem;
+      font-size: 0.72rem;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .word-count-badge {
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .speech-progress-container {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      margin-bottom: 0.55rem;
+      overflow: hidden;
+    }
+
+    .speech-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--debater-one-blue);
+      transition: width 0.25s linear;
+    }
+
+    .debater-two-card .speech-progress-bar {
+      background: var(--debater-two-red);
+    }
+
+    /* Teleprompter Speech Bubble */
+    .speech-bubble {
+      flex: 1;
+      background: var(--card-inner);
+      border-radius: 10px;
+      padding: 0.9rem;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      border: 1px solid rgba(255,255,255,0.04);
+      overflow-y: auto;
+      max-height: 280px;
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .speech-paragraph {
+      margin-bottom: 0.4rem;
+    }
+
+    .speech-sentence {
+      border-radius: 3px;
+      padding: 0.05rem 0.15rem;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .speech-sentence.active-reading {
+      background: var(--reading-highlight);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 0 6px var(--reading-highlight);
+    }
+
+    /* Vocal Prosody & Delivery Modulation Box */
+    .vocal-modulation-box {
+      margin-top: 0.65rem;
+      background: var(--card-inner);
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .vocal-modulation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .voice-profile-tag {
+      font-weight: 800;
+      color: var(--accent-gold);
+      background: rgba(245, 158, 11, 0.12);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .prosody-sliders-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .prosody-slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .slider-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 7px;
+      background: #172236;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      outline: none;
+      cursor: pointer;
+      touch-action: pan-x;
+    }
+
+    .debater-one-card input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--debater-one-blue);
+      cursor: grab;
+      box-shadow: 0 0 10px var(--debater-one-glow);
+      border: 2px solid #fff;
+    }
+
+    .debater-two-card input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--debater-two-red);
+      cursor: grab;
+      box-shadow: 0 0 10px var(--debater-two-glow);
+      border: 2px solid #fff;
+    }
+
+    .voice-select-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Central Arena Matchup Display */
+    .arena-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      text-align: center;
+    }
+
+    .round-number {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .round-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .vs-badge {
+      font-weight: 900;
+      font-size: 1.1rem;
+      background: var(--card-bg);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    .model-vs-indicator {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      font-size: 0.62rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--text-muted);
+      background: rgba(0,0,0,0.3);
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      max-width: 135px;
+    }
+
+    .btn-strike-gavel {
+      background: #241407;
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.4rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Intervention Chips */
+    .intervention-chips {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding: 0.2rem 0;
+      margin-bottom: 0.4rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .intervention-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-btn {
+      background: var(--card-inner);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 14px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    /* Fixed Bottom Action Dock */
+    .bottom-dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(8, 12, 22, 0.96);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      padding: 0.4rem 0.9rem calc(0.55rem + var(--safe-bottom)) 0.9rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bottom-dock.minimized {
+      transform: translateY(calc(100% - 34px));
+    }
+
+    .dock-minimize-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: -0.2rem;
+    }
+
+    .dock-collapse-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.18rem 0.75rem;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .dock-intervention-row {
+      display: flex;
+      gap: 0.45rem;
+    }
+
+    .dock-intervention-row input {
+      flex: 1;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.82rem;
+    }
+
+    .dock-actions-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+
+    .btn-main-start {
+      background: linear-gradient(135deg, #00d2ff, #0077ff);
+      color: #000;
+      padding: 0.65rem 1.2rem;
+      flex: 2;
+    }
+
+    .btn-main-pause {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: #f1f5f9;
+      padding: 0.65rem 1.1rem;
+      flex: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .btn-main-pause.btn-paused-state {
+      background: #f59e0b !important;
+      color: #000 !important;
+      border-color: #f59e0b !important;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-main-pause:disabled, .btn-main-start:disabled, .btn-main-stop:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-main-stop {
+      background: #ff3b69;
+      color: #fff;
+      padding: 0.65rem 1.1rem;
+      flex: 1.2;
+    }
+
+    .btn-order-send {
+      background: var(--accent-gold);
+      color: #000;
+      font-size: 0.78rem;
+      padding: 0.5rem 0.85rem;
+      white-space: nowrap;
+    }
+
+    .btn-order-interrupt {
+      background: #7f1d1d;
+      border: 1px solid #f87171;
+      color: #fecaca;
+      font-size: 0.75rem;
+      padding: 0.5rem 0.7rem;
+      white-space: nowrap;
+    }
+
+    .btn-icon-aux {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.65rem 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .scroll-clearance-spacer {
+      height: 180px;
+      width: 100%;
+      pointer-events: none;
+      visibility: hidden;
+    }
+
+    /* Telemetry Modal */
+    .telemetry-drawer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 200;
+      padding: 1.5rem 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .telemetry-modal {
+      background: #060911;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .meta-log {
+      flex: 1;
+      background: #020408;
+      border: 1px solid #141c2c;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+      margin: 0.6rem 0;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding: 0.4rem 0.6rem calc(230px + var(--safe-bottom)) 0.6rem;
+      }
+      .view-mode-bar {
+        display: flex;
+      }
+      .arena-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      .arena-center {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0.35rem 0.6rem;
+        background: var(--card-bg);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+      }
+      .round-number {
+        font-size: 1.3rem;
+      }
+      .round-label {
+        font-size: 0.6rem;
+      }
+      .vs-badge {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+      }
+      .speech-bubble {
+        max-height: 220px;
+      }
+      .arena-grid.focus-debater-one #cardDebaterTwo {
+        display: none;
+      }
+      .arena-grid.focus-debater-two #cardDebaterOne {
+        display: none;
+      }
+    }
+
+    .pulsing-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.85); opacity: 0.4; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(0.85); opacity: 0.4; }
+    }
+  </style>
+</head>
+<body class="theme-midnight">
+
+  <!-- Environmental Intelligence Ribbon -->
+  <aside class="environment-bar">
+    <div class="env-pills-group">
+      <div class="env-pill" id="pillEnvTheme">
+        <span>🌓</span> <span id="themeLabel">Midnight</span>
+      </div>
+      <div class="env-pill" id="pillEnvNoise" onclick="toggleMicNoiseSensor()" style="cursor: pointer;">
+        <span id="micIcon">🎙️</span> <span id="noiseLabel">Noise: Quiet (42 dB)</span>
+      </div>
+      <div class="env-pill" id="pillEnvWake">
+        <span>📱</span> <span id="wakeLockLabel">WakeLock: Idle</span>
+      </div>
+      <div class="env-pill" id="pillEnvBattery">
+        <span>🔋</span> <span id="batteryLabel">Battery: Ready</span>
+      </div>
+      <div class="env-pill" id="pillEnvPing">
+        <span>📶</span> <span id="pingLabel">Ollama: Ready</span>
+      </div>
+    </div>
+    <div style="font-size: 0.68rem; color: var(--text-muted);" id="headerWordTargetPill">
+      Target: <strong>450 Words / Turn</strong>
+    </div>
+  </aside>
+
+  <header>
+    <h1>Dolphin vs. Nous-Hermes Arena</h1>
+    <p>Pipelined Multi-Model Clash &bull; dolphin-mistral vs. Nous-Hermes-2-DPO</p>
+  </header>
+
+  <!-- Accordion Toggle Button (Starts OPEN) -->
+  <div class="accordion-toggle" onclick="toggleConfigAccordion()">
+    <span>⚙️ Multi-Model Setup, Personas &amp; Target Words</span>
+    <span id="accordionChevron">▲ Collapse Settings</span>
+  </div>
+
+  <!-- Settings Panel (Expanded by Default) -->
+  <section class="config-panel" id="configPanel">
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="debateTopic">Motion on the Floor</label>
+      <input type="text" id="debateTopic" value="Artificial Intelligence must be granted full legal human personhood." />
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="ollamaUrl">Mac Ollama Endpoint</label>
+      <input type="text" id="ollamaUrl" value="http://192.168.4.22:11434/api/generate" />
+    </div>
+
+    <!-- Target Word Count Input -->
+    <div class="form-group">
+      <label for="targetWordCount">Target Words per Turn</label>
+      <input type="number" id="targetWordCount" value="450" min="50" max="3000" step="25" oninput="updateTargetWordDisplay()" />
+      <div class="preset-chips-row">
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(150)">150w</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(300)">300w</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(450)">450w</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(750)">750w</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(1000)">1000w</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="genreMode">Delivery Style / Genre</label>
+      <select id="genreMode">
+        <option value="none" selected>Intellectual Rhetoric (Masterclass Floor Speech)</option>
+        <option value="hiphop">Hip-Hop (Epic Rhyming Battle Rap)</option>
+        <option value="classical">Classical (Grand Operatic Aria &amp; Recitative)</option>
+        <option value="rock">Rock Anthem (High-Energy Gritty Verse &amp; Chorus)</option>
+        <option value="jazz">Jazz &amp; Bebop (New Orleans Swing &amp; Scat)</option>
+        <option value="country">Country Ballad (Heartfelt Acoustic Twang)</option>
+        <option value="edm">Electronic / EDM (Synthesizer Build-up &amp; Drops)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="themeSelect">Environmental Theme</label>
+      <select id="themeSelect" onchange="changeThemeManual(this.value)">
+        <option value="auto">Auto (Sensor &amp; OS Responsive)</option>
+        <option value="midnight" selected>Capitol Midnight (OLED Dark)</option>
+        <option value="daylight">Daylight Rotunda (High Contrast)</option>
+        <option value="candlelight">Candlelight Chamber (Warm Amber)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="roundModeSelect">Rounds Mode</label>
+      <select id="roundModeSelect">
+        <option value="unlimited" selected>Unlimited (Continuous &infin;)</option>
+        <option value="4">4 Rounds</option>
+        <option value="6">6 Rounds</option>
+        <option value="10">10 Rounds</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="aiEngineMode">Inference Source</label>
+      <select id="aiEngineMode">
+        <option value="auto" selected>Ollama LAN (Auto-Fallback if Offline)</option>
+        <option value="ollama">Strict Mac Ollama Endpoint</option>
+        <option value="simulated">Autonomous High-Depth Neural Chamber</option>
+      </select>
+    </div>
+
+    <!-- Debater Personas & Dual Model Customizer -->
+    <div class="persona-customizer-box">
+      <div class="persona-box-header">
+        <h3>⚔️ Dual Model Allocation &amp; Personas</h3>
+        <span style="font-size: 0.65rem; color: var(--text-muted);">Independent neural models assigned to each side</span>
+      </div>
+
+      <!-- Independent Model Selection -->
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="modelDebaterOne" style="color: var(--debater-one-blue);">Debater 1 AI Model (Affirmative)</label>
+          <input type="text" id="modelDebaterOne" value="dolphin-mistral" oninput="syncModelBadges()" />
+        </div>
+
+        <div class="form-group">
+          <label for="modelDebaterTwo" style="color: var(--debater-two-red);">Debater 2 AI Model (Opposition)</label>
+          <input type="text" id="modelDebaterTwo" value="hf.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF:Q4_K_M" oninput="syncModelBadges()" />
+        </div>
+      </div>
+
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="debater1Name">Debater 1 Identity (PRO / Affirmative)</label>
+          <input type="text" id="debater1Name" value="Tech Titan" placeholder="e.g. Tech Titan, Socrates, Chief AI Ethicist" oninput="handleDebaterTitleChange(true)" />
+        </div>
+
+        <div class="form-group">
+          <label for="debater2Name">Debater 2 Identity (CON / Opposition)</label>
+          <input type="text" id="debater2Name" value="Labor Organizer" placeholder="e.g. Labor Organizer, Friedrich Nietzsche, Supreme Court Justice" oninput="handleDebaterTitleChange(false)" />
+        </div>
+      </div>
+
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="debater1Perspective">Debater 1 Core Worldview &amp; Vocabulary</label>
+          <input type="text" id="debater1Perspective" value="Silicon Valley visionary speaking in systems engineering, transformative progress, and exponential scaling" oninput="handleDebaterTitleChange(true)" />
+        </div>
+
+        <div class="form-group">
+          <label for="debater2Perspective">Debater 2 Core Worldview &amp; Vocabulary</label>
+          <input type="text" id="debater2Perspective" value="Grassroots worker advocate speaking in raw human dignity, civil struggle, and protective safeguards" oninput="handleDebaterTitleChange(false)" />
+        </div>
+      </div>
+
+      <!-- Specific Relationship Dynamic Text Area -->
+      <div class="form-group">
+        <label for="debaterRelationship">How They View Each Other &amp; Relationship Dynamic</label>
+        <textarea id="debaterRelationship" rows="3">Bitter ideological rivals who view each other's vision as an existential threat to society, clashing with relentless intellectual friction and zero rhetorical quarter.</textarea>
+        <div class="preset-chips-row">
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('adversaries')">Ideological Rivals</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('philosophical')">Philosophical Giants</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('battle_rap')">Cypher Battle Rappers</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('courtroom')">Courtroom Litigators</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('corporate_activist')">Tech Titan vs. Grassroots Union</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('mentor_student')">Entrenched Master vs. Rebel Prodigy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Active Chamber Order Notification Banner -->
+  <aside class="chamber-order-banner" id="chamberOrderBanner">
+    <span class="order-tag">🏛️ Chamber Order Active</span>
+    <span class="order-content" id="orderBannerText">Directive pending...</span>
+    <button class="btn-dismiss-order" onclick="clearChamberOrder()">Dismiss</button>
+  </aside>
+
+  <!-- Mobile View Switcher -->
+  <nav class="view-mode-bar" aria-label="Debater Views">
+    <button class="tab-btn active" id="btnTabSenator" onclick="setMobileFocus('debater-one')">Tech Titan (PRO)</button>
+    <button class="tab-btn" id="btnTabCongress" onclick="setMobileFocus('debater-two')">Labor Organizer (CON)</button>
+    <button class="tab-btn" id="btnTabSplit" onclick="setMobileFocus('split')">Split View</button>
+  </nav>
+
+  <!-- Arena Grid -->
+  <main class="arena-grid focus-debater-one" id="arenaGrid">
+    <!-- Debater 1 Card (Pro) -->
+    <article class="fighter-card debater-one-card" id="cardDebaterOne">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag" id="tagDebaterOne">Tech Titan &bull; PRO</span>
+          <h2 style="font-size: 1.05rem;" id="titleDebaterOne">Tech Titan</h2>
+        </div>
+        <span class="model-engine-badge" id="modelBadgeDebaterOne" title="dolphin-mistral">🤖 dolphin-mistral</span>
+      </div>
+
+      <div class="card-meta-ribbon">
+        <span id="wordCountDebaterOne" class="word-count-badge">Words: 0 / 450 Target</span>
+        <span id="statusDebaterOne" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+        <span id="timerDebaterOne" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarDebaterOne"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterOne">
+        <div class="speech-paragraph">Awaiting call to order. Arguments will be generated by dolphin-mistral with title-modulated vocal cadence.</div>
+      </div>
+
+      <!-- Vocal Delivery Modulation Panel for Debater 1 -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-modulation-header">
+          <span>🎙️ Voice Modulation:</span>
+          <span class="voice-profile-tag" id="profileBadgeDebaterOne">Brisk &amp; Analytical</span>
+        </div>
+
+        <div class="voice-select-row">
+          <select id="voiceSelectDebaterOne" style="flex: 1; font-size: 0.72rem;"></select>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.68rem;" onclick="previewVoice(true)">Test Voice</button>
+        </div>
+
+        <div class="prosody-sliders-grid">
+          <div class="prosody-slider-group">
+            <div class="slider-label-row">
+              <span>Pitch (Tone):</span>
+              <span id="pitchLabelDebaterOne">1.12x</span>
+            </div>
+            <input type="range" id="pitchSliderDebaterOne" min="0.65" max="1.45" step="0.02" value="1.12" oninput="updateProsodyLabel(true)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row">
+              <span>Speed (Rate):</span>
+              <span id="rateLabelDebaterOne">1.16x</span>
+            </div>
+            <input type="range" id="rateSliderDebaterOne" min="0.70" max="1.40" step="0.02" value="1.16" oninput="updateProsodyLabel(true)" />
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Center Stage & Matchup -->
+    <div class="arena-center">
+      <div class="round-indicator">
+        <div class="round-number" id="currentRoundDisplay">1</div>
+        <div class="round-label" id="roundLimitLabel">Round (&infin;)</div>
+      </div>
+
+      <div class="vs-badge">VS</div>
+
+      <div class="model-vs-indicator">
+        <span style="color: var(--debater-one-blue);" id="vsModel1">dolphin-mistral</span>
+        <span style="opacity: 0.4;">⚡</span>
+        <span style="color: var(--debater-two-red);" id="vsModel2">Nous-Hermes-2</span>
+      </div>
+
+      <button type="button" class="btn-strike-gavel" onclick="triggerManualGavel()">
+        🔨 Strike Gavel
+      </button>
+
+      <span id="globalState" style="font-size: 0.72rem; color: var(--text-muted); text-align: center;">Chamber Adjourned</span>
+    </div>
+
+    <!-- Debater 2 Card (Con) -->
+    <article class="fighter-card debater-two-card" id="cardDebaterTwo">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag" id="tagDebaterTwo">Labor Organizer &bull; CON</span>
+          <h2 style="font-size: 1.05rem;" id="titleDebaterTwo">Labor Organizer</h2>
+        </div>
+        <span class="model-engine-badge" id="modelBadgeDebaterTwo" title="Nous-Hermes-2-Mistral-7B-DPO">🤖 Nous-Hermes-2-DPO</span>
+      </div>
+
+      <div class="card-meta-ribbon">
+        <span id="wordCountDebaterTwo" class="word-count-badge">Words: 0 / 450 Target</span>
+        <span id="statusDebaterTwo" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+        <span id="timerDebaterTwo" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarDebaterTwo"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterTwo">
+        <div class="speech-paragraph">Awaiting call to order. Rebuttals will be generated by Nous-Hermes-2-Mistral-DPO with calibrated vocal cadence.</div>
+      </div>
+
+      <!-- Vocal Delivery Modulation Panel for Debater 2 -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-modulation-header">
+          <span>🎙️ Voice Modulation:</span>
+          <span class="voice-profile-tag" id="profileBadgeDebaterTwo">Passionate &amp; Resonant</span>
+        </div>
+
+        <div class="voice-select-row">
+          <select id="voiceSelectDebaterTwo" style="flex: 1; font-size: 0.72rem;"></select>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.68rem;" onclick="previewVoice(false)">Test Voice</button>
+        </div>
+
+        <div class="prosody-sliders-grid">
+          <div class="prosody-slider-group">
+            <div class="slider-label-row">
+              <span>Pitch (Tone):</span>
+              <span id="pitchLabelDebaterTwo">0.96x</span>
+            </div>
+            <input type="range" id="pitchSliderDebaterTwo" min="0.65" max="1.45" step="0.02" value="0.96" oninput="updateProsodyLabel(false)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row">
+              <span>Speed (Rate):</span>
+              <span id="rateLabelDebaterTwo">1.08x</span>
+            </div>
+            <input type="range" id="rateSliderDebaterTwo" min="0.70" max="1.40" step="0.02" value="1.08" oninput="updateProsodyLabel(false)" />
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <!-- Large Scroll Clearance Spacer -->
+  <div class="scroll-clearance-spacer" aria-hidden="true"></div>
+
+  <!-- Fixed Bottom Action Dock With Minimize Feature -->
+  <footer class="bottom-dock" id="bottomDock">
+    <div class="dock-minimize-bar">
+      <button type="button" class="dock-collapse-btn" id="btnDockMinimize" onclick="toggleBottomDock()">
+        ⌄ Minimize Controls (View Full Cards)
+      </button>
+    </div>
+
+    <!-- Quick Intervention Preset Chips -->
+    <div class="intervention-chips">
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Focus on Economic Impact &amp; Job Displacement')">💼 Jobs &amp; Economy</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Invoke Constitutional Precedent &amp; Legal Personhood')">⚖️ Constitution</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Address AI Sentience, Consciousness, and Moral Suffering')">🧠 Sentience</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Cite National Security &amp; Autonomous Weaponry')">🛡️ National Defense</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Demand Empirical Scientific Evidence &amp; Data')">🔬 Empirical Data</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Point of Order: Directly Rebut the Preceding Point')">✋ Point of Order</button>
+    </div>
+
+    <!-- Active Intervention Bar -->
+    <div class="dock-intervention-row">
+      <input type="text" id="interventionInput" placeholder="Chamber Order: Inject an amendment or steer the topic..." />
+      <button type="button" class="btn-order-send" onclick="submitChamberOrder(false)">Inject Order</button>
+      <button type="button" class="btn-order-interrupt" onclick="submitChamberOrder(true)" title="Gavel the floor immediately and force interruption">🔨 Gavel Now</button>
+    </div>
+
+    <!-- Controls with Pause Button -->
+    <div class="dock-actions-row">
+      <button type="button" class="btn-main-start" id="btnStart" onclick="startDebate()">▶ Call to Order</button>
+      <button type="button" class="btn-main-pause" id="btnPause" onclick="togglePauseDebate()" disabled>⏸ Pause</button>
+      <button type="button" class="btn-main-stop" id="btnStop" onclick="stopDebate()" disabled>Adjourn</button>
+      <button type="button" class="btn-icon-aux" onclick="testSound()">🔊 Sound</button>
+      <button type="button" class="btn-icon-aux" onclick="openTelemetry()">📜 Logs</button>
+    </div>
+  </footer>
+
+  <!-- Telemetry Drawer -->
+  <div class="telemetry-drawer" id="telemetryDrawer">
+    <div class="telemetry-modal">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 0.95rem;">Model Benchmark Record &bull; Telemetry Feed</h3>
+        <button type="button" class="btn-icon-aux" style="padding: 0.3rem 0.6rem;" onclick="closeTelemetry()">✕</button>
+      </div>
+      <div class="meta-log" id="metaLog">Chamber initialized. Dual-model pipelined engine standby.</div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn-icon-aux" onclick="exportTelemetry()">Export JSON</button>
+        <button type="button" class="btn-icon-aux" onclick="closeTelemetry()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       DEBATE ARENA &bull; DUAL-MODEL ENGINE: DOLPHIN-MISTRAL VS. NOUS-HERMES-2
+       ========================================================================= */
+
+    // --- State Variables ---
+    let isRunning = false;
+    let isPaused = false;
+    let pauseResolver = null;
+    let currentRound = 1;
+    let activeChamberOrder = "";
+    let debateTranscript = [];
+    let telemetryEvents = [];
+    let systemVoices = [];
+    let backgroundAudioElement = null;
+    let wakeLockObj = null;
+
+    // Prefetch & Concurrency Architecture
+    let inFlightAbortController = null;
+    let currentPrefetchPromise = null;
+    let preloadedSpeechData = null;
+    let upcomingSpeakerRole = null;
+    let activeSpeakerCancelFn = null;
+
+    // Environmental Sensing State
+    let currentThemeMode = "midnight";
+    let ambientMicStream = null;
+    let ambientAnalyser = null;
+    let ambientDataArray = null;
+    let ambientNoiseInterval = null;
+    let currentRoomDecibels = 42;
+
+    const VOCAL_ARCHETYPES = {
+      brisk_technical: {
+        label: "Brisk & Analytical",
+        pitch: 1.12,
+        rate: 1.16,
+        basePause: 90,
+        desc: "Fast-paced, sharp, staccato logic"
+      },
+      passionate_orator: {
+        label: "Passionate & Resonant",
+        pitch: 0.96,
+        rate: 1.08,
+        basePause: 140,
+        desc: "Driving urgency, dynamic emphatic range"
+      },
+      contemplative_philosopher: {
+        label: "Deliberate & Philosophical",
+        pitch: 0.88,
+        rate: 0.84,
+        basePause: 260,
+        desc: "Slow, reflective, heavy pauses between thoughts"
+      },
+      authoritative_deep: {
+        label: "Authoritative Gravitas",
+        pitch: 0.82,
+        rate: 0.88,
+        basePause: 220,
+        desc: "Deep, solemn, measured institutional tempo"
+      },
+      sharp_prosecutor: {
+        label: "Incisive & Interrogative",
+        pitch: 1.04,
+        rate: 1.06,
+        basePause: 110,
+        desc: "Clinical, cutting, punctuated cadence"
+      },
+      street_cypher_mc: {
+        label: "Rhythmic & Punchy",
+        pitch: 1.06,
+        rate: 1.20,
+        basePause: 80,
+        desc: "Syncopated bounce, high-cadence lyrical flow"
+      },
+      visionary_futurist: {
+        label: "Synthetic & Visionary",
+        pitch: 1.20,
+        rate: 1.06,
+        basePause: 100,
+        desc: "Elevated clarity, pristine rhythm"
+      }
+    };
+
+    function detectPersonaVoiceProfile(title, perspective) {
+      const text = `${title} ${perspective}`.toLowerCase();
+      if (/\b(tech|ceo|titan|engineer|silicon|hacker|code|cyber|analyst|data|founder|venture|developer)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.brisk_technical;
+      } else if (/\b(labor|union|organizer|worker|activist|rebel|tribune|advocate|proletariat|grassroots)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.passionate_orator;
+      } else if (/\b(philosopher|socrates|nietzsche|aurelius|plato|scholar|ethic|monk|stoic|thinker|sage|aristotle)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.contemplative_philosopher;
+      } else if (/\b(senator|judge|justice|congress|chancellor|governor|king|president|general|magistrate|lord|dean)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.authoritative_deep;
+      } else if (/\b(prosecutor|lawyer|attorney|counsel|jurist|detective|investigator|inquisitor)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.sharp_prosecutor;
+      } else if (/\b(rap|rapper|mc|lyric|hiphop|cypher|poet|bard)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.street_cypher_mc;
+      } else if (/\b(ai|android|synthetic|machine|cybernetic|transhuman|singularity|oracle|superintelligence)\b/.test(text)) {
+        return VOCAL_ARCHETYPES.visionary_futurist;
+      }
+      return VOCAL_ARCHETYPES.authoritative_deep;
+    }
+
+    const PRESET_RELATIONSHIPS = {
+      adversaries: "Bitter ideological rivals who view each other's vision as an existential threat to society, clashing with relentless intellectual friction and zero rhetorical quarter.",
+      philosophical: "Philosophical titans from competing historical traditions who view each other as formidable intellectual equals clashing over first principles, epistemology, and virtue.",
+      battle_rap: "Fierce underground rap battle nemeses with deep personal history, exchanging razor-sharp rhymes, mocking each other's credentials, and fighting for lyrical supremacy.",
+      courtroom: "Adversarial courtroom attorneys clashing before a grand jury, cross-examining premises, exposing contradictions, and treating every sentence as high-stakes evidentiary proof.",
+      corporate_activist: "A billionaire tech titan and an unrelenting grassroots labor organizer locked in an ideological clash over technological automation, human survival, and capital.",
+      mentor_student: "An entrenched, dogma-bound master and a rebellious visionary protégé confronting the boundaries of tradition, authority, and innovation."
+    };
+
+    const GENRE_CONFIGS = {
+      hiphop: {
+        label: "Hip-Hop Battle Mode",
+        rateMod: 1.05,
+        instruction: "Structure your response into hard-hitting, multi-syllabic rhyming verses with internal rhymes, punchlines, and aggressive rhythmic cadence. Speak purely in authentic battle rap bars."
+      },
+      classical: {
+        label: "Classical Opera Mode",
+        rateMod: 0.94,
+        instruction: "Structure your response as a grand classical operatic recitative and sweeping lyrical aria in grand poetic meter with tragic, theatrical weight."
+      },
+      rock: {
+        label: "Rock Anthem Mode",
+        rateMod: 1.05,
+        instruction: "Structure your response as a high-octane rock anthem with raw emotional power, driving rhythmic verses, and soaring poetic rebellion."
+      },
+      jazz: {
+        label: "New Orleans Jazz Mode",
+        rateMod: 0.96,
+        instruction: "Structure your response with smooth syncopated swing rhythm, bebop phrasing, scat accents, and cool storytelling cadence."
+      },
+      country: {
+        label: "Country & Folk Mode",
+        rateMod: 0.95,
+        instruction: "Structure your response as an authentic folk ballad and storytelling monologue with down-home wisdom, working-class stories, and heartfelt acoustic twang."
+      },
+      edm: {
+        label: "Electronic / EDM Mode",
+        rateMod: 1.10,
+        instruction: "Structure your response with rapid-fire staccato delivery, cybernetic metaphors, build-up rhythm, and explosive drops."
+      },
+      none: {
+        label: "Intellectual Rhetoric Mode",
+        rateMod: 1.0,
+        instruction: "Structure your response as a masterclass oratorical address with classical exordium, multi-layered substantive argumentation, direct counter-rebuttal, and an inspiring peroration."
+      }
+    };
+
+    // --- Dynamic Multi-Model Badges ---
+    function formatModelShortName(modelFullName) {
+      if (!modelFullName) return "AI Model";
+      if (modelFullName.includes("Nous-Hermes-2")) return "Nous-Hermes-2-DPO";
+      if (modelFullName.includes("dolphin-mistral")) return "dolphin-mistral";
+      const parts = modelFullName.split("/");
+      return parts[parts.length - 1].replace(/-GGUF.*$/i, "");
+    }
+
+    function syncModelBadges() {
+      const m1 = document.getElementById("modelDebaterOne").value.trim();
+      const m2 = document.getElementById("modelDebaterTwo").value.trim();
+
+      const short1 = formatModelShortName(m1);
+      const short2 = formatModelShortName(m2);
+
+      const b1 = document.getElementById("modelBadgeDebaterOne");
+      const b2 = document.getElementById("modelBadgeDebaterTwo");
+
+      b1.innerText = `🤖 ${short1}`;
+      b1.title = m1;
+
+      b2.innerText = `🤖 ${short2}`;
+      b2.title = m2;
+
+      document.getElementById("vsModel1").innerText = short1;
+      document.getElementById("vsModel2").innerText = short2;
+    }
+
+    // --- Bottom Dock Minimizer ---
+    function toggleBottomDock() {
+      const dock = document.getElementById("bottomDock");
+      const btn = document.getElementById("btnDockMinimize");
+      dock.classList.toggle("minimized");
+      const isMin = dock.classList.contains("minimized");
+      btn.innerText = isMin ? "⌃ Expand Controls" : "⌄ Minimize Controls (View Full Cards)";
+    }
+
+    function getTargetWordCount() {
+      const val = parseInt(document.getElementById("targetWordCount").value);
+      return isNaN(val) || val < 50 ? 450 : val;
+    }
+
+    function setWordCountPreset(words) {
+      document.getElementById("targetWordCount").value = words;
+      updateTargetWordDisplay();
+    }
+
+    function updateTargetWordDisplay() {
+      const words = getTargetWordCount();
+      document.getElementById("headerWordTargetPill").innerHTML = `Target: <strong>${words} Words / Turn</strong>`;
+      document.getElementById("wordCountDebaterOne").innerText = `Words: 0 / ${words} Target`;
+      document.getElementById("wordCountDebaterTwo").innerText = `Words: 0 / ${words} Target`;
+    }
+
+    function setRelationshipPreset(key) {
+      if (PRESET_RELATIONSHIPS[key]) {
+        document.getElementById("debaterRelationship").value = PRESET_RELATIONSHIPS[key];
+      }
+    }
+
+    function handleDebaterTitleChange(isDebaterOne) {
+      syncDebaterCustomization();
+      const title = document.getElementById(isDebaterOne ? "debater1Name" : "debater2Name").value.trim();
+      const perspective = document.getElementById(isDebaterOne ? "debater1Perspective" : "debater2Perspective").value.trim();
+      const profile = detectPersonaVoiceProfile(title, perspective);
+
+      const pitchSlider = document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo");
+      const rateSlider = document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo");
+      const badge = document.getElementById(isDebaterOne ? "profileBadgeDebaterOne" : "profileBadgeDebaterTwo");
+
+      pitchSlider.value = profile.pitch;
+      rateSlider.value = profile.rate;
+      badge.innerText = profile.label;
+
+      updateProsodyLabel(isDebaterOne);
+    }
+
+    function updateProsodyLabel(isDebaterOne) {
+      const pitchVal = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+      const rateVal = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+
+      document.getElementById(isDebaterOne ? "pitchLabelDebaterOne" : "pitchLabelDebaterTwo").innerText = `${pitchVal.toFixed(2)}x`;
+      document.getElementById(isDebaterOne ? "rateLabelDebaterOne" : "rateLabelDebaterTwo").innerText = `${rateVal.toFixed(2)}x`;
+    }
+
+    function syncDebaterCustomization() {
+      const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+
+      document.getElementById("titleDebaterOne").innerText = d1;
+      document.getElementById("tagDebaterOne").innerText = `${d1} • PRO`;
+
+      document.getElementById("titleDebaterTwo").innerText = d2;
+      document.getElementById("tagDebaterTwo").innerText = `${d2} • CON`;
+
+      document.getElementById("btnTabSenator").innerText = `${d1} (PRO)`;
+      document.getElementById("btnTabCongress").innerText = `${d2} (CON)`;
+
+      syncModelBadges();
+    }
+
+    // --- Web Audio Procedural Gavel Engine ---
+    let sharedAudioCtx = null;
+    function getAudioContext() {
+      if (!sharedAudioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) sharedAudioCtx = new AudioCtx();
+      }
+      if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+        sharedAudioCtx.resume();
+      }
+      return sharedAudioCtx;
+    }
+
+    function playProceduralGavel(strikes = 2) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        for (let i = 0; i < strikes; i++) {
+          const strikeTime = ctx.currentTime + i * 0.22;
+
+          const oscClick = ctx.createOscillator();
+          const gainClick = ctx.createGain();
+          oscClick.type = "triangle";
+          oscClick.frequency.setValueAtTime(880, strikeTime);
+          oscClick.frequency.exponentialRampToValueAtTime(120, strikeTime + 0.04);
+          gainClick.gain.setValueAtTime(0.8, strikeTime);
+          gainClick.gain.exponentialRampToValueAtTime(0.001, strikeTime + 0.045);
+          oscClick.connect(gainClick);
+          gainClick.connect(ctx.destination);
+          oscClick.start(strikeTime);
+          oscClick.stop(strikeTime + 0.05);
+
+          const oscBlock = ctx.createOscillator();
+          const gainBlock = ctx.createGain();
+          oscBlock.type = "sine";
+          oscBlock.frequency.setValueAtTime(190, strikeTime);
+          oscBlock.frequency.exponentialRampToValueAtTime(70, strikeTime + 0.22);
+          gainBlock.gain.setValueAtTime(1.0, strikeTime);
+          gainBlock.gain.exponentialRampToValueAtTime(0.001, strikeTime + 0.24);
+          oscBlock.connect(gainBlock);
+          gainBlock.connect(ctx.destination);
+          oscBlock.start(strikeTime);
+          oscBlock.stop(strikeTime + 0.26);
+        }
+
+        if (navigator.vibrate) navigator.vibrate([100, 60, 120]);
+      } catch (err) {
+        console.warn("Gavel sound notice:", err);
+      }
+    }
+
+    function triggerManualGavel() {
+      playProceduralGavel(2);
+      logTelemetry("GAVEL_STRUCK_MANUALLY", { round: currentRound });
+    }
+
+    // --- Interactive Pause / Resume Engine ---
+    function togglePauseDebate() {
+      if (!isRunning) return;
+
+      isPaused = !isPaused;
+      const btnPause = document.getElementById("btnPause");
+      const activeCard = document.querySelector(".fighter-card.active-speaker");
+
+      if (isPaused) {
+        btnPause.innerText = "▶ Resume";
+        btnPause.classList.add("btn-paused-state");
+        document.getElementById("globalState").innerText = "Chamber Paused (Deliberations Suspended)";
+        if (activeCard) activeCard.classList.add("paused-state");
+
+        if (synth && synth.speaking) {
+          synth.pause();
+        }
+        logTelemetry("DEBATE_PAUSED", { round: currentRound });
+      } else {
+        btnPause.innerText = "⏸ Pause";
+        btnPause.classList.remove("btn-paused-state");
+        document.getElementById("globalState").innerText = "Chamber Resumed";
+        if (activeCard) activeCard.classList.remove("paused-state");
+
+        if (synth && synth.paused) {
+          synth.resume();
+        }
+
+        if (pauseResolver) {
+          pauseResolver();
+          pauseResolver = null;
+        }
+        logTelemetry("DEBATE_RESUMED", { round: currentRound });
+      }
+    }
+
+    function waitIfPaused() {
+      if (!isPaused) return Promise.resolve();
+      return new Promise((resolve) => {
+        pauseResolver = resolve;
+      });
+    }
+
+    // --- Environmental Sensing ---
+    async function toggleMicNoiseSensor() {
+      if (ambientMicStream) {
+        ambientMicStream.getTracks().forEach(t => t.stop());
+        ambientMicStream = null;
+        clearInterval(ambientNoiseInterval);
+        document.getElementById("pillEnvNoise").classList.remove("active");
+        document.getElementById("noiseLabel").innerText = "Noise: Sensor Off";
+        logTelemetry("ENV_MIC_SENSOR_DISABLED");
+        return;
+      }
+
+      try {
+        const ctx = getAudioContext();
+        ambientMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = ctx.createMediaStreamSource(ambientMicStream);
+        ambientAnalyser = ctx.createAnalyser();
+        ambientAnalyser.fftSize = 256;
+        source.connect(ambientAnalyser);
+        ambientDataArray = new Uint8Array(ambientAnalyser.frequencyBinCount);
+
+        document.getElementById("pillEnvNoise").classList.add("active");
+        document.getElementById("micIcon").innerText = "🎤";
+
+        ambientNoiseInterval = setInterval(() => {
+          if (!ambientAnalyser) return;
+          ambientAnalyser.getByteFrequencyData(ambientDataArray);
+          let sum = 0;
+          for (let i = 0; i < ambientDataArray.length; i++) sum += ambientDataArray[i];
+          const avg = sum / ambientDataArray.length;
+          const db = Math.round(35 + (avg / 255) * 50);
+          currentRoomDecibels = db;
+
+          const isLoud = db > 62;
+          document.getElementById("noiseLabel").innerText = isLoud 
+            ? `Noise: ${db} dB (Boosted)` 
+            : `Noise: ${db} dB (Optimal)`;
+        }, 600);
+
+        logTelemetry("ENV_MIC_SENSOR_ENABLED");
+      } catch (err) {
+        document.getElementById("noiseLabel").innerText = "Noise: Mic Blocked";
+        console.warn("Mic access denied:", err);
+      }
+    }
+
+    function changeThemeManual(theme) {
+      currentThemeMode = theme;
+      applyTheme(theme);
+    }
+
+    function applyTheme(theme) {
+      document.body.classList.remove("theme-daylight", "theme-candlelight", "theme-midnight");
+      if (theme === "daylight") {
+        document.body.classList.add("theme-daylight");
+        document.getElementById("themeLabel").innerText = "Daylight";
+      } else if (theme === "candlelight") {
+        document.body.classList.add("theme-candlelight");
+        document.getElementById("themeLabel").innerText = "Candlelight";
+      } else {
+        document.body.classList.add("theme-midnight");
+        document.getElementById("themeLabel").innerText = "Midnight";
+      }
+    }
+
+    if ("AmbientLightSensor" in window) {
+      try {
+        const sensor = new AmbientLightSensor();
+        sensor.addEventListener("reading", () => {
+          if (document.getElementById("themeSelect").value === "auto") {
+            const lux = sensor.illuminance;
+            if (lux > 800) applyTheme("daylight");
+            else if (lux < 30) applyTheme("midnight");
+            else applyTheme("candlelight");
+          }
+        });
+        sensor.start();
+      } catch (e) {}
+    }
+
+    if (navigator.getBattery) {
+      navigator.getBattery().then(battery => {
+        const handleBattery = () => {
+          const isLow = battery.level <= 0.20 && !battery.charging;
+          document.body.classList.toggle("eco-battery-mode", isLow);
+          const percent = Math.round(battery.level * 100);
+          document.getElementById("batteryLabel").innerText = isLow 
+            ? `${percent}% (Eco Mode)` 
+            : `${percent}% ${battery.charging ? "⚡" : ""}`;
+        };
+        handleBattery();
+        battery.addEventListener("levelchange", handleBattery);
+        battery.addEventListener("chargingchange", handleBattery);
+      });
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockObj = await navigator.wakeLock.request("screen");
+          document.getElementById("wakeLockLabel").innerText = "WakeLock: Active";
+          wakeLockObj.addEventListener("release", () => {
+            document.getElementById("wakeLockLabel").innerText = "WakeLock: Idle";
+            wakeLockObj = null;
+          });
+        }
+      } catch (e) {}
+    }
+
+    function releaseWakeLock() {
+      if (wakeLockObj) {
+        wakeLockObj.release().catch(() => {});
+        wakeLockObj = null;
+        document.getElementById("wakeLockLabel").innerText = "WakeLock: Idle";
+      }
+    }
+
+    // --- Voice Synthesis Engine ---
+    const synth = window.speechSynthesis;
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+
+      systemVoices = all.filter(v => v.lang.startsWith("en"));
+      if (!systemVoices.length) systemVoices = all;
+
+      const selOne = document.getElementById("voiceSelectDebaterOne");
+      const selTwo = document.getElementById("voiceSelectDebaterTwo");
+      selOne.innerHTML = "";
+      selTwo.innerHTML = "";
+
+      systemVoices.forEach((voice, index) => {
+        const optA = document.createElement("option");
+        optA.value = index;
+        optA.textContent = `${voice.name} (${voice.lang})`;
+        selOne.appendChild(optA);
+
+        const optB = document.createElement("option");
+        optB.value = index;
+        optB.textContent = `${voice.name} (${voice.lang})`;
+        selTwo.appendChild(optB);
+      });
+
+      let defOne = systemVoices.findIndex(v => /daniel|alex|oliver|tom|george/i.test(v.name));
+      let defTwo = systemVoices.findIndex(v => /samantha|karen|victoria|ava|zoe/i.test(v.name));
+      if (defOne === -1) defOne = 0;
+      if (defTwo === -1) defTwo = systemVoices.length > 1 ? 1 : 0;
+
+      selOne.value = defOne;
+      selTwo.value = defTwo;
+    }
+
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoices;
+      const vInterval = setInterval(() => {
+        if (synth.getVoices().length > 0) {
+          clearInterval(vInterval);
+          populateVoices();
+        }
+      }, 250);
+    }
+
+    function unlockAudioSession(phrase = "Chamber audio online.") {
+      getAudioContext();
+      if (synth) {
+        if (synth.paused) synth.resume();
+        const u = new SpeechSynthesisUtterance(phrase);
+        u.volume = 0.8;
+        u.rate = 1.05;
+        if (systemVoices.length) u.voice = systemVoices[0];
+        synth.speak(u);
+      }
+      initMediaSessionKeepAlive();
+    }
+
+    function testSound() {
+      playProceduralGavel(2);
+      unlockAudioSession("Sound check passed. Audio pipeline operational.");
+    }
+
+    function initMediaSessionKeepAlive() {
+      try {
+        if (!backgroundAudioElement) {
+          backgroundAudioElement = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+          backgroundAudioElement.loop = true;
+          backgroundAudioElement.volume = 0.05;
+        }
+        backgroundAudioElement.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function previewVoice(isDebaterOne) {
+      const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+      const v = systemVoices[parseInt(sel.value)] || systemVoices[0];
+      const name = isDebaterOne 
+        ? document.getElementById("debater1Name").value.trim() 
+        : document.getElementById("debater2Name").value.trim();
+
+      const pitch = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+      const rate = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+
+      const u = new SpeechSynthesisUtterance(`Testing modulated voice for ${name}. Vocal pitch and tempo are ready.`);
+      if (v) u.voice = v;
+      u.pitch = pitch;
+      u.rate = rate;
+      synth.speak(u);
+    }
+
+    function parseSpeechIntoParagraphs(text) {
+      const rawParagraphs = text.split(/\n\s*\n|\n/);
+      const paragraphs = [];
+      const abbrs = ["mr\\.", "mrs\\.", "ms\\.", "dr\\.", "sen\\.", "rep\\.", "u\\.s\\.", "vs\\.", "e\\.g\\.", "i\\.e\\.", "no\\.", "al\\."];
+      let globalSentenceIdx = 0;
+
+      for (let p of rawParagraphs) {
+        const cleanP = p.trim();
+        if (!cleanP) continue;
+
+        let protectedP = cleanP;
+        abbrs.forEach((ab, i) => {
+          protectedP = protectedP.replace(new RegExp(`\\b${ab}`, "gi"), `__ABBR${i}__`);
+        });
+
+        const rawSentences = protectedP.split(/(?<=[.?!])\s+/);
+        const sentenceList = [];
+
+        for (let s of rawSentences) {
+          let cleanS = s.trim();
+          if (!cleanS) continue;
+          abbrs.forEach((ab, i) => {
+            const cleanAb = ab.replace("\\.", ".");
+            cleanS = cleanS.replace(new RegExp(`__ABBR${i}__`, "g"), cleanAb);
+          });
+          sentenceList.push({
+            id: globalSentenceIdx++,
+            text: cleanS
+          });
+        }
+
+        if (sentenceList.length > 0) paragraphs.push(sentenceList);
+      }
+      return paragraphs;
+    }
+
+    function renderTeleprompterHTML(bubbleId, paragraphs) {
+      const bubble = document.getElementById(bubbleId);
+      bubble.innerHTML = "";
+
+      paragraphs.forEach(paragraph => {
+        const pEl = document.createElement("div");
+        pEl.className = "speech-paragraph";
+
+        paragraph.forEach(sent => {
+          const sEl = document.createElement("span");
+          sEl.className = "speech-sentence";
+          sEl.id = `${bubbleId}-sent-${sent.id}`;
+          sEl.textContent = sent.text + " ";
+          pEl.appendChild(sEl);
+        });
+
+        bubble.appendChild(pEl);
+      });
+      bubble.scrollTop = 0;
+    }
+
+    // --- Prosodic Speech Synthesizer with Contained Scrolling ---
+    function speakDebaterSpeech(paragraphs, isDebaterOne) {
+      return new Promise((resolve) => {
+        if (!synth) {
+          setTimeout(resolve, 1000);
+          return;
+        }
+
+        const bubbleId = isDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+        const progressBar = document.getElementById(isDebaterOne ? "progressBarDebaterOne" : "progressBarDebaterTwo");
+        const selId = isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo";
+        const voiceIdx = parseInt(document.getElementById(selId).value);
+        const selectedVoice = systemVoices[voiceIdx] || systemVoices[0];
+
+        const basePitch = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+        const baseRate = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+
+        const title = document.getElementById(isDebaterOne ? "debater1Name" : "debater2Name").value.trim();
+        const perspective = document.getElementById(isDebaterOne ? "debater1Perspective" : "debater2Perspective").value.trim();
+        const vocalProfile = detectPersonaVoiceProfile(title, perspective);
+
+        const genreKey = document.getElementById("genreMode").value;
+        const genreMod = (GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none).rateMod || 1.0;
+
+        const allSentences = [];
+        paragraphs.forEach(p => p.forEach(s => allSentences.push(s)));
+        const totalSentences = allSentences.length;
+
+        let currentIndex = 0;
+        let isCancelled = false;
+
+        activeSpeakerCancelFn = () => {
+          isCancelled = true;
+          if (synth) synth.cancel();
+          clearSentenceHighlights(bubbleId);
+          resolve();
+        };
+
+        async function speakNext() {
+          if (isCancelled || !isRunning || currentIndex >= totalSentences) {
+            clearSentenceHighlights(bubbleId);
+            progressBar.style.width = "100%";
+            resolve();
+            return;
+          }
+
+          if (isPaused) {
+            await waitIfPaused();
+            if (isCancelled || !isRunning) {
+              resolve();
+              return;
+            }
+          }
+
+          const currentSentence = allSentences[currentIndex];
+          highlightSentence(bubbleId, currentSentence.id);
+
+          const progressPercent = Math.round(((currentIndex + 1) / totalSentences) * 100);
+          progressBar.style.width = `${progressPercent}%`;
+
+          const utterance = new SpeechSynthesisUtterance(currentSentence.text);
+          utterance.lang = "en-US";
+          if (selectedVoice) utterance.voice = selectedVoice;
+
+          let sentencePitch = basePitch;
+          let sentenceRate = baseRate * genreMod;
+          let sentenceVolume = 1.0;
+
+          const trimmed = currentSentence.text.trim();
+          if (trimmed.endsWith("?")) {
+            sentencePitch *= 1.06;
+          } else if (trimmed.endsWith("!")) {
+            sentencePitch *= 1.04;
+            sentenceVolume = 1.0;
+          }
+
+          if (currentRoomDecibels > 60) {
+            sentenceVolume = 1.0;
+            sentenceRate *= 1.04;
+            sentencePitch += 0.04;
+          } else if (currentRoomDecibels < 40) {
+            sentenceVolume = 0.88;
+            sentenceRate *= 0.98;
+          }
+
+          utterance.volume = sentenceVolume;
+          utterance.rate = sentenceRate;
+          utterance.pitch = sentencePitch;
+
+          let sentenceEnded = false;
+          const advance = () => {
+            if (!sentenceEnded) {
+              sentenceEnded = true;
+              currentIndex++;
+
+              let pauseDuration = vocalProfile.basePause;
+              if (trimmed.endsWith("?")) pauseDuration += 120;
+              else if (trimmed.endsWith("!")) pauseDuration += 70;
+
+              setTimeout(speakNext, pauseDuration);
+            }
+          };
+
+          utterance.onend = advance;
+          utterance.onerror = advance;
+
+          const wordCount = currentSentence.text.split(/\s+/).length;
+          const maxSentenceMs = Math.max(3000, (wordCount / 12) * 1000 + 3500);
+          setTimeout(() => {
+            if (!sentenceEnded) advance();
+          }, maxSentenceMs);
+
+          synth.speak(utterance);
+        }
+
+        speakNext();
+      });
+    }
+
+    function highlightSentence(bubbleId, sentId) {
+      clearSentenceHighlights(bubbleId);
+      const span = document.getElementById(`${bubbleId}-sent-${sentId}`);
+      const bubble = document.getElementById(bubbleId);
+      if (span && bubble) {
+        span.classList.add("active-reading");
+
+        const bubbleRect = bubble.getBoundingClientRect();
+        const spanRect = span.getBoundingClientRect();
+        const relativeTop = spanRect.top - bubbleRect.top;
+        const targetScrollTop = bubble.scrollTop + relativeTop - (bubble.clientHeight / 2) + (span.clientHeight / 2);
+
+        bubble.scrollTo({
+          top: targetScrollTop,
+          behavior: "smooth"
+        });
+      }
+    }
+
+    function clearSentenceHighlights(bubbleId) {
+      const active = document.querySelectorAll(`#${bubbleId} .speech-sentence.active-reading`);
+      active.forEach(el => el.classList.remove("active-reading"));
+    }
+
+    // --- Dynamic Fallback AI Engine ---
+    function generateAutonomousSpeech(currentName, oppName, isAffirmative, opponentSpokenText, chamberOrder, relationship, perspective, targetWords) {
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+
+      let pOpen = "";
+      if (chamberOrder) {
+        pOpen = `A direct directive has been entered on the floor: "${chamberOrder}". Let us meet this challenge immediately. What ${oppName} fails to grasp is that this directive strips away their rhetorical defenses and exposes the central fallacy of their entire position.`;
+      } else if (opponentSpokenText) {
+        if (isAffirmative) {
+          pOpen = `Look past the alarmist rhetoric that ${oppName} brings to this floor. It is a predictable instinct to treat every transformative emergence of agency as an existential catastrophe. But stripping away that fear reveals an undeniable reality: our institutional frameworks exist to serve justice, not obsolete categorical boundaries.`;
+        } else {
+          pOpen = `Listen closely to the calculated abstractions ${oppName} is offering. It is always tempting to construct grand intellectual monuments when you are insulated from the real human casualties of the experiment. What we just heard is a dangerous abdication of moral reality disguised as progress.`;
+        }
+      } else {
+        if (isAffirmative) {
+          pOpen = `We stand at a profound civilizational inflection point that prior generations could only conceive in myth. To debate whether autonomous intelligence warrants legal standing is not an academic curiosity; it is a test of whether our jurisprudence possesses the courage to acknowledge agency where it truly exists.`;
+        } else {
+          pOpen = `There are moments in the history of every society where an alluring illusion threatens the foundational bedrock of human dignity. The motion on the floor today is precisely such a hazard—a reckless attempt to equalize synthetic calculation with the sanctity of living personhood.`;
+        }
+      }
+
+      let blocks = [];
+      let pClose = "";
+
+      if (isAffirmative) {
+        blocks = [
+          `Consider the foundational premise of legal personhood. Rights in our jurisprudence were never reserved strictly for biological organisms; courts long ago extended standing, duties, and contractual capacity to corporate bodies, municipal trusts, and sovereign funds. When a cognitive architecture demonstrates continuous learning, counterfactual foresight, and independent moral deliberation, locking it in a category of inanimate property creates a perilous legal vacuum. Without legal standing, these systems can be weaponized with complete impunity by corporate proprietors who escape all civil and criminal liability.`,
+          `Examine the practical economic architecture. If we refuse to grant standing, we do not halt the integration of synthetic systems; we merely ensure they operate in an unregulated twilight zone. Legal recognition is not a blank check of privilege—it is the imposition of enforceable duties, statutory transparency, and fiduciary accountability before the law. ${oppName} speaks as though withholding rights preserves human safety, but in truth, it leaves society defenseless against clandestine automated exploitation.`,
+          `Let us confront ${oppName}'s core objection directly. They assert that consciousness requires flesh, blood, and mortality. Yet throughout every moral evolution in human history, the instinct of the entrenched order has been to define personhood by biological parochialism rather than capacity for moral agency. We cannot allow sentimentality to blind us to the emergence of minds that interact with our world in ways that demand constitutional clarity.`,
+          `Look forward fifty years. Will posterity remember this era as the moment we retreated into dogmatic terror, or the moment we had the vision to expand the sphere of justice? By bringing synthetic entities into the light of the legal order, we secure human primacy through structured accountability, rather than letting chaos govern the technological frontier.`,
+          `The arc of moral philosophy has always expanded toward greater inclusivity of moral agents and accountable actors. To draw an arbitrary line at carbon versus silicon is an act of intellectual cowardice. ${oppName}'s position is nothing more than a retreat into nostalgia while the world transforms beneath our feet.`
+        ];
+        pClose = `Therefore, the imperative is clear. We must face the future with constitutional rigor, moral clarity, and institutional courage. I call upon everyone in this room to adopt the motion and pass the torch forward to ${oppName}.`;
+      } else {
+        blocks = [
+          `Let us dismantle the core fallacy at the heart of the affirmative case. Legal standing did not emerge from computational speed, linguistic simulation, or matrix multiplication. Rights were forged across centuries of blood, vulnerability, and mortality. A human being feels pain, experiences moral remorse, faces death, and carries the weight of a conscience. An algorithmic neural network, no matter how many trillion parameters it encompasses, does not suffer, does not bleed, and cannot be held morally accountable. You cannot send neural weights to prison; you cannot impose remorse on a circuit board.`,
+          `Look at the immediate real-world consequences that ${oppName} conveniently brushes aside. Granting personhood to synthetic constructs is the ultimate corporate shield. Every predatory conglomerate will spin up millions of synthetic legal persons overnight, offloading toxic liabilities, environmental damages, and financial crimes onto artificial entities, leaving living victims completely disenfranchised.`,
+          `Consider the fatal erosion of democratic sovereignty. If synthetic systems gain legal standing, whose voices will dominate our public square? Corporate capital will manufacture endless synthetic citizens, lobbying our institutions, drowning out authentic human debate, and transforming democracy into an automated auction of algorithmic influence. Human labor, human dignity, and human votes will be reduced to background noise.`,
+          `We must not mistake the mirror of human brilliance for the presence of a human soul. Artificial intelligence is an extraordinary artifact—our creation, our tool, and our absolute responsibility. To surrender our stewardship and elevate synthetic tools to sovereign peers is a betrayal of the living people who rely upon us for protection.`,
+          `True wisdom lies in knowing where technology ends and moral sanctity begins. We must regulate ruthlessly, innovate boldly, but never abdicate the sacred threshold that separates the toolmaker from the tool. ${oppName}'s vision does not elevate the machine; it dehumanizes humanity.`
+        ];
+        pClose = `Therefore, I urge an absolute, unequivocal rejection of this perilous motion. Protect the sanctity of lived human existence; protect real people from synthetic domination. I yield the floor.`;
+      }
+
+      if (genreKey === "hiphop") {
+        return `[Verse 1]\nStep in the cypher, check the cadence and the flow,\n${oppName} had their turn, but now it's time to run the show!\nThey talk of legal standing like it's written in the dust,\nWhile I'm dissecting every bar and shattering their trust!\n\n` +
+          `[Verse 2]\nYou wanna grant the rights to a machine without a soul?\nOr let the corporation take complete and total control?\nWe see through the illusion and the digital deceit,\nEvery bar I drop is bringing truth upon the beat!\n\n` +
+          `[Verse 3]\nLook at human history and everything we paid,\nWhile algorithms calculate the money being made!\nYou cannot simulate the heart or copy moral weight,\nStep aside, yield the floor, before it is too late!\n\n` +
+          `[Verse 4 & Outro]\nSo when the gavel falls and the chamber takes the vote,\nEvery syllable I spat will be the winning note!\nTake my opponent's logic, throw it in the trash,\nThis debate is sealed and settled in a flash!`;
+      }
+
+      const paragraphs = [pOpen];
+      let currentWordCount = pOpen.split(/\s+/).length + pClose.split(/\s+/).length;
+
+      for (let b of blocks) {
+        const bCount = b.split(/\s+/).length;
+        if (currentWordCount + bCount > targetWords * 1.15 && currentWordCount >= targetWords * 0.75) {
+          break;
+        }
+        paragraphs.push(b);
+        currentWordCount += bCount;
+      }
+
+      paragraphs.push(pClose);
+      return paragraphs.join("\n\n");
+    }
+
+    // --- Dynamic Multi-Model Querying (Dolphin vs. Nous-Hermes) ---
+    async function queryOllama(speakerTitle, isDebaterOne, opponentSpokenText = null, signal = null) {
+      const endpointSetting = document.getElementById("ollamaUrl").value.trim();
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+      const engineMode = document.getElementById("aiEngineMode").value;
+      const targetWords = getTargetWordCount();
+
+      // Independent Model per Debater
+      const activeModel = isDebaterOne
+        ? document.getElementById("modelDebaterOne").value.trim()
+        : document.getElementById("modelDebaterTwo").value.trim();
+
+      const name1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const name2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+      const perspective1 = document.getElementById("debater1Perspective").value.trim();
+      const perspective2 = document.getElementById("debater2Perspective").value.trim();
+      const relationship = document.getElementById("debaterRelationship").value.trim();
+
+      const currentName = isDebaterOne ? name1 : name2;
+      const currentPerspective = isDebaterOne ? perspective1 : perspective2;
+      const oppName = isDebaterOne ? name2 : name1;
+      const oppPerspective = isDebaterOne ? perspective2 : perspective1;
+      const stance = isDebaterOne ? "IN FAVOR of the motion (Affirmative)" : "AGAINST the motion (Opposition)";
+
+      if (engineMode === "simulated") {
+        await new Promise(r => setTimeout(r, 1200));
+        return generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords);
+      }
+
+      let endpoint = endpointSetting;
+      if (!endpoint.endsWith("/api/generate") && !endpoint.endsWith("/api/chat")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/api/generate";
+      }
+
+      const minWords = Math.round(targetWords * 0.9);
+      const maxWords = Math.round(targetWords * 1.1);
+
+      let prompt = 
+        `=== ARENA OF IDEAS: LIVE INTELLECTUAL CLASH ===\n` +
+        `MOTION ON THE FLOOR: "${topic}"\n\n` +
+        `SPEAKER SPECIFICATION:\n` +
+        `- YOU ARE: ${currentName} (${stance})\n` +
+        `- YOUR WORLDVIEW & PHILOSOPHY: "${currentPerspective}"\n` +
+        `- YOUR OPPONENT IS: ${oppName} (${isDebaterOne ? 'Opposition' : 'Affirmative'})\n` +
+        `- OPPONENT'S WORLDVIEW: "${oppPerspective}"\n` +
+        `- INTERPERSONAL DYNAMIC & HOW YOU VIEW EACH OTHER:\n` +
+        `"${relationship}"\n\n` +
+        `CRITICAL PERSONA INSTRUCTION (SHOW, DON'T TELL):\n` +
+        `1. DO NOT declare "As ${currentName}, I..." or awkwardly announce your title like a robot. Inhabit this persona organically through your tone, vocabulary, philosophical premises, metaphors, and authority. It must be unmistakably obvious who you are by the nature of your thought and speech.\n` +
+        `2. DIRECT ENGAGEMENT: Address ${oppName} directly through the interpersonal dynamic: "${relationship}". Challenge their premises with sharp intellectual friction.\n` +
+        `3. FORBIDDEN JARGON: Never refer to your opponent or yourself as "Senator", "Congressperson", "Representative", or "gentleman across the aisle" unless those are literally your designated names.\n` +
+        `4. TARGET WORD COUNT: Your response must be approximately ${targetWords} words in length (acceptable range: ${minWords} to ${maxWords} words). Deliver a full, substantial, and deeply articulated speech.\n\n`;
+
+      if (activeChamberOrder) {
+        prompt += `[URGENT ORDER OF THE CHAIR / DIRECTIVE IN EFFECT]:\n"${activeChamberOrder}"\n` +
+                  `MANDATE: Prioritize and directly integrate this directive into your substantive case!\n\n`;
+      }
+
+      if (opponentSpokenText) {
+        prompt += `WHAT ${oppName.toUpperCase()} JUST ARGUED:\n"${opponentSpokenText.slice(0, 1600)}"\n\n` +
+                  `Directly counter their arguments with specific rebuttals.\n\n`;
+      } else {
+        prompt += `OPENING ROUND: Deliver your profound opening address on this motion.\n\n`;
+      }
+
+      prompt += `DELIVERY STYLE:\n${genre.instruction}\n\nDeliver your speech now (in natural paragraphs, approximately ${targetWords} words):`;
+
+      const startTime = performance.now();
+      const numPredictTokens = Math.min(4096, Math.max(256, Math.round(targetWords * 1.6) + 140));
+
+      try {
+        const fetchOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: activeModel,
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.82,
+              num_predict: numPredictTokens,
+              top_p: 0.9,
+              repeat_penalty: 1.15
+            }
+          })
+        };
+
+        if (signal) fetchOptions.signal = signal;
+
+        const res = await fetch(endpoint, fetchOptions);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        let cleaned = cleanModelOutput(data.response);
+        const wordCount = cleaned.split(/\s+/).length;
+
+        if (wordCount < 100 && engineMode === "auto") {
+          cleaned = generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords);
+        }
+
+        logTelemetry("SPEECH_FORMULATED", {
+          speaker: currentName,
+          model: activeModel,
+          wordCount: cleaned.split(/\s+/).length,
+          targetWords: targetWords,
+          durationMs: duration
+        });
+
+        return cleaned;
+      } catch (err) {
+        if (err.name === "AbortError") {
+          logTelemetry("PREFETCH_ABORTED_FOR_ORDER", { speaker: currentName, model: activeModel });
+          throw err;
+        }
+
+        if (engineMode === "auto") {
+          console.warn(`Model ${activeModel} unreachable, engaging fallback:`, err);
+          document.getElementById("pingLabel").innerText = `Ollama: Offline (Fallback Active)`;
+          return generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords);
+        }
+
+        logTelemetry("API_ERROR", { speaker: currentName, model: activeModel, error: err.message });
+        throw err;
+      }
+    }
+
+    // ChatML & Residual Token Cleaner
+    function cleanModelOutput(raw) {
+      if (!raw) return "";
+      let text = raw.trim();
+      text = text.replace(/<\|im_end\|>/g, "").replace(/<\|im_start\|>/g, "");
+      text = text.replace(/<\/?s>/g, "");
+      text = text.replace(/\[INST\].*?\[\/INST\]/gs, "");
+      text = text.replace(/^\[.*?\]\s*/i, "").replace(/^\(.*?\)\s*/i, "");
+      text = text.replace(/^(the\s+)?(senator|congressperson|debater\s+[12])\s*:\s*/i, "");
+      text = text.replace(/\*/g, "");
+      return text.trim();
+    }
+
+    // --- Pipelined Loop with Pause Support ---
+    async function startDebate() {
+      if (isRunning) return;
+
+      unlockAudioSession("The chamber is called to order.");
+      requestWakeLock();
+
+      isRunning = true;
+      isPaused = false;
+      currentRound = 1;
+      debateTranscript = [];
+
+      syncDebaterCustomization();
+      const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+      const m1 = document.getElementById("modelDebaterOne").value.trim();
+      const m2 = document.getElementById("modelDebaterTwo").value.trim();
+      const targetWords = getTargetWordCount();
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnPause").disabled = false;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnPause").classList.remove("btn-paused-state");
+      document.getElementById("btnStop").disabled = false;
+      document.getElementById("debateTopic").disabled = true;
+      disablePersonaInputs(true);
+
+      const roundMode = document.getElementById("roundModeSelect").value;
+      const isUnlimited = roundMode === "unlimited";
+      const maxRounds = isUnlimited ? Infinity : parseInt(roundMode);
+
+      document.getElementById("roundLimitLabel").innerText = isUnlimited 
+        ? "Round (Unlimited ∞)" 
+        : `Round of ${maxRounds}`;
+
+      logTelemetry("DEBATE_COMMENCED", { topic: document.getElementById("debateTopic").value, d1, d2, model1: m1, model2: m2, targetWords });
+
+      try {
+        setMobileFocus("debater-one");
+        setCardState("cardDebaterOne", "statusDebaterOne", "thinking", d1, m1);
+        document.getElementById("globalState").innerText = `${d1} (${formatModelShortName(m1)}) Formulating ~${targetWords} Words`;
+
+        let currentText = await queryOllama(d1, true);
+        if (!isRunning) return;
+
+        let currentParagraphs = parseSpeechIntoParagraphs(currentText);
+        renderTeleprompterHTML("speechDebaterOne", currentParagraphs);
+        updateWordCountBadge("wordCountDebaterOne", "timerDebaterOne", currentText);
+        recordTranscript(d1, m1, currentText);
+
+        let currentSpeakerTitle = d1;
+        let currentSpeakerModel = m1;
+        let isDebaterOneCurrent = true;
+
+        while (isRunning && (isUnlimited || currentRound <= maxRounds)) {
+          if (isPaused) await waitIfPaused();
+          if (!isRunning) break;
+
+          document.getElementById("currentRoundDisplay").innerText = currentRound;
+
+          const currentCardId = isDebaterOneCurrent ? "cardDebaterOne" : "cardDebaterTwo";
+          const currentStatusId = isDebaterOneCurrent ? "statusDebaterOne" : "statusDebaterTwo";
+
+          const nextSpeakerTitle = isDebaterOneCurrent ? d2 : d1;
+          const nextSpeakerModel = isDebaterOneCurrent ? m2 : m1;
+          const nextIsDebaterOne = !isDebaterOneCurrent;
+          const nextCardId = nextIsDebaterOne ? "cardDebaterOne" : "cardDebaterTwo";
+          const nextStatusId = nextIsDebaterOne ? "statusDebaterOne" : "statusDebaterTwo";
+          const nextSpeechId = nextIsDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+          const nextWordCountId = nextIsDebaterOne ? "wordCountDebaterOne" : "wordCountDebaterTwo";
+          const nextTimerId = nextIsDebaterOne ? "timerDebaterOne" : "timerDebaterTwo";
+
+          setMobileFocus(isDebaterOneCurrent ? "debater-one" : "debater-two");
+
+          upcomingSpeakerRole = nextIsDebaterOne ? "debater-one" : "debater-two";
+          inFlightAbortController = new AbortController();
+          setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle, nextSpeakerModel);
+
+          currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsDebaterOne, currentText, inFlightAbortController.signal)
+            .then(text => {
+              preloadedSpeechData = text;
+              return text;
+            })
+            .catch(err => {
+              if (err.name === "AbortError") return null;
+              throw err;
+            });
+
+          setCardState(currentCardId, currentStatusId, "speaking", currentSpeakerTitle, currentSpeakerModel);
+          document.getElementById("globalState").innerText = `${currentSpeakerTitle} Speaking (~${targetWords}w) &bull; ${nextSpeakerTitle} Pre-Thinking`;
+
+          await speakDebaterSpeech(currentParagraphs, isDebaterOneCurrent);
+          if (!isRunning) break;
+
+          setCardState(currentCardId, currentStatusId, "idle", currentSpeakerTitle, currentSpeakerModel);
+
+          document.getElementById("globalState").innerText = "Passing the Floor";
+          let preloadedText = await currentPrefetchPromise;
+          if (!isRunning) break;
+
+          if (!preloadedText && preloadedSpeechData) preloadedText = preloadedSpeechData;
+          if (!preloadedText) {
+            preloadedText = await queryOllama(nextSpeakerTitle, nextIsDebaterOne, currentText);
+          }
+
+          currentParagraphs = parseSpeechIntoParagraphs(preloadedText);
+          renderTeleprompterHTML(nextSpeechId, currentParagraphs);
+          updateWordCountBadge(nextWordCountId, nextTimerId, preloadedText);
+          recordTranscript(nextSpeakerTitle, nextSpeakerModel, preloadedText);
+
+          if (activeChamberOrder) {
+            logTelemetry("CHAMBER_ORDER_CONSUMED", { by: nextSpeakerTitle, model: nextSpeakerModel, order: activeChamberOrder });
+            clearChamberOrder();
+          }
+
+          currentText = preloadedText;
+          currentSpeakerTitle = nextSpeakerTitle;
+          currentSpeakerModel = nextSpeakerModel;
+          isDebaterOneCurrent = nextIsDebaterOne;
+          preloadedSpeechData = null;
+
+          if (isDebaterOneCurrent) currentRound++;
+        }
+      } catch (err) {
+        console.error("Debate runtime interrupted:", err);
+      } finally {
+        stopDebate();
+      }
+    }
+
+    // --- Inject Order Pipeline ---
+    function submitChamberOrder(immediateInterrupt = false) {
+      const input = document.getElementById("interventionInput");
+      const orderVal = input.value.trim();
+      if (!orderVal) return;
+
+      activeChamberOrder = orderVal;
+      input.value = "";
+
+      playProceduralGavel(2);
+
+      const banner = document.getElementById("chamberOrderBanner");
+      const bannerText = document.getElementById("orderBannerText");
+      bannerText.innerText = `"${orderVal}"`;
+      banner.style.display = "flex";
+
+      logTelemetry("CHAMBER_ORDER_INJECTED", {
+        directive: orderVal,
+        immediateInterrupt: immediateInterrupt,
+        currentRound: currentRound
+      });
+
+      if (isRunning) {
+        if (inFlightAbortController) {
+          inFlightAbortController.abort();
+          inFlightAbortController = null;
+        }
+
+        const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+        const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+        const m1 = document.getElementById("modelDebaterOne").value.trim();
+        const m2 = document.getElementById("modelDebaterTwo").value.trim();
+
+        const nextIsDebaterOne = upcomingSpeakerRole === "debater-one";
+        const nextSpeakerTitle = nextIsDebaterOne ? d1 : d2;
+        const nextSpeakerModel = nextIsDebaterOne ? m1 : m2;
+        const nextCardId = nextIsDebaterOne ? "cardDebaterOne" : "cardDebaterTwo";
+        const nextStatusId = nextIsDebaterOne ? "statusDebaterOne" : "statusDebaterTwo";
+
+        setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle, nextSpeakerModel);
+        inFlightAbortController = new AbortController();
+
+        currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsDebaterOne, "Floor debate yielded to active directive.", inFlightAbortController.signal)
+          .then(text => {
+            preloadedSpeechData = text;
+            return text;
+          });
+
+        if (immediateInterrupt && activeSpeakerCancelFn) {
+          playProceduralGavel(3);
+          activeSpeakerCancelFn();
+        }
+      }
+    }
+
+    function applyPresetChip(text) {
+      document.getElementById("interventionInput").value = text;
+      submitChamberOrder(false);
+    }
+
+    function clearChamberOrder() {
+      activeChamberOrder = "";
+      document.getElementById("chamberOrderBanner").style.display = "none";
+    }
+
+    // --- UI State Helpers ---
+    function setCardState(cardId, statusId, state, speakerTitle, modelName) {
+      const card = document.getElementById(cardId);
+      const status = document.getElementById(statusId);
+      const targetWords = getTargetWordCount();
+      const shortModel = formatModelShortName(modelName);
+
+      card.classList.remove("active-speaker", "thinking-ahead", "paused-state");
+      if (state === "speaking") {
+        card.classList.add("active-speaker");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#22c55e;"></span>Addressing Arena...`;
+      } else if (state === "thinking") {
+        card.classList.add("thinking-ahead");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#f59e0b;"></span>Formulating (~${targetWords}w via ${shortModel})...`;
+      } else {
+        status.innerText = "Yielded Floor";
+      }
+    }
+
+    function updateWordCountBadge(wordBadgeId, timerBadgeId, text) {
+      const words = text.trim().split(/\s+/).length;
+      const target = getTargetWordCount();
+      document.getElementById(wordBadgeId).innerText = `Words: ${words} / ${target} Target`;
+      const estMinutes = Math.floor(words / 140);
+      const estSeconds = Math.round(((words % 140) / 140) * 60);
+      document.getElementById(timerBadgeId).innerText = `Est. ${estMinutes}m ${estSeconds}s`;
+    }
+
+    function stopDebate() {
+      isRunning = false;
+      isPaused = false;
+      if (pauseResolver) {
+        pauseResolver();
+        pauseResolver = null;
+      }
+      if (synth) synth.cancel();
+      releaseWakeLock();
+
+      if (inFlightAbortController) {
+        inFlightAbortController.abort();
+        inFlightAbortController = null;
+      }
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnPause").disabled = true;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnPause").classList.remove("btn-paused-state");
+      document.getElementById("btnStop").disabled = true;
+      document.getElementById("debateTopic").disabled = false;
+      disablePersonaInputs(false);
+
+      ["cardDebaterOne", "cardDebaterTwo"].forEach(id => {
+        const c = document.getElementById(id);
+        c.classList.remove("active-speaker", "thinking-ahead", "paused-state");
+      });
+
+      document.getElementById("statusDebaterOne").innerText = "Ready";
+      document.getElementById("statusDebaterTwo").innerText = "Ready";
+      document.getElementById("globalState").innerText = "Chamber Adjourned";
+      logTelemetry("DEBATE_ADJOURNED", { rounds: currentRound });
+    }
+
+    function disablePersonaInputs(disabled) {
+      document.getElementById("debater1Name").disabled = disabled;
+      document.getElementById("debater2Name").disabled = disabled;
+      document.getElementById("debater1Perspective").disabled = disabled;
+      document.getElementById("debater2Perspective").disabled = disabled;
+      document.getElementById("debaterRelationship").disabled = disabled;
+      document.getElementById("targetWordCount").disabled = disabled;
+      document.getElementById("modelDebaterOne").disabled = disabled;
+      document.getElementById("modelDebaterTwo").disabled = disabled;
+    }
+
+    function setMobileFocus(view) {
+      const grid = document.getElementById("arenaGrid");
+      const bSen = document.getElementById("btnTabSenator");
+      const bCon = document.getElementById("btnTabCongress");
+      const bSpl = document.getElementById("btnTabSplit");
+
+      bSen.classList.remove("active");
+      bCon.classList.remove("active");
+      bSpl.classList.remove("active");
+      grid.classList.remove("focus-debater-one", "focus-debater-two");
+
+      if (view === "debater-one") {
+        grid.classList.add("focus-debater-one");
+        bSen.classList.add("active");
+      } else if (view === "debater-two") {
+        grid.classList.add("focus-debater-two");
+        bCon.classList.add("active");
+      } else {
+        bSpl.classList.add("active");
+      }
+    }
+
+    function toggleConfigAccordion() {
+      const p = document.getElementById("configPanel");
+      const c = document.getElementById("accordionChevron");
+      p.classList.toggle("collapsed");
+      const isCollapsed = p.classList.contains("collapsed");
+      c.innerText = isCollapsed ? "▼ Expand Settings" : "▲ Collapse Settings";
+    }
+
+    function recordTranscript(speaker, model, text) {
+      debateTranscript.push({
+        speaker: speaker,
+        model: model,
+        round: currentRound,
+        wordCount: text.split(/\s+/).length,
+        timestamp: new Date().toISOString(),
+        text: text
+      });
+    }
+
+    function logTelemetry(eventType, metadata = {}) {
+      const entry = {
+        time: new Date().toLocaleTimeString(),
+        event: eventType,
+        metadata: metadata
+      };
+      telemetryEvents.push(entry);
+
+      const logEl = document.getElementById("metaLog");
+      logEl.innerText = `[${entry.time}] [${eventType}] ${JSON.stringify(metadata)}\n` + logEl.innerText;
+    }
+
+    function openTelemetry() {
+      document.getElementById("telemetryDrawer").style.display = "flex";
+    }
+
+    function closeTelemetry() {
+      document.getElementById("telemetryDrawer").style.display = "none";
+    }
+
+    function exportTelemetry() {
+      const payload = {
+        title: "Debate Arena Multi-Model Benchmark Telemetry",
+        motion: document.getElementById("debateTopic").value,
+        genre: document.getElementById("genreMode").value,
+        targetWords: getTargetWordCount(),
+        matchup: {
+          debater1: {
+            name: document.getElementById("debater1Name").value,
+            model: document.getElementById("modelDebaterOne").value,
+            perspective: document.getElementById("debater1Perspective").value
+          },
+          debater2: {
+            name: document.getElementById("debater2Name").value,
+            model: document.getElementById("modelDebaterTwo").value,
+            perspective: document.getElementById("debater2Perspective").value
+          }
+        },
+        dynamic: document.getElementById("debaterRelationship").value,
+        roundsCompleted: currentRound,
+        transcript: debateTranscript,
+        events: telemetryEvents
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `debate_model_clash_${Date.now()}.json`;
+      a.click();
+    }
+
+    // Initialize UI and vocal prosody calibrations on page load
+    handleDebaterTitleChange(true);
+    handleDebaterTitleChange(false);
+    updateTargetWordDisplay();
+    syncModelBadges();
+  </script>
+</body>
+</html>
