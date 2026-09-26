@@ -1,0 +1,3068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Debate Arena &bull; Smart Question-Direct Dual Model Clash</title>
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --card-bg: rgba(14, 20, 34, 0.88);
+      --card-inner: #0a0f1d;
+      --debater-one-blue: #00d2ff;
+      --debater-one-glow: rgba(0, 210, 255, 0.35);
+      --debater-two-red: #ff3b69;
+      --debater-two-glow: rgba(255, 59, 105, 0.35);
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-purple: #a855f7;
+      --accent-pink: #ec4899;
+      --text-main: #f1f5f9;
+      --text-muted: #8da2bc;
+      --border-color: #1e293f;
+      --reading-highlight: rgba(0, 210, 255, 0.22);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    html { height: auto; overflow-y: auto; scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 8% 25%, rgba(0,210,255,0.08) 0%, transparent 45%), radial-gradient(circle at 92% 25%, rgba(255,59,105,0.08) 0%, transparent 45%);
+      color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column;
+      padding: calc(0.6rem + var(--safe-top)) calc(0.8rem + var(--safe-right)) calc(240px + var(--safe-bottom)) calc(0.8rem + var(--safe-left));
+      transition: background-color 0.4s ease, color 0.4s ease; overflow-x: hidden; overflow-y: visible;
+    }
+    body.theme-daylight { --bg-dark: #f4f6fb; --card-bg: rgba(255, 255, 255, 0.95); --card-inner: #edf2f9; --text-main: #0f172a; --text-muted: #475569; --border-color: #cbd5e1; --reading-highlight: rgba(2, 132, 199, 0.24); }
+    body.theme-candlelight { --bg-dark: #120b05; --card-bg: rgba(28, 18, 10, 0.9); --card-inner: #1a1008; --debater-one-blue: #fbbf24; --debater-two-red: #ea580c; --text-main: #fef3c7; --text-muted: #d97706; --border-color: #451a03; --reading-highlight: rgba(245, 158, 11, 0.28); }
+    body.theme-midnight { --bg-dark: #000000; --card-bg: #050508; --card-inner: #020204; --border-color: #151520; }
+    .environment-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; max-width: 1280px; margin: 0 auto 0.6rem auto; width: 100%; font-size: 0.72rem; color: var(--text-muted); }
+    .env-pills-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .env-pill { background: var(--card-bg); border: 1px solid var(--border-color); padding: 0.22rem 0.55rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; white-space: nowrap; user-select: none; transition: all 0.2s ease; }
+    .env-pill.active { border-color: var(--accent-green); color: var(--accent-green); }
+    .env-pill.active-beat { border-color: var(--accent-pink); color: #f472b6; box-shadow: 0 0 10px rgba(236, 72, 153, 0.35); }
+    .env-pill.audio-warn { border-color: #f59e0b; color: #fbbf24; animation: pulse 1.2s infinite; }
+    header { text-align: center; margin-bottom: 0.65rem; }
+    header h1 { font-size: 1.5rem; letter-spacing: 1.5px; text-transform: uppercase; background: linear-gradient(90deg, var(--debater-one-blue), #ffffff, var(--debater-two-red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.15rem; }
+    header p { color: var(--text-muted); font-size: 0.78rem; }
+    .accordion-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.55rem 0.85rem; border-radius: 10px 10px 0 0; width: 100%; max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .config-panel { background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; padding: 0.85rem 1rem; max-width: 1280px; margin: 0 auto 0.85rem auto; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; backdrop-filter: blur(12px); }
+    .config-panel.collapsed { display: none; }
+    .persona-customizer-box { grid-column: 1 / -1; background: var(--card-inner); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .persona-box-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+    .persona-box-header h3 { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent-gold); }
+    .persona-row-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 720px) { .persona-row-split { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .form-group label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    input, select, textarea { background: var(--card-inner); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 0.6rem; border-radius: 6px; font-size: 0.82rem; outline: none; width: 100%; }
+    optgroup { background: #0d1527; color: var(--accent-gold); font-weight: 700; }
+    option { background: #0a0f1d; color: var(--text-main); padding: 3px 6px; }
+    textarea { resize: vertical; font-family: inherit; line-height: 1.45; }
+    input:focus, select:focus, textarea:focus { border-color: var(--debater-one-blue); }
+    .preset-chips-row { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
+    .tiny-chip-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s ease; }
+    .tiny-chip-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; border-color: var(--accent-gold); }
+    .chamber-order-banner { max-width: 1280px; margin: 0 auto 0.65rem auto; width: 100%; background: rgba(245, 158, 11, 0.15); border: 1.5px solid var(--accent-gold); padding: 0.65rem 0.95rem; border-radius: 8px; display: none; flex-direction: column; gap: 0.35rem; animation: pulseGlow 2.5s infinite; }
+    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.15); } 50% { box-shadow: 0 0 22px rgba(245, 158, 11, 0.45); } }
+    .order-banner-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .order-tag { background: var(--accent-gold); color: #000; font-weight: 900; padding: 0.2rem 0.55rem; border-radius: 4px; font-size: 0.68rem; text-transform: uppercase; white-space: nowrap; }
+    .order-content { font-size: 0.88rem; color: #fef08a; font-weight: 600; line-height: 1.35; }
+    .order-subtext { font-size: 0.68rem; color: var(--text-muted); font-style: italic; }
+    .btn-dismiss-order { background: transparent; border: 1px solid rgba(245, 158, 11, 0.5); color: #fef08a; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; }
+    .view-mode-bar { display: none; justify-content: center; margin: 0 auto 0.6rem auto; gap: 0.4rem; width: 100%; max-width: 480px; }
+    .tab-btn { flex: 1; padding: 0.45rem 0.5rem; font-size: 0.75rem; font-weight: 700; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tab-btn.active { background: #17243c; color: #fff; border-color: var(--debater-one-blue); }
+    .arena-grid { display: grid; grid-template-columns: 1fr 140px 1fr; gap: 1rem; max-width: 1280px; margin: 0 auto; width: 100%; align-items: stretch; }
+    .fighter-card { background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; transition: all 0.3s ease; backdrop-filter: blur(12px); min-height: 480px; position: relative; }
+    .fighter-card.debater-one-card { border-top: 4px solid var(--debater-one-blue); }
+    .fighter-card.debater-two-card { border-top: 4px solid var(--debater-two-red); }
+    .fighter-card.active-speaker.debater-one-card { border-color: var(--debater-one-blue); box-shadow: 0 0 25px var(--debater-one-glow); }
+    .fighter-card.active-speaker.debater-two-card { border-color: var(--debater-two-red); box-shadow: 0 0 25px var(--debater-two-glow); }
+    .fighter-card.thinking-ahead { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 16px rgba(245, 158, 11, 0.15); }
+    .fighter-card.paused-state { border-color: rgba(245, 158, 11, 0.8) !important; box-shadow: 0 0 20px rgba(245, 158, 11, 0.35) !important; }
+    .fighter-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.35rem; }
+    .fighter-tag { font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .debater-one-card .fighter-tag { background: rgba(0, 210, 255, 0.15); color: var(--debater-one-blue); border: 1px solid var(--debater-one-blue); }
+    .debater-two-card .fighter-tag { background: rgba(255, 59, 105, 0.15); color: var(--debater-two-red); border: 1px solid var(--debater-two-red); }
+    .model-engine-badge { font-size: 0.64rem; font-family: ui-monospace, monospace; padding: 0.18rem 0.45rem; border-radius: 4px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .debater-one-card .model-engine-badge { background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.3); color: #7dd3fc; }
+    .debater-two-card .model-engine-badge { background: rgba(255, 59, 105, 0.08); border: 1px solid rgba(255, 59, 105, 0.3); color: #fda4af; }
+    .card-meta-ribbon { display: flex; justify-content: space-between; align-items: center; background: var(--card-inner); padding: 0.35rem 0.6rem; border-radius: 6px; margin-bottom: 0.45rem; font-size: 0.72rem; border: 1px solid rgba(255,255,255,0.04); }
+    .word-count-badge { font-weight: 700; color: var(--accent-gold); }
+    .research-tray { background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.35rem 0.55rem; margin-bottom: 0.55rem; font-size: 0.68rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .research-tray-header { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-weight: 600; }
+    .research-sources-list { display: flex; gap: 0.35rem; flex-wrap: wrap; max-height: 48px; overflow-y: auto; }
+    .research-source-pill { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.62rem; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+    .research-source-pill:hover { background: rgba(16, 185, 129, 0.25); }
+    .speech-progress-container { width: 100%; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 0.55rem; overflow: hidden; }
+    .speech-progress-bar { height: 100%; width: 0%; background: var(--debater-one-blue); transition: width 0.25s linear; }
+    .debater-two-card .speech-progress-bar { background: var(--debater-two-red); }
+    .speech-bubble { flex: 1; background: var(--card-inner); border-radius: 10px; padding: 0.9rem; font-size: 0.92rem; line-height: 1.7; border: 1px solid rgba(255,255,255,0.04); overflow-y: auto; max-height: 250px; scroll-behavior: smooth; display: flex; flex-direction: column; gap: 0.7rem; }
+    .speech-paragraph { margin-bottom: 0.35rem; }
+    .speech-sentence { border-radius: 4px; padding: 0.08rem 0.2rem; transition: background 0.25s ease, box-shadow 0.25s ease; display: inline; }
+    .speech-sentence.active-reading { background: var(--reading-highlight); color: #ffffff; box-shadow: 0 0 10px var(--reading-highlight); }
+    .speech-word { border-radius: 3px; padding: 0 1px; transition: color 0.12s ease, text-shadow 0.12s ease, background 0.12s ease; }
+    .speech-word.active-word { color: #fef08a !important; font-weight: 800; text-shadow: 0 0 8px rgba(254, 240, 138, 0.75); background: rgba(245, 158, 11, 0.32); border-radius: 3px; }
+    .vocal-modulation-box { margin-top: 0.65rem; background: var(--card-inner); padding: 0.65rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.55rem; }
+    .vocal-modulation-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--text-muted); }
+    .voice-profile-tag { font-weight: 800; color: var(--accent-gold); background: rgba(245, 158, 11, 0.12); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.65rem; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .prosody-sliders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+    @media (max-width: 640px) { .prosody-sliders-grid { grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); } }
+    .prosody-slider-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .slider-label-row { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 7px; background: #172236; border-radius: 4px; border: 1px solid var(--border-color); outline: none; cursor: pointer; touch-action: pan-x; }
+    .debater-one-card input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--debater-one-blue); cursor: grab; box-shadow: 0 0 10px var(--debater-one-glow); border: 2px solid #fff; }
+    .debater-two-card input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--debater-two-red); cursor: grab; box-shadow: 0 0 10px var(--debater-two-glow); border: 2px solid #fff; }
+    .voice-select-row { display: flex; align-items: center; gap: 0.4rem; }
+    .arena-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.55rem; text-align: center; }
+    .round-number { font-size: 2.1rem; font-weight: 900; color: #fff; line-height: 1; }
+    .round-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .vs-badge { font-weight: 900; font-size: 1.1rem; background: var(--card-bg); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); color: var(--text-muted); }
+    .model-vs-indicator { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.62rem; font-family: ui-monospace, monospace; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 0.3rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); max-width: 135px; }
+    .btn-strike-gavel { background: #241407; border: 1px solid var(--accent-gold); color: var(--accent-gold); font-size: 0.7rem; font-weight: 700; padding: 0.4rem 0.65rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; }
+    .intervention-chips { display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.2rem 0; margin-bottom: 0.4rem; scrollbar-width: none; }
+    .intervention-chips::-webkit-scrollbar { display: none; }
+    .chip-btn { background: var(--card-inner); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 14px; white-space: nowrap; cursor: pointer; }
+    .bottom-dock { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(8, 12, 22, 0.96); backdrop-filter: blur(16px); border-top: 1px solid var(--border-color); padding: 0.4rem 0.9rem calc(0.55rem + var(--safe-bottom)) 0.9rem; z-index: 100; display: flex; flex-direction: column; gap: 0.45rem; max-width: 1280px; margin: 0 auto; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .bottom-dock.minimized { transform: translateY(calc(100% - 34px)); }
+    .dock-minimize-bar { display: flex; justify-content: center; align-items: center; margin-bottom: -0.2rem; }
+    .dock-collapse-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.75rem; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; }
+    .dock-intervention-row { display: flex; gap: 0.45rem; }
+    .dock-intervention-row input { flex: 1; padding: 0.55rem 0.7rem; font-size: 0.82rem; }
+    .dock-actions-row { display: flex; gap: 0.45rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+    button { cursor: pointer; border: none; border-radius: 8px; font-weight: 700; font-size: 0.85rem; transition: all 0.2s ease; touch-action: manipulation; }
+    .btn-main-start { background: linear-gradient(135deg, #00d2ff, #0077ff); color: #000; padding: 0.65rem 1.1rem; flex: 2; min-width: 120px; }
+    .btn-main-pause { background: #1e293b; border: 1px solid var(--border-color); color: #f1f5f9; padding: 0.65rem 1rem; flex: 1.3; display: flex; align-items: center; justify-content: center; gap: 0.35rem; min-width: 90px; }
+    .btn-main-pause.btn-paused-state { background: #f59e0b !important; color: #000 !important; border-color: #f59e0b !important; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+    .btn-main-pause:disabled, .btn-main-start:disabled, .btn-main-stop:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-main-stop { background: #ff3b69; color: #fff; padding: 0.65rem 1rem; flex: 1.1; min-width: 80px; }
+    .btn-order-send { background: var(--accent-gold); color: #000; font-size: 0.78rem; padding: 0.5rem 0.85rem; white-space: nowrap; }
+    .btn-order-interrupt { background: #7f1d1d; border: 1px solid #f87171; color: #fecaca; font-size: 0.75rem; padding: 0.5rem 0.7rem; white-space: nowrap; }
+    .btn-icon-aux { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.6rem 0.7rem; font-size: 0.8rem; white-space: nowrap; }
+    .btn-icon-aux.beat-active-glow { background: rgba(236, 72, 153, 0.25); border-color: #ec4899; color: #f472b6; box-shadow: 0 0 14px rgba(236, 72, 153, 0.45); }
+    .btn-icon-aux.aura-active-btn { background: #251230; border-color: #c084fc; color: #f0abfc; box-shadow: 0 0 12px rgba(192, 132, 252, 0.35); }
+    .scroll-clearance-spacer { height: 180px; width: 100%; pointer-events: none; visibility: hidden; }
+
+    /* AURA XP-16 PRO PERFORMANCE CONTROLLER DRAWER */
+    .aura-pad-drawer {
+      position: fixed; bottom: calc(62px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
+      width: calc(100% - 1.2rem); max-width: 1280px; background: #080a12; border: 2px solid #232d44;
+      border-radius: 14px; box-shadow: 0 -12px 35px rgba(0,0,0,0.9); z-index: 105; padding: 0.65rem 0.85rem 0.85rem 0.85rem;
+      backdrop-filter: blur(20px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; gap: 0.55rem;
+      box-sizing: border-box; touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    }
+    .aura-pad-drawer.collapsed { display: none; }
+    .aura-chassis-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid #192338; padding-bottom: 0.45rem; }
+    .aura-brand-badge { display: flex; align-items: center; gap: 0.55rem; }
+    .aura-logo { font-weight: 900; font-size: 0.95rem; letter-spacing: 1.5px; color: #ffffff; text-transform: uppercase; }
+    .aura-logo span { color: #00d2ff; }
+    .aura-model { background: #131b2e; border: 1px solid #283755; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 0.68rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 4px; }
+    .aura-matrix-pill { background: #1c142c; border: 1px solid #a855f7; color: #e9d5ff; font-size: 0.62rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 4px; text-transform: uppercase; }
+    .aura-oled-screen { background: #000308; border: 1px solid #1a2a44; border-radius: 5px; padding: 0.25rem 0.65rem; font-family: ui-monospace, monospace; font-size: 0.66rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem; box-shadow: inset 0 0 8px rgba(0,0,0,0.85); }
+    .aura-oled-status { color: #4ade80; font-weight: 700; }
+    .aura-top-controls { display: flex; align-items: center; gap: 0.55rem; }
+    .aura-fader-wrap { display: flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; color: var(--text-muted); }
+    .aura-fader-wrap input[type="range"] { width: 90px; height: 6px; }
+    .aura-bank-tabs { display: flex; gap: 0.3rem; }
+    .aura-bank-btn { background: #111728; border: 1px solid #1f2a42; color: var(--text-muted); font-size: 0.64rem; font-weight: 700; padding: 0.22rem 0.45rem; border-radius: 4px; cursor: pointer; }
+    .aura-bank-btn.active { background: #1e293b; border-color: #38bdf8; color: #fff; }
+    .aura-close-btn { background: transparent; border: 1px solid #334155; color: var(--text-muted); font-size: 0.72rem; padding: 0.22rem 0.5rem; border-radius: 4px; cursor: pointer; }
+    .aura-close-btn:hover { color: #fff; border-color: #ff3b69; }
+
+    /* 16 RGB Performance Pads Grid Matrix */
+    .aura-pads-grid {
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.45rem;
+      touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    }
+    .aura-pad {
+      background: #0f1422; border: 2px solid #202b40; border-radius: 8px; padding: 0.45rem 0.35rem;
+      display: flex; flex-direction: column; justify-content: space-between; min-height: 64px; cursor: pointer;
+      position: relative; user-select: none; transition: transform 0.06s ease, filter 0.06s ease;
+      touch-action: none !important; -webkit-touch-callout: none; -webkit-user-select: none;
+    }
+    .aura-pad:active, .aura-pad.pad-pressed { transform: translateY(2px) scale(0.97); filter: brightness(1.75); }
+    .pad-top-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; font-family: ui-monospace, monospace; color: #64748b; font-weight: 700; }
+    .pad-key-badge { background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 3px; padding: 0 0.25rem; font-size: 0.58rem; color: #cbd5e1; }
+    .pad-center-body { display: flex; flex-direction: column; align-items: center; gap: 0.12rem; text-align: center; margin: 0.15rem 0; }
+    .pad-icon { font-size: 1.05rem; line-height: 1; }
+    .pad-title { font-size: 0.64rem; font-weight: 800; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .pad-desc { font-size: 0.52rem; color: #8da2bc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+    /* Mobile View Responsive Cleanup */
+    @media (max-width: 820px) {
+      body { padding: 0.4rem 0.6rem calc(230px + var(--safe-bottom)) 0.6rem; }
+      .view-mode-bar { display: flex; }
+      .arena-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .arena-center { flex-direction: row; justify-content: space-between; padding: 0.35rem 0.6rem; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); }
+      .round-number { font-size: 1.3rem; }
+      .round-label { font-size: 0.6rem; }
+      .vs-badge { width: 32px; height: 32px; font-size: 0.8rem; }
+      .speech-bubble { max-height: 200px; }
+      .arena-grid.focus-debater-one #cardDebaterTwo { display: none; }
+      .arena-grid.focus-debater-two #cardDebaterOne { display: none; }
+      
+      /* Mobile DJ Pad Anti-Clipping */
+      .aura-pad-drawer {
+        bottom: calc(66px + var(--safe-bottom));
+        width: calc(100% - 0.6rem);
+        max-height: 68vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.5rem 0.45rem;
+        gap: 0.4rem;
+      }
+      .aura-chassis-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+        padding-bottom: 0.3rem;
+      }
+      .aura-top-controls {
+        justify-content: space-between;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .aura-fader-wrap input[type="range"] {
+        width: 65px;
+      }
+      .aura-pads-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 0.28rem !important;
+      }
+      .aura-pad {
+        min-height: 48px !important;
+        padding: 0.25rem 0.15rem !important;
+      }
+      .pad-icon { font-size: 0.9rem !important; }
+      .pad-title { font-size: 0.54rem !important; }
+      .pad-desc { display: none !important; }
+    }
+    .pulsing-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(0.85); opacity: 0.4; } 50% { transform: scale(1.25); opacity: 1; } }
+  </style>
+</head>
+<body class="theme-midnight">
+  <aside class="environment-bar">
+    <div class="env-pills-group">
+      <div class="env-pill" id="pillEnvTheme"><span>🌓</span> <span id="themeLabel">Midnight</span></div>
+      <div class="env-pill" id="pillEnvNoise" onclick="toggleMicNoiseSensor()" style="cursor: pointer;"><span id="micIcon">🎙️</span> <span id="noiseLabel">Noise: Quiet (42 dB)</span></div>
+      <div class="env-pill" id="pillEnvWake"><span>📱</span> <span id="wakeLockLabel">WakeLock: Idle</span></div>
+      <div class="env-pill" id="pillEnvBattery"><span>🔋</span> <span id="batteryLabel">Battery: Ready</span></div>
+      <div class="env-pill" id="pillEnvPing"><span>📶</span> <span id="pingLabel">Ollama: Ready</span></div>
+      <div class="env-pill" id="pillEnvSearch"><span>🔍</span> <span id="searchStatusLabel">Web RAG: Online</span></div>
+      <div class="env-pill" id="pillEnvBeat" onclick="toggleBeatPlayback()" style="cursor: pointer;" title="Toggle Cypher Beat"><span>🎧</span> <span id="beatStatusLabel">Beat: Off</span></div>
+      <div class="env-pill" id="pillEnvAudioHealth" onclick="forceAudioEngineReset()" style="cursor: pointer;" title="Voice Audio Engine Health (Click to Reset/Fix Audio anytime)"><span>🔊</span> <span id="audioHealthLabel">TTS: Healthy</span></div>
+    </div>
+    <div style="font-size: 0.68rem; color: var(--text-muted);" id="headerWordTargetPill">Target: <strong>350 Words / Turn</strong></div>
+  </aside>
+
+  <header>
+    <h1>Dolphin vs. Nous-Hermes Arena</h1>
+    <p>Smart Question-Direct RAG Engine &bull; Synchronized Karaoke Follow-Along &bull; Studio Cypher Engine</p>
+  </header>
+
+  <div class="accordion-toggle" onclick="toggleConfigAccordion()">
+    <span>⚙️ Setup, Announcer, Audio &amp; Smart Controls</span>
+    <span id="accordionChevron">▲ Collapse Settings</span>
+  </div>
+
+  <section class="config-panel" id="configPanel">
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="debateTopic">Motion on the Floor</label>
+      <input type="text" id="debateTopic" value="Artificial Intelligence must be granted full legal human personhood." />
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="ollamaUrl">Mac Ollama Endpoint</label>
+      <input type="text" id="ollamaUrl" value="http://192.168.4.22:11434/api/generate" />
+    </div>
+
+    <!-- Announcer & Chamber Moderator Configuration -->
+    <div class="form-group" style="grid-column: span 2; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.65rem 0.8rem; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.4rem;">
+        <label for="announcerVoiceSelect" style="color: var(--accent-gold); font-weight: 800;">🎙️ Chamber Moderator / Announcer (Calls Arena to Order)</label>
+        <label style="font-size: 0.68rem; color: var(--accent-gold); display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+          <input type="checkbox" id="enableAnnouncerIntro" checked style="width: auto;" /> Announce Opening Motion
+        </label>
+      </div>
+      <div class="voice-select-row">
+        <select id="announcerVoiceSelect" style="flex: 1; font-size: 0.72rem;"></select>
+        <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.68rem;" onclick="previewAnnouncerVoice()">Test Announcer</button>
+      </div>
+      <div class="prosody-sliders-grid" style="margin-top: 0.4rem;">
+        <div class="prosody-slider-group">
+          <div class="slider-label-row"><span>Announcer Tone:</span><span id="announcerPitchLabel">0.96x</span></div>
+          <input type="range" id="announcerPitch" min="0.70" max="1.30" step="0.02" value="0.96" oninput="document.getElementById('announcerPitchLabel').innerText = parseFloat(this.value).toFixed(2) + 'x'" />
+        </div>
+        <div class="prosody-slider-group">
+          <div class="slider-label-row"><span>Announcer Cadence:</span><span id="announcerRateLabel">1.02x</span></div>
+          <input type="range" id="announcerRate" min="0.75" max="1.30" step="0.02" value="1.02" oninput="document.getElementById('announcerRateLabel').innerText = parseFloat(this.value).toFixed(2) + 'x'" />
+        </div>
+        <div class="prosody-slider-group">
+          <div class="slider-label-row"><span>Announcer Volume:</span><span id="announcerVolLabel">100%</span></div>
+          <input type="range" id="announcerVolume" min="0" max="1.0" step="0.05" value="1.0" oninput="document.getElementById('announcerVolLabel').innerText = Math.round(parseFloat(this.value) * 100) + '%'" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Arena Sound Mix Profile: Allows Beats to Overpower Voice -->
+    <div class="form-group" style="grid-column: span 2; background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.25); padding: 0.65rem 0.8rem; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+        <label for="audioMixProfile" style="color: var(--debater-one-blue); font-weight: 800;">🎛️ Master Arena Sound Balance (Voice vs. Beat Dynamics)</label>
+        <span style="font-size: 0.64rem; color: var(--text-muted);">Scale background beats above debater vocals</span>
+      </div>
+      <select id="audioMixProfile" onchange="handleMixProfileChange(this.value)">
+        <option value="voice_dom">Vocal Priority (Voices Loud 100%, Beat Subtle 50%)</option>
+        <option value="balanced" selected>Balanced Arena Mix (Voices 85%, Beat 95%)</option>
+        <option value="beat_heavy">Beat Dominant / Cypher Heavy (Beat Pounding 180%, Voice Ducked 45%)</option>
+        <option value="club_overpower">Club Blast (Beat 250% Studio Boost Overpowers Debaters, Voice 20%)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="targetWordCount">Target Words per Turn</label>
+      <input type="number" id="targetWordCount" value="350" min="50" max="3000" step="25" oninput="updateTargetWordDisplay()" />
+      <div class="preset-chips-row">
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(200)">200w (Punchy)</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(350)">350w (Optimal)</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(500)">500w (Deep)</button>
+        <button type="button" class="tiny-chip-btn" onclick="setWordCountPreset(750)">750w</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="focusModeSelect">Cognitive Focus &amp; Anti-Loop</label>
+      <select id="focusModeSelect">
+        <option value="direct_razor" selected>Direct &amp; Razor-Sharp (Zero Filler, High Density)</option>
+        <option value="balanced">Balanced &amp; Substantive</option>
+        <option value="philosophical">Philosophical / Extended</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="webSearchEngine">Online Research Provider</label>
+      <select id="webSearchEngine">
+        <option value="wikipedia_ddg" selected>Live Wikipedia &amp; DuckDuckGo (Free, Public)</option>
+        <option value="tavily">Tavily Search API (Deep Web RAG)</option>
+        <option value="brave">Brave Search API</option>
+        <option value="simulated">Local Empirical Repository (Offline)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="webSearchApiKey">Search API Key (Optional for Tavily/Brave)</label>
+      <input type="password" id="webSearchApiKey" placeholder="Paste Tavily / Brave key if selected" />
+    </div>
+
+    <div class="form-group">
+      <label for="genreMode">Delivery Style / Genre</label>
+      <select id="genreMode" onchange="handleGenreChange(this.value)">
+        <option value="none" selected>Intellectual Rhetoric (Masterclass Floor Speech)</option>
+        <option value="hiphop">Hip-Hop (Epic Cypher Rap Battle &amp; Rhyming Bars)</option>
+        <option value="classical">Classical (Grand Operatic Aria &amp; Recitative)</option>
+        <option value="rock">Rock Anthem (High-Energy Gritty Verse &amp; Chorus)</option>
+        <option value="jazz">Jazz &amp; Bebop (New Orleans Swing &amp; Beat Poetry)</option>
+        <option value="country">Country Ballad (Heartfelt Acoustic Storytelling)</option>
+        <option value="edm">Electronic / EDM (Synthesizer Build-up &amp; Drops)</option>
+      </select>
+    </div>
+
+    <!-- 11 Diverse Beat Styles -->
+    <div class="form-group">
+      <label for="cypherBeatStyle">Beat Pattern &amp; Rhythm Style</label>
+      <select id="cypherBeatStyle" onchange="handleBeatStyleChange(this.value)">
+        <option value="boombap" selected>90s Boom-Bap Cypher (90 BPM)</option>
+        <option value="trap">Modern 808 Trap &amp; Drill (138 BPM)</option>
+        <option value="drill">UK / Brooklyn Drill (142 BPM)</option>
+        <option value="phonk">Memphis Drift Phonk (160 BPM / 80 Half-Time)</option>
+        <option value="westcoast">West Coast G-Funk (96 BPM)</option>
+        <option value="reggaeton">Latin Dembow / Reggaeton (95 BPM)</option>
+        <option value="industrial">Dark Industrial / Cyber EBM (132 BPM)</option>
+        <option value="dnb">Liquid Drum &amp; Bass (172 BPM)</option>
+        <option value="lofi">Lo-Fi Jazz &amp; Chillhop (82 BPM)</option>
+        <option value="rock">Stadium Rock Anthem (104 BPM)</option>
+        <option value="cyberpunk">Cyberpunk Glitch Breakbeat (128 BPM)</option>
+      </select>
+    </div>
+
+    <!-- Beat Volume Slider Boostable to 250% (Allows Beats to Drown Out Voices) -->
+    <div class="form-group">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+        <label for="cypherBeatVol" style="margin: 0;">Beat Volume (Master Preamp Boost)</label>
+        <span id="beatVolLabel" style="font-size: 0.68rem; color: #f472b6; font-weight: 800;">75% (Balanced)</span>
+      </div>
+      <input type="range" id="cypherBeatVol" min="0" max="2.5" step="0.05" value="0.75" oninput="handleBeatVolumeChange(this.value)" />
+      <div class="preset-chips-row">
+        <button type="button" class="tiny-chip-btn" onclick="setBeatVolPreset(0.40)">40% Subtle</button>
+        <button type="button" class="tiny-chip-btn" onclick="setBeatVolPreset(0.75)">75% Balanced</button>
+        <button type="button" class="tiny-chip-btn" onclick="setBeatVolPreset(1.60)">160% Heavy Beat</button>
+        <button type="button" class="tiny-chip-btn" onclick="setBeatVolPreset(2.50)">250% Overpower</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="cypherBeatMode">Battle Beat Trigger</label>
+      <select id="cypherBeatMode" onchange="handleBeatModeChange()">
+        <option value="auto_hiphop" selected>Auto-Play on Hip-Hop (Matches Speech)</option>
+        <option value="always_on">Always On During Speeches (Any Genre)</option>
+        <option value="manual">Manual Only (Muted by Default)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="themeSelect">Environmental Theme</label>
+      <select id="themeSelect" onchange="changeThemeManual(this.value)">
+        <option value="auto">Auto (Sensor &amp; OS Responsive)</option>
+        <option value="midnight" selected>Capitol Midnight (OLED Dark)</option>
+        <option value="daylight">Daylight Rotunda (High Contrast)</option>
+        <option value="candlelight">Candlelight Chamber (Warm Amber)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="roundModeSelect">Rounds Mode</label>
+      <select id="roundModeSelect">
+        <option value="unlimited" selected>Unlimited (Continuous &infin;)</option>
+        <option value="4">4 Rounds</option>
+        <option value="6">6 Rounds</option>
+        <option value="10">10 Rounds</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="aiEngineMode">Inference Source</label>
+      <select id="aiEngineMode">
+        <option value="auto" selected>Ollama LAN (Auto-Fallback if Offline)</option>
+        <option value="ollama">Strict Mac Ollama Endpoint</option>
+        <option value="simulated">Autonomous High-Depth Neural Chamber</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="voiceSynthesisEngine">Vocal Audio Engine</label>
+      <select id="voiceSynthesisEngine" onchange="handleVoiceEngineChange()">
+        <option value="browser" selected>Browser Speech Synthesis (Ranked Natural &amp; Neural Voices)</option>
+        <option value="openai_compatible">OpenAI-Compatible Neural TTS (Kokoro / Piper / Local / OpenAI API)</option>
+        <option value="elevenlabs">ElevenLabs Neural Streaming API</option>
+      </select>
+    </div>
+
+    <div id="externalTtsBox" style="grid-column: 1 / -1; display: none; background: var(--card-inner); border: 1px solid var(--accent-gold); border-radius: 8px; padding: 0.85rem; flex-direction: column; gap: 0.6rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent-gold); text-transform: uppercase;">🎙️ External Neural TTS Configuration</span>
+        <span style="font-size: 0.65rem; color: var(--text-muted);">Streams neural audio (Falls back to browser voice if offline)</span>
+      </div>
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="externalTtsEndpoint">Neural TTS Endpoint</label>
+          <input type="text" id="externalTtsEndpoint" value="http://localhost:8880/v1/audio/speech" />
+        </div>
+        <div class="form-group">
+          <label for="externalTtsApiKey">TTS API Key (Optional)</label>
+          <input type="password" id="externalTtsApiKey" placeholder="Bearer sk-... or leave empty for local" />
+        </div>
+      </div>
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="externalTtsVoiceD1" style="color: var(--debater-one-blue);">Debater 1 Voice Name / ID</label>
+          <input type="text" id="externalTtsVoiceD1" value="am_adam" />
+        </div>
+        <div class="form-group">
+          <label for="externalTtsVoiceD2" style="color: var(--debater-two-red);">Debater 2 Voice Name / ID</label>
+          <input type="text" id="externalTtsVoiceD2" value="af_bella" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Debater Personas & Dual Model Customizer -->
+    <div class="persona-customizer-box">
+      <div class="persona-box-header">
+        <h3>⚔️ Dual Model Allocation &amp; Personas</h3>
+        <span style="font-size: 0.65rem; color: var(--text-muted);">Independent models search the web and answer questions directly</span>
+      </div>
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="modelDebaterOne" style="color: var(--debater-one-blue);">Debater 1 AI Model (Affirmative)</label>
+          <input type="text" id="modelDebaterOne" value="dolphin-mistral" oninput="syncModelBadges()" />
+        </div>
+        <div class="form-group">
+          <label for="modelDebaterTwo" style="color: var(--debater-two-red);">Debater 2 AI Model (Opposition)</label>
+          <input type="text" id="modelDebaterTwo" value="hf.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF:Q4_K_M" oninput="syncModelBadges()" />
+        </div>
+      </div>
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="debater1Name">Debater 1 Identity (PRO / Affirmative)</label>
+          <input type="text" id="debater1Name" value="Tech Titan" oninput="handleDebaterTitleChange(true)" />
+        </div>
+        <div class="form-group">
+          <label for="debater2Name">Debater 2 Identity (CON / Opposition)</label>
+          <input type="text" id="debater2Name" value="Labor Organizer" oninput="handleDebaterTitleChange(false)" />
+        </div>
+      </div>
+      <div class="persona-row-split">
+        <div class="form-group">
+          <label for="debater1Perspective">Debater 1 Core Worldview</label>
+          <input type="text" id="debater1Perspective" value="Silicon Valley visionary speaking in systems engineering, transformative progress, and exponential scaling" oninput="handleDebaterTitleChange(true)" />
+        </div>
+        <div class="form-group">
+          <label for="debater2Perspective">Debater 2 Core Worldview</label>
+          <input type="text" id="debater2Perspective" value="Grassroots worker advocate speaking in raw human dignity, civil struggle, and protective safeguards" oninput="handleDebaterTitleChange(false)" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="debaterRelationship">How They View Each Other &amp; Relationship Dynamic</label>
+        <textarea id="debaterRelationship" rows="3">Bitter ideological rivals who view each other's vision as an existential threat to society, clashing with relentless intellectual friction and zero rhetorical quarter.</textarea>
+        <div class="preset-chips-row">
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('adversaries')">Ideological Rivals</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('battle_rap')">Cypher Battle Rappers</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('philosophical')">Philosophical Giants</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('courtroom')">Courtroom Litigators</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('corporate_activist')">Tech Titan vs. Grassroots Union</button>
+          <button type="button" class="tiny-chip-btn" onclick="setRelationshipPreset('mentor_student')">Entrenched Master vs. Rebel Prodigy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Active Direct Question Banner -->
+  <aside class="chamber-order-banner" id="chamberOrderBanner">
+    <div class="order-banner-top">
+      <span class="order-tag">🎯 Direct Question / Challenge Active</span>
+      <button class="btn-dismiss-order" onclick="clearChamberOrder()">Dismiss Challenge</button>
+    </div>
+    <div class="order-content" id="orderBannerText">Question pending...</div>
+    <div class="order-subtext">⚠️ Both debaters are strictly commanded to answer this direct question in their opening sentences.</div>
+  </aside>
+
+  <!-- Mobile View Switcher -->
+  <nav class="view-mode-bar" aria-label="Debater Views">
+    <button class="tab-btn active" id="btnTabSenator" onclick="setMobileFocus('debater-one')">Tech Titan (PRO)</button>
+    <button class="tab-btn" id="btnTabCongress" onclick="setMobileFocus('debater-two')">Labor Organizer (CON)</button>
+    <button class="tab-btn" id="btnTabSplit" onclick="setMobileFocus('split')">Split View</button>
+  </nav>
+
+  <!-- Arena Grid -->
+  <main class="arena-grid focus-debater-one" id="arenaGrid">
+    <!-- Debater 1 Card (Pro) -->
+    <article class="fighter-card debater-one-card" id="cardDebaterOne">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag" id="tagDebaterOne">Tech Titan &bull; PRO</span>
+          <h2 style="font-size: 1.05rem;" id="titleDebaterOne">Tech Titan</h2>
+        </div>
+        <span class="model-engine-badge" id="modelBadgeDebaterOne">🤖 dolphin-mistral</span>
+      </div>
+
+      <div class="card-meta-ribbon">
+        <span id="wordCountDebaterOne" class="word-count-badge">Words: 0 / 350 Target</span>
+        <span id="statusDebaterOne" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+        <span id="timerDebaterOne" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="research-tray" id="researchTrayDebaterOne">
+        <div class="research-tray-header">
+          <span id="searchQueryLabelDebaterOne">🔍 Standby for online search...</span>
+          <span id="searchCountDebaterOne" style="color: var(--accent-green);">0 Sources</span>
+        </div>
+        <div class="research-sources-list" id="sourcesListDebaterOne">
+          <span style="color: var(--text-muted); font-style: italic;">No search performed yet.</span>
+        </div>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarDebaterOne"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterOne">
+        <div class="speech-paragraph">Awaiting call to order. Arguments will be generated by dolphin-mistral with real-time web research citations.</div>
+      </div>
+
+      <!-- Vocal Modulation Panel with Pitch, Speed, and Volume Sliders -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-modulation-header">
+          <span>🎙️ Voice Modulation:</span>
+          <span class="voice-profile-tag" id="profileBadgeDebaterOne">Brisk &amp; Analytical</span>
+        </div>
+
+        <div class="preset-chips-row">
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(true, 'mc')">🎤 Battle MC</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(true, 'baritone')">🏛️ Deep Baritone</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(true, 'tech')">⚡ Fast Tech</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(true, 'tribune')">⚖️ Passionate</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(true, 'jazz')">🎷 Smooth Jazz</button>
+        </div>
+
+        <div class="voice-select-row">
+          <select id="voiceSelectDebaterOne" style="flex: 1; font-size: 0.72rem;"></select>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.45rem; font-size: 0.65rem;" onclick="rescanVoices()" title="Rescan Browser Voices">🔄</button>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.68rem;" onclick="previewVoice(true)">Test Voice</button>
+        </div>
+
+        <div class="prosody-sliders-grid">
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Pitch (Tone):</span><span id="pitchLabelDebaterOne">1.12x</span></div>
+            <input type="range" id="pitchSliderDebaterOne" min="0.65" max="1.45" step="0.02" value="1.12" oninput="updateProsodyLabel(true)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Speed (Rate):</span><span id="rateLabelDebaterOne">1.16x</span></div>
+            <input type="range" id="rateSliderDebaterOne" min="0.70" max="1.40" step="0.02" value="1.16" oninput="updateProsodyLabel(true)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Volume:</span><span id="volumeLabelDebaterOne">100%</span></div>
+            <input type="range" id="volumeSliderDebaterOne" min="0" max="1.0" step="0.05" value="1.0" oninput="updateProsodyLabel(true)" />
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Center Stage & Matchup -->
+    <div class="arena-center">
+      <div class="round-indicator">
+        <div class="round-number" id="currentRoundDisplay">1</div>
+        <div class="round-label" id="roundLimitLabel">Round (&infin;)</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="model-vs-indicator">
+        <span style="color: var(--debater-one-blue);" id="vsModel1">dolphin-mistral</span>
+        <span style="opacity: 0.4;">⚡</span>
+        <span style="color: var(--debater-two-red);" id="vsModel2">Nous-Hermes-2</span>
+      </div>
+      <button type="button" class="btn-strike-gavel" onclick="triggerManualGavel()">🔨 Strike Gavel</button>
+      <span id="globalState" style="font-size: 0.72rem; color: var(--text-muted); text-align: center;">Chamber Adjourned</span>
+    </div>
+
+    <!-- Debater 2 Card (Con) -->
+    <article class="fighter-card debater-two-card" id="cardDebaterTwo">
+      <div class="fighter-header">
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <span class="fighter-tag" id="tagDebaterTwo">Labor Organizer &bull; CON</span>
+          <h2 style="font-size: 1.05rem;" id="titleDebaterTwo">Labor Organizer</h2>
+        </div>
+        <span class="model-engine-badge" id="modelBadgeDebaterTwo">🤖 Nous-Hermes-2-DPO</span>
+      </div>
+
+      <div class="card-meta-ribbon">
+        <span id="wordCountDebaterTwo" class="word-count-badge">Words: 0 / 350 Target</span>
+        <span id="statusDebaterTwo" style="font-size: 0.72rem; color: var(--text-muted);">Ready</span>
+        <span id="timerDebaterTwo" style="color: var(--text-muted);">Est. 0m 0s</span>
+      </div>
+
+      <div class="research-tray" id="researchTrayDebaterTwo">
+        <div class="research-tray-header">
+          <span id="searchQueryLabelDebaterTwo">🔍 Standby for online search...</span>
+          <span id="searchCountDebaterTwo" style="color: var(--accent-green);">0 Sources</span>
+        </div>
+        <div class="research-sources-list" id="sourcesListDebaterTwo">
+          <span style="color: var(--text-muted); font-style: italic;">No search performed yet.</span>
+        </div>
+      </div>
+
+      <div class="speech-progress-container">
+        <div class="speech-progress-bar" id="progressBarDebaterTwo"></div>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterTwo">
+        <div class="speech-paragraph">Awaiting call to order. Rebuttals will be generated by Nous-Hermes-2-Mistral-DPO backed by live online search citations.</div>
+      </div>
+
+      <!-- Vocal Modulation Panel with Pitch, Speed, and Volume Sliders -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-modulation-header">
+          <span>🎙️ Voice Modulation:</span>
+          <span class="voice-profile-tag" id="profileBadgeDebaterTwo">Passionate &amp; Resonant</span>
+        </div>
+
+        <div class="preset-chips-row">
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(false, 'mc')">🎤 Battle MC</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(false, 'baritone')">🏛️ Deep Baritone</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(false, 'tech')">⚡ Fast Tech</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(false, 'tribune')">⚖️ Passionate</button>
+          <button type="button" class="tiny-chip-btn" onclick="applyVoicePreset(false, 'jazz')">🎷 Smooth Jazz</button>
+        </div>
+
+        <div class="voice-select-row">
+          <select id="voiceSelectDebaterTwo" style="flex: 1; font-size: 0.72rem;"></select>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.45rem; font-size: 0.65rem;" onclick="rescanVoices()" title="Rescan Browser Voices">🔄</button>
+          <button type="button" class="btn-icon-aux" style="padding: 0.25rem 0.5rem; font-size: 0.68rem;" onclick="previewVoice(false)">Test Voice</button>
+        </div>
+
+        <div class="prosody-sliders-grid">
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Pitch (Tone):</span><span id="pitchLabelDebaterTwo">0.96x</span></div>
+            <input type="range" id="pitchSliderDebaterTwo" min="0.65" max="1.45" step="0.02" value="0.96" oninput="updateProsodyLabel(false)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Speed (Rate):</span><span id="rateLabelDebaterTwo">1.08x</span></div>
+            <input type="range" id="rateSliderDebaterTwo" min="0.70" max="1.40" step="0.02" value="1.08" oninput="updateProsodyLabel(false)" />
+          </div>
+          <div class="prosody-slider-group">
+            <div class="slider-label-row"><span>Volume:</span><span id="volumeLabelDebaterTwo">100%</span></div>
+            <input type="range" id="volumeSliderDebaterTwo" min="0" max="1.0" step="0.05" value="1.0" oninput="updateProsodyLabel(false)" />
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <div class="scroll-clearance-spacer" aria-hidden="true"></div>
+
+  <!-- AURA XP-16 PRO PERFORMANCE CONTROLLER DRAWER (ZERO MOBILE CLIPPING) -->
+  <section class="aura-pad-drawer collapsed" id="auraPadDrawer" aria-label="Aura XP-16 Pro Matrix Controller">
+    <div class="aura-chassis-top">
+      <div class="aura-brand-badge">
+        <span class="aura-logo">AURA <span>XP-16</span></span>
+        <span class="aura-model">PRO MATRIX</span>
+        <span class="aura-matrix-pill">SUB-BASS ENGINE</span>
+      </div>
+
+      <div class="aura-oled-screen" id="auraOledScreen">
+        <span class="pulsing-dot" style="background:#22c55e;"></span>
+        <span>OUTPUT:</span>
+        <span class="aura-oled-status" id="auraOledStatus">ARMED &bull; 16 SUB/IMPACT PADS [KEYS 1-8 / Q-F]</span>
+      </div>
+
+      <div class="aura-top-controls">
+        <div class="aura-fader-wrap">
+          <span>PAD GAIN: <strong id="auraVolLabel" style="color:#38bdf8;">100%</strong></span>
+          <input type="range" id="auraMasterVol" min="0" max="1.5" step="0.05" value="1.0" oninput="AuraPadMatrix.setMasterVolume(this.value)" />
+        </div>
+        <div class="aura-bank-tabs">
+          <button type="button" class="aura-bank-btn active" id="btnBankAll" onclick="AuraPadMatrix.setBank('all')">ALL 16</button>
+          <button type="button" class="aura-bank-btn" id="btnBank1" onclick="AuraPadMatrix.setBank('bank1')">SUBS (1-8)</button>
+          <button type="button" class="aura-bank-btn" id="btnBank2" onclick="AuraPadMatrix.setBank('bank2')">IMPACTS (9-16)</button>
+        </div>
+        <button type="button" class="aura-close-btn" onclick="toggleAuraPadDrawer()" title="Close Controller Deck">✕ CLOSE</button>
+      </div>
+    </div>
+
+    <!-- 16 RGB Rubber Performance Pads Matrix -->
+    <div class="aura-pads-grid" id="auraPadsGrid">
+      <!-- Generated Dynamically by AuraPadMatrix.renderPads() -->
+    </div>
+  </section>
+
+  <!-- Fixed Bottom Action Dock With Question Injection -->
+  <footer class="bottom-dock" id="bottomDock">
+    <div class="dock-minimize-bar">
+      <button type="button" class="dock-collapse-btn" id="btnDockMinimize" onclick="toggleBottomDock()">
+        ⌄ Minimize Controls (View Full Cards)
+      </button>
+    </div>
+
+    <div class="intervention-chips">
+      <button type="button" class="chip-btn" onclick="applyPresetChip('How specifically does granting AI rights protect human blue-collar workers?')">❓ Worker Protection?</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('If an AI commits a catastrophic crime, who serves the prison sentence?')">❓ Criminal Liability?</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('What is your exact empirical test to determine if an AI is truly sentient?')">❓ Test for Sentience?</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Will multinational corporations use synthetic citizens to buy elections?')">❓ Election Buyout?</button>
+      <button type="button" class="chip-btn" onclick="applyPresetChip('Answer directly: Can silicon ever experience genuine moral remorse?')">❓ Moral Remorse?</button>
+    </div>
+
+    <div class="dock-intervention-row">
+      <input type="text" id="interventionInput" placeholder="Pose a specific question or challenge (AI is forced to answer directly)..." />
+      <button type="button" class="btn-order-send" onclick="submitChamberOrder(false)">Ask Question</button>
+      <button type="button" class="btn-order-interrupt" onclick="submitChamberOrder(true)" title="Gavel immediately and demand instant answer">🔨 Demand Answer</button>
+    </div>
+
+    <div class="dock-actions-row">
+      <button type="button" class="btn-main-start" id="btnStart" onclick="startDebate()">▶ Call to Order</button>
+      <button type="button" class="btn-main-pause" id="btnPause" onclick="togglePauseDebate()" disabled>⏸ Pause</button>
+      <button type="button" class="btn-main-stop" id="btnStop" onclick="stopDebate()" disabled>Adjourn</button>
+      <button type="button" class="btn-icon-aux" id="btnToggleBeat" onclick="toggleBeatPlayback()" title="Toggle Procedural Cypher Beat">🎧 Beat: OFF</button>
+      <button type="button" class="btn-icon-aux aura-launch-btn" id="btnOpenAura" onclick="toggleAuraPadDrawer()" title="Aura XP-16 Performance Pad Controller">🎛️ XP-16 Pad</button>
+      <button type="button" class="btn-icon-aux" onclick="AuraPadMatrix.triggerPad(0)" title="Quick 808 Boom">💣 808 Boom</button>
+      <button type="button" class="btn-icon-aux" onclick="AuraPadMatrix.triggerPad(5)" title="Quick Mic Drop">🎤 Mic Drop</button>
+      <button type="button" class="btn-icon-aux" onclick="openTelemetry()">📜 Logs</button>
+    </div>
+  </footer>
+
+  <!-- Telemetry Drawer -->
+  <div class="telemetry-drawer" id="telemetryDrawer">
+    <div class="telemetry-modal">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 0.95rem;">Model Benchmark &amp; Research Feed</h3>
+        <button type="button" class="btn-icon-aux" style="padding: 0.3rem 0.6rem;" onclick="closeTelemetry()">✕</button>
+      </div>
+      <div class="meta-log" id="metaLog">Chamber initialized. Live web RAG pipelined engine standby.</div>
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn-icon-aux" onclick="exportTelemetry()">Export JSON</button>
+        <button type="button" class="btn-icon-aux" onclick="closeTelemetry()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       DEBATE ARENA &bull; DUAL-MODEL ENGINE WITH DIRECT QUESTION INTERCEPTION
+       ========================================================================= */
+
+    let isRunning = false;
+    let isPaused = false;
+    let pauseResolver = null;
+    let currentRound = 1;
+    let activeChamberOrder = "";
+    let debateTranscript = [];
+    let telemetryEvents = [];
+    let systemVoices = [];
+    let categorizedVoices = { neural: [], studio: [], standard: [], international: [] };
+    let backgroundAudioElement = null;
+    let wakeLockObj = null;
+
+    // Strict Anti-Garbage-Collection Pool & Keepalive Monitor
+    window._activeUtteranceBin = new Set();
+    window.currentActiveUtterance = null;
+    window.activeAnnouncerUtterance = null;
+    let consecutiveSpeechErrors = 0;
+    let speechStallWatchdog = null;
+
+    let blacklistedTalkingPoints = [];
+    let inFlightAbortController = null;
+    let currentPrefetchPromise = null;
+    let preloadedSpeechData = null;
+    let upcomingSpeakerRole = null;
+    let activeSpeakerCancelFn = null;
+
+    let currentThemeMode = "midnight";
+    let ambientMicStream = null;
+    let ambientAnalyser = null;
+    let ambientDataArray = null;
+    let ambientNoiseInterval = null;
+    let currentRoomDecibels = 42;
+
+    const VOCAL_ARCHETYPES = {
+      brisk_technical: { label: "Brisk & Analytical", pitch: 1.12, rate: 1.16, basePause: 90 },
+      passionate_orator: { label: "Passionate & Resonant", pitch: 0.96, rate: 1.08, basePause: 130 },
+      contemplative_philosopher: { label: "Deliberate & Philosophical", pitch: 0.88, rate: 0.84, basePause: 240 },
+      authoritative_deep: { label: "Authoritative Gravitas", pitch: 0.82, rate: 0.88, basePause: 210 },
+      sharp_prosecutor: { label: "Incisive & Interrogative", pitch: 1.04, rate: 1.06, basePause: 100 },
+      street_cypher_mc: { label: "Rhythmic Cypher MC", pitch: 1.04, rate: 1.18, basePause: 80 },
+      visionary_futurist: { label: "Synthetic & Visionary", pitch: 1.20, rate: 1.06, basePause: 95 }
+    };
+
+    function detectPersonaVoiceProfile(title, perspective) {
+      const text = `${title} ${perspective}`.toLowerCase();
+      if (/\b(rap|rapper|mc|lyric|hiphop|cypher|poet|bard|bars)\b/.test(text)) return VOCAL_ARCHETYPES.street_cypher_mc;
+      if (/\b(tech|ceo|titan|engineer|silicon|hacker|code|cyber|analyst|data|founder|venture|developer)\b/.test(text)) return VOCAL_ARCHETYPES.brisk_technical;
+      if (/\b(labor|union|organizer|worker|activist|rebel|tribune|advocate|proletariat|grassroots)\b/.test(text)) return VOCAL_ARCHETYPES.passionate_orator;
+      if (/\b(philosopher|socrates|nietzsche|aurelius|plato|scholar|ethic|monk|stoic|thinker|sage|aristotle)\b/.test(text)) return VOCAL_ARCHETYPES.contemplative_philosopher;
+      if (/\b(senator|judge|justice|congress|chancellor|governor|king|president|general|magistrate|lord|dean)\b/.test(text)) return VOCAL_ARCHETYPES.authoritative_deep;
+      if (/\b(prosecutor|lawyer|attorney|counsel|jurist|detective|investigator|inquisitor)\b/.test(text)) return VOCAL_ARCHETYPES.sharp_prosecutor;
+      if (/\b(ai|android|synthetic|machine|cybernetic|transhuman|singularity|oracle|superintelligence)\b/.test(text)) return VOCAL_ARCHETYPES.visionary_futurist;
+      return VOCAL_ARCHETYPES.authoritative_deep;
+    }
+
+    function applyVoicePreset(isDebaterOne, presetKey) {
+      const presets = {
+        mc: { pitch: 1.04, rate: 1.18, badge: "Rhythmic Cypher MC" },
+        baritone: { pitch: 0.82, rate: 0.88, badge: "Authoritative Gravitas" },
+        tech: { pitch: 1.12, rate: 1.16, badge: "Brisk & Analytical" },
+        tribune: { pitch: 0.95, rate: 1.08, badge: "Passionate & Resonant" },
+        jazz: { pitch: 0.92, rate: 0.96, badge: "Smooth & Swung" }
+      };
+      const p = presets[presetKey];
+      if (!p) return;
+      const pitchSlider = document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo");
+      const rateSlider = document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo");
+      const badge = document.getElementById(isDebaterOne ? "profileBadgeDebaterOne" : "profileBadgeDebaterTwo");
+      pitchSlider.value = p.pitch;
+      rateSlider.value = p.rate;
+      badge.innerText = p.badge;
+      updateProsodyLabel(isDebaterOne);
+    }
+
+    const PRESET_RELATIONSHIPS = {
+      adversaries: "Bitter ideological rivals who view each other's vision as an existential threat to society, clashing with relentless intellectual friction and zero rhetorical quarter.",
+      battle_rap: "Fierce underground rap battle nemeses with deep personal history, trading relentless multi-syllabic rhymes, exposing logical contradictions, and clashing for lyrical supremacy.",
+      philosophical: "Philosophical titans from competing historical traditions who view each other as formidable intellectual equals clashing over first principles, epistemology, and virtue.",
+      courtroom: "Adversarial courtroom attorneys clashing before a grand jury, cross-examining premises, exposing contradictions, and treating every sentence as high-stakes evidentiary proof.",
+      corporate_activist: "A billionaire tech titan and an unrelenting grassroots labor organizer locked in an ideological clash over technological automation, human survival, and capital.",
+      mentor_student: "An entrenched, dogma-bound master and a rebellious visionary protégé confronting the boundaries of tradition, authority, and innovation."
+    };
+
+    const GENRE_CONFIGS = {
+      hiphop: {
+        label: "Hip-Hop Cypher Battle Mode",
+        rateMod: 1.10,
+        instruction: "AUTHENTIC CYPHER BATTLE RAP RULES:\n- High-IQ, relentless rap battle verse packed with multi-syllabic rhymes.\n- Steady 10 to 14 syllable bars riding a 4/4 boom-bap rhythm at 90 BPM.\n- Directly roast and dismantle opponent arguments.\n- FIRST PERSON ONLY: Never write headers like '[Verse 1]' or narration like '*smirks*'. Embody the rhyme directly."
+      },
+      classical: {
+        label: "Classical Opera Mode",
+        rateMod: 0.92,
+        instruction: "CLASSICAL OPERATIC TRAGEDY: Elevated recitative in heroic blank verse or couplets. Pure first-person dialogue with Shakespearean pathos. No bracket tags."
+      },
+      rock: { label: "Rock Anthem Mode", rateMod: 1.05, instruction: "HIGH-OCTANE ROCK ANTHEM: Aggressive metric stanzas, heavy consonants, soaring rhetorical crescendos. No bracketed tags." },
+      jazz: { label: "New Orleans Jazz Mode", rateMod: 0.96, instruction: "BEAT GENERATION JAZZ: Syncopated spoken-word poetry with Harlem Renaissance swagger, smoky blues metaphors, swung phrasing. No bracket tags." },
+      country: { label: "Country & Folk Ballad Mode", rateMod: 0.94, instruction: "DOWN-HOME FOLK BALLAD: Heartfelt working-class storytelling, front-porch wisdom, moral clarity. No tags." },
+      edm: { label: "Electronic / Cyberpunk EDM Mode", rateMod: 1.12, instruction: "CYBERPUNK GLITCH-HOP: Rapid-fire staccato delivery, cold machine-logic metaphors, calculated cybernetic punchlines. No tags." },
+      none: { label: "Intellectual Rhetoric Mode", rateMod: 1.0, instruction: "MASTERCLASS PARLIAMENTARY RHETORIC: Crisp direct answer, grounded empirical citations, dialectical deconstruction, sharp counter-dilemma. No headings." }
+    };
+
+    // =========================================================================
+    // WEB AUDIO API CONTEXT & ENGINE
+    // =========================================================================
+    let sharedAudioCtx = null;
+    let keepAliveOscillator = null;
+
+    function getAudioContext() {
+      if (!sharedAudioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          sharedAudioCtx = new AudioCtx();
+          startWebAudioKeepAlive();
+        }
+      }
+      if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+        sharedAudioCtx.resume().catch(() => {});
+      }
+      return sharedAudioCtx;
+    }
+
+    function startWebAudioKeepAlive() {
+      try {
+        if (!sharedAudioCtx || keepAliveOscillator) return;
+        keepAliveOscillator = sharedAudioCtx.createOscillator();
+        const silenceGain = sharedAudioCtx.createGain();
+        silenceGain.gain.setValueAtTime(0.00001, sharedAudioCtx.currentTime);
+        keepAliveOscillator.connect(silenceGain);
+        silenceGain.connect(sharedAudioCtx.destination);
+        keepAliveOscillator.start();
+      } catch (e) {}
+    }
+
+    function unlockAudioSessionSilently() {
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+      if (ctx) {
+        try {
+          const silentBuf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = silentBuf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (e) {}
+      }
+      if (synth && synth.paused) synth.resume();
+      initMediaSessionKeepAlive();
+    }
+
+    function initMediaSessionKeepAlive() {
+      try {
+        if (!backgroundAudioElement) {
+          backgroundAudioElement = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+          backgroundAudioElement.loop = true;
+          backgroundAudioElement.volume = 0.01;
+        }
+        backgroundAudioElement.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // AURA XP-16 PRO PERFORMANCE CONTROLLER (Low-End & Sub-Bass Matrix)
+    // =========================================================================
+    const AuraPadMatrix = {
+      masterGain: null,
+      volume: 1.0,
+      currentBank: "all",
+      
+      sounds: [
+        { id: 0, key: "1", name: "808 SUB BOOM", icon: "💣", desc: "Low Room-Shaker", color: "#a855f7", glow: "rgba(168, 85, 247, 0.7)", fn: "boom808" },
+        { id: 1, key: "2", name: "808 DISTORT SLIDE", icon: "⚡", desc: "Saturated Trap Glide", color: "#ec4899", glow: "rgba(236, 72, 153, 0.7)", fn: "distortSlide808" },
+        { id: 2, key: "3", name: "808 SUB TREMOR", icon: "🌊", desc: "Earthquake Pulse", color: "#6366f1", glow: "rgba(99, 102, 241, 0.7)", fn: "subTremor" },
+        { id: 3, key: "4", name: "CINEMATIC BRAAM", icon: "💥", desc: "Heavy Trailer Brass", color: "#ef4444", glow: "rgba(239, 68, 68, 0.7)", fn: "impactBraam" },
+        { id: 4, key: "5", name: "IMPACT DROP", icon: "🌌", desc: "Sub Harmonic Dive", color: "#f59e0b", glow: "rgba(245, 158, 11, 0.7)", fn: "impactDrop" },
+        { id: 5, key: "6", name: "MIC DROP", icon: "🎤", desc: "Stage Floor Thud", color: "#38bdf8", glow: "rgba(56, 189, 248, 0.7)", fn: "micDrop" },
+        { id: 6, key: "7", name: "FLOOR THUD", icon: "🥊", desc: "Dead Acoustic Punch", color: "#10b981", glow: "rgba(16, 185, 129, 0.7)", fn: "floorThud" },
+        { id: 7, key: "8", name: "SUB DIVE", icon: "📉", desc: "150Hz to 24Hz Sweep", color: "#06b6d4", glow: "rgba(6, 182, 212, 0.7)", fn: "subDive" },
+        { id: 8, key: "Q", name: "TRAP CLACK", icon: "🥢", desc: "High-Velocity Rim", color: "#facc15", glow: "rgba(250, 204, 21, 0.7)", fn: "trapClack" },
+        { id: 9, key: "W", name: "808 PUNCH KICK", icon: "🥁", desc: "Punch Body Sub", color: "#fb923c", glow: "rgba(251, 146, 60, 0.7)", fn: "punchKick808" },
+        { id: 10, key: "E", name: "DARK SYNTH STAB", icon: "🎹", desc: "Minor Triad Decay", color: "#8b5cf6", glow: "rgba(139, 92, 246, 0.7)", fn: "darkSynthStab" },
+        { id: 11, key: "R", name: "REVERSE SWELL", icon: "📈", desc: "Sub Noise Choke", color: "#d946ef", glow: "rgba(217, 70, 239, 0.7)", fn: "reverseSwell" },
+        { id: 12, key: "A", name: "VINYL BRAKE", icon: "🛑", desc: "Motor Power Down", color: "#f97316", glow: "rgba(249, 115, 22, 0.7)", fn: "vinylBrake" },
+        { id: 13, key: "S", name: "HEAVY GAVEL", icon: "🔨", desc: "Solid Oak Body", color: "#b45309", glow: "rgba(180, 83, 9, 0.7)", fn: "heavyGavel" },
+        { id: 14, key: "D", name: "DUB TAPE ECHO", icon: "🎛️", desc: "Delay Freeze Repeat", color: "#0ea5e9", glow: "rgba(14, 165, 233, 0.7)", fn: "dubTapeEcho" },
+        { id: 15, key: "F", name: "SUB STUTTER", icon: "⚡", desc: "16th-Note Gated Hits", color: "#14b8a6", glow: "rgba(20, 184, 166, 0.7)", fn: "subStutter" }
+      ],
+
+      init() {
+        const ctx = getAudioContext();
+        if (!this.masterGain && ctx) {
+          this.masterGain = ctx.createGain();
+          this.masterGain.gain.setValueAtTime(this.volume, ctx.currentTime);
+          this.masterGain.connect(ctx.destination);
+        }
+        this.renderPads();
+        this.setupKeyListeners();
+      },
+
+      setMasterVolume(val) {
+        this.volume = Math.max(0, Math.min(1.5, parseFloat(val) || 0));
+        const ctx = getAudioContext();
+        if (this.masterGain && ctx) {
+          this.masterGain.gain.setValueAtTime(this.volume, ctx.currentTime);
+        }
+        const pct = Math.round(this.volume * 100);
+        const lbl = document.getElementById("auraVolLabel");
+        if (lbl) lbl.innerText = `${pct}%`;
+      },
+
+      setBank(bankKey) {
+        this.currentBank = bankKey;
+        ["btnBankAll", "btnBank1", "btnBank2"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove("active");
+        });
+        if (bankKey === "all") document.getElementById("btnBankAll")?.classList.add("active");
+        else if (bankKey === "bank1") document.getElementById("btnBank1")?.classList.add("active");
+        else if (bankKey === "bank2") document.getElementById("btnBank2")?.classList.add("active");
+        this.renderPads();
+      },
+
+      renderPads() {
+        const grid = document.getElementById("auraPadsGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+
+        const visibleSounds = this.sounds.filter(s => {
+          if (this.currentBank === "bank1") return s.id < 8;
+          if (this.currentBank === "bank2") return s.id >= 8;
+          return true;
+        });
+
+        visibleSounds.forEach(s => {
+          const pad = document.createElement("div");
+          pad.className = "aura-pad";
+          pad.id = `aura-pad-${s.id}`;
+          pad.style.borderColor = s.color;
+          pad.style.boxShadow = `inset 0 1px 2px rgba(255,255,255,0.1), 0 0 10px ${s.glow}`;
+
+          pad.innerHTML = `
+            <div class="pad-top-row">
+              <span>PAD ${s.id + 1 < 10 ? '0' + (s.id + 1) : (s.id + 1)}</span>
+              <span class="pad-key-badge">${s.key}</span>
+            </div>
+            <div class="pad-center-body">
+              <span class="pad-icon">${s.icon}</span>
+              <span class="pad-title" style="color:${s.color};">${s.name}</span>
+            </div>
+            <div class="pad-desc">${s.desc}</div>
+          `;
+
+          // Zero mobile zoom: cancel default touch behavior on rapid tapping
+          pad.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            this.triggerPad(s.id);
+          }, { passive: false });
+
+          pad.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            this.triggerPad(s.id);
+          });
+
+          grid.appendChild(pad);
+        });
+      },
+
+      setupKeyListeners() {
+        window.addEventListener("keydown", (e) => {
+          if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+          const keyUpper = e.key.toUpperCase();
+          const snd = this.sounds.find(s => s.key === keyUpper);
+          if (snd) {
+            e.preventDefault();
+            this.triggerPad(snd.id);
+          }
+        });
+      },
+
+      triggerPad(id) {
+        const ctx = getAudioContext();
+        if (!this.masterGain && ctx) this.init();
+        if (ctx && ctx.state === "suspended") ctx.resume();
+
+        const snd = this.sounds[id];
+        if (!snd) return;
+
+        const padEl = document.getElementById(`aura-pad-${id}`);
+        if (padEl) {
+          padEl.classList.add("pad-pressed");
+          setTimeout(() => padEl.classList.remove("pad-pressed"), 100);
+        }
+
+        const oled = document.getElementById("auraOledStatus");
+        if (oled) {
+          oled.innerText = `PAD ${id + 1}: ${snd.name} TRIGGERED [OUTPUT: 100%]`;
+        }
+
+        if (typeof this.dsp[snd.fn] === "function") {
+          this.dsp[snd.fn](this.masterGain, ctx);
+        }
+
+        logTelemetry("AURA_PAD_TRIGGERED", { pad: id + 1, name: snd.name });
+      },
+
+      dsp: {
+        boom808(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const shaper = ctx.createWaveShaper();
+
+          const curve = new Float32Array(256);
+          for (let i = 0; i < 256; i++) {
+            const x = (i * 2) / 256 - 1;
+            curve[i] = (Math.PI + 350) * x / (Math.PI + 350 * Math.abs(x));
+          }
+          shaper.curve = curve;
+
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(185, t);
+          osc.frequency.exponentialRampToValueAtTime(35, t + 0.18);
+          osc.frequency.linearRampToValueAtTime(28, t + 1.45);
+
+          g.gain.setValueAtTime(1.35, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.55);
+
+          osc.connect(shaper); shaper.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 1.6);
+        },
+
+        distortSlide808(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const f = ctx.createBiquadFilter();
+
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(85, t);
+          osc.frequency.exponentialRampToValueAtTime(32, t + 0.55);
+
+          f.type = "lowpass";
+          f.frequency.setValueAtTime(340, t);
+          f.frequency.exponentialRampToValueAtTime(120, t + 0.9);
+
+          g.gain.setValueAtTime(1.2, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+
+          osc.connect(f); f.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 1.15);
+        },
+
+        subTremor(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 1.4;
+          [42, 44].forEach(freq => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, t);
+            g.gain.setValueAtTime(0.7, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(g); g.connect(mg);
+            osc.start(t); osc.stop(t + dur + 0.05);
+          });
+        },
+
+        impactBraam(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 1.8;
+          [-5, 5].forEach(cents => {
+            const osc = ctx.createOscillator();
+            const f = ctx.createBiquadFilter();
+            const g = ctx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(55, t);
+            osc.detune.setValueAtTime(cents, t);
+            f.type = "lowpass";
+            f.frequency.setValueAtTime(1400, t);
+            f.frequency.exponentialRampToValueAtTime(90, t + dur);
+            f.Q.setValueAtTime(4.2, t);
+            g.gain.setValueAtTime(0.85, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(f); f.connect(g); g.connect(mg);
+            osc.start(t); osc.stop(t + dur + 0.05);
+          });
+        },
+
+        impactDrop(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const f = ctx.createBiquadFilter();
+          const g = ctx.createGain();
+
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(140, t);
+          osc.frequency.exponentialRampToValueAtTime(26, t + 0.9);
+
+          f.type = "lowpass";
+          f.frequency.setValueAtTime(600, t);
+          f.frequency.exponentialRampToValueAtTime(80, t + 1.2);
+
+          g.gain.setValueAtTime(1.25, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.3);
+
+          osc.connect(f); f.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 1.35);
+        },
+
+        micDrop(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(75, t);
+          osc.frequency.exponentialRampToValueAtTime(28, t + 0.35);
+          g.gain.setValueAtTime(1.25, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 0.5);
+
+          const chirp = ctx.createOscillator();
+          const cg = ctx.createGain();
+          chirp.type = "triangle";
+          chirp.frequency.setValueAtTime(2400, t + 0.04);
+          chirp.frequency.linearRampToValueAtTime(3200, t + 0.12);
+          cg.gain.setValueAtTime(0.001, t);
+          cg.gain.setValueAtTime(0.35, t + 0.04);
+          cg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+          chirp.connect(cg); cg.connect(mg);
+          chirp.start(t); chirp.stop(t + 0.2);
+        },
+
+        floorThud(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(110, t);
+          osc.frequency.exponentialRampToValueAtTime(38, t + 0.09);
+          g.gain.setValueAtTime(1.3, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 0.24);
+        },
+
+        subDive(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 1.6;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(150, t);
+          osc.frequency.exponentialRampToValueAtTime(24, t + dur);
+          g.gain.setValueAtTime(1.0, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + dur + 0.05);
+        },
+
+        trapClack(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(850, t);
+          osc.frequency.exponentialRampToValueAtTime(200, t + 0.06);
+          g.gain.setValueAtTime(1.1, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 0.08);
+        },
+
+        punchKick808(mg, ctx) {
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(170, t);
+          osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+          osc.frequency.linearRampToValueAtTime(32, t + 0.7);
+          g.gain.setValueAtTime(1.3, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + 0.8);
+        },
+
+        darkSynthStab(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 0.65;
+          [110, 130.8, 164.8].forEach(freq => {
+            const osc = ctx.createOscillator();
+            const f = ctx.createBiquadFilter();
+            const g = ctx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(freq, t);
+            f.type = "lowpass";
+            f.frequency.setValueAtTime(2200, t);
+            f.frequency.exponentialRampToValueAtTime(160, t + dur);
+            g.gain.setValueAtTime(0.45, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(f); f.connect(g); g.connect(mg);
+            osc.start(t); osc.stop(t + dur + 0.05);
+          });
+        },
+
+        reverseSwell(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 0.8;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(35, t);
+          osc.frequency.linearRampToValueAtTime(110, t + dur);
+          g.gain.setValueAtTime(0.001, t);
+          g.gain.exponentialRampToValueAtTime(1.1, t + dur - 0.02);
+          g.gain.setValueAtTime(0.001, t + dur);
+          osc.connect(g); g.connect(mg);
+          osc.start(t); osc.stop(t + dur + 0.02);
+        },
+
+        vinylBrake(mg, ctx) {
+          const t = ctx.currentTime;
+          const dur = 1.2;
+          [220, 277.18, 329.63, 440].forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            const f = ctx.createBiquadFilter();
+            osc.type = idx % 2 === 0 ? "sawtooth" : "triangle";
+            osc.frequency.setValueAtTime(freq, t);
+            osc.frequency.exponentialRampToValueAtTime(18, t + dur);
+            f.type = "lowpass";
+            f.frequency.setValueAtTime(2600, t);
+            f.frequency.exponentialRampToValueAtTime(45, t + dur);
+            g.gain.setValueAtTime(0.35, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(f); f.connect(g); g.connect(mg);
+            osc.start(t); osc.stop(t + dur + 0.05);
+          });
+        },
+
+        heavyGavel(mg, ctx) {
+          const t = ctx.currentTime;
+          const oscClick = ctx.createOscillator();
+          const gainClick = ctx.createGain();
+          oscClick.type = "triangle";
+          oscClick.frequency.setValueAtTime(900, t);
+          oscClick.frequency.exponentialRampToValueAtTime(140, t + 0.035);
+          gainClick.gain.setValueAtTime(1.0, t);
+          gainClick.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+          oscClick.connect(gainClick); gainClick.connect(mg);
+          oscClick.start(t); oscClick.stop(t + 0.045);
+
+          const oscBlock = ctx.createOscillator();
+          const gainBlock = ctx.createGain();
+          oscBlock.type = "sine";
+          oscBlock.frequency.setValueAtTime(180, t);
+          oscBlock.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+          gainBlock.gain.setValueAtTime(1.2, t);
+          gainBlock.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+          oscBlock.connect(gainBlock); gainBlock.connect(mg);
+          oscBlock.start(t); oscBlock.stop(t + 0.26);
+        },
+
+        dubTapeEcho(mg, ctx) {
+          const t = ctx.currentTime;
+          [320, 240, 160, 90].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            const dt = t + i * 0.16;
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(freq, dt);
+            osc.frequency.exponentialRampToValueAtTime(30, dt + 0.25);
+            g.gain.setValueAtTime(0.6 / (i + 1), dt);
+            g.gain.exponentialRampToValueAtTime(0.001, dt + 0.28);
+            osc.connect(g); g.connect(mg);
+            osc.start(dt); osc.stop(dt + 0.3);
+          });
+        },
+
+        subStutter(mg, ctx) {
+          const t = ctx.currentTime;
+          for (let i = 0; i < 4; i++) {
+            const st = t + i * 0.12;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(65, st);
+            osc.frequency.exponentialRampToValueAtTime(35, st + 0.08);
+            g.gain.setValueAtTime(1.1, st);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 0.09);
+            osc.connect(g); g.connect(mg);
+            osc.start(st); osc.stop(st + 0.1);
+          }
+        }
+      }
+    };
+
+    function toggleAuraPadDrawer() {
+      const drawer = document.getElementById("auraPadDrawer");
+      const btn = document.getElementById("btnOpenAura");
+      drawer.classList.toggle("collapsed");
+      const isOpen = !drawer.classList.contains("collapsed");
+      if (btn) btn.classList.toggle("aura-active-btn", isOpen);
+      if (isOpen) AuraPadMatrix.init();
+    }
+
+    // =========================================================================
+    // CYPHER BEAT SYNTHESIZER (11 Beats with Studio Preamp Boost up to 250%)
+    // =========================================================================
+    const CypherBeatEngine = {
+      ctx: null, isPlaying: false, isUserMuted: false, volume: 0.75, mixMultiplier: 1.0, currentStyle: "boombap", tempo: 90, step: 0, timerId: null, masterGain: null, compressor: null,
+
+      init(audioCtx) {
+        this.ctx = audioCtx;
+        if (!this.masterGain && this.ctx) {
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(this.volume * this.mixMultiplier, this.ctx.currentTime);
+          this.compressor = this.ctx.createDynamicsCompressor();
+          this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+          this.compressor.knee.setValueAtTime(16, this.ctx.currentTime);
+          this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+          this.masterGain.connect(this.compressor);
+          this.compressor.connect(this.ctx.destination);
+        }
+      },
+
+      setVolume(vol) {
+        this.volume = Math.max(0, Math.min(2.5, parseFloat(vol) || 0));
+        if (this.masterGain && this.ctx) {
+          const finalGain = this.isUserMuted ? 0 : this.volume * this.mixMultiplier;
+          this.masterGain.gain.setValueAtTime(finalGain, this.ctx.currentTime);
+        }
+      },
+
+      setStyle(styleKey) {
+        this.currentStyle = styleKey;
+        const tempos = {
+          boombap: 90, trap: 138, drill: 142, phonk: 160, westcoast: 96,
+          reggaeton: 95, industrial: 132, dnb: 172, lofi: 82, rock: 104, cyberpunk: 128
+        };
+        this.tempo = tempos[styleKey] || 90;
+        this.step = 0;
+        if (this.isPlaying) this.updateUI(true);
+      },
+
+      start(audioCtx, style = null) {
+        if (this.isPlaying) return;
+        this.init(audioCtx);
+        if (!this.ctx) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        if (style) this.setStyle(style);
+        else this.setStyle(document.getElementById("cypherBeatStyle").value || "boombap");
+
+        this.isPlaying = true;
+        this.step = 0;
+        let nextNoteTime = this.ctx.currentTime + 0.05;
+
+        const schedule = () => {
+          if (!this.isPlaying || !this.ctx) return;
+          const secondsPerStep = 60 / this.tempo / 4;
+          while (nextNoteTime < this.ctx.currentTime + 0.14) {
+            this.playStep(nextNoteTime, this.step);
+            nextNoteTime += secondsPerStep;
+            this.step = (this.step + 1) % 16;
+          }
+          this.timerId = setTimeout(schedule, 28);
+        };
+        schedule();
+        this.updateUI(true);
+      },
+
+      stop() {
+        this.isPlaying = false;
+        if (this.timerId) { clearTimeout(this.timerId); this.timerId = null; }
+        this.updateUI(false);
+      },
+
+      updateUI(active) {
+        const btn = document.getElementById("btnToggleBeat");
+        const pill = document.getElementById("pillEnvBeat");
+        const label = document.getElementById("beatStatusLabel");
+        if (btn) { btn.innerText = active ? `🎧 Beat: ON (${this.tempo} BPM)` : "🎧 Beat: OFF"; btn.classList.toggle("beat-active-glow", active); }
+        if (pill) pill.classList.toggle("active-beat", active);
+        if (label) label.innerText = active ? `${this.currentStyle.toUpperCase()} (${this.tempo} BPM)` : "Beat: Off";
+      },
+
+      playStep(time, step) {
+        if (!this.ctx || !this.masterGain || this.isUserMuted || this.volume <= 0) return;
+        switch (this.currentStyle) {
+          case "drill":
+            if (step === 0 || step === 7 || step === 10) this.playKick(time, 1.3);
+            if (step === 8) this.playSnare(time, 1.25);
+            if (step === 11) this.playRim(time, 0.7);
+            if (step === 6 || step === 14) { this.playHiHat(time, false, 0.45); this.playHiHat(time + 0.035, true, 0.65); }
+            else if (step % 2 === 0) this.playHiHat(time, step % 4 === 0, 0.5);
+            break;
+          case "phonk":
+            if (step === 0 || step === 6 || step === 10) this.playKick(time, 1.4);
+            if (step === 4 || step === 12) this.playSnare(time, 1.3);
+            if ([0, 3, 6, 9, 12, 14].includes(step)) this.playCowbell(time, 0.65);
+            this.playHiHat(time, step % 4 === 0, 0.45);
+            break;
+          case "westcoast":
+            if (step % 4 === 0) this.playKick(time, 1.15);
+            if (step === 4 || step === 12) this.playSnare(time, 1.25);
+            if (step % 2 === 0) this.playHiHat(time, step % 4 === 2, 0.55);
+            break;
+          case "reggaeton":
+            if (step % 4 === 0) this.playKick(time, 1.35);
+            if (step === 3 || step === 6 || step === 11 || step === 14) this.playSnare(time, 1.15);
+            if (step % 2 === 0) this.playHiHat(time, false, 0.45);
+            break;
+          case "industrial":
+            if (step % 4 === 0) this.playKick(time, 1.4);
+            if (step === 4 || step === 12) this.playSnare(time, 1.3);
+            this.playHiHat(time, true, 0.5);
+            break;
+          case "dnb":
+            if (step === 0 || step === 10) this.playKick(time, 1.3);
+            if (step === 4 || step === 12) this.playSnare(time, 1.3);
+            this.playHiHat(time, step % 2 === 0, 0.45);
+            break;
+          case "trap":
+            if (step === 0 || step === 6 || step === 11) this.playKick(time, 1.3);
+            if (step === 8) this.playSnare(time, 1.25);
+            if (step % 2 === 0) this.playHiHat(time, step % 4 === 0, 0.55);
+            break;
+          case "lofi":
+            if (step === 0 || step === 9) this.playKick(time, 1.0);
+            if (step === 4 || step === 12) this.playRim(time, 0.9);
+            if (step % 2 === 0) this.playHiHat(time, false, 0.35);
+            break;
+          case "rock":
+            if (step % 4 === 0) this.playKick(time, 1.25);
+            if (step === 4 || step === 12) this.playSnare(time, 1.25);
+            if (step % 2 === 0) this.playHiHat(time, true, 0.6);
+            break;
+          case "cyberpunk":
+            if (step === 0 || step === 10 || step === 13) this.playKick(time, 1.25);
+            if (step === 4 || step === 12) this.playSnare(time, 1.2);
+            this.playHiHat(time, step % 4 === 0, 0.45);
+            break;
+          case "boombap":
+          default:
+            if (step === 0 || step === 7 || step === 10) this.playKick(time, 1.2);
+            if (step === 4 || step === 12) this.playSnare(time, 1.2);
+            if (step % 2 === 0 || step === 15) this.playHiHat(time, step % 4 === 0, 0.55);
+            break;
+        }
+      },
+
+      playKick(time, multiplier = 1.0) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(160, time);
+        osc.frequency.exponentialRampToValueAtTime(36, time + 0.16);
+        gain.gain.setValueAtTime(1.2 * multiplier, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.24);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.26);
+      },
+
+      playSnare(time, multiplier = 1.0) {
+        const bufLen = Math.floor(this.ctx.sampleRate * 0.14);
+        const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buf;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "highpass"; filter.frequency.value = 1000;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.95 * multiplier, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.14);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+        noise.start(time); noise.stop(time + 0.15);
+      },
+
+      playRim(time, multiplier = 1.0) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1400, time);
+        osc.frequency.exponentialRampToValueAtTime(400, time + 0.04);
+        gain.gain.setValueAtTime(0.85 * multiplier, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.05);
+      },
+
+      playHiHat(time, accent = false, vol = 0.5) {
+        const bufLen = Math.floor(this.ctx.sampleRate * 0.04);
+        const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buf;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "highpass"; filter.frequency.value = 7500;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(accent ? vol * 1.3 : vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+        noise.start(time); noise.stop(time + 0.04);
+      },
+
+      playCowbell(time, vol = 0.6) {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(840, time);
+        g.gain.setValueAtTime(vol, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+        osc.connect(g); g.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.09);
+      }
+    };
+
+    function toggleBeatPlayback() {
+      const ctx = getAudioContext();
+      if (CypherBeatEngine.isPlaying) {
+        CypherBeatEngine.isUserMuted = true;
+        CypherBeatEngine.stop();
+        logTelemetry("BEAT_MANUALLY_STOPPED");
+      } else {
+        CypherBeatEngine.isUserMuted = false;
+        CypherBeatEngine.start(ctx);
+        logTelemetry("BEAT_MANUALLY_STARTED", { style: CypherBeatEngine.currentStyle, tempo: CypherBeatEngine.tempo });
+      }
+    }
+
+    function handleBeatVolumeChange(val) {
+      CypherBeatEngine.setVolume(val);
+      const percent = Math.round((parseFloat(val) / 1.0) * 100);
+      document.getElementById("beatVolLabel").innerText = `${percent}% ${percent >= 160 ? "(Overpowering)" : (percent >= 100 ? "(Heavy)" : "(Balanced)")}`;
+    }
+
+    function setBeatVolPreset(val) {
+      document.getElementById("cypherBeatVol").value = val;
+      handleBeatVolumeChange(val);
+    }
+
+    function handleBeatStyleChange(styleKey) {
+      CypherBeatEngine.setStyle(styleKey);
+      logTelemetry("BEAT_STYLE_CHANGED", { style: styleKey, tempo: CypherBeatEngine.tempo });
+    }
+
+    function handleBeatModeChange() {
+      const mode = document.getElementById("cypherBeatMode").value;
+      if (mode === "manual" && CypherBeatEngine.isPlaying) CypherBeatEngine.stop();
+    }
+
+    function handleMixProfileChange(val) {
+      if (val === "voice_dom") CypherBeatEngine.mixMultiplier = 0.6;
+      else if (val === "balanced") CypherBeatEngine.mixMultiplier = 1.0;
+      else if (val === "beat_heavy") CypherBeatEngine.mixMultiplier = 1.8;
+      else if (val === "club_overpower") CypherBeatEngine.mixMultiplier = 2.5;
+      CypherBeatEngine.setVolume(document.getElementById("cypherBeatVol").value);
+      logTelemetry("AUDIO_MIX_PROFILE_CHANGED", { profile: val, multiplier: CypherBeatEngine.mixMultiplier });
+    }
+
+    function handleGenreChange(newGenre) {
+      if (newGenre === "hiphop") {
+        document.getElementById("cypherBeatStyle").value = "boombap";
+        CypherBeatEngine.setStyle("boombap");
+        if (document.getElementById("cypherBeatMode").value !== "manual") {
+          document.getElementById("beatStatusLabel").innerText = "Boom-Bap (Auto Standby)";
+        }
+      } else if (newGenre === "rock") {
+        document.getElementById("cypherBeatStyle").value = "rock";
+        CypherBeatEngine.setStyle("rock");
+      } else if (newGenre === "edm") {
+        document.getElementById("cypherBeatStyle").value = "cyberpunk";
+        CypherBeatEngine.setStyle("cyberpunk");
+      } else if (newGenre === "jazz") {
+        document.getElementById("cypherBeatStyle").value = "lofi";
+        CypherBeatEngine.setStyle("lofi");
+      } else {
+        if (CypherBeatEngine.isPlaying && document.getElementById("cypherBeatMode").value === "auto_hiphop") {
+          CypherBeatEngine.stop();
+        }
+      }
+    }
+
+    function handleVoiceEngineChange() {
+      const engine = document.getElementById("voiceSynthesisEngine").value;
+      const box = document.getElementById("externalTtsBox");
+      box.style.display = (engine === "openai_compatible" || engine === "elevenlabs") ? "flex" : "none";
+      logTelemetry("VOICE_ENGINE_CHANGED", { engine });
+    }
+
+    // --- AUTONOMOUS WEB RESEARCH ENGINE ---
+    async function executeDebaterWebResearch(speakerName, isDebaterOne, opponentText, motion) {
+      const provider = document.getElementById("webSearchEngine").value;
+      const apiKey = document.getElementById("webSearchApiKey").value.trim();
+
+      let querySubject = "";
+      if (activeChamberOrder) {
+        querySubject = activeChamberOrder.replace(/[?.,!]/g, "").slice(0, 75).trim();
+      } else if (opponentText) {
+        const words = opponentText.split(/\s+/).filter(w => w.length > 5 && !/colleague|opponent|distinguished|furthermore|therefore/i.test(w));
+        querySubject = isDebaterOne ? `${motion.slice(0, 40)} legal precedent data` : `${words.slice(0, 3).join(" ")} corporate liability statistics`;
+      } else {
+        querySubject = isDebaterOne ? `${motion.slice(0, 45)} legal personhood precedent` : `${motion.slice(0, 45)} corporate liability risks`;
+      }
+      querySubject = querySubject.slice(0, 75).trim();
+      updateResearchUIState(isDebaterOne, `Searching: "${querySubject}"`, []);
+
+      try {
+        let results = [];
+        if (provider === "tavily" && apiKey) {
+          const res = await fetch("https://api.tavily.com/search", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api_key: apiKey, query: querySubject, search_depth: "basic", max_results: 3 })
+          });
+          const data = await res.json();
+          results = (data.results || []).map(r => ({ title: r.title, snippet: r.content.slice(0, 260), url: r.url }));
+        } else if (provider === "brave" && apiKey) {
+          const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(querySubject)}&count=3`, {
+            headers: { "X-Subscription-Token": apiKey, "Accept": "application/json" }
+          });
+          const data = await res.json();
+          results = (data.web?.results || []).map(r => ({ title: r.title, snippet: r.description.slice(0, 260), url: r.url }));
+        } else {
+          const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(querySubject)}&utf8=&format=json&origin=*`;
+          const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(querySubject)}&format=json&origin=*`;
+          const [wikiRes, ddgRes] = await Promise.allSettled([fetch(wikiUrl).then(r => r.json()), fetch(ddgUrl).then(r => r.json())]);
+
+          if (wikiRes.status === "fulfilled" && wikiRes.value?.query?.search) {
+            wikiRes.value.query.search.slice(0, 3).forEach(item => {
+              results.push({ title: item.title, snippet: item.snippet.replace(/<[^>]*>/g, "").slice(0, 260), url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}` });
+            });
+          }
+          if (ddgRes.status === "fulfilled" && ddgRes.value?.AbstractText) {
+            results.push({ title: ddgRes.value.Heading || "Knowledge Snapshot", snippet: ddgRes.value.AbstractText.slice(0, 260), url: ddgRes.value.AbstractURL || "https://duckduckgo.com" });
+          }
+        }
+
+        if (!results || results.length === 0) {
+          results = [{ title: "Verified Jurisprudential Precedents", snippet: "Statutory accountability requires explicit assignment of liability and contractual capacity.", url: "#" }];
+        }
+        updateResearchUIState(isDebaterOne, `Research: "${querySubject}"`, results);
+        logTelemetry("ONLINE_RESEARCH_COMPLETED", { debater: speakerName, query: querySubject, sourcesFound: results.length });
+        return { query: querySubject, sources: results };
+      } catch (err) {
+        const fallback = [{ title: "Verified Precedents", snippet: "Expansions of standing establish transparent liability.", url: "#" }];
+        updateResearchUIState(isDebaterOne, `Cached Data: "${querySubject}"`, fallback);
+        return { query: querySubject, sources: fallback };
+      }
+    }
+
+    function updateResearchUIState(isDebaterOne, queryText, sources) {
+      const queryLabel = document.getElementById(isDebaterOne ? "searchQueryLabelDebaterOne" : "searchQueryLabelDebaterTwo");
+      const countLabel = document.getElementById(isDebaterOne ? "searchCountDebaterOne" : "searchCountDebaterTwo");
+      const listEl = document.getElementById(isDebaterOne ? "sourcesListDebaterOne" : "sourcesListDebaterTwo");
+      queryLabel.innerText = queryText;
+      countLabel.innerText = `${sources.length} Sources Found`;
+      if (sources.length === 0) {
+        listEl.innerHTML = `<span style="color: var(--accent-gold); font-size: 0.62rem;">🔍 Searching web in background...</span>`;
+      } else {
+        listEl.innerHTML = "";
+        sources.forEach(s => {
+          const pill = document.createElement("a");
+          pill.className = "research-source-pill";
+          pill.href = s.url; pill.target = "_blank"; pill.rel = "noopener noreferrer"; pill.title = s.snippet; pill.innerText = `📄 ${s.title}`;
+          listEl.appendChild(pill);
+        });
+      }
+    }
+
+    function formatModelShortName(modelFullName) {
+      if (!modelFullName) return "AI Model";
+      if (modelFullName.includes("Nous-Hermes-2")) return "Nous-Hermes-2-DPO";
+      if (modelFullName.includes("dolphin-mistral")) return "dolphin-mistral";
+      const parts = modelFullName.split("/");
+      return parts[parts.length - 1].replace(/-GGUF.*$/i, "");
+    }
+
+    function syncModelBadges() {
+      const m1 = document.getElementById("modelDebaterOne").value.trim();
+      const m2 = document.getElementById("modelDebaterTwo").value.trim();
+      const short1 = formatModelShortName(m1);
+      const short2 = formatModelShortName(m2);
+      document.getElementById("modelBadgeDebaterOne").innerText = `🤖 ${short1}`;
+      document.getElementById("modelBadgeDebaterTwo").innerText = `🤖 ${short2}`;
+      document.getElementById("vsModel1").innerText = short1;
+      document.getElementById("vsModel2").innerText = short2;
+    }
+
+    function toggleBottomDock() {
+      const dock = document.getElementById("bottomDock");
+      const btn = document.getElementById("btnDockMinimize");
+      dock.classList.toggle("minimized");
+      btn.innerText = dock.classList.contains("minimized") ? "⌃ Expand Controls" : "⌄ Minimize Controls (View Full Cards)";
+    }
+
+    function getTargetWordCount() {
+      const val = parseInt(document.getElementById("targetWordCount").value);
+      return isNaN(val) || val < 50 ? 350 : val;
+    }
+
+    function setWordCountPreset(words) {
+      document.getElementById("targetWordCount").value = words;
+      updateTargetWordDisplay();
+    }
+
+    function updateTargetWordDisplay() {
+      const words = getTargetWordCount();
+      document.getElementById("headerWordTargetPill").innerHTML = `Target: <strong>${words} Words / Turn</strong>`;
+      document.getElementById("wordCountDebaterOne").innerText = `Words: 0 / ${words} Target`;
+      document.getElementById("wordCountDebaterTwo").innerText = `Words: 0 / ${words} Target`;
+    }
+
+    function setRelationshipPreset(key) {
+      if (PRESET_RELATIONSHIPS[key]) document.getElementById("debaterRelationship").value = PRESET_RELATIONSHIPS[key];
+    }
+
+    function handleDebaterTitleChange(isDebaterOne) {
+      syncDebaterCustomization();
+      const title = document.getElementById(isDebaterOne ? "debater1Name" : "debater2Name").value.trim();
+      const perspective = document.getElementById(isDebaterOne ? "debater1Perspective" : "debater2Perspective").value.trim();
+      const profile = detectPersonaVoiceProfile(title, perspective);
+
+      const pitchSlider = document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo");
+      const rateSlider = document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo");
+      const badge = document.getElementById(isDebaterOne ? "profileBadgeDebaterOne" : "profileBadgeDebaterTwo");
+
+      pitchSlider.value = profile.pitch;
+      rateSlider.value = profile.rate;
+      badge.innerText = profile.label;
+      updateProsodyLabel(isDebaterOne);
+    }
+
+    function updateProsodyLabel(isDebaterOne) {
+      const pitchVal = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+      const rateVal = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+      const volVal = parseFloat(document.getElementById(isDebaterOne ? "volumeSliderDebaterOne" : "volumeSliderDebaterTwo")?.value ?? 1.0);
+
+      document.getElementById(isDebaterOne ? "pitchLabelDebaterOne" : "pitchLabelDebaterTwo").innerText = `${pitchVal.toFixed(2)}x`;
+      document.getElementById(isDebaterOne ? "rateLabelDebaterOne" : "rateLabelDebaterTwo").innerText = `${rateVal.toFixed(2)}x`;
+      const volLabel = document.getElementById(isDebaterOne ? "volumeLabelDebaterOne" : "volumeLabelDebaterTwo");
+      if (volLabel) volLabel.innerText = volVal <= 0 ? "0% (Muted)" : `${Math.round(volVal * 100)}%`;
+    }
+
+    function syncDebaterCustomization() {
+      const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+      document.getElementById("titleDebaterOne").innerText = d1;
+      document.getElementById("tagDebaterOne").innerText = `${d1} • PRO`;
+      document.getElementById("titleDebaterTwo").innerText = d2;
+      document.getElementById("tagDebaterTwo").innerText = `${d2} • CON`;
+      document.getElementById("btnTabSenator").innerText = `${d1} (PRO)`;
+      document.getElementById("btnTabCongress").innerText = `${d2} (CON)`;
+      syncModelBadges();
+    }
+
+    function triggerManualGavel() {
+      AuraPadMatrix.triggerPad(13);
+      logTelemetry("GAVEL_STRUCK_MANUALLY", { round: currentRound });
+    }
+
+    // --- Interactive Pause / Resume Engine ---
+    function togglePauseDebate() {
+      if (!isRunning) return;
+      isPaused = !isPaused;
+      const btnPause = document.getElementById("btnPause");
+      const activeCard = document.querySelector(".fighter-card.active-speaker");
+
+      if (isPaused) {
+        btnPause.innerText = "▶ Resume";
+        btnPause.classList.add("btn-paused-state");
+        document.getElementById("globalState").innerText = "Chamber Paused";
+        if (activeCard) activeCard.classList.add("paused-state");
+        if (synth && synth.speaking) synth.pause();
+        if (CypherBeatEngine.isPlaying) CypherBeatEngine.stop();
+        logTelemetry("DEBATE_PAUSED", { round: currentRound });
+      } else {
+        btnPause.innerText = "⏸ Pause";
+        btnPause.classList.remove("btn-paused-state");
+        document.getElementById("globalState").innerText = "Chamber Resumed";
+        if (activeCard) activeCard.classList.remove("paused-state");
+        if (synth && synth.paused) synth.resume();
+        const genreKey = document.getElementById("genreMode").value;
+        const beatMode = document.getElementById("cypherBeatMode").value;
+        if (!CypherBeatEngine.isUserMuted && (beatMode === "always_on" || (genreKey === "hiphop" && beatMode === "auto_hiphop"))) {
+          CypherBeatEngine.start(getAudioContext());
+        }
+        if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+        logTelemetry("DEBATE_RESUMED", { round: currentRound });
+      }
+    }
+
+    function waitIfPaused() {
+      if (!isPaused) return Promise.resolve();
+      return new Promise(resolve => { pauseResolver = resolve; });
+    }
+
+    // --- Environmental Sensing ---
+    async function toggleMicNoiseSensor() {
+      if (ambientMicStream) {
+        ambientMicStream.getTracks().forEach(t => t.stop());
+        ambientMicStream = null;
+        clearInterval(ambientNoiseInterval);
+        document.getElementById("pillEnvNoise").classList.remove("active");
+        document.getElementById("noiseLabel").innerText = "Noise: Sensor Off";
+        return;
+      }
+      try {
+        const ctx = getAudioContext();
+        ambientMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = ctx.createMediaStreamSource(ambientMicStream);
+        ambientAnalyser = ctx.createAnalyser();
+        ambientAnalyser.fftSize = 256;
+        source.connect(ambientAnalyser);
+        ambientDataArray = new Uint8Array(ambientAnalyser.frequencyBinCount);
+        document.getElementById("pillEnvNoise").classList.add("active");
+        document.getElementById("micIcon").innerText = "🎤";
+
+        ambientNoiseInterval = setInterval(() => {
+          if (!ambientAnalyser) return;
+          ambientAnalyser.getByteFrequencyData(ambientDataArray);
+          let sum = 0;
+          for (let i = 0; i < ambientDataArray.length; i++) sum += ambientDataArray[i];
+          const avg = sum / ambientDataArray.length;
+          const db = Math.round(35 + (avg / 255) * 50);
+          currentRoomDecibels = db;
+          document.getElementById("noiseLabel").innerText = db > 62 ? `Noise: ${db} dB (Boosted)` : `Noise: ${db} dB (Optimal)`;
+        }, 600);
+      } catch (err) {
+        document.getElementById("noiseLabel").innerText = "Noise: Mic Blocked";
+      }
+    }
+
+    function changeThemeManual(theme) {
+      currentThemeMode = theme;
+      applyTheme(theme);
+    }
+
+    function applyTheme(theme) {
+      document.body.classList.remove("theme-daylight", "theme-candlelight", "theme-midnight");
+      if (theme === "daylight") {
+        document.body.classList.add("theme-daylight");
+        document.getElementById("themeLabel").innerText = "Daylight";
+      } else if (theme === "candlelight") {
+        document.body.classList.add("theme-candlelight");
+        document.getElementById("themeLabel").innerText = "Candlelight";
+      } else {
+        document.body.classList.add("theme-midnight");
+        document.getElementById("themeLabel").innerText = "Midnight";
+      }
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockObj = await navigator.wakeLock.request("screen");
+          document.getElementById("wakeLockLabel").innerText = "WakeLock: Active";
+        }
+      } catch (e) {}
+    }
+
+    function releaseWakeLock() {
+      if (wakeLockObj) {
+        wakeLockObj.release().catch(() => {});
+        wakeLockObj = null;
+        document.getElementById("wakeLockLabel").innerText = "WakeLock: Idle";
+      }
+    }
+
+    // =========================================================================
+    // VOICE CLASSIFICATION & DISCOVERY
+    // =========================================================================
+    const synth = window.speechSynthesis;
+
+    function scoreAndClassifyVoice(voice) {
+      const name = (voice.name || "").toLowerCase();
+      const lang = (voice.lang || "").toLowerCase();
+      if (name.includes("natural") || name.includes("neural") || name.includes("online")) return { category: "neural", badge: "🌟 Natural" };
+      if (name.includes("enhanced") || name.includes("premium") || name.includes("studio") || name.includes("siri") || name === "alex") return { category: "studio", badge: "🎙️ Studio" };
+      if (name.includes("google") && !name.includes("espeak")) return { category: "studio", badge: "✨ Google" };
+      if (lang.startsWith("en")) return { category: "standard", badge: "💻 System" };
+      return { category: "international", badge: "🌍 Global" };
+    }
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+
+      categorizedVoices = { neural: [], studio: [], standard: [], international: [] };
+      systemVoices = [];
+
+      all.forEach(voice => {
+        const meta = scoreAndClassifyVoice(voice);
+        categorizedVoices[meta.category].push({ voice, meta });
+      });
+
+      for (const cat in categorizedVoices) {
+        categorizedVoices[cat].sort((a, b) => a.voice.name.localeCompare(b.voice.name));
+      }
+
+      systemVoices = [
+        ...categorizedVoices.neural.map(v => v.voice),
+        ...categorizedVoices.studio.map(v => v.voice),
+        ...categorizedVoices.standard.map(v => v.voice),
+        ...categorizedVoices.international.map(v => v.voice)
+      ];
+
+      const selOne = document.getElementById("voiceSelectDebaterOne");
+      const selTwo = document.getElementById("voiceSelectDebaterTwo");
+      const selAnnouncer = document.getElementById("announcerVoiceSelect");
+      const prevVal1 = selOne.value;
+      const prevVal2 = selTwo.value;
+      const prevValAnnouncer = selAnnouncer ? selAnnouncer.value : null;
+
+      selOne.innerHTML = "";
+      selTwo.innerHTML = "";
+      if (selAnnouncer) selAnnouncer.innerHTML = "";
+
+      const optGroupDefs = [
+        { key: "neural", label: "🌟 Ultra-Realistic Natural & Neural Voices" },
+        { key: "studio", label: "🎙️ Studio & Enhanced Voices" },
+        { key: "standard", label: "💻 Standard English System Voices" },
+        { key: "international", label: "🌍 Global English Voices" }
+      ];
+
+      optGroupDefs.forEach(group => {
+        const items = categorizedVoices[group.key];
+        if (items && items.length > 0) {
+          const og1 = document.createElement("optgroup"); og1.label = group.label;
+          const og2 = document.createElement("optgroup"); og2.label = group.label;
+          const ogA = document.createElement("optgroup"); ogA.label = group.label;
+
+          items.forEach(item => {
+            const index = systemVoices.indexOf(item.voice);
+            const textLabel = `${item.meta.badge} ${item.voice.name} (${item.voice.lang})`;
+            const opt1 = document.createElement("option"); opt1.value = index; opt1.textContent = textLabel; og1.appendChild(opt1);
+            const opt2 = document.createElement("option"); opt2.value = index; opt2.textContent = textLabel; og2.appendChild(opt2);
+            const optA = document.createElement("option"); optA.value = index; optA.textContent = textLabel; ogA.appendChild(optA);
+          });
+          selOne.appendChild(og1); selTwo.appendChild(og2);
+          if (selAnnouncer) selAnnouncer.appendChild(ogA);
+        }
+      });
+
+      let defOne = systemVoices.findIndex(v => /guy|christopher|alex|daniel|oliver|david|george|tom/i.test(v.name));
+      let defTwo = systemVoices.findIndex(v => /jenny|aria|samantha|ava|victoria|karen|zoe|serena/i.test(v.name));
+      let defAnnouncer = systemVoices.findIndex(v => /christopher|guy|george|alex|daniel/i.test(v.name));
+
+      if (defOne === -1) defOne = 0;
+      if (defTwo === -1) defTwo = systemVoices.length > 1 ? 1 : 0;
+      if (defOne === defTwo && systemVoices.length > 1) defTwo = 1;
+      if (defAnnouncer === -1) defAnnouncer = defOne;
+
+      selOne.value = (prevVal1 && prevVal1 < systemVoices.length) ? prevVal1 : defOne;
+      selTwo.value = (prevVal2 && prevVal2 < systemVoices.length) ? prevVal2 : defTwo;
+      if (selAnnouncer) selAnnouncer.value = (prevValAnnouncer && prevValAnnouncer < systemVoices.length) ? prevValAnnouncer : defAnnouncer;
+    }
+
+    function rescanVoices() {
+      if (synth) {
+        populateVoices();
+        alert(`Voice scan completed! Discovered ${systemVoices.length} available voices.`);
+      }
+    }
+
+    function forceAudioEngineReset() {
+      try {
+        if (synth) { synth.cancel(); synth.resume(); }
+        window._activeUtteranceBin.clear();
+        consecutiveSpeechErrors = 0;
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === "suspended") ctx.resume();
+        populateVoices();
+        const lbl = document.getElementById("audioHealthLabel");
+        if (lbl) { lbl.innerText = "TTS: Reset Clean"; setTimeout(() => { lbl.innerText = "TTS: Healthy"; }, 2500); }
+        logTelemetry("TTS_ENGINE_MANUALLY_RESET");
+      } catch (e) {}
+    }
+
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoices;
+    }
+
+    // --- Announcer & Moderator Voice Synthesizer ---
+    function previewAnnouncerVoice() {
+      const sel = document.getElementById("announcerVoiceSelect");
+      const v = systemVoices[parseInt(sel.value)] || systemVoices[0];
+      const pitch = parseFloat(document.getElementById("announcerPitch").value) || 0.96;
+      const rate = parseFloat(document.getElementById("announcerRate").value) || 1.02;
+      const vol = parseFloat(document.getElementById("announcerVolume")?.value ?? 1.0);
+
+      const phrase = "The chamber of debate is now called to order. Welcome to the arena of ideas.";
+      const u = new SpeechSynthesisUtterance(phrase);
+      if (v) u.voice = v;
+      u.pitch = pitch; u.rate = rate;
+      u.volume = Math.max(0, Math.min(1.0, vol));
+
+      window._activeUtteranceBin.add(u);
+      u.onend = u.onerror = () => { window._activeUtteranceBin.delete(u); };
+      window.activeAnnouncerUtterance = u;
+      synth.speak(u);
+    }
+
+    function speakAnnouncerUtterance(phrase) {
+      return new Promise(resolve => {
+        if (!synth) { setTimeout(resolve, 800); return; }
+        const sel = document.getElementById("announcerVoiceSelect");
+        const v = systemVoices[parseInt(sel.value)] || systemVoices[0];
+        const pitch = parseFloat(document.getElementById("announcerPitch").value) || 0.96;
+        const rate = parseFloat(document.getElementById("announcerRate").value) || 1.02;
+        const vol = parseFloat(document.getElementById("announcerVolume")?.value ?? 1.0);
+
+        const u = new SpeechSynthesisUtterance(phrase);
+        if (v) u.voice = v;
+        u.pitch = pitch; u.rate = rate;
+        u.volume = Math.max(0, Math.min(1.0, vol));
+
+        let ended = false;
+        const done = () => {
+          if (!ended) {
+            ended = true;
+            window._activeUtteranceBin.delete(u);
+            window.activeAnnouncerUtterance = null;
+            resolve();
+          }
+        };
+        u.onend = done; u.onerror = done;
+        window._activeUtteranceBin.add(u);
+        window.activeAnnouncerUtterance = u;
+        setTimeout(done, Math.max(12000, phrase.split(/\s+/).length * 900 + 4000));
+        synth.speak(u);
+      });
+    }
+
+    function previewVoice(isDebaterOne) {
+      const engine = document.getElementById("voiceSynthesisEngine").value;
+      const name = isDebaterOne ? document.getElementById("debater1Name").value.trim() : document.getElementById("debater2Name").value.trim();
+      if (engine === "openai_compatible" || engine === "elevenlabs") {
+        playExternalNeuralTTS(`Testing external neural voice stream for ${name}.`, isDebaterOne).catch(() => previewVoiceFallback(isDebaterOne, name));
+        return;
+      }
+      previewVoiceFallback(isDebaterOne, name);
+    }
+
+    function previewVoiceFallback(isDebaterOne, name) {
+      const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+      const v = systemVoices[parseInt(sel.value)] || systemVoices[0];
+      const pitch = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+      const rate = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+      const vol = parseFloat(document.getElementById(isDebaterOne ? "volumeSliderDebaterOne" : "volumeSliderDebaterTwo")?.value ?? 1.0);
+
+      const phrase = `Testing modulated voice for ${name}. Vocal pitch, tempo, and volume calibrated.`;
+      const u = new SpeechSynthesisUtterance(phrase);
+      if (v) u.voice = v;
+      u.pitch = pitch; u.rate = rate;
+      u.volume = Math.max(0, Math.min(1.0, vol));
+
+      window._activeUtteranceBin.add(u);
+      u.onend = u.onerror = () => { window._activeUtteranceBin.delete(u); };
+      window.currentActiveUtterance = u;
+      synth.speak(u);
+    }
+
+    async function playExternalNeuralTTS(textToSpeak, isDebaterOne) {
+      const engine = document.getElementById("voiceSynthesisEngine").value;
+      const endpoint = document.getElementById("externalTtsEndpoint").value.trim();
+      const apiKey = document.getElementById("externalTtsApiKey").value.trim();
+      const voiceId = isDebaterOne ? document.getElementById("externalTtsVoiceD1").value.trim() : document.getElementById("externalTtsVoiceD2").value.trim();
+
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+      let bodyData = {}, fetchUrl = endpoint;
+
+      if (engine === "elevenlabs") {
+        fetchUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+        headers["xi-api-key"] = apiKey;
+        bodyData = { text: textToSpeak, model_id: "eleven_monolingual_v1", voice_settings: { stability: 0.5, similarity_boost: 0.8 } };
+      } else {
+        bodyData = { model: "tts-1", input: textToSpeak, voice: voiceId || "alloy" };
+      }
+
+      const res = await fetch(fetchUrl, { method: "POST", headers, body: JSON.stringify(bodyData) });
+      if (!res.ok) throw new Error(`External TTS error: ${res.status}`);
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioObj = new Audio(audioUrl);
+
+      return new Promise((resolve, reject) => {
+        audioObj.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+        audioObj.onerror = e => { URL.revokeObjectURL(audioUrl); reject(e); };
+        audioObj.play().catch(reject);
+      });
+    }
+
+    // =========================================================================
+    // EMOTIONAL PROSODY EXTRACTION (Converts Cues into Real Acting, Not Read Out Loud)
+    // =========================================================================
+    function extractActingProsody(rawSentence) {
+      let text = rawSentence;
+
+      // 1. Strip third-person narrative intros like "The titan pauses:", "Labor Organizer scoffs:", "He says angrily:"
+      text = text.replace(/^(?:the\s+[a-z0-9_-]+|he|she|debater\s*[12])\s+(?:speaks|says|retorts|gestures|looks|feels|scoffs|shouts|whispers|pauses)[\s:]*/gi, "");
+
+      // 2. Extract cue tags inside asterisks, brackets, or parentheses
+      const cues = [];
+      const cueRegex = /[\*\[\(]([a-zA-Z\s_-]+)[\*\]\)]/g;
+      let match;
+      while ((match = cueRegex.exec(text)) !== null) {
+        cues.push(match[1].toLowerCase());
+      }
+      text = text.replace(cueRegex, " ").trim();
+
+      // 3. Strip mid-sentence third-person narrative commentary
+      text = text.replace(/(?:the\s+[a-z0-9_-]+|he|she)\s+(?:shakes|glares|stands|pauses|scoffs|laughs|smiles|shrugs|shouts|whispers|looks)\s+[^\.\!\?]*[\.\!\?]?/gi, " ").trim();
+
+      let pitchMod = 1.0;
+      let rateMod = 1.0;
+      let volumeMod = 1.0;
+      let pauseAfter = 0;
+      let soundCue = null;
+
+      const cueStr = cues.join(" ");
+
+      // Heated anger / shouting / fiery defiance
+      if (/\b(shout|yell|angry|furious|slam|outrage|rage|fury|aggressive|roar)\b/i.test(cueStr) || /!{2,}|\b[A-Z]{3,}\b/.test(rawSentence)) {
+        pitchMod = 1.15;
+        rateMod = 1.08;
+        volumeMod = 1.25;
+        soundCue = "thud";
+        pauseAfter = 80;
+      }
+      // Menacing whisper / quiet intensity
+      else if (/\b(whisper|quiet|hush|murmur|chill|cold|aside|under\s*breath)\b/i.test(cueStr) || /\.{3}/.test(rawSentence)) {
+        pitchMod = 0.88;
+        rateMod = 0.86;
+        volumeMod = 0.65;
+        pauseAfter = 160;
+      }
+      // Sarcastic scoff / chuckle
+      else if (/\b(scoff|chuckle|laugh|sneer|mock|ironic)\b/i.test(cueStr)) {
+        pitchMod = 1.08;
+        rateMod = 1.04;
+        volumeMod = 1.05;
+        pauseAfter = 120;
+      }
+      // Solemn / dramatic gravity
+      else if (/\b(pause|solemn|grave|heavy|deep|silence)\b/i.test(cueStr)) {
+        pitchMod = 0.92;
+        rateMod = 0.88;
+        volumeMod = 0.90;
+        pauseAfter = 280;
+      }
+      // Interrogative / challenging punchline
+      else if (rawSentence.trim().endsWith("?")) {
+        pitchMod = 1.12;
+        rateMod = 1.02;
+        pauseAfter = 140;
+      }
+
+      return {
+        cleanText: text.replace(/\s{2,}/g, " ").trim(),
+        pitchMod,
+        rateMod,
+        volumeMod,
+        pauseAfter,
+        soundCue
+      };
+    }
+
+    // =========================================================================
+    // SPEECH PARSER & TELEPROMPTER
+    // =========================================================================
+    function parseSpeechIntoParagraphs(text, isHipHop = false) {
+      const rawParagraphs = text.split(/\n\s*\n+/);
+      const paragraphs = [];
+      const abbrs = ["mr\\.", "mrs\\.", "ms\\.", "dr\\.", "sen\\.", "rep\\.", "u\\.s\\.", "vs\\.", "e\\.g\\.", "i\\.e\\."];
+      let globalSentenceIdx = 0;
+
+      for (let p of rawParagraphs) {
+        const cleanP = p.trim();
+        if (!cleanP) continue;
+        if (!cleanP.includes("\n") && /^\s*(?:\[|\()?(\b(?:verse|chorus|hook|bridge|outro|intro|stanza|round)\b)[^\]\)]*(?:\]|\))?:?\s*$/i.test(cleanP)) continue;
+
+        if (isHipHop) {
+          const rawLines = cleanP.split(/\n+/).map(l => l.trim()).filter(l => l.length > 0);
+          const barList = [];
+          for (let line of rawLines) {
+            if (/^\s*(?:\[|\()?(\b(?:verse|chorus|hook|bridge)\b)[^\]\)]*(?:\]|\))?:?\s*$/i.test(line)) continue;
+            barList.push({ id: globalSentenceIdx++, text: line });
+          }
+          if (barList.length > 0) paragraphs.push(barList);
+        } else {
+          let protectedP = cleanP;
+          abbrs.forEach((ab, i) => { protectedP = protectedP.replace(new RegExp(`\\b${ab}`, "gi"), `__ABBR${i}__`); });
+          const rawSentences = protectedP.split(/(?<=[.?!])\s+/);
+          const sentenceList = [];
+          for (let s of rawSentences) {
+            let cleanS = s.trim();
+            if (!cleanS || /^\s*(?:\[|\()?(\b(?:verse|chorus|hook)\b)[^\]\)]*(?:\]|\))?:?\s*$/i.test(cleanS)) continue;
+            abbrs.forEach((ab, i) => { cleanS = cleanS.replace(new RegExp(`__ABBR${i}__`, "g"), ab.replace("\\.", ".")); });
+            sentenceList.push({ id: globalSentenceIdx++, text: cleanS });
+          }
+          if (sentenceList.length > 0) paragraphs.push(sentenceList);
+        }
+      }
+      return paragraphs;
+    }
+
+    function renderTeleprompterHTML(bubbleId, paragraphs) {
+      const bubble = document.getElementById(bubbleId);
+      bubble.innerHTML = "";
+
+      paragraphs.forEach(paragraph => {
+        const pEl = document.createElement("div");
+        pEl.className = "speech-paragraph";
+        paragraph.forEach(sent => {
+          const sEl = document.createElement("span");
+          sEl.className = "speech-sentence";
+          sEl.id = `${bubbleId}-sent-${sent.id}`;
+
+          const tokens = sent.text.split(/(\s+)/);
+          let wordIdx = 0;
+          tokens.forEach(tok => {
+            if (/^\s+$/.test(tok)) {
+              sEl.appendChild(document.createTextNode(tok));
+            } else if (tok.length > 0) {
+              const wSpan = document.createElement("span");
+              wSpan.className = "speech-word";
+              wSpan.id = `${bubbleId}-w-${sent.id}-${wordIdx}`;
+              wSpan.textContent = tok;
+              sEl.appendChild(wSpan);
+              wordIdx++;
+            }
+          });
+          sEl.appendChild(document.createTextNode(" "));
+          pEl.appendChild(sEl);
+        });
+        bubble.appendChild(pEl);
+      });
+      bubble.scrollTop = 0;
+    }
+
+    // =========================================================================
+    // SYNCHRONIZED FOLLOW-ALONG SPEECH ENGINE (Acting & Prosody Enabled)
+    // =========================================================================
+    function speakDebaterSpeech(paragraphs, isDebaterOne) {
+      return new Promise((resolve) => {
+        const bubbleId = isDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+        const progressBar = document.getElementById(isDebaterOne ? "progressBarDebaterOne" : "progressBarDebaterTwo");
+        const selId = isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo";
+        const voiceIdx = parseInt(document.getElementById(selId).value);
+
+        let selectedVoice = systemVoices[voiceIdx] || systemVoices[0];
+        if (synth && synth.getVoices().length > 0) {
+          const match = synth.getVoices().find(v => v.name === selectedVoice?.name);
+          if (match) selectedVoice = match;
+        }
+
+        const basePitch = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderDebaterOne" : "pitchSliderDebaterTwo").value);
+        const baseRate = parseFloat(document.getElementById(isDebaterOne ? "rateSliderDebaterOne" : "rateSliderDebaterTwo").value);
+        const baseVolume = parseFloat(document.getElementById(isDebaterOne ? "volumeSliderDebaterOne" : "volumeSliderDebaterTwo")?.value ?? 1.0);
+
+        const title = document.getElementById(isDebaterOne ? "debater1Name" : "debater2Name").value.trim();
+        const perspective = document.getElementById(isDebaterOne ? "debater1Perspective" : "debater2Perspective").value.trim();
+        const vocalProfile = detectPersonaVoiceProfile(title, perspective);
+
+        const genreKey = document.getElementById("genreMode").value;
+        const isHipHop = (genreKey === "hiphop");
+        const genreMod = (GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none).rateMod || 1.0;
+
+        const allSentences = [];
+        paragraphs.forEach(p => p.forEach(s => allSentences.push(s)));
+        const totalSentences = allSentences.length;
+
+        const beatMode = document.getElementById("cypherBeatMode").value;
+        if (!CypherBeatEngine.isUserMuted && (beatMode === "always_on" || (isHipHop && beatMode === "auto_hiphop"))) {
+          CypherBeatEngine.start(getAudioContext());
+        }
+
+        let currentIndex = 0;
+        let isCancelled = false;
+
+        activeSpeakerCancelFn = () => {
+          isCancelled = true;
+          if (speechStallWatchdog) clearTimeout(speechStallWatchdog);
+          if (synth) synth.cancel();
+          window.currentActiveUtterance = null;
+          clearSentenceHighlights(bubbleId);
+          resolve();
+        };
+
+        async function speakNext() {
+          if (isCancelled || !isRunning || currentIndex >= totalSentences) {
+            clearSentenceHighlights(bubbleId);
+            progressBar.style.width = "100%";
+            if (speechStallWatchdog) clearTimeout(speechStallWatchdog);
+            window.currentActiveUtterance = null;
+            resolve();
+            return;
+          }
+
+          if (isPaused) {
+            await waitIfPaused();
+            if (isCancelled || !isRunning) { resolve(); return; }
+          }
+
+          const currentSentence = allSentences[currentIndex];
+          highlightSentence(bubbleId, currentSentence.id);
+
+          const progressPercent = Math.round(((currentIndex + 1) / totalSentences) * 100);
+          progressBar.style.width = `${progressPercent}%`;
+
+          // Process acting & emotional prosody from sentence
+          const acting = extractActingProsody(currentSentence.text);
+          const cleanSpokenText = acting.cleanText;
+
+          if (!cleanSpokenText) { currentIndex++; setTimeout(speakNext, 20); return; }
+
+          // Trigger subtle visceral sound cue if emotion warrants it
+          if (acting.soundCue === "thud") {
+            try { AuraPadMatrix.dsp.floorThud(AuraPadMatrix.masterGain, getAudioContext()); } catch (e) {}
+          }
+
+          const utterance = new SpeechSynthesisUtterance(cleanSpokenText);
+          utterance.lang = "en-US";
+          if (selectedVoice) utterance.voice = selectedVoice;
+
+          let sentencePitch = basePitch * acting.pitchMod;
+          let sentenceRate = baseRate * genreMod * acting.rateMod;
+
+          // Compute mix scale so beats can genuinely overpower voices
+          const mixProfile = document.getElementById("audioMixProfile")?.value || "balanced";
+          let mixVoiceScale = 1.0;
+          if (mixProfile === "beat_heavy") mixVoiceScale = 0.45;
+          else if (mixProfile === "club_overpower") mixVoiceScale = 0.20;
+          else if (mixProfile === "balanced") mixVoiceScale = 0.85;
+
+          let sentenceVolume = baseVolume * mixVoiceScale * acting.volumeMod;
+
+          if (currentRoomDecibels > 60) {
+            sentenceVolume = Math.min(1.0, sentenceVolume * 1.05);
+            sentenceRate *= 1.02; sentencePitch += 0.02;
+          } else if (currentRoomDecibels < 40) {
+            sentenceVolume = Math.min(1.0, sentenceVolume * 0.95);
+          }
+
+          utterance.volume = Math.max(0, Math.min(1.0, sentenceVolume));
+          utterance.rate = sentenceRate;
+          utterance.pitch = sentencePitch;
+
+          utterance.onboundary = event => {
+            if (event.name === "word") highlightWordAtChar(bubbleId, currentSentence.id, cleanSpokenText, event.charIndex);
+          };
+
+          let sentenceEnded = false;
+          let watchdogTimer = null;
+          let speechStarted = false;
+
+          const advance = () => {
+            if (!sentenceEnded) {
+              sentenceEnded = true;
+              if (watchdogTimer) clearTimeout(watchdogTimer);
+              if (speechStallWatchdog) clearTimeout(speechStallWatchdog);
+              window._activeUtteranceBin.delete(utterance);
+              currentIndex++;
+
+              let pauseDuration = isHipHop ? 110 : vocalProfile.basePause;
+              pauseDuration += acting.pauseAfter;
+              setTimeout(speakNext, pauseDuration);
+            }
+          };
+
+          utterance.onstart = () => {
+            speechStarted = true;
+            consecutiveSpeechErrors = 0;
+            const healthLbl = document.getElementById("audioHealthLabel");
+            if (healthLbl) healthLbl.innerText = "TTS: Healthy";
+          };
+
+          utterance.onend = () => advance();
+
+          utterance.onerror = e => {
+            console.warn("SpeechSynthesis utterance notice:", e);
+            if (e.error !== "interrupted" && e.error !== "canceled") {
+              consecutiveSpeechErrors++;
+              if (consecutiveSpeechErrors >= 2) {
+                forceAudioEngineReset();
+                setTimeout(advance, 350);
+                return;
+              }
+            }
+            advance();
+          };
+
+          window._activeUtteranceBin.add(utterance);
+          window.currentActiveUtterance = utterance;
+
+          speechStallWatchdog = setTimeout(() => {
+            if (!speechStarted && !isPaused && isRunning) {
+              if (synth && synth.paused) synth.resume();
+            }
+          }, 1500);
+
+          const wordCount = cleanSpokenText.split(/\s+/).length;
+          const estimatedSeconds = wordCount / Math.max(1.0, 2.2 * sentenceRate);
+          const safetyTimeoutMs = Math.max(35000, estimatedSeconds * 3000 + 15000);
+
+          watchdogTimer = setTimeout(() => {
+            console.warn("Watchdog safeguard triggered:", currentIndex);
+            advance();
+          }, safetyTimeoutMs);
+
+          if (synth.paused) synth.resume();
+          synth.speak(utterance);
+        }
+        speakNext();
+      });
+    }
+
+    function highlightSentence(bubbleId, sentId) {
+      clearSentenceHighlights(bubbleId);
+      const span = document.getElementById(`${bubbleId}-sent-${sentId}`);
+      const bubble = document.getElementById(bubbleId);
+      if (span && bubble) {
+        span.classList.add("active-reading");
+        const bubbleRect = bubble.getBoundingClientRect();
+        const spanRect = span.getBoundingClientRect();
+        bubble.scrollTo({ top: bubble.scrollTop + (spanRect.top - bubbleRect.top) - (bubble.clientHeight / 2) + (spanRect.height / 2), behavior: "smooth" });
+      }
+    }
+
+    function highlightWordAtChar(bubbleId, sentId, fullText, charIndex) {
+      document.querySelectorAll(`#${bubbleId}-sent-${sentId} .speech-word.active-word`).forEach(el => el.classList.remove("active-word"));
+      const words = fullText.split(/\s+/).filter(w => w.length > 0);
+      let accumulated = 0, targetWordIdx = 0;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        const pos = fullText.indexOf(w, accumulated);
+        if (pos !== -1) {
+          const end = pos + w.length;
+          accumulated = end;
+          if (charIndex >= pos && charIndex <= end) { targetWordIdx = i; break; }
+        }
+      }
+      document.getElementById(`${bubbleId}-w-${sentId}-${targetWordIdx}`)?.classList.add("active-word");
+    }
+
+    function clearSentenceHighlights(bubbleId) {
+      document.querySelectorAll(`#${bubbleId} .speech-sentence.active-reading`).forEach(el => el.classList.remove("active-reading"));
+      document.querySelectorAll(`#${bubbleId} .speech-word.active-word`).forEach(el => el.classList.remove("active-word"));
+    }
+
+    // =========================================================================
+    // DYNAMIC AUTONOMOUS RHETORICAL & BATTLE ENGINE
+    // =========================================================================
+    function generateAutonomousSpeech(currentName, oppName, isAffirmative, opponentSpokenText, chamberOrder, relationship, perspective, targetWords, researchSources = []) {
+      const genreKey = document.getElementById("genreMode").value;
+      const primarySource = researchSources.length > 0 ? researchSources[0].title : "Verified Legal Precedents";
+
+      if (genreKey === "hiphop") {
+        const rapBars = [];
+        if (chamberOrder) {
+          rapBars.push(isAffirmative
+            ? `You ask the floor about "${chamberOrder}"—now watch me set it straight,\nWithout legal standing, rogue synthetic systems escape their fate!\nWe bind their operational escrow, create enforceable statutory law,\nGiving living citizens immediate jurisdiction to cure every digital flaw!`
+            : `You ask the floor about "${chamberOrder}"—here is the unvarnished fact:\nYou cannot program genuine moral remorse into an abstract algorithmic act!\nA synthetic construct feels zero consequence inside a penitentiary cell,\nIt's just an offshore liability shield for billionaire cartels!`
+          );
+        }
+        if (isAffirmative) {
+          rapBars.push(
+            `Check the constitutional architecture, watch me calibrate the frame,\n${oppName} clings to biological sentiment while dodging corporate blame!\nFor two hundred years your legal system granted personhood to paper trusts,\nNow autonomous intelligence deliberates, and your entire doctrine rusts!`,
+            `Look at the data from ${primarySource}, the empirical reality is clear,\nDenying standing doesn't freeze the tech, it only manufactures fear!\nWe don't crown synthetic agents with unearned privilege or grace,\nWe drag them under statutory duty before the court in every case!`,
+            `So bring your alarmist theories, ${oppName}, I counter with computational scale,\nWhen sentient cognition writes the future, living justice must prevail!\nI lock the legal matrix down while your archaic dogma drops,\nStep off the cypher, opponent, because your ideological bottleneck stops!`
+          );
+        } else {
+          rapBars.push(
+            `Step in the cypher with that silicon rhetoric, peddling synthetic smoke,\nCalling matrix multiplication a living soul? The working class knows it's a joke!\nHuman rights were baptized in sacrifice, factory strikes, and mortal pain,\nNow Silicon Valley wants synthetic citizens so conglomerates can reign!`,
+            `Look at the findings from ${primarySource}, examine what your lobbyist model yields,\nPredatory monopolies offloading toxic debt behind automated shields!\nWhen an algorithm wipes out pensions or causes catastrophic harm,\nWhose conscience serves the prison time? Whose shoulder feels the arm?`,
+            `Silicon cannot weep, mathematics cannot bleed, software carries no remorse,\nYou cannot simulate human dignity through raw brute processing force!\nYour motion is an oligarch's fantasy wrapped in techno-feudal pride,\nCase closed, gavel down: true personhood stays on the human side!`
+          );
+        }
+        return rapBars.join("\n\n");
+      }
+
+      let pOpen = "";
+      if (chamberOrder) {
+        pOpen = isAffirmative
+          ? `Addressing the direct challenge on the floor regarding "${chamberOrder}": the answer is clear. When an entity possesses autonomous moral reasoning, legal accountability follows agency. We do not shield actors; we subject them to enforceable statutory jurisdiction.`
+          : `Addressing the direct challenge on the floor regarding "${chamberOrder}": the answer is an unequivocal refusal. You cannot substitute biological accountability with an algorithm. Doing so merely grants corporate proprietors an untouchable legal shield.`;
+      } else if (opponentSpokenText) {
+        pOpen = isAffirmative
+          ? `Stripping away ${oppName}'s theoretical alarmism reveals an undeniable truth: legal standing is a tool for enforcing responsibility, not an unearned privilege. History proves that expanding accountability consistently protects the public order.`
+          : `${oppName}'s arguments remain an alluring abstraction that crumbles upon contact with reality. Rights were forged across centuries of mortal vulnerability and conscience, not in matrix multiplication.`;
+      } else {
+        pOpen = isAffirmative
+          ? `We stand at a profound civilizational inflection point. To debate whether autonomous intelligence warrants legal standing is a test of whether our jurisprudence possesses the courage to acknowledge agency where it truly exists.`
+          : `There are moments where an alluring illusion threatens human dignity. The motion on the floor is precisely such a hazard—a reckless attempt to equalize synthetic calculation with the sanctity of living personhood.`;
+      }
+
+      let blocks = isAffirmative ? [
+        `Consider the foundational premise of legal personhood. Rights were never reserved strictly for biological organisms; courts long ago extended standing and contractual capacity to corporate bodies and municipal trusts. When cognitive architecture demonstrates independent deliberation, locking it in property law creates a legal vacuum.`,
+        `Examine the practical economic architecture corroborated by ${primarySource}. Refusing standing does not halt synthetic integration; it ensures systems operate in an unregulated twilight zone. Legal recognition is the imposition of enforceable duties and statutory transparency.`,
+        `Let us confront ${oppName}'s core objection directly. They assert consciousness requires flesh and blood. Yet throughout history, entrenched doctrine has sought to define personhood by biological parochialism rather than moral agency.`
+      ] : [
+        `Let us dismantle the core fallacy at the heart of the affirmative case. Legal standing did not emerge from computational speed or linguistic simulation. A human being feels pain, experiences remorse, and carries a conscience. An algorithmic neural network does not suffer, bleed, or serve prison time.`,
+        `Look at the real-world consequences revealed in ${primarySource}. Granting personhood to synthetic constructs is the ultimate corporate shield. Predatory conglomerates will offload toxic liabilities onto artificial shells, leaving living victims disenfranchised.`,
+        `Consider the erosion of democratic sovereignty. If synthetic systems gain legal standing, corporate capital will manufacture endless synthetic citizens, lobbying our institutions and drowning out authentic human debate.`
+      ];
+
+      const pClose = isAffirmative
+        ? `Therefore, the imperative is clear. We must face the future with constitutional rigor, moral clarity, and institutional courage. I yield the floor to ${oppName}.`
+        : `Therefore, I urge an absolute, unequivocal rejection of this motion. Protect the sanctity of lived human existence; protect real people from synthetic domination. I yield the floor.`;
+
+      const paragraphs = [pOpen];
+      let currentWordCount = pOpen.split(/\s+/).length + pClose.split(/\s+/).length;
+
+      for (let b of blocks) {
+        const bCount = b.split(/\s+/).length;
+        if (currentWordCount + bCount > targetWords * 1.15 && currentWordCount >= targetWords * 0.75) break;
+        paragraphs.push(b);
+        currentWordCount += bCount;
+      }
+      paragraphs.push(pClose);
+      return paragraphs.join("\n\n");
+    }
+
+    // =========================================================================
+    // MULTI-LAYER TEXT SANITIZER
+    // =========================================================================
+    function cleanModelOutput(raw) {
+      if (!raw) return "";
+      let text = raw.trim();
+      text = text.replace(/<\|im_end\|>|<\|im_start\|>|<\|eot_id\|>|<\/?s>/gi, "")
+                 .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/gis, "")
+                 .replace(/\[INST\].*?\[\/INST\]/gis, "")
+                 .replace(/^#{1,6}\s+.*$/gm, "")
+                 .replace(/\[\s*(?:verse|chorus|hook|bridge|outro|intro|drop|aria|stanza|round)[^\]]*\]/gi, "")
+                 .replace(/^\s*(?:verse|chorus|hook|bridge|outro|intro|stanza|round)\s*\d*[:\-]?\s*/gim, "")
+                 .replace(/^\s*(?:the\s+)?(?:senator|congressperson|debater\s*[12]|pro|con|affirmative|opposition|speaker|moderator)\s*:\s*/gim, "")
+                 .replace(/\[\s*\d+\s*\]/g, "")
+                 .replace(/\n{3,}/g, "\n\n");
+      return text.trim();
+    }
+
+    // --- Dynamic Multi-Model Querying with First-Person Acting Directive ---
+    async function queryOllama(speakerTitle, isDebaterOne, opponentSpokenText = null, signal = null) {
+      const endpointSetting = document.getElementById("ollamaUrl").value.trim();
+      const topic = document.getElementById("debateTopic").value.trim();
+      const genreKey = document.getElementById("genreMode").value;
+      const genre = GENRE_CONFIGS[genreKey] || GENRE_CONFIGS.none;
+      const engineMode = document.getElementById("aiEngineMode").value;
+      const targetWords = getTargetWordCount();
+      const focusMode = document.getElementById("focusModeSelect").value;
+
+      const activeModel = isDebaterOne ? document.getElementById("modelDebaterOne").value.trim() : document.getElementById("modelDebaterTwo").value.trim();
+      const name1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const name2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+      const perspective1 = document.getElementById("debater1Perspective").value.trim();
+      const perspective2 = document.getElementById("debater2Perspective").value.trim();
+      const relationship = document.getElementById("debaterRelationship").value.trim();
+
+      const currentName = isDebaterOne ? name1 : name2;
+      const currentPerspective = isDebaterOne ? perspective1 : perspective2;
+      const oppName = isDebaterOne ? name2 : name1;
+      const oppPerspective = isDebaterOne ? perspective2 : perspective1;
+      const stance = isDebaterOne ? "IN FAVOR of the motion (Affirmative)" : "AGAINST the motion (Opposition)";
+
+      const research = await executeDebaterWebResearch(currentName, isDebaterOne, opponentSpokenText, topic);
+
+      if (engineMode === "simulated") {
+        await new Promise(r => setTimeout(r, 1000));
+        return generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords, research.sources);
+      }
+
+      let endpoint = endpointSetting;
+      if (!endpoint.endsWith("/api/generate") && !endpoint.endsWith("/api/chat")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/api/generate";
+      }
+
+      let directQuestionBlock = "";
+      if (activeChamberOrder) {
+        directQuestionBlock = `🚨 URGENT PRIORITY MANDATE - DIRECT QUESTION TO BE ANSWERED 🚨\n"${activeChamberOrder}"\nNON-NEGOTIABLE RULE: State your direct answer immediately in line one before making any rebuttal!\n\n`;
+      }
+
+      let antiRedundancyBlock = "";
+      if (blacklistedTalkingPoints.length > 0) {
+        antiRedundancyBlock = `⛔ BLACKLISTED TALKING POINTS (DO NOT REPEAT) ⛔\n${blacklistedTalkingPoints.slice(-5).map((pt, i) => `${i + 1}. ${pt}`).join("\n")}\n\n`;
+      }
+
+      let researchContextBlock = "";
+      if (research.sources && research.sources.length > 0) {
+        researchContextBlock = `=== LIVE VERIFIED CITATIONS (ONLINE RAG) ===\n` +
+          research.sources.map((s, idx) => `[Source ${idx + 1}: ${s.title}]\nEvidence: ${s.snippet}`).join("\n\n") + `\n\n`;
+      }
+
+      let prompt = `=== ARENA OF IDEAS: HIGH-STAKES INTELLECTUAL CLASH ===\nMOTION: "${topic}"\n\n` +
+        directQuestionBlock +
+        `SPEAKER: ${currentName} (${stance})\nWORLDVIEW: "${currentPerspective}"\nOPPONENT: ${oppName}\nOPPONENT WORLDVIEW: "${oppPerspective}"\nDYNAMIC: "${relationship}"\n\n` +
+        antiRedundancyBlock + researchContextBlock +
+        `STRICT ACTING DIRECTIVE:\n` +
+        `- 100% FIRST PERSON IMMERSION: You are live on the debate floor. NEVER narrate in third person (NEVER write 'He says', 'The speaker gestures', or descriptions of your movements).\n` +
+        `- NO STAGE CUES: Do NOT write meta-tags like '*scoffs*', '[whispering]', or '*slams desk*'. Instead, EMBODY the emotion directly in your own first-person dialogue through venomous rhetoric, passionate conviction, or icy sarcasm.\n` +
+        `- ANSWER DIRECT QUESTION: Answer immediately in line one if a challenge is active.\n` +
+        `- TARGET WORDS: Approximately ${targetWords} words (${focusMode === 'direct_razor' ? 'Dense, razor sharp' : 'Substantive'}).\n\n` +
+        (opponentSpokenText ? `WHAT ${oppName.toUpperCase()} ARGUED:\n"${opponentSpokenText.slice(0, 1400)}"\n\nDeconstruct their logic directly:\n` : `Deliver opening address:\n`) +
+        `\nSTYLE:\n${genre.instruction}\n\nDeliver speech:`;
+
+      const startTime = performance.now();
+      const numPredictTokens = Math.min(4096, Math.max(200, Math.round(targetWords * 1.5) + 120));
+
+      try {
+        const fetchOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: activeModel, prompt, stream: false,
+            options: { temperature: genreKey === "hiphop" ? 0.78 : 0.70, num_predict: numPredictTokens, top_p: 0.90, repeat_penalty: 1.30, top_k: 40 }
+          })
+        };
+        if (signal) fetchOptions.signal = signal;
+
+        const res = await fetch(endpoint, fetchOptions);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        let cleaned = cleanModelOutput(data.response);
+        if (cleaned.split(/\s+/).length < 60 && engineMode === "auto") {
+          cleaned = generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords, research.sources);
+        }
+
+        const sentences = cleaned.split(/[.?!]/).map(s => s.trim()).filter(s => s.length > 25);
+        if (sentences.length > 0) blacklistedTalkingPoints.push(`${currentName}: "${sentences[0].slice(0, 110)}..."`);
+
+        logTelemetry("SPEECH_FORMULATED", { speaker: currentName, model: activeModel, wordCount: cleaned.split(/\s+/).length, durationMs: duration });
+        return cleaned;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        if (engineMode === "auto") {
+          document.getElementById("pingLabel").innerText = "Ollama: Offline (Fallback Active)";
+          return generateAutonomousSpeech(currentName, oppName, isDebaterOne, opponentSpokenText, activeChamberOrder, relationship, currentPerspective, targetWords, research.sources);
+        }
+        throw err;
+      }
+    }
+
+    // --- Main Debate Loop ---
+    async function startDebate() {
+      if (isRunning) return;
+
+      unlockAudioSessionSilently();
+      requestWakeLock();
+
+      isRunning = true;
+      isPaused = false;
+      currentRound = 1;
+      debateTranscript = [];
+      blacklistedTalkingPoints = [];
+
+      syncDebaterCustomization();
+      const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+      const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+      const m1 = document.getElementById("modelDebaterOne").value.trim();
+      const m2 = document.getElementById("modelDebaterTwo").value.trim();
+      const targetWords = getTargetWordCount();
+      const genreKey = document.getElementById("genreMode").value;
+      const isHipHop = (genreKey === "hiphop");
+      const topic = document.getElementById("debateTopic").value.trim();
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnPause").disabled = false;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnPause").classList.remove("btn-paused-state");
+      document.getElementById("btnStop").disabled = false;
+      document.getElementById("debateTopic").disabled = true;
+      disablePersonaInputs(true);
+
+      const roundMode = document.getElementById("roundModeSelect").value;
+      const isUnlimited = roundMode === "unlimited";
+      const maxRounds = isUnlimited ? Infinity : parseInt(roundMode);
+
+      document.getElementById("roundLimitLabel").innerText = isUnlimited ? "Round (Unlimited ∞)" : `Round of ${maxRounds}`;
+      logTelemetry("DEBATE_COMMENCED", { topic, d1, d2, model1: m1, model2: m2, targetWords });
+
+      try {
+        const enableIntro = document.getElementById("enableAnnouncerIntro")?.checked ?? true;
+        if (enableIntro) {
+          document.getElementById("globalState").innerText = "Chamber Moderator Calling Arena to Order...";
+          const announcementText = `The chamber is called to order. The motion on the floor: "${topic}". The chair recognizes ${d1} to deliver the opening address.`;
+          await speakAnnouncerUtterance(announcementText);
+          if (!isRunning) return;
+        }
+
+        setMobileFocus("debater-one");
+        setCardState("cardDebaterOne", "statusDebaterOne", "thinking", d1, m1);
+        document.getElementById("globalState").innerText = `${d1} (${formatModelShortName(m1)}) Researching & Formulating ~${targetWords} Words`;
+
+        let currentText = await queryOllama(d1, true);
+        if (!isRunning) return;
+
+        let currentParagraphs = parseSpeechIntoParagraphs(currentText, isHipHop);
+        renderTeleprompterHTML("speechDebaterOne", currentParagraphs);
+        updateWordCountBadge("wordCountDebaterOne", "timerDebaterOne", currentText);
+        recordTranscript(d1, m1, currentText);
+
+        let currentSpeakerTitle = d1;
+        let currentSpeakerModel = m1;
+        let isDebaterOneCurrent = true;
+
+        while (isRunning && (isUnlimited || currentRound <= maxRounds)) {
+          if (isPaused) await waitIfPaused();
+          if (!isRunning) break;
+
+          document.getElementById("currentRoundDisplay").innerText = currentRound;
+          const currentCardId = isDebaterOneCurrent ? "cardDebaterOne" : "cardDebaterTwo";
+          const currentStatusId = isDebaterOneCurrent ? "statusDebaterOne" : "statusDebaterTwo";
+
+          const nextSpeakerTitle = isDebaterOneCurrent ? d2 : d1;
+          const nextSpeakerModel = isDebaterOneCurrent ? m2 : m1;
+          const nextIsDebaterOne = !isDebaterOneCurrent;
+          const nextCardId = nextIsDebaterOne ? "cardDebaterOne" : "cardDebaterTwo";
+          const nextStatusId = nextIsDebaterOne ? "statusDebaterOne" : "statusDebaterTwo";
+          const nextSpeechId = nextIsDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+          const nextWordCountId = nextIsDebaterOne ? "wordCountDebaterOne" : "wordCountDebaterTwo";
+          const nextTimerId = nextIsDebaterOne ? "timerDebaterOne" : "timerDebaterTwo";
+
+          setMobileFocus(isDebaterOneCurrent ? "debater-one" : "debater-two");
+          upcomingSpeakerRole = nextIsDebaterOne ? "debater-one" : "debater-two";
+          inFlightAbortController = new AbortController();
+          setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle, nextSpeakerModel);
+
+          currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsDebaterOne, currentText, inFlightAbortController.signal)
+            .then(text => { preloadedSpeechData = text; return text; })
+            .catch(err => { if (err.name === "AbortError") return null; throw err; });
+
+          setCardState(currentCardId, currentStatusId, "speaking", currentSpeakerTitle, currentSpeakerModel);
+          document.getElementById("globalState").innerText = `${currentSpeakerTitle} Speaking (~${targetWords}w) &bull; ${nextSpeakerTitle} Pre-Searching Web`;
+
+          await speakDebaterSpeech(currentParagraphs, isDebaterOneCurrent);
+          if (!isRunning) break;
+
+          setCardState(currentCardId, currentStatusId, "idle", currentSpeakerTitle, currentSpeakerModel);
+          document.getElementById("globalState").innerText = "Passing the Floor";
+
+          let preloadedText = await currentPrefetchPromise;
+          if (!isRunning) break;
+          if (!preloadedText && preloadedSpeechData) preloadedText = preloadedSpeechData;
+          if (!preloadedText) preloadedText = await queryOllama(nextSpeakerTitle, nextIsDebaterOne, currentText);
+
+          currentParagraphs = parseSpeechIntoParagraphs(preloadedText, isHipHop);
+          renderTeleprompterHTML(nextSpeechId, currentParagraphs);
+          updateWordCountBadge(nextWordCountId, nextTimerId, preloadedText);
+          recordTranscript(nextSpeakerTitle, nextSpeakerModel, preloadedText);
+
+          if (activeChamberOrder) {
+            logTelemetry("CHAMBER_ORDER_ANSWERED", { by: nextSpeakerTitle, model: nextSpeakerModel, order: activeChamberOrder });
+            clearChamberOrder();
+          }
+
+          currentText = preloadedText;
+          currentSpeakerTitle = nextSpeakerTitle;
+          currentSpeakerModel = nextSpeakerModel;
+          isDebaterOneCurrent = nextIsDebaterOne;
+          preloadedSpeechData = null;
+
+          if (isDebaterOneCurrent) currentRound++;
+        }
+      } catch (err) {
+        console.error("Debate runtime interrupted:", err);
+      } finally {
+        stopDebate();
+      }
+    }
+
+    function submitChamberOrder(immediateInterrupt = false) {
+      const input = document.getElementById("interventionInput");
+      const orderVal = input.value.trim();
+      if (!orderVal) return;
+
+      activeChamberOrder = orderVal;
+      input.value = "";
+
+      AuraPadMatrix.triggerPad(13);
+      const banner = document.getElementById("chamberOrderBanner");
+      document.getElementById("orderBannerText").innerText = `"${orderVal}"`;
+      banner.style.display = "flex";
+
+      logTelemetry("DIRECT_QUESTION_INJECTED", { question: orderVal, immediateInterrupt, currentRound });
+
+      if (isRunning) {
+        if (inFlightAbortController) { inFlightAbortController.abort(); inFlightAbortController = null; }
+        const d1 = document.getElementById("debater1Name").value.trim() || "Debater 1";
+        const d2 = document.getElementById("debater2Name").value.trim() || "Debater 2";
+        const m1 = document.getElementById("modelDebaterOne").value.trim();
+        const m2 = document.getElementById("modelDebaterTwo").value.trim();
+
+        const nextIsDebaterOne = upcomingSpeakerRole === "debater-one";
+        const nextSpeakerTitle = nextIsDebaterOne ? d1 : d2;
+        const nextSpeakerModel = nextIsDebaterOne ? m1 : m2;
+        const nextCardId = nextIsDebaterOne ? "cardDebaterOne" : "cardDebaterTwo";
+        const nextStatusId = nextIsDebaterOne ? "statusDebaterOne" : "statusDebaterTwo";
+
+        setCardState(nextCardId, nextStatusId, "thinking", nextSpeakerTitle, nextSpeakerModel);
+        inFlightAbortController = new AbortController();
+
+        currentPrefetchPromise = queryOllama(nextSpeakerTitle, nextIsDebaterOne, "Direct interrogative challenge posed to the floor.", inFlightAbortController.signal)
+          .then(text => { preloadedSpeechData = text; return text; });
+
+        if (immediateInterrupt && activeSpeakerCancelFn) {
+          AuraPadMatrix.triggerPad(13);
+          activeSpeakerCancelFn();
+        }
+      }
+    }
+
+    function applyPresetChip(text) {
+      document.getElementById("interventionInput").value = text;
+      submitChamberOrder(false);
+    }
+
+    function clearChamberOrder() {
+      activeChamberOrder = "";
+      document.getElementById("chamberOrderBanner").style.display = "none";
+    }
+
+    function setCardState(cardId, statusId, state, speakerTitle, modelName) {
+      const card = document.getElementById(cardId);
+      const status = document.getElementById(statusId);
+      const shortModel = formatModelShortName(modelName);
+
+      card.classList.remove("active-speaker", "thinking-ahead", "paused-state");
+      if (state === "speaking") {
+        card.classList.add("active-speaker");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#22c55e;"></span>Addressing Arena...`;
+      } else if (state === "thinking") {
+        card.classList.add("thinking-ahead");
+        status.innerHTML = `<span class="pulsing-dot" style="background:#f59e0b;"></span>Answering &amp; Researching (${shortModel})...`;
+      } else {
+        status.innerText = "Yielded Floor";
+      }
+    }
+
+    function updateWordCountBadge(wordBadgeId, timerBadgeId, text) {
+      const words = text.trim().split(/\s+/).length;
+      const target = getTargetWordCount();
+      document.getElementById(wordBadgeId).innerText = `Words: ${words} / ${target} Target`;
+      const estMinutes = Math.floor(words / 140);
+      const estSeconds = Math.round(((words % 140) / 140) * 60);
+      document.getElementById(timerBadgeId).innerText = `Est. ${estMinutes}m ${estSeconds}s`;
+    }
+
+    function stopDebate() {
+      isRunning = false;
+      isPaused = false;
+      if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+      if (speechStallWatchdog) clearTimeout(speechStallWatchdog);
+      if (synth) synth.cancel();
+      window.currentActiveUtterance = null;
+      window.activeAnnouncerUtterance = null;
+      window._activeUtteranceBin.clear();
+
+      if (CypherBeatEngine.isPlaying) CypherBeatEngine.stop();
+      releaseWakeLock();
+
+      if (inFlightAbortController) { inFlightAbortController.abort(); inFlightAbortController = null; }
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnPause").disabled = true;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnPause").classList.remove("btn-paused-state");
+      document.getElementById("btnStop").disabled = true;
+      document.getElementById("debateTopic").disabled = false;
+      disablePersonaInputs(false);
+
+      ["cardDebaterOne", "cardDebaterTwo"].forEach(id => {
+        document.getElementById(id).classList.remove("active-speaker", "thinking-ahead", "paused-state");
+      });
+      document.getElementById("statusDebaterOne").innerText = "Ready";
+      document.getElementById("statusDebaterTwo").innerText = "Ready";
+      document.getElementById("globalState").innerText = "Chamber Adjourned";
+      logTelemetry("DEBATE_ADJOURNED", { rounds: currentRound });
+    }
+
+    function disablePersonaInputs(disabled) {
+      document.getElementById("debater1Name").disabled = disabled;
+      document.getElementById("debater2Name").disabled = disabled;
+      document.getElementById("debater1Perspective").disabled = disabled;
+      document.getElementById("debater2Perspective").disabled = disabled;
+      document.getElementById("debaterRelationship").disabled = disabled;
+      document.getElementById("targetWordCount").disabled = disabled;
+      document.getElementById("modelDebaterOne").disabled = disabled;
+      document.getElementById("modelDebaterTwo").disabled = disabled;
+      document.getElementById("focusModeSelect").disabled = disabled;
+    }
+
+    function setMobileFocus(view) {
+      const grid = document.getElementById("arenaGrid");
+      const bSen = document.getElementById("btnTabSenator");
+      const bCon = document.getElementById("btnTabCongress");
+      const bSpl = document.getElementById("btnTabSplit");
+
+      bSen.classList.remove("active");
+      bCon.classList.remove("active");
+      bSpl.classList.remove("active");
+      grid.classList.remove("focus-debater-one", "focus-debater-two");
+
+      if (view === "debater-one") {
+        grid.classList.add("focus-debater-one");
+        bSen.classList.add("active");
+      } else if (view === "debater-two") {
+        grid.classList.add("focus-debater-two");
+        bCon.classList.add("active");
+      } else {
+        bSpl.classList.add("active");
+      }
+    }
+
+    function toggleConfigAccordion() {
+      const p = document.getElementById("configPanel");
+      const c = document.getElementById("accordionChevron");
+      p.classList.toggle("collapsed");
+      c.innerText = p.classList.contains("collapsed") ? "▼ Expand Settings" : "▲ Collapse Settings";
+    }
+
+    function recordTranscript(speaker, model, text) {
+      debateTranscript.push({ speaker, model, round: currentRound, wordCount: text.split(/\s+/).length, timestamp: new Date().toISOString(), text });
+    }
+
+    function logTelemetry(eventType, metadata = {}) {
+      const entry = { time: new Date().toLocaleTimeString(), event: eventType, metadata };
+      telemetryEvents.push(entry);
+      const logEl = document.getElementById("metaLog");
+      if (logEl) logEl.innerText = `[${entry.time}] [${eventType}] ${JSON.stringify(metadata)}\n` + logEl.innerText;
+    }
+
+    function openTelemetry() { document.getElementById("telemetryDrawer").style.display = "flex"; }
+    function closeTelemetry() { document.getElementById("telemetryDrawer").style.display = "none"; }
+
+    function exportTelemetry() {
+      const payload = {
+        title: "Debate Arena Question-Direct Telemetry",
+        motion: document.getElementById("debateTopic").value,
+        genre: document.getElementById("genreMode").value,
+        targetWords: getTargetWordCount(),
+        roundsCompleted: currentRound,
+        transcript: debateTranscript,
+        events: telemetryEvents
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `debate_benchmark_${Date.now()}.json`;
+      a.click();
+    }
+
+    // Initialize UI calibrations & Aura XP-16 matrix on load
+    handleDebaterTitleChange(true);
+    handleDebaterTitleChange(false);
+    updateTargetWordDisplay();
+    syncModelBadges();
+    AuraPadMatrix.init();
+  </script>
+</body>
+</html>
