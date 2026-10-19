@@ -1,0 +1,662 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#061722">
+<meta name="description" content="Interactive ocean observatory using satellite imagery, ocean science data, marine biodiversity and seafloor mapping.">
+<title>Ocean Observatory | Earth Intelligence</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+:root{color-scheme:dark;--bg:#061722;--panel:#0c2431;--line:#214451;--text:#e7f6ff;--muted:#91afbe;--cyan:#51e4df;--green:#8df0bc;--orange:#ffc27a}
+*{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{margin:0;color:var(--text);background:radial-gradient(ellipse at 90% 0%,#123b50 0%,transparent 43%),var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+header{padding:calc(17px + env(safe-area-inset-top)) 17px 14px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:12px}.logo{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;border:1px solid #397e91;border-radius:15px;color:var(--cyan);background:#0d3443;font-size:25px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--cyan);text-transform:uppercase}h1{margin:4px 0 0;font-size:clamp(21px,6vw,30px);letter-spacing:-1px}.subtitle{margin:13px 0 0;color:var(--muted);font-size:13px;line-height:1.55}
+.wrap{padding:14px;max-width:1100px;margin:auto}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 11px}.section-head h2{margin:0;font-size:17px;letter-spacing:-.3px}.small{font-size:11px;color:var(--muted);line-height:1.5}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #2a5260;border-radius:100px;padding:6px 9px;font-size:10px;font-weight:700;color:#b9d9e5;white-space:nowrap}.dot{width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 9px #8df0bc66}
+.panel{border:1px solid var(--line);border-radius:17px;background:linear-gradient(150deg,#102b39,#091d29);padding:14px;min-width:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.btn{border:1px solid #315766;border-radius:11px;background:#123443;color:var(--text);padding:10px 12px;font-size:12px;font-weight:700;min-height:42px}.btn:active{transform:scale(.98)}.btn.primary{background:#b9f7ee;border-color:#b9f7ee;color:#06232b}.btn.active{background:#174b58;border-color:var(--cyan);color:var(--cyan)}.btn:disabled{opacity:.55;cursor:wait}
+.map-shell{overflow:hidden;border:1px solid #28515f;border-radius:15px;background:#08222f;position:relative}#map{height:min(58vh,530px);min-height:340px;width:100%}.map-foot{padding:10px 12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:10px;color:var(--muted);background:#091d28}.map-foot strong{color:var(--cyan)}
+.search-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.field{min-width:0;display:flex;flex-direction:column;gap:6px}.field label{color:var(--muted);font-size:11px}.field input,.field select{width:100%;min-width:0;color:var(--text);background:#061a25;border:1px solid #315361;border-radius:10px;padding:12px 10px;min-height:44px}.search-actions{display:flex;gap:8px;margin-top:9px}.search-actions .btn{flex:1}
+.layer-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.layer{display:flex;align-items:flex-start;gap:10px;text-align:left;padding:12px 10px;min-width:0;min-height:83px;border:1px solid var(--line);border-radius:13px;color:var(--text);background:#0b202c}.layer.active{border-color:#40c8c5;background:#103641}.layer-icon{font-size:22px;line-height:1.2}.layer strong{display:block;font-size:12px;line-height:1.4}.layer small{display:block;margin-top:5px;color:var(--muted);font-size:10px;line-height:1.4}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{min-width:0;padding:13px;border-radius:14px;background:#0b202c;border:1px solid var(--line)}.metric .symbol{font-size:20px}.metric h3{margin:8px 0 5px;font-size:13px}.metric p{margin:0;font-size:11px;color:var(--muted);line-height:1.55}.metric a{display:inline-block;margin-top:11px;font-size:11px;font-weight:700;text-decoration:none}
+.source-list{display:grid;gap:9px}.source{padding:12px;border:1px solid var(--line);border-radius:13px;background:#0a1e2a;overflow-wrap:anywhere}.source-top{display:flex;align-items:center;gap:9px}.source-icon{font-size:21px}.source h3{margin:0;font-size:13px}.source p{color:var(--muted);font-size:11px;line-height:1.55;margin:8px 0}.source a{font-size:11px;font-weight:700;text-decoration:none}.notice{margin-top:12px;border-left:3px solid var(--orange);background:#2b281f;color:#f2d8a9;padding:12px;border-radius:0 10px 10px 0;font-size:11px;line-height:1.6}.status{font-size:11px;line-height:1.5;color:var(--muted);min-height:17px;margin-top:9px}.footer{margin-top:22px;padding:17px 5px;border-top:1px solid var(--line);color:var(--muted);font-size:10px;line-height:1.8}.footer a{margin-right:10px}.legend{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:10px}.gradient{height:8px;width:100px;border-radius:10px;background:linear-gradient(90deg,#0c3c85,#00b7c7,#7bdba1,#e8d889,#d77c55)}
+.leaflet-control-attribution{font-size:9px!important}.leaflet-control-zoom a{color:#102c38!important}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#102b39;color:#e7f6ff}.leaflet-popup-content{font-size:12px;line-height:1.5}.leaflet-container{background:#092635;font-family:inherit}.leaflet-control-layers{background:#102b39!important;color:#e7f6ff!important;border:1px solid #315766!important}
+@media(min-width:760px){header{padding-left:max(22px,calc((100vw - 1060px)/2))}.wrap{padding:20px}.layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.8fr);gap:16px;align-items:start}.side-stack{display:grid;gap:14px}.layer-list{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:360px){.wrap{padding:10px}.layer-list,.grid{grid-template-columns:1fr}#map{min-height:310px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">〰</div><div><div class="eyebrow">Earth intelligence system</div><h1>OCEAN OBSERVATORY</h1></div></div>
+  <p class="subtitle">Explore ocean surfaces, thermal patterns, marine productivity, currents and the hidden terrain of the seafloor.</p>
+</header>
+<main class="wrap">
+  <div class="section-head"><h2>Live exploration map</h2><span class="pill"><span class="dot"></span> ONLINE TOOLS</span></div>
+  <div class="layout">
+    <section>
+      <div class="panel">
+        <div class="toolbar"><button class="btn primary" id="locateBtn">◎ My location</button><button class="btn" id="resetBtn">Reset view</button><button class="btn" id="fullscreenBtn">⛶ Expand map</button></div>
+        <div class="map-shell" id="mapShell"><div id="map" aria-label="Interactive ocean observation map"></div><div class="map-foot"><span>COORDINATES <strong id="coords">27.5000, -80.0000</strong></span><span id="mapScale">Tap map to inspect</span></div></div>
+        <div class="search-row"><div class="field"><label for="latInput">Latitude</label><input id="latInput" type="number" step="any" min="-90" max="90" value="27.5"></div><div class="field"><label for="lonInput">Longitude</label><input id="lonInput" type="number" step="any" min="-180" max="180" value="-80"></div></div>
+        <div class="search-actions"><button class="btn primary" id="goBtn">Go to coordinates</button><button class="btn" id="copyBtn">Copy coordinates</button></div>
+        <div class="status" id="mapStatus" role="status">Loading map layers…</div>
+      </div>
+      <div class="section-head"><h2>Observation layers</h2><span class="small">Tap to enable or disable</span></div>
+      <div class="layer-list" id="layerList">
+        <button class="layer active" data-layer="base"><span class="layer-icon">🌊</span><span><strong>Ocean floor basemap</strong><small>Ocean features and bathymetric context</small></span></button>
+        <button class="layer" data-layer="satellite"><span class="layer-icon">🛰️</span><span><strong>Satellite imagery</strong><small>NASA MODIS true-color imagery</small></span></button>
+        <button class="layer" data-layer="sst"><span class="layer-icon">🌡️</span><span><strong>Sea surface temperature</strong><small>Satellite-derived temperature layer</small></span></button>
+        <button class="layer" data-layer="chlorophyll"><span class="layer-icon">🧬</span><span><strong>Ocean color / chlorophyll</strong><small>Ocean productivity and phytoplankton</small></span></button>
+        <button class="layer" data-layer="labels"><span class="layer-icon">📍</span><span><strong>Ocean reference labels</strong><small>Geographic context</small></span></button>
+      </div>
+      <p class="small" style="margin:9px 2px">Satellite overlays depend on source availability, valid observation dates, zoom coverage and network access. A failed layer is not a measurement of zero.</p>
+    </section>
+    <aside class="side-stack">
+      <section class="panel"><div class="section-head" style="margin-top:0"><h2>Scientific instruments</h2></div>
+        <div class="grid">
+          <article class="metric"><div class="symbol">🌡️</div><h3>Thermal mapping</h3><p>Identify warm and cold surface water patterns and potential fronts.</p><a href="https://worldview.earthdata.nasa.gov/" target="_blank" rel="noopener">Open NASA Worldview ↗</a></article>
+          <article class="metric"><div class="symbol">🟢</div><h3>Ocean color</h3><p>Investigate chlorophyll, phytoplankton and algal-bloom indicators.</p><a href="https://oceancolor.gsfc.nasa.gov/" target="_blank" rel="noopener">Open Ocean Color ↗</a></article>
+          <article class="metric"><div class="symbol">〰️</div><h3>Surface topography</h3><p>Study sea-surface height, currents and broad ocean circulation.</p><a href="https://swot.jpl.nasa.gov/" target="_blank" rel="noopener">Explore SWOT ↗</a></article>
+          <article class="metric"><div class="symbol">⛰️</div><h3>Seafloor terrain</h3><p>Explore mapped underwater ridges, trenches and abyssal plains.</p><a href="https://www.gebco.net/data-products/gridded-bathymetry-data" target="_blank" rel="noopener">Explore GEBCO ↗</a></article>
+        </div>
+      </section>
+      <section class="panel"><div class="section-head" style="margin-top:0"><h2>Seafloor depth explorer</h2><span class="pill">GEBCO GRID</span></div>
+        <p class="small">Retrieve real gridded seafloor elevations along a transect centered on the selected coordinates. Negative elevations are plotted as water depth.</p>
+        <div class="search-row"><div class="field"><label for="transectLength">Transect length</label><select id="transectLength"><option value="2">2 km</option><option value="5">5 km</option><option value="10" selected>10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></div><div class="field"><label for="transectBearing">Direction</label><select id="transectBearing"><option value="0">North–south</option><option value="90" selected>East–west</option><option value="45">Northeast–southwest</option><option value="135">Southeast–northwest</option></select></div></div>
+        <button class="btn primary" id="loadOceanData" style="width:100%;margin-top:12px">Retrieve local ocean data</button>
+        <div class="status" id="transectStatus" role="status">Choose a map location to begin.</div>
+        <div class="grid" style="margin-top:10px"><article class="metric"><h3>Center depth</h3><div id="centerDepth" style="font-size:22px;font-weight:800">—</div><p>From gridded elevation API</p></article><article class="metric"><h3>Profile coverage</h3><div id="profileCoverage" style="font-size:22px;font-weight:800">—</div><p>Valid below-sea-level samples</p></article></div>
+        <canvas id="depthCanvas" width="900" height="360" style="display:block;width:100%;height:auto;margin-top:14px;border-radius:12px;background:#071d2b" aria-label="Gridded bathymetry transect"></canvas>
+        <div class="legend"><span>Shallow</span><span class="gradient"></span><span>Deep</span></div>
+        <p class="small" id="depthSource">Source: GEBCO grid elevations via Open Topo Data. The app tries direct access and browser-readable proxy routes; if the network blocks all routes, a serverless proxy is required.</p>
+        <div class="notice"><strong>Resolution warning:</strong> This profile uses a global bathymetry grid, not live sonar. Closely spaced points are interpolated from gridded data and are not independent soundings. Land and missing values are not ocean depths.</div>
+      </section>
+      <section class="panel"><div class="section-head" style="margin-top:0"><h2>Species recorded nearby</h2><span class="pill" id="speciesCount">Not loaded</span></div>
+        <p class="small">Search OBIS occurrence records around the selected point. Records may be historical and do not establish that an organism is currently present.</p>
+        <div class="search-row"><div class="field"><label for="speciesRadius">Search radius</label><select id="speciesRadius"><option value="1">1 km</option><option value="5">5 km</option><option value="10" selected>10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></div><div class="field"><label for="speciesFilter">Organism group</label><select id="speciesFilter"><option value="all">All organisms</option><option value="animal">Animals</option><option value="plant">Plants and algae</option></select></div></div>
+        <button class="btn" id="loadSpecies" style="width:100%;margin-top:10px">Search biodiversity records</button><div class="status" id="speciesStatus" role="status"></div><div id="speciesResults" class="source-list" style="margin-top:10px"></div>
+      </section>
+      <section class="panel"><div class="section-head" style="margin-top:0"><h2>Wrecks and submerged objects</h2></div>
+        <p class="small">Search a public charted wreck dataset near this location. Coverage is incomplete; reports are not independent confirmation of a wreck's identity, position or condition.</p>
+        <button class="btn" id="loadWrecks" style="width:100%">Search wreck and obstruction records</button><div class="status" id="wreckStatus" role="status"></div><div id="wreckResults" class="source-list" style="margin-top:10px"></div>
+        <p class="small">Other data resources: <a href="https://api.obis.org/" target="_blank" rel="noopener">OBIS API</a> · <a href="https://www.opentopodata.org/datasets/gebco2020/" target="_blank" rel="noopener">GEBCO 2020 API</a> · <a href="https://nauticalcharts.noaa.gov/data/wrecks-and-obstructions.html" target="_blank" rel="noopener">NOAA wreck information</a> · <a href="https://www.movebank.org/" target="_blank" rel="noopener">Movebank tracking</a> · <a href="https://obis.org/" target="_blank" rel="noopener">OBIS portal</a></p>
+      </section>
+    </aside>
+  </div>
+  <section class="panel" style="margin-top:17px"><div class="section-head" style="margin-top:0"><h2>Scientific data access</h2></div><p class="small">These links open external scientific systems. They are not values calculated by this page.</p>
+    <div class="source-list">
+      <div class="source"><div class="source-top"><span class="source-icon">🌐</span><h3>NOAA ERDDAP — ocean data search</h3></div><p>Find machine-readable datasets, including gridded ocean measurements.</p><a id="noaaLink" href="https://erddap.gml.noaa.gov/erddap/search/index.html?page=1&amp;itemsPerPage=1000&amp;searchFor=sea+surface+temperature" target="_blank" rel="noopener">Search NOAA datasets ↗</a></div>
+      <div class="source"><div class="source-top"><span class="source-icon">🛰️</span><h3>NASA Worldview</h3></div><p>Browse satellite imagery and time-dependent Earth observation layers.</p><a id="nasaLink" href="https://worldview.earthdata.nasa.gov/" target="_blank" rel="noopener">Open satellite viewer ↗</a></div>
+      <div class="source"><div class="source-top"><span class="source-icon">⛰️</span><h3>GEBCO — bathymetry data</h3></div><p>Access gridded ocean depths and information about source-data types.</p><a href="https://www.gebco.net/data-products/gridded-bathymetry-data" target="_blank" rel="noopener">Open seafloor data ↗</a> · <a href="https://wms.gebco.net/mapserv?" target="_blank" rel="noopener">GEBCO WMS ↗</a></div>
+    </div>
+    <div class="notice"><strong>Measurement versus model:</strong> Surface imagery, sea-surface temperature, ocean color and sea-surface height are different products. Deep bathymetry is compiled from sonar soundings and other evidence, including gravity-derived estimates. It is not a photograph of the deep ocean.</div>
+  </section>
+  <footer class="footer">OCEAN OBSERVATORY · MOBILE SCIENCE CONSOLE<br>Mapping: Esri World Ocean Basemap and Reference. Satellite imagery: NASA GIBS / Earthdata where available. Bathymetry: GEBCO. Biodiversity: OBIS. External services have their own availability, terms and attribution requirements. This is an independent viewer, not an official NASA, NOAA, ESA or GEBCO product.</footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const status = $("mapStatus");
+const defaultCenter = [27.5, -80.0];
+
+if (!window.L) {
+  status.textContent = "Map library did not load. Check your connection and reload.";
+  return;
+}
+
+const map = L.map("map", {
+  center: defaultCenter, zoom: 5, minZoom: 2, maxZoom: 18,
+  zoomControl: true, worldCopyJump: true
+});
+
+const oceanBase = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+  {maxZoom:18, attribution:'Map data &copy; <a href="https://www.esri.com/">Esri</a>'}
+).addTo(map);
+
+const oceanLabels = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
+  {maxZoom:18, attribution:"Ocean reference labels &copy; Esri"}
+);
+
+function utcDateAgo(days) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0,10);
+}
+const imageryDate = utcDateAgo(3);
+const gibsRoot = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/";
+
+function gibsLayer(name, ext, attribution) {
+  return L.tileLayer(
+    gibsRoot + name + "/default/" + imageryDate +
+    "/GoogleMapsCompatible_Level9/{z}/{y}/{x}." + ext,
+    {maxNativeZoom:9,maxZoom:18,opacity:.88,attribution:attribution}
+  );
+}
+
+const satellite = gibsLayer(
+  "MODIS_Terra_CorrectedReflectance_TrueColor","jpg",
+  'Imagery &copy; <a href="https://earthdata.nasa.gov/">NASA Earthdata / GIBS</a>'
+);
+const sst = gibsLayer(
+  "GHRSST_L4_MUR_Sea_Surface_Temperature","png",
+  "Temperature layer &copy; NASA GIBS"
+);
+const chlorophyll = gibsLayer(
+  "MODIS_Aqua_Chlorophyll_A","png",
+  "Ocean color layer &copy; NASA GIBS"
+);
+const layerObjects = {base:oceanBase,satellite,sst,chlorophyll,labels:oceanLabels};
+const layerState = {base:true,satellite:false,sst:false,chlorophyll:false,labels:false};
+let marker = null;
+
+function setStatus(message) { status.textContent = message; }
+
+const oceanState = {lat:defaultCenter[0],lon:defaultCenter[1],transect:[],species:[],wrecks:[]};
+function oceanStatus(id,message) { const el=$(id); if(el) el.textContent=message; }
+function oceanEscape(value) {
+  return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function oceanPoint(lat,lon) { oceanState.lat=lat; oceanState.lon=lon; }
+function oceanCenter() { return {lat:oceanState.lat,lon:oceanState.lon}; }
+
+function updateCoordinates(latlng) {
+  const lat=latlng.lat, lon=latlng.lng;
+  oceanPoint(lat,lon);
+  $("coords").textContent=lat.toFixed(4)+", "+lon.toFixed(4);
+  $("latInput").value=lat.toFixed(5);
+  $("lonInput").value=lon.toFixed(5);
+  $("mapScale").textContent="Zoom "+map.getZoom()+" · "+lat.toFixed(2)+"°, "+lon.toFixed(2)+"°";
+  $("noaaLink").href="https://erddap.gml.noaa.gov/erddap/search/index.html?page=1&itemsPerPage=1000&searchFor="+encodeURIComponent("sea surface temperature");
+  $("nasaLink").href="https://worldview.earthdata.nasa.gov/?v="+(lon-2)+","+(lat-2)+","+(lon+2)+","+(lat+2);
+}
+function inspect(latlng) {
+  updateCoordinates(latlng);
+  if(marker) map.removeLayer(marker);
+  marker=L.marker(latlng).addTo(map).bindPopup(
+    "<strong>Selected observation point</strong><br>Latitude: "+
+    latlng.lat.toFixed(5)+"<br>Longitude: "+latlng.lng.toFixed(5)+
+    "<br>Run a scientific data search to investigate this location."
+  ).openPopup();
+  setStatus("Location selected. Coordinates updated. Use the data tools to investigate actual records.");
+}
+map.on("click",e=>inspect(e.latlng));
+map.on("moveend zoomend",()=>updateCoordinates(map.getCenter()));
+
+function toggleLayer(name) {
+  const layer=layerObjects[name];
+  if(!layer)return;
+  if(layerState[name]) {map.removeLayer(layer);layerState[name]=false;}
+  else {
+    if(["satellite","sst","chlorophyll"].includes(name)) {
+      ["satellite","sst","chlorophyll"].forEach(other=>{
+        if(other!==name&&layerState[other]){
+          map.removeLayer(layerObjects[other]);layerState[other]=false;
+          const b=document.querySelector('[data-layer="'+other+'"]');
+          if(b)b.classList.remove("active");
+        }
+      });
+    }
+    layer.addTo(map);layerState[name]=true;
+  }
+  const button=document.querySelector('[data-layer="'+name+'"]');
+  if(button)button.classList.toggle("active",layerState[name]);
+  const descriptions={
+    base:"Ocean basemap toggled.",
+    satellite:"NASA true-color imagery requested for "+imageryDate+".",
+    sst:"NASA sea-surface temperature overlay requested for "+imageryDate+".",
+    chlorophyll:"NASA ocean-color overlay requested for "+imageryDate+".",
+    labels:"Ocean reference labels toggled."
+  };
+  setStatus(descriptions[name]+" If tiles remain blank, the product/date may be unavailable.");
+}
+document.querySelectorAll("[data-layer]").forEach(button=>button.addEventListener("click",()=>toggleLayer(button.dataset.layer)));
+$("goBtn").addEventListener("click",()=>{
+  const lat=Number($("latInput").value),lon=Number($("lonInput").value);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat< -90||lat>90||lon< -180||lon>180){
+    setStatus("Enter a valid latitude (-90 to 90) and longitude (-180 to 180).");return;
+  }
+  const target=L.latLng(lat,lon);map.setView(target,Math.max(map.getZoom(),6));inspect(target);
+});
+$("copyBtn").addEventListener("click",async()=>{
+  const text=$("coords").textContent;
+  try{await navigator.clipboard.writeText(text);setStatus("Copied coordinates: "+text);}
+  catch{$("latInput").focus();$("latInput").select();setStatus("Clipboard unavailable. Coordinates are displayed above for copying.");}
+});
+$("resetBtn").addEventListener("click",()=>{
+  map.setView(defaultCenter,5);
+  if(marker){map.removeLayer(marker);marker=null;}
+  setStatus("Map reset to the Florida Atlantic coast.");
+});
+$("locateBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){setStatus("Location is not supported by this browser.");return;}
+  setStatus("Requesting device location. Allow access if prompted.");
+  navigator.geolocation.getCurrentPosition(position=>{
+    const point=L.latLng(position.coords.latitude,position.coords.longitude);
+    map.setView(point,9);inspect(point);
+    setStatus("Device location acquired. GPS accuracy: approximately "+Math.round(position.coords.accuracy)+" metres.");
+  },error=>{
+    const messages={1:"Location permission denied. Enter coordinates manually.",2:"Device location unavailable. Try again or enter coordinates.",3:"Location request timed out. Try again."};
+    setStatus(messages[error.code]||"Could not obtain location.");
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+});
+$("fullscreenBtn").addEventListener("click",async()=>{
+  const shell=$("mapShell");
+  try{
+    if(!document.fullscreenElement&&shell.requestFullscreen)await shell.requestFullscreen();
+    else if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();
+    else{shell.scrollIntoView({behavior:"smooth",block:"start"});setStatus("Fullscreen is not supported in this view.");}
+    setTimeout(()=>map.invalidateSize(),250);
+  }catch{shell.scrollIntoView({behavior:"smooth",block:"start"});setStatus("Fullscreen unavailable in this browser view.");}
+});
+
+/*
+ * Resilient GEBCO 2020 bathymetry transect engine.
+ * Uses real elevation values from Open Topo Data; no synthetic depth data.
+ * GET is attempted first (avoids JSON POST CORS preflight), then POST fallback.
+ * Requests are chunked, retried on transient errors, and spaced to reduce rate limiting.
+ */
+function oceanDestination(lat, lon, bearingDegrees, distanceKm) {
+  const earthRadiusKm = 6371.0088;
+  const angularDistance = distanceKm / earthRadiusKm;
+  const bearing = bearingDegrees * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lon1 = lon * Math.PI / 180;
+  const sinLat2 = Math.sin(lat1) * Math.cos(angularDistance) +
+    Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(bearing);
+  const lat2 = Math.asin(Math.max(-1, Math.min(1, sinLat2)));
+  const y = Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(lat1);
+  const x = Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2);
+  let lon2 = lon1 + Math.atan2(y, x);
+  lon2 = ((lon2 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+  return { lat: lat2 * 180 / Math.PI, lon: lon2 * 180 / Math.PI };
+}
+
+function oceanTransectPoints(lat, lon, lengthKm, bearingDegrees) {
+  const count = Math.max(21, Math.min(81, Math.ceil(lengthKm / 0.5) + 1));
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const distanceKm = -lengthKm / 2 + lengthKm * i / (count - 1);
+    const pointBearing = distanceKm < 0 ? (bearingDegrees + 180) % 360 : bearingDegrees;
+    const position = oceanDestination(lat, lon, pointBearing, Math.abs(distanceKm));
+    points.push({ lat: position.lat, lon: position.lon, distanceKm });
+  }
+  return points;
+}
+
+async function oceanFetchJSON(url, options = {}, timeoutMs = 16000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: { Accept: "application/json", ...(options.headers || {}) }
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      const detail = body ? ": " + body.slice(0, 140).replace(/\s+/g, " ") : "";
+      const error = new Error("HTTP " + response.status + detail);
+      error.httpStatus = response.status;
+      throw error;
+    }
+    let data;
+    try { data = JSON.parse(body); }
+    catch { throw new Error("The elevation service returned invalid JSON."); }
+    return data;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("Request timed out after " + Math.round(timeoutMs / 1000) + " seconds.");
+    if (error instanceof TypeError) throw new Error("Network/CORS failure reaching the elevation service.");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const oceanWait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function oceanFetchWithRetry(url, options = {}) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await oceanFetchJSON(url, options);
+    } catch (error) {
+      lastError = error;
+      const permanentBrowserFailure = /Network\/CORS failure|Invalid URL|invalid URL/i.test(error.message || "");
+      const transient = !permanentBrowserFailure && (!error.httpStatus || error.httpStatus === 429 || error.httpStatus >= 500);
+      if (!transient || attempt === 2) break;
+      await oceanWait(700 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
+function oceanValidateElevationResponse(data, expectedCount) {
+  if (!data || data.status !== "OK" || !Array.isArray(data.results)) {
+    throw new Error((data && data.error) || "Unexpected response from the GEBCO elevation service.");
+  }
+  if (data.results.length !== expectedCount) {
+    throw new Error("Expected " + expectedCount + " samples but received " + data.results.length + ".");
+  }
+  return data.results;
+}
+
+async function oceanQueryElevationBatch(points) {
+  const endpoint = "https://api.opentopodata.org/v1/gebco2020";
+  const locations = points.map(p => p.lat.toFixed(5) + "," + p.lon.toFixed(5)).join("|");
+  const target = endpoint + "?locations=" + encodeURIComponent(locations) + "&interpolation=bilinear&nodata_value=null";
+  const failures = [];
+
+  // Route 1: direct browser request. Some hosting/network combinations allow this.
+  try {
+    const data = await oceanFetchWithRetry(target);
+    return oceanValidateElevationResponse(data, points.length);
+  } catch (error) {
+    failures.push("direct API: " + error.message);
+  }
+
+  // Route 2: CORS-friendly raw proxy. This only forwards a public GET request;
+  // it does not create or alter any elevation values.
+  const proxyUrls = [
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(target),
+    "https://corsproxy.io/?url=" + encodeURIComponent(target)
+  ];
+
+  for (const proxyUrl of proxyUrls) {
+    try {
+      const data = await oceanFetchWithRetry(proxyUrl);
+      // Proxy may return a service error body; validate it as the original API response.
+      return oceanValidateElevationResponse(data, points.length);
+    } catch (error) {
+      failures.push("proxy: " + error.message);
+    }
+  }
+
+  // Route 3: final POST attempt. It may work where direct GET is blocked,
+  // although a public endpoint without CORS support can still be unreadable in browsers.
+  try {
+    const data = await oceanFetchWithRetry(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locations, interpolation: "bilinear", nodata_value: null })
+    });
+    return oceanValidateElevationResponse(data, points.length);
+  } catch (error) {
+    failures.push("POST: " + error.message);
+  }
+
+  throw new Error(failures.join(" | ") + ". If every route is blocked, configure a small same-origin/serverless proxy (for example, a Cloudflare Worker) for production use.");
+}
+
+async function oceanGetElevationSamples(points) {
+  const elevations = new Array(points.length).fill(null);
+  const errors = [];
+  const chunkSize = 8;
+  for (let offset = 0; offset < points.length; offset += chunkSize) {
+    // The public endpoint can rate-limit bursts. Space requests apart.
+    if (offset > 0) await oceanWait(1100);
+    const batch = points.slice(offset, offset + chunkSize);
+    try {
+      const results = await oceanQueryElevationBatch(batch);
+      results.forEach((item, index) => {
+        const value = item && item.elevation;
+        elevations[offset + index] = typeof value === "number" && Number.isFinite(value) ? value : null;
+      });
+    } catch (error) {
+      errors.push("batch " + (Math.floor(offset / chunkSize) + 1) + ": " + error.message);
+    }
+  }
+  if (elevations.every(value => value === null)) {
+    throw new Error(errors.join(" | ") || "The service returned no valid elevation values.");
+  }
+  return { elevations, errors };
+}
+
+function oceanDrawProfile(samples, lengthKm) {
+  const canvas = $("depthCanvas");
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#071d2b";
+  ctx.fillRect(0, 0, width, height);
+  const valid = samples.filter(p => Number.isFinite(p.elevation));
+  if (valid.length < 2) {
+    ctx.fillStyle = "#e7f6ff";
+    ctx.font = "22px sans-serif";
+    ctx.fillText("No usable elevation samples", 28, 70);
+    ctx.fillStyle = "#91afbe";
+    ctx.font = "15px sans-serif";
+    ctx.fillText("Retry or choose another location.", 28, 105);
+    return;
+  }
+
+  let min = Math.min(0, ...valid.map(p => p.elevation));
+  let max = Math.max(0, ...valid.map(p => p.elevation));
+  if (max - min < 20) { min -= 10; max += 10; }
+  const padding = (max - min) * 0.08;
+  min -= padding;
+  max += padding;
+  const left = 82, right = width - 22, top = 45, bottom = height - 48;
+  const plotWidth = right - left, plotHeight = bottom - top;
+  const xFor = p => left + ((p.distanceKm + lengthKm / 2) / lengthKm) * plotWidth;
+  const yFor = elevation => top + ((max - elevation) / (max - min)) * plotHeight;
+
+  ctx.font = "15px sans-serif";
+  ctx.fillStyle = "#b9d9e5";
+  ctx.fillText("GRIDDED ELEVATION PROFILE · GEBCO 2020", left, 24);
+  ctx.strokeStyle = "#1d4050";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#91afbe";
+  for (let i = 0; i <= 4; i++) {
+    const elevation = max - (max - min) * i / 4;
+    const y = top + plotHeight * i / 4;
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+    ctx.fillText(Math.round(elevation).toLocaleString() + " m", 5, y + 5);
+  }
+
+  const seaY = yFor(0);
+  ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = "#e6d49a"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(left, seaY); ctx.lineTo(right, seaY); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = "#e6d49a"; ctx.font = "12px sans-serif";
+  ctx.fillText("Sea level", right - 67, Math.max(top + 13, seaY - 7));
+
+  const segments = [];
+  let segment = [];
+  for (const point of samples) {
+    if (Number.isFinite(point.elevation)) segment.push(point);
+    else { if (segment.length) segments.push(segment); segment = []; }
+  }
+  if (segment.length) segments.push(segment);
+
+  for (const pointsInSegment of segments) {
+    if (pointsInSegment.length < 2) continue;
+    let underwater = [];
+    const flushUnderwater = () => {
+      if (underwater.length >= 2) {
+        ctx.beginPath(); ctx.moveTo(xFor(underwater[0]), seaY);
+        for (const p of underwater) ctx.lineTo(xFor(p), yFor(Math.min(0, p.elevation)));
+        ctx.lineTo(xFor(underwater[underwater.length - 1]), seaY); ctx.closePath();
+        const fill = ctx.createLinearGradient(0, seaY, 0, bottom);
+        fill.addColorStop(0, "#20bfc3"); fill.addColorStop(1, "#123e80");
+        ctx.fillStyle = fill; ctx.fill();
+      }
+      underwater = [];
+    };
+    for (const p of pointsInSegment) {
+      if (p.elevation <= 0) underwater.push(p);
+      else flushUnderwater();
+    }
+    flushUnderwater();
+    ctx.beginPath();
+    pointsInSegment.forEach((p, i) => i === 0 ? ctx.moveTo(xFor(p), yFor(p.elevation)) : ctx.lineTo(xFor(p), yFor(p.elevation)));
+    ctx.strokeStyle = "#62e5e0"; ctx.lineWidth = 3; ctx.stroke();
+    for (const p of pointsInSegment) {
+      ctx.beginPath(); ctx.arc(xFor(p), yFor(p.elevation), 2.8, 0, Math.PI * 2);
+      ctx.fillStyle = p.elevation <= 0 ? "#e7ffff" : "#ffc27a"; ctx.fill();
+    }
+  }
+  ctx.fillStyle = "#91afbe"; ctx.font = "14px sans-serif";
+  ctx.fillText("−" + (lengthKm / 2) + " km", left, height - 15);
+  ctx.fillText("Center", left + plotWidth / 2 - 20, height - 15);
+  ctx.fillText("+" + (lengthKm / 2) + " km", right - 85, height - 15);
+}
+
+async function oceanLoadTransect() {
+  const { lat, lon } = oceanCenter();
+  const lengthKm = Number($("transectLength").value);
+  const bearing = Number($("transectBearing").value);
+  const button = $("loadOceanData");
+  button.disabled = true;
+  oceanStatus("transectStatus", "Querying GEBCO grid elevations in small, rate-limited batches…");
+  oceanStatus("centerDepth", "Loading…");
+  oceanStatus("profileCoverage", "Loading…");
+  try {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      throw new Error("Selected coordinates are outside valid latitude/longitude ranges.");
+    }
+    if (![2, 5, 10, 25, 50].includes(lengthKm) || ![0, 45, 90, 135].includes(bearing)) {
+      throw new Error("Choose a valid transect length and direction.");
+    }
+    const points = oceanTransectPoints(lat, lon, lengthKm, bearing);
+    const result = await oceanGetElevationSamples(points);
+    const samples = points.map((p, i) => ({ ...p, elevation: result.elevations[i], dataset: "GEBCO 2020" }));
+    oceanState.transect = samples;
+    oceanDrawProfile(samples, lengthKm);
+    const center = samples[Math.floor(samples.length / 2)];
+    const valid = samples.filter(p => Number.isFinite(p.elevation));
+    const underwaterCount = valid.filter(p => p.elevation < 0).length;
+    if (Number.isFinite(center.elevation) && center.elevation < 0) {
+      oceanStatus("centerDepth", Math.round(-center.elevation).toLocaleString() + " m depth");
+    } else if (Number.isFinite(center.elevation)) {
+      oceanStatus("centerDepth", center.elevation === 0 ? "Sea level" : Math.round(center.elevation).toLocaleString() + " m above sea level");
+    } else {
+      oceanStatus("centerDepth", "No grid value");
+    }
+    oceanStatus("profileCoverage", valid.length + "/" + samples.length + " valid");
+    let message = "Received " + valid.length + " of " + samples.length + " valid grid elevations; " + underwaterCount + " are below sea level. These are gridded values, not independent sonar soundings.";
+    if (result.errors.length) message += " Partial failures: " + result.errors.join(" | ");
+    else if (valid.length < samples.length) message += " Some locations have no grid value.";
+    oceanStatus("transectStatus", message);
+    oceanStatus("depthSource", "Source: GEBCO 2020 via Open Topo Data. Transect " + lengthKm + " km; bearing " + bearing + "°; " + samples.length + " samples. Grid spacing is approximately 15 arc-seconds (~450 m at the equator); effective resolution and accuracy vary by location.");
+  } catch (error) {
+    oceanStatus("transectStatus", "Bathymetry unavailable: " + error.message + " Check network/API access, then retry or use the official GEBCO link below. No synthetic depth values are shown.");
+    oceanStatus("centerDepth", "Unavailable");
+    oceanStatus("profileCoverage", "Unavailable");
+    const ctx = $("depthCanvas").getContext("2d");
+    ctx.clearRect(0, 0, 900, 360); ctx.fillStyle = "#071d2b"; ctx.fillRect(0, 0, 900, 360);
+    ctx.fillStyle = "#e7f6ff"; ctx.font = "22px sans-serif"; ctx.fillText("Bathymetry data unavailable", 28, 70);
+    ctx.fillStyle = "#91afbe"; ctx.font = "15px sans-serif"; ctx.fillText("Retry or open the official data services below.", 28, 105);
+  } finally {
+    button.disabled = false;
+  }
+}
+$("loadOceanData").addEventListener("click", oceanLoadTransect);
+$("transectLength").addEventListener("change", () => oceanStatus("transectStatus", "Transect length changed. Retrieve data again."));
+$("transectBearing").addEventListener("change", () => oceanStatus("transectStatus", "Transect direction changed. Retrieve data again."));
+
+
+/* OBIS occurrence search. Radius is approximated by a bounding rectangle. */
+function oceanBuildPolygon(lat,lon,radiusKm) {
+  const dLat=radiusKm/111.32,dLon=radiusKm/(111.32*Math.max(.01,Math.cos(lat*Math.PI/180)));
+  const west=lon-dLon,east=lon+dLon,south=Math.max(-90,lat-dLat),north=Math.min(90,lat+dLat);
+  return "POLYGON(("+west+" "+south+","+east+" "+south+","+east+" "+north+","+west+" "+north+","+west+" "+south+"))";
+}
+function oceanIsPlant(record) {
+  const text=[record.kingdom,record.phylum,record.class,record.order,record.scientificName].join(" ").toLowerCase();
+  return /plantae|chlorophyta|rhodophyta|ochrophyta|phaeophyceae|bacillariophyta|seagrass|macroalga|seaweed/.test(text);
+}
+function oceanSpeciesCard(record) {
+  const name=record.scientificName||"Unidentified species",common=record.vernacularName||"";
+  const date=record.eventDate||record.dateIdentified||"Date not supplied",rank=record.taxonRank||"Taxonomic rank unknown";
+  const location=[record.decimalLatitude,record.decimalLongitude].every(v=>v!==undefined&&v!==null)?Number(record.decimalLatitude).toFixed(4)+", "+Number(record.decimalLongitude).toFixed(4):"Coordinates not supplied";
+  const url=record.occurrenceID||record.url||"";
+  return `<article class="source"><div class="source-top"><span class="source-icon">${oceanIsPlant(record)?"🌿":"🐟"}</span><div><h3>${oceanEscape(name)}</h3>${common?`<div class="small">${oceanEscape(common)}</div>`:""}</div></div><p>Group: ${oceanEscape(rank)}<br>Recorded: ${oceanEscape(date)}<br>Coordinates: ${oceanEscape(location)}</p>${url.startsWith("http")?`<a href="${oceanEscape(url)}" target="_blank" rel="noopener">Open observation record ↗</a>`:`<a href="https://obis.org/" target="_blank" rel="noopener">Explore OBIS ↗</a>`}</article>`;
+}
+async function oceanLoadSpecies() {
+  const {lat,lon}=oceanCenter(),radius=Number($("speciesRadius").value),filter=$("speciesFilter").value,button=$("loadSpecies"),box=$("speciesResults");
+  button.disabled=true;box.replaceChildren();oceanStatus("speciesCount","Loading…");oceanStatus("speciesStatus","Searching recorded marine observations nearby…");
+  try{
+    const geometry=oceanBuildPolygon(lat,lon,radius);
+    const url="https://api.obis.org/v3/occurrence?geometry="+encodeURIComponent(geometry)+"&size=50";
+    const data=await oceanFetchJSON(url),records=Array.isArray(data.results)?data.results:[];
+    const seen=new Set(),unique=records.filter(record=>{if(!record.scientificName)return false;const key=record.scientificName.toLowerCase();if(seen.has(key))return false;seen.add(key);return true;});
+    const filtered=unique.filter(record=>filter==="plant"?oceanIsPlant(record):filter==="animal"?!oceanIsPlant(record):true);
+    oceanState.species=filtered;oceanStatus("speciesCount",filtered.length+" taxa");
+    if(!filtered.length){
+      oceanStatus("speciesStatus","No matching records returned. This does not prove the area lacks marine life; coverage may be limited.");
+      box.innerHTML='<article class="source"><h3>No matching records returned</h3><p>Try a larger radius or another organism group.</p><a href="https://obis.org/" target="_blank" rel="noopener">Search the OBIS map ↗</a></article>';return;
+    }
+    box.innerHTML=filtered.map(oceanSpeciesCard).join("");
+    const total=Number.isFinite(data.total)?data.total:"unknown";
+    oceanStatus("speciesStatus","Returned "+filtered.length+" unique named taxa from up to 50 occurrence records. API total: "+total+". These are recorded occurrences, not a live census.");
+  }catch(error){
+    oceanStatus("speciesCount","Unavailable");oceanStatus("speciesStatus","OBIS request failed: "+error.message+". Check network access or open OBIS directly.");
+    box.innerHTML='<article class="source"><h3>OBIS service unavailable</h3><p>No species list has been fabricated.</p><a href="https://obis.org/" target="_blank" rel="noopener">Open Ocean Biodiversity Information System ↗</a></article>';
+  }finally{button.disabled=false;}
+}
+$("loadSpecies").addEventListener("click",oceanLoadSpecies);
+
+/* Wreck search through a public ArcGIS endpoint. The endpoint may change
+   or be region-limited; failures are shown rather than filled with guesses. */
+async function oceanLoadWrecks() {
+  const {lat,lon}=oceanCenter(),button=$("loadWrecks"),box=$("wreckResults");
+  button.disabled=true;box.replaceChildren();oceanStatus("wreckStatus","Searching charted wreck records…");
+  try{
+    const radiusKm=25,dLat=radiusKm/111.32,dLon=radiusKm/(111.32*Math.max(.01,Math.cos(lat*Math.PI/180)));
+    // NOAA AWOIS wreck/obstruction service. The previous URL had an invalid
+    // ArcGIS organization/service path. This published layer uses WGS84 coordinates.
+    const wreckParams = new URLSearchParams({
+      where: "1=1",
+      geometry: JSON.stringify({xmin:lon-dLon,ymin:lat-dLat,xmax:lon+dLon,ymax:lat+dLat,spatialReference:{wkid:4326}}),
+      geometryType: "esriGeometryEnvelope",
+      inSR: "4326",
+      outSR: "4326",
+      spatialRel: "esriSpatialRelIntersects",
+      outFields: "*",
+      returnGeometry: "true",
+      resultRecordCount: "50",
+      f: "json"
+    });
+    const wreckUrl = new URL("https://services5.arcgis.com/HDRa0B57OVrv2E1q/ArcGIS/rest/services/Wrecks_and_Obstructions/FeatureServer/0/query");
+    wreckUrl.search = wreckParams.toString();
+    const data=await oceanFetchJSON(wreckUrl.toString());
+    if(data.error)throw new Error(data.error.message||"ArcGIS query error");
+    const features=Array.isArray(data.features)?data.features:[];
+    oceanState.wrecks=features;
+    if(!features.length){
+      oceanStatus("wreckStatus","No records returned by this dataset. This does not prove there are no wrecks or submerged objects.");
+      box.innerHTML='<article class="source"><h3>No records returned</h3><p>This service may not cover this region. Check official chart resources.</p><a href="https://nauticalcharts.noaa.gov/data/wrecks-and-obstructions.html" target="_blank" rel="noopener">NOAA wrecks and obstructions ↗</a></article>';return;
+    }
+    box.innerHTML=features.map((feature,index)=>{
+      const a=feature.attributes||{},geom=feature.geometry||{};
+      const name=a.VESSLTERMS||a.vesselTerm||a.Vessel||a.Name||a.NAME||a.CATWRK||a.Feature_ty||a.FEATURE_TYPE||a.ObjectName||"Unnamed wreck / obstruction";
+      const details=Object.entries(a).filter(([key,value])=>value!==null&&value!==""&&/vessel|name|depth|feature|type|chart|descript|condition|position|year|history|quality|source/i.test(key)).slice(0,6).map(([key,value])=>`<br>${oceanEscape(key)}: ${oceanEscape(value)}`).join("");
+      const position=Number.isFinite(geom.x)&&Number.isFinite(geom.y)?Number(geom.y).toFixed(5)+", "+Number(geom.x).toFixed(5):([a.LATDEC,a.LONDEC,a.latitudeDD,a.longitudeD].every(v=>v!==undefined&&v!==null&&v!=="")?Number(a.LATDEC??a.latitudeDD).toFixed(5)+", "+Number(a.LONDEC??a.longitudeD).toFixed(5):"Position not provided");
+      return `<article class="source"><div class="source-top"><span class="source-icon">⚓</span><h3>${index+1}. ${oceanEscape(name)}</h3></div><p>Reported position: ${oceanEscape(position)}${details}</p><p class="small">Dataset record; position, identity and condition have not been independently verified by this application.</p></article>`;
+    }).join("");
+    oceanStatus("wreckStatus","Returned "+features.length+" record(s) from the queried dataset. It is not a complete global inventory.");
+  }catch(error){
+    oceanStatus("wreckStatus","Wreck query failed: "+error.message+". The source may be unavailable or not cover this region.");
+    box.innerHTML='<article class="source"><h3>Unable to retrieve wreck records</h3><p>No unverified objects have been invented.</p><a href="https://nauticalcharts.noaa.gov/data/wrecks-and-obstructions.html" target="_blank" rel="noopener">Open NOAA wreck and obstruction resources ↗</a></article>';
+  }finally{button.disabled=false;}
+}
+$("loadWrecks").addEventListener("click",oceanLoadWrecks);
+
+let tileErrorShown=false;
+[oceanBase,satellite,sst,chlorophyll,oceanLabels].forEach(layer=>layer.on("tileerror",()=>{
+  if(!tileErrorShown){tileErrorShown=true;setStatus("A map tile could not load. Check connectivity or provider availability. Other layers may still work.");}
+}));
+oceanBase.once("load",()=>setStatus("Ocean basemap loaded. Select an observation layer to explore."));
+window.addEventListener("orientationchange",()=>setTimeout(()=>map.invalidateSize(),350));
+window.addEventListener("resize",()=>map.invalidateSize());
+updateCoordinates(map.getCenter());
+oceanStatus("transectStatus","Ready. Select a map point, then retrieve the bathymetry profile.");
+})();
+</script>
+</body>
+</html>
