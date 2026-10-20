@@ -4309,21 +4309,25 @@ const airplaySafeBtn = document.getElementById('airplay-safe-btn');
 function toggleAirPlaySafeMode() {
   isAirPlaySafe = !isAirPlaySafe;
   if (isAirPlaySafe) {
-    airplaySafeBtn.classList.add('active');
-    airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON (Stable)";
+    if (airplaySafeBtn) {
+      airplaySafeBtn.classList.add('active');
+      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON (Stable)";
+    }
     video.setAttribute('disableRemotePlayback', 'true');
     video.setAttribute('x-webkit-airplay', 'deny');
-    mirrorVideo.style.display = 'block';
+    if (mirrorVideo) mirrorVideo.style.display = 'block';
     video.style.display = 'none';
     startCanvasMirrorStream();
     toast("AirPlay Safe Mode Enabled (Multi-Instance Stable)");
     logToTerminal('AIRPLAY', 'AirPlay Safe Mode Enabled (Stable)');
   } else {
-    airplaySafeBtn.classList.remove('active');
-    airplaySafeBtn.textContent = "🛡️ AirPlay Safe: OFF";
+    if (airplaySafeBtn) {
+      airplaySafeBtn.classList.remove('active');
+      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: OFF";
+    }
     video.removeAttribute('disableRemotePlayback');
     video.setAttribute('x-webkit-airplay', 'allow');
-    mirrorVideo.style.display = 'none';
+    if (mirrorVideo) mirrorVideo.style.display = 'none';
     video.style.display = 'block';
     stopCanvasMirrorStream();
     toast("AirPlay Safe Mode Disabled");
@@ -4352,8 +4356,10 @@ function startCanvasMirrorStream() {
             }
             try {
               activeCaptureStream = mirrorCanvas.captureStream(25);
-              mirrorVideo.srcObject = activeCaptureStream;
-              mirrorVideo.play().catch(() => {});
+              if (mirrorVideo) {
+                mirrorVideo.srcObject = activeCaptureStream;
+                mirrorVideo.play().catch(() => {});
+              }
             } catch (err) {
               logToTerminal('ERROR', 'Canvas captureStream failed: ' + err.message);
             }
@@ -5843,13 +5849,16 @@ function onAirPlayStateChange(connected) {
 }
 
 function toggleAirPlayPicker() {
-  video.disableRemotePlayback = false;
-  if (video.webkitShowPlaybackTargetPicker) {
-    video.webkitShowPlaybackTargetPicker();
-  } else if (video.remote && video.remote.prompt) {
-    video.remote.prompt().catch(() => {});
+  const targetVideo = (typeof isAirPlaySafe !== 'undefined' && isAirPlaySafe) ? (document.getElementById('mirror-video') || video) : video;
+  targetVideo.disableRemotePlayback = false;
+  if (targetVideo.webkitShowPlaybackTargetPicker) {
+    targetVideo.webkitShowPlaybackTargetPicker();
+  } else if (targetVideo.remote && targetVideo.remote.prompt) {
+    targetVideo.remote.prompt().catch((err) => {
+      toast("AirPlay target picker unavailable or blocked");
+    });
   } else {
-    toast("AirPlay is natively supported in Safari on Apple devices.");
+    toast("AirPlay is natively supported in Safari on Apple mobile devices.");
   }
 }
 
