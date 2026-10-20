@@ -1423,7 +1423,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
   <div class="telemetry-bar">
     <span>LIBRARY: <strong id="stat-total">0</strong></span>
     <span>FILTERED: <strong id="stat-showing">0</strong></span>
-    <span>FAVS: <strong id="stat-favs" style="color:var(--accent-fav)">0</strong></span>
     <span>PICTURE: <strong id="stat-pic" style="color:var(--accent-aurora)">QUANTUM SSR</strong></span>
     <span>AIRPLAY: <strong id="stat-airplay">READY</strong></span>
     <span id="sleep-badge" class="telemetry-pill pill-gold" style="display:none;">⏳ 00:00</span>
@@ -1433,7 +1432,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
   <div class="header-quick-actions">
     <button onclick="scanPreset('curated')" class="btn-accent" title="Sync top essentials">⚡ Sync Essentials</button>
     <button onclick="scanPreset('world_mega')" title="Scan 8,000+ global channels">🌐 Deep World Scan</button>
-    <button onclick="toggleMasterSoundLock()" class="btn-accent" id="header-sound-btn" title="Toggle and lock unmuted sound">🔊 Sound: UNMUTED</button>
     <button onclick="openModal('pictureModal')" class="btn-aurora" id="header-pic-btn">🎨 Picture Equalizer</button>
     <button onclick="playRandomChannel()" title="Zap to a surprise channel">🎲 Zap</button>
     <button onclick="toggleFavoritesView()" id="fav-toggle-btn">⭐ Favorites</button>
@@ -1455,7 +1453,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
   <button class="preset-pill-btn" onclick="scanPreset('kids_anime')">🧸 Cartoons & Anime</button>
   <button class="preset-pill-btn" onclick="scanPreset('science_docs')">🔬 Science & Docs</button>
   <button class="preset-pill-btn" onclick="scanPreset('music_hits')">🎵 24/7 Live Music</button>
-  <button class="preset-pill-btn" onclick="scanPreset('adult_xxx')" style="border-color:#ec4899; color:#f472b6; background:rgba(236,72,153,0.18);">🔞 Sync 500+ Adult Pack</button>
   <button class="preset-pill-btn" onclick="filterByKeyword('hentai')" style="border-color: #a855f7; color: #c084fc; background: rgba(168,85,247,0.12);">🎨 Anime & Hentai</button>
   <button class="preset-pill-btn" onclick="selectMainCategory('adult')" style="border-color: #ec4899; color: #f472b6; background: rgba(236,72,153,0.12);">🔞 All 18+ Channels</button>
 </div>
@@ -1468,9 +1465,7 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
     <div class="player-bezel" id="playerBezel">
       <div class="video-frame" id="playerScreen">
         <!-- Live Video Element -->
-        <video id="video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video>
-        <!-- AirPlay Safe Mirror Element (Desktop Canvas Mirror) -->
-        <video id="mirror-video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" style="display:none;"></video>
+        <video id="video" class="video-player aspect-16-9" controls autoplay playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video>
 
         <!-- Dynamic A/B Split Comparison Layer -->
         <div id="splitOverlay" class="split-compare-overlay"></div>
@@ -1562,10 +1557,10 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
 
       <div class="controls-row">
         <button onclick="toggleAirPlayPicker()" id="airplay-btn" title="Stream to Apple TV or AirPlay Screen">📺 AirPlay</button>
-        <button onclick="toggleAirPlaySafeMode()" id="airplay-safe-btn" title="Desktop Canvas Mirror: Decodes stream locally so AirPlay never drops">🛡️ AirPlay Safe: OFF</button>
-        <button onclick="disconnectAirPlay()" id="local-screen-btn" title="Switch playback back to laptop screen" style="display:none; background:#ec4899; color:#fff; border-color:#ec4899;">🖥️ Return to Laptop</button>
-        <button onclick="skipCommercialSlate()" title="Instantly fast-forward past looping commercial ad slates">⚡ Skip Slate</button>
-        <button onclick="findAlternateStream()" title="Find an alternate live feed for this channel">🔀 Alt Feed</button>
+        <button onclick="toggleAirPlaySafeMode()" id="airplay-safe-btn" title="Extended 30s Buffer Tolerance for TV AirPlay">🛡️ AirPlay Safe: OFF</button>
+        <button onclick="skipCommercialSlate()" title="Skip 5s past Pluto TV commercial holding loops">⚡ Skip Slate</button>
+        <button onclick="findAlternateStream()" title="Switch to Alternate Stream Link">🔀 Alt Link</button>
+        <button onclick="disconnectAirPlay()" id="local-screen-btn" title="Switch playback back to local screen" style="display:none; background:#ec4899; color:#fff; border-color:#ec4899;">🖥️ Return</button>
         <button onclick="toggleMainSplitCompare()" id="split-compare-btn" title="Toggle Main Screen A/B Split Compare">↔ Compare</button>
         <button onclick="reconnectCurrentStream(false)" title="Re-synchronize with live transmission edge">🔄 Re-Sync</button>
         <button onclick="tryPrevStream()" title="Previous Channel">⏮️ Prev</button>
@@ -1932,14 +1927,6 @@ const TAXONOMY = [
 ];
 
 const PRESET_SOURCES = {
-  adult_xxx: {
-    label: "🔞 Adult 18+ & Anime Hentai Master Pack (~500+ Ch)",
-    urls: [
-      "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/nsfw.m3u",
-      "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/adult.m3u",
-      "https://iptv-org.github.io/iptv/categories/xxx.m3u"
-    ]
-  },
   curated: {
     label: "⚡ Curated Fast Essentials (~1,500 Ch)",
     urls: [
@@ -2017,6 +2004,8 @@ const PRESET_SOURCES = {
 };
 
 const STARTER_CHANNELS = [
+  {"name": "Pluto TV Comedy Central Animation", "url": "https://jmp2.uk/plu-64f8a949f5b5e4000862467c.m3u8", "logo": "", "group": "Cartoons & Anime", "country": "US", "quality": "1080p FHD"},
+
   { name: "NASA TV UHD & Science", url: "https://ntv.akamaized.net/hls/live/2013499/NASA-NTV-Public/master.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg", group: "Science & Tech", country: "US", quality: "4K UHD" },
   { name: "Bloomberg Television USA", url: "https://liveproduseast.global.ssl.fastly.net/us/Channel-HD-AWS-virginia-1/live.m3u8", logo: "https://upload.wikimedia.org/wikipedia/commons/5/53/Bloomberg_Television_logo.svg", group: "Business & News", country: "US", quality: "1080p FHD" },
   { name: "Sky News Live HD", url: "https://skynews-live.akamaized.net/hls/live/sky_news/index.m3u8", logo: "https://upload.wikimedia.org/wikipedia/en/3/30/Sky_News_logo_2018.svg", group: "Global News", country: "UK", quality: "1080p FHD" },
@@ -4165,101 +4154,58 @@ const STARTER_CHANNELS = [
   {"name": "AdultIPTV.net Gay", "url": "http://cdn.adultiptv.net/gay.m3u8", "logo": "https://files.adultiptv.net/adultiptvnet.jpg", "group": "XXX", "country": "Global", "quality": "HD"}
 ];
 
-// SMART PROXY MATRIX: Prioritizes local high-speed Python proxy when running on localhost
-const CORS_PROXIES = [
-  (u) => u, // Layer 0: Direct Connection
-  (u) => (window.location.protocol.startsWith('http') ? `/proxy?url=${encodeURIComponent(u)}` : `https://corsproxy.io/?${encodeURIComponent(u)}`), // Layer 1: High-Speed Local Proxy (Zero-CORS)
-  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // Layer 2: AllOrigins Buffer
-  (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` // Layer 3: CodeTabs Gateway
-];
+// Multi-Instance Isolated Device & Session Identity
+const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) && !window.MSStream;
+const isMobileDevice = /iPad|iPhone|iPod|Android/.test(navigator.userAgent);
 
-function isAlreadyProxied(u) {
-  if (!u) return false;
-  return u.includes("/proxy?url=") || u.includes("corsproxy.io") || u.includes("allorigins.win") || u.includes("codetabs.com");
+function getClientDeviceId() {
+  let id = localStorage.getItem("sat_client_device_id");
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).substring(2, 12) + "_" + Date.now().toString(36);
+    localStorage.setItem("sat_client_device_id", id);
+  }
+  return id;
 }
 
-function formatProxyUrl(rawUrl, pIdx) {
-  if (!rawUrl || pIdx <= 0 || pIdx >= CORS_PROXIES.length) return rawUrl;
-  if (isAlreadyProxied(rawUrl)) return rawUrl;
-  return CORS_PROXIES[pIdx](rawUrl);
+function generateSessionId() {
+  return "sid_" + Math.random().toString(36).substring(2, 12) + "_" + Date.now().toString(36);
 }
 
-// TERMINAL TELEMETRY CLIENT: Relays stream status, diagnostics, and errors directly to the Python terminal
-function logToTerminal(level, message, data = {}) {
-  try {
-    if (!window.location.protocol.startsWith('http')) return;
-    const payload = {
-      level: level,
-      message: message,
-      channel: currentPlayingChannel ? currentPlayingChannel.name : 'Station',
-      url: currentPlayingChannel ? currentPlayingChannel.url : '',
-      country: currentPlayingChannel ? currentPlayingChannel.country : '',
-      data: data
-    };
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/log', JSON.stringify(payload));
+// Xbox Edge & Mixed Content Stream Normalizer
+function normalizeStreamUrl(rawUrl) {
+  if (!rawUrl) return rawUrl;
+  let u = rawUrl.trim();
+
+  // Resolve jmp2.uk Pluto aliases directly to HTTPS stitcher (Fixes Xbox Edge CORS & 302 Mixed Content)
+  const jmpMatch = u.match(/jmp2\.uk\/plu-([a-f0-9]+)(?:-[^.]+)?\.m3u8/i);
+  if (jmpMatch) {
+    const chId = jmpMatch[1];
+    return `https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/${chId}/master.m3u8?deviceType=web&deviceMake=Chrome&deviceId=${getClientDeviceId()}&sid=${generateSessionId()}`;
+  }
+
+  // Rewrite insecure Pluto TV endpoints to HTTPS & inject unique client IDs to prevent multi-device eviction
+  if (u.includes("pluto.tv")) {
+    u = u.replace(/^http:\/\//i, "https://");
+    if (u.includes("deviceId=")) {
+      u = u.replace(/deviceId=[^&]+/i, `deviceId=${getClientDeviceId()}`);
     } else {
-      fetch('/api/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(() => {});
+      u += (u.includes("?") ? "&" : "?") + `deviceId=${getClientDeviceId()}`;
     }
-  } catch (e) {}
-}
-
-// Master Audio Authority: Permanently unlocks unmuted audio for Safari & AirPlay
-let masterAudioUnlocked = true;
-function unlockAudioEngine() {
-  if (video) {
-    video.muted = false;
-    const volSlider = document.getElementById("volume-slider");
-    const desired = volSlider ? parseFloat(volSlider.value) : 1.0;
-    video.volume = desired > 0 ? desired : 1.0;
-  }
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) {
-      const actx = new AudioCtx();
-      if (actx.state === "suspended") actx.resume();
+    if (u.includes("sid=")) {
+      u = u.replace(/sid=[^&]+/i, `sid=${generateSessionId()}`);
+    } else {
+      u += (u.includes("?") ? "&" : "?") + `sid=${generateSessionId()}`;
     }
-  } catch (e) {}
-  const unmute = document.getElementById("unmute-btn");
-  if (unmute) unmute.style.display = "none";
-  const soundBtn = document.getElementById("header-sound-btn");
-  if (soundBtn) {
-    soundBtn.textContent = "🔊 Sound: UNMUTED";
-    soundBtn.classList.add("btn-accent");
   }
+  return u;
 }
 
-function toggleMasterSoundLock() {
-  unlockAudioEngine();
-  video.play().catch(() => {});
-  toast("Master Audio Pipeline Unlocked (100% Volume)");
-  logToTerminal('AUDIO', 'Master Sound Lock active: 100% Passthrough');
-}
-
-['click', 'touchstart', 'keydown', 'mousedown'].forEach(evt => {
-  window.addEventListener(evt, unlockAudioEngine, { passive: true });
-});
-
-// Intercepts and proxies manifests AND individual .ts video segments to fix 403 / CORS on adult & global streams
-class ShieldProxyLoader extends (typeof Hls !== "undefined" && Hls.DefaultConfig ? Hls.DefaultConfig.loader : Object) {
-  constructor(config) {
-    super(config);
-    const defaultLoad = this.load.bind(this);
-    this.load = function (context, config, callbacks) {
-      if (currentPlayingChannel && currentPlayingChannel.proxyIndex > 0) {
-        const pIdx = currentPlayingChannel.proxyIndex;
-        if (context.url && !isAlreadyProxied(context.url)) {
-          context.url = formatProxyUrl(context.url, pIdx);
-        }
-      }
-      return defaultLoad(context, config, callbacks);
-    };
-  }
-}
+const CORS_PROXIES = [
+  (u) => u,
+  (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+];
 
 // CANONICAL PICTURE SETTINGS
 const pictureSettings = {
@@ -4360,120 +4306,6 @@ const splitOverlay = document.getElementById("splitOverlay");
 const splitBar = document.getElementById("splitBar");
 const splitLabels = document.getElementById("splitLabels");
 const splitCompareBtn = document.getElementById("split-compare-btn");
-const mirrorVideo = document.getElementById("mirror-video");
-const airplaySafeBtn = document.getElementById("airplay-safe-btn");
-
-// Device & Multi-Instance AirPlay Engine
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
-const APP_INSTANCE_ID = 'sat_' + Math.random().toString(36).substring(2, 9);
-
-let isAirPlaySafe = false;
-let airplayPreemptionCooldown = 0;
-let mirrorCanvas = document.createElement("canvas");
-let mirrorCtx = mirrorCanvas.getContext("2d", { alpha: false });
-let mirrorAnimId = null;
-let fastStallCount = 0;
-let isFastHealing = false;
-
-function safePlay(v = video) {
-  if (!v) return;
-  const p = v.play();
-  if (p !== undefined) {
-    p.catch(err => {
-      if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
-        console.warn("safePlay notice:", err);
-      }
-    });
-  }
-}
-
-// 🛡️ AIRPLAY SAFE-STREAM CANVAS MIRRORING (Desktop macOS Safari No-Drop Engine)
-function toggleAirPlaySafeMode() {
-  if (isIOS) {
-    toast("iOS Mobile natively uses Apple TV AirPlay hardware.");
-    return;
-  }
-  isAirPlaySafe = !isAirPlaySafe;
-  if (isAirPlaySafe) {
-    if (airplaySafeBtn) {
-      airplaySafeBtn.classList.add("active");
-      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON";
-    }
-    video.setAttribute("disableRemotePlayback", "true");
-    video.setAttribute("x-webkit-airplay", "deny");
-    if (mirrorVideo) mirrorVideo.style.display = "block";
-    video.style.display = "none";
-    startCanvasMirror();
-    triggerShieldNotify("AirPlay Safe Canvas Mode Enabled");
-    toast("AirPlay Safe Mode Active (Zero Dropouts)");
-  } else {
-    if (airplaySafeBtn) {
-      airplaySafeBtn.classList.remove("active");
-      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: OFF";
-    }
-    video.removeAttribute("disableRemotePlayback");
-    video.setAttribute("x-webkit-airplay", "allow");
-    if (mirrorVideo) mirrorVideo.style.display = "none";
-    video.style.display = "block";
-    stopCanvasMirror();
-    triggerShieldNotify("Native AirPlay Restored");
-    toast("Native Direct AirPlay Mode Active");
-  }
-}
-
-function startCanvasMirror() {
-  const draw = () => {
-    if (!video.paused && !video.ended && video.videoWidth > 0) {
-      if (mirrorCanvas.width !== video.videoWidth) {
-        mirrorCanvas.width = video.videoWidth;
-        mirrorCanvas.height = video.videoHeight;
-        if (mirrorCanvas.captureStream) {
-          const st = mirrorCanvas.captureStream(30);
-          if (mirrorVideo) {
-            mirrorVideo.srcObject = st;
-            safePlay(mirrorVideo);
-          }
-        }
-      }
-      mirrorCtx.drawImage(video, 0, 0, mirrorCanvas.width, mirrorCanvas.height);
-    }
-    if (isAirPlaySafe) {
-      mirrorAnimId = requestAnimationFrame(draw);
-    }
-  };
-  draw();
-}
-
-function stopCanvasMirror() {
-  if (mirrorAnimId) cancelAnimationFrame(mirrorAnimId);
-  if (mirrorVideo) mirrorVideo.srcObject = null;
-}
-
-// ⚡ FAST-FORWARD PLUTO TV SLATE FILLER LOOPS
-function skipCommercialSlate() {
-  if (video && !video.paused) {
-    video.currentTime += 5.0;
-    triggerShieldNotify("Skipped Filler Slate (+5s)");
-    toast("Skipped +5s past filler slate");
-  }
-}
-
-// 🔲 FIND ALTERNATE STREAM FEED
-function findAlternateStream() {
-  if (!currentPlayingChannel) return;
-  const currentName = currentPlayingChannel.name.toLowerCase().replace(/pluto|tv|\(1080p\)|\(720p\)|live|hd|fhd/g, "").trim();
-  const alts = allChannels.filter(c => c.url !== currentPlayingChannel.url && currentName.length > 2 && c.name.toLowerCase().includes(currentName));
-  if (alts.length > 0) {
-    const nextAlt = alts[Math.floor(Math.random() * alts.length)];
-    triggerShieldNotify(`Switched to Alt Feed: ${nextAlt.name}`);
-    toast(`Switched to: ${nextAlt.name}`);
-    tuneChannelWithAudio(nextAlt.url, nextAlt.name, nextAlt.subName || nextAlt.group, nextAlt.logo, nextAlt.country, nextAlt.quality);
-  } else {
-    triggerShieldNotify("No Alt Feed found. Re-syncing stream edge...");
-    reconnectCurrentStream(true);
-  }
-}
 
 // INITIALIZATION
 window.addEventListener("DOMContentLoaded", () => {
@@ -4683,7 +4515,7 @@ function showPage() {
 
     const card = document.createElement("div");
     card.className = `ch-item ${isPlaying ? 'playing' : ''}`;
-    card.onclick = () => tuneChannelWithAudio(ch.url, ch.name, ch.subName || ch.group, ch.logo, ch.country, ch.quality);
+    card.onclick = () => play(ch.url, ch.name, ch.subName || ch.group, ch.logo, ch.country, ch.quality);
 
     const logoHtml = ch.logo
       ? `<img class="ch-logo-img" src="${ch.logo}" alt="${escapeHtml(ch.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -4777,20 +4609,52 @@ function resetFilters() {
    ROCK-SOLID PERSISTENT PLAYBACK ENGINE
    ========================================================= */
 
-function tuneChannelWithAudio(url, name, category, logo, country, quality) {
-  unlockAudioEngine();
-  const prime = video.play();
-  if (prime !== undefined) prime.catch(() => {});
-  play(url, name, category, logo, country, quality, 0);
+let isAirPlaySafe = false;
+
+function checkIsAirPlay() {
+  return isAirPlayActive || 
+         Boolean(video.webkitCurrentPlaybackTargetIsWireless) || 
+         (video.remote && video.remote.state === 'connected') ||
+         isAirPlaySafe;
+}
+
+function skipCommercialSlate() {
+  if (video && !video.paused) {
+    video.currentTime += 5.0;
+    triggerShieldNotify("Skipped Filler Slate (+5s)");
+  }
+}
+
+function findAlternateStream() {
+  if (!currentPlayingChannel) return;
+  const currentName = currentPlayingChannel.name.toLowerCase().replace(/pluto|tv|hd|\(1080p\)|\(720p\)/g, '').trim();
+  const alternates = allChannels.filter(c => 
+    c.url !== currentPlayingChannel.url && 
+    c.name.toLowerCase().includes(currentName)
+  );
+  if (alternates.length > 0) {
+    const nextAlt = alternates[Math.floor(Math.random() * alternates.length)];
+    triggerShieldNotify(`Switched to Alt Feed: ${nextAlt.name}`);
+    play(nextAlt.url, nextAlt.name, nextAlt.subName || nextAlt.group, nextAlt.logo, nextAlt.country, nextAlt.quality);
+  } else {
+    triggerShieldNotify("No Alt Feed found. Re-syncing live edge...");
+    reconnectCurrentStream(true);
+  }
+}
+
+function toggleAirPlaySafeMode() {
+  isAirPlaySafe = !isAirPlaySafe;
+  const btn = document.getElementById("airplay-safe-btn");
+  if (btn) {
+    btn.classList.toggle("active", isAirPlaySafe);
+    btn.textContent = isAirPlaySafe ? "🛡️ AirPlay Safe: ON" : "🛡️ AirPlay Safe: OFF";
+  }
+  toast(isAirPlaySafe ? "AirPlay Safe: 30s Buffer Tolerance Active" : "AirPlay Safe Mode Disabled");
 }
 
 function play(url, name, category, logo, country, quality, proxyIndex = 0) {
-  // Synchronously claim audio permission inside user interaction
-  unlockAudioEngine();
-  safePlay(video);
-
-  currentPlayingChannel = { url, name, category, logo, country, quality, proxyIndex };
-  logToTerminal("TUNE", `Tuning: "${name}" [${country || "Global"}] (Layer ${proxyIndex})`, { url, quality });
+  const normalizedUrl = normalizeStreamUrl(url);
+  currentPlayingChannel = { url: normalizedUrl, name, category, logo, country, quality, proxyIndex };
 
   // Update UI Elements
   document.getElementById("now-playing-title").textContent = name;
@@ -4812,15 +4676,15 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
       : `<div class="now-playing-fallback">${initials}</div>`;
   }
 
-  updateStreamStatus("connecting", isAirPlayActive ? "📶 CONNECTING AIRPLAY..." : (proxyIndex > 0 ? `🟡 PROXY LAYER ${proxyIndex}...` : "🟡 CONNECTING..."));
+  const isRemoteAirPlay = checkIsAirPlay();
+  updateStreamStatus("connecting", isRemoteAirPlay ? "📶 CONNECTING AIRPLAY..." : "🟡 CONNECTING...");
   watchdogFrozenCount = 0;
-  fastStallCount = 0;
   lastPlaybackTime = -1;
   isChannelTuning = true;
 
   addToHistory(currentPlayingChannel);
 
-  // Clean previous HLS instance without resetting media element authorization
+  // --- DEEP CLEAN MEMORY BEFORE PLAYING ---
   if (hls) {
     hls.stopLoad();
     hls.detachMedia();
@@ -4828,58 +4692,40 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
     hls = null;
   }
   video.pause();
+  video.removeAttribute('src');
+  video.load(); 
 
-  // Enforce unmuted audio state
-  video.muted = false;
-  const volSlider = document.getElementById("volume-slider");
-  const targetVol = volSlider ? parseFloat(volSlider.value) : 1.0;
-  video.volume = targetVol > 0 ? targetVol : 1.0;
-
-  // Resolve target stream URL with active proxy layer
-  const targetUrl = formatProxyUrl(url, proxyIndex);
+  // AirPlay & Native Safari HLS Direct Origin Routing
+  const isNativeHLS = Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
+  const targetUrl = ((isNativeHLS || isRemoteAirPlay) && proxyIndex === 0) 
+    ? normalizedUrl 
+    : (proxyIndex < CORS_PROXIES.length ? CORS_PROXIES[proxyIndex](normalizedUrl) : normalizedUrl);
 
   const startPlayback = () => {
     applyCaptionSettings();
     applyPictureProcessing();
-    
-    // Always attempt unmuted playback first
-    video.muted = false;
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        updateStreamStatus("live", isAirPlayActive ? "📶 AIRPLAY LIVE" : "🟢 LIVE ON AIR");
-        if (unmuteBtn) unmuteBtn.style.display = "none";
-        isChannelTuning = false;
-        logToTerminal("ONLINE", `Playing: "${name}" (${video.videoWidth || 1920}x${video.videoHeight || 1080}) [${country || "Global"}]`);
-      }).catch((err) => {
-        if (!isAirPlayActive) {
-          // Fallback for initial load if browser blocks unmuted sound prior to user gesture
-          video.muted = true;
-          if (unmuteBtn) unmuteBtn.style.display = "flex";
-          safePlay(video);
+    video.play().then(() => {
+      updateStreamStatus("live", checkIsAirPlay() ? "📶 AIRPLAY LIVE" : "🟢 LIVE ON AIR");
+      unmuteBtn.style.display = "none";
+      isChannelTuning = false;
+    }).catch(() => {
+      if (!checkIsAirPlay()) {
+        video.muted = true;
+        unmuteBtn.style.display = "flex";
+        video.play().then(() => {
           updateStreamStatus("live", "🟢 LIVE (MUTED)");
           isChannelTuning = false;
-        } else {
-          // AirPlay active: keep unmuted so remote presentation clock syncs
-          video.muted = false;
-          if (unmuteBtn) {
-            unmuteBtn.style.display = "flex";
-            unmuteBtn.textContent = "🔊 Click to Stream Unmuted Sound to AirPlay";
-          }
-          updateStreamStatus("live", "📶 AIRPLAY LIVE");
+        }).catch(() => {
+          updateStreamStatus("error", "🔴 CLICK TO PLAY");
           isChannelTuning = false;
-        }
-      });
-    }
+        });
+      } else {
+        isChannelTuning = false;
+      }
+    });
   };
 
-  // HYBRID ENGINE ARCHITECTURE:
-  // On iOS Mobile Safari, MediaSource is unsupported for HLS; native AVPlayer must be used.
-  // On Desktop Safari, direct feeds (proxyIndex === 0) run natively unless AirPlay Safe Mode is active or Hls.js is required.
-  const shouldUseNative = (isIOS || (isSafari && proxyIndex === 0 && !isAirPlaySafe)) && Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
-
-  if (shouldUseNative) {
-    // Safari & iOS Native AVPlayer pipeline
+  if (isNativeHLS || isRemoteAirPlay) {
     video.src = targetUrl;
     if (video.readyState >= 1) {
       startPlayback();
@@ -4887,37 +4733,30 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
       video.addEventListener("loadedmetadata", startPlayback, { once: true });
       video.addEventListener("canplay", startPlayback, { once: true });
       setTimeout(() => {
-        if (video.paused && currentPlayingChannel && isChannelTuning) {
-          startPlayback();
-        }
-      }, 1200);
+        if (video.paused && currentPlayingChannel) startPlayback();
+      }, 1000);
     }
   } else if (typeof Hls !== "undefined" && Hls.isSupported()) {
-    // Upgraded HLS.js with 60MB Allocation & Non-Capping Level Engine (for pristine AirPlay transmission)
     hls = new Hls({
-      loader: ShieldProxyLoader,
       enableWorker: true,
       lowLatencyMode: false,
-      capLevelToPlayerSize: false, // Prevents downsampling on small screens when AirPlaying to 4K TV
-      maxBufferLength: 90,         // Robust 90-second buffer
-      maxMaxBufferLength: 180,     // 180-second headroom
-      maxBufferSize: 60 * 1024 * 1024, // 60MB allocation
-      maxBufferHole: 1.0,
-      maxFragLookUpTolerance: 0.5,
+      capLevelToPlayerSize: true,
+      liveSyncDurationCount: 6,
+      backBufferLength: 30,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      maxBufferSize: 25 * 1024 * 1024,
+      maxBufferHole: 0.8,
       highBufferWatchdogPeriod: 2,
       nudgeOffset: 0.3,
-      nudgeMaxRetry: 10,
-      fragLoadingTimeOut: 25000,
-      manifestLoadingTimeOut: 25000,
-      fragLoadingMaxRetry: 10,
-      manifestLoadingMaxRetry: 10,
-      levelLoadingMaxRetry: 10,
-      xhrSetup: (xhr, reqUrl) => {
+      nudgeMaxRetry: 6,
+      fragLoadingTimeOut: 30000,
+      manifestLoadingTimeOut: 30000,
+      fragLoadingMaxRetry: 6,
+      manifestLoadingMaxRetry: 6,
+      levelLoadingMaxRetry: 6,
+      xhrSetup: (xhr) => {
         xhr.withCredentials = false;
-        try {
-          xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-          xhr.setRequestHeader('Accept', '*/*');
-        } catch (e) {}
       }
     });
 
@@ -4926,7 +4765,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
 
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
       populateQualityDropdown(data.levels);
-      forceMaxQualityLevel();
+      hls.currentLevel = -1; 
       startPlayback();
     });
 
@@ -4941,30 +4780,42 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
       applyCaptionSettings();
     });
 
-    // Auto-Shield Fatal Error Handler: Cascades to next proxy layer
+    // Auto-Shield Fatal & Non-Fatal Error Interceptor with Multi-Proxy Failover
     hls.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            triggerShieldNotify("Re-synchronizing Network Buffer");
-            hls.startLoad();
-            setTimeout(() => {
-              if (video.paused || video.readyState < 3) {
-                failoverToNextProxy("Network Connection Blocked");
-              }
-            }, 3000);
+            if (proxyIndex + 1 < CORS_PROXIES.length) {
+              triggerShieldNotify(`Failover: Activating Proxy Engine (${proxyIndex + 1})...`);
+              play(url, name, category, logo, country, quality, proxyIndex + 1);
+            } else {
+              triggerShieldNotify("Network Re-synchronizing Live Edge...");
+              hls.startLoad();
+              setTimeout(() => {
+                if (video.paused || video.readyState < 3) {
+                  reconnectCurrentStream(true);
+                }
+              }, 3500);
+            }
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
             triggerShieldNotify("Auto-Healing Broken Media Splice");
             hls.recoverMediaError();
             setTimeout(() => {
               if (video.paused || video.readyState < 3) {
-                failoverToNextProxy("Media Codec Mismatch");
+                reconnectCurrentStream(true);
               }
-            }, 3000);
+            }, 3500);
             break;
           default:
-            failoverToNextProxy(data.details || "Stream Ingestion Failure");
+            if (proxyIndex + 1 < CORS_PROXIES.length) {
+              triggerShieldNotify(`Failover to Alternate Proxy Stream (${proxyIndex + 1})`);
+              play(url, name, category, logo, country, quality, proxyIndex + 1);
+            } else {
+              triggerShieldNotify("Stream Buffering — Auto-Reconnect Active");
+              updateStreamStatus("connecting", "🔄 RE-SYNCING...");
+              setTimeout(() => reconnectCurrentStream(true), 4000);
+            }
             break;
         }
       } else if (data.details === "fragLoadError" || data.details === "fragParsingError" || data.details === "bufferStalledError") {
@@ -4972,7 +4823,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
         if (hls && typeof hls.nudgeStream === "function") {
           hls.nudgeStream();
         } else {
-          video.currentTime += 0.3;
+          video.currentTime += 0.1;
         }
       }
     });
@@ -4984,44 +4835,13 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
   showPage();
 }
 
-// Automatically cascades through Anti-Block Proxy layers when an origin server drops requests
-function failoverToNextProxy(reason) {
-  if (!currentPlayingChannel) return;
-  if (Date.now() < airplayPreemptionCooldown) {
-    console.warn("Proxy failover suppressed during AirPlay preemption/handoff window");
-    return;
-  }
-  const currentIdx = currentPlayingChannel.proxyIndex || 0;
-  const nextIdx = currentIdx + 1;
-  if (nextIdx < CORS_PROXIES.length) {
-    shieldInterceptCount++;
-    logToTerminal("FAILOVER", `Interrupted [${reason}]. Cascading "${currentPlayingChannel.name}" to Layer ${nextIdx}`);
-    triggerShieldNotify(`Shield: Layer ${nextIdx} Active (${reason || 'Anti-Block'})`);
-    play(
-      currentPlayingChannel.url,
-      currentPlayingChannel.name,
-      currentPlayingChannel.category,
-      currentPlayingChannel.logo,
-      currentPlayingChannel.country,
-      currentPlayingChannel.quality,
-      nextIdx
-    );
-  } else {
-    triggerShieldNotify("Stream edge re-synchronizing...");
-    updateStreamStatus("connecting", "🔄 RE-SYNCING...");
-    setTimeout(() => reconnectCurrentStream(true), 3500);
-  }
-}
-
 let isReconnecting = false;
 function reconnectCurrentStream(silent = false) {
   if (!currentPlayingChannel || isReconnecting) return;
-  if (Date.now() < airplayPreemptionCooldown) return;
-
   isReconnecting = true;
   setTimeout(() => { isReconnecting = false; }, 4000);
 
-  if (!silent) updateStreamStatus("connecting", isAirPlayActive ? "📶 SYNCING AIRPLAY..." : "🔄 RE-SYNCING...");
+  if (!silent) updateStreamStatus("connecting", checkIsAirPlay() ? "📶 SYNCING AIRPLAY..." : "🔄 RE-SYNCING...");
 
   const base = currentPlayingChannel.url;
   const ts = Date.now();
@@ -5040,31 +4860,29 @@ function reconnectCurrentStream(silent = false) {
 
 function setupCommercialAutoShield() {
   video.addEventListener("error", () => {
-    // If an error fired because AirPlay was preempted or disconnected, DO NOT cascade proxies or tear down video!
-    if (Date.now() < airplayPreemptionCooldown) {
-      console.warn("Handled AirPlay preemption event without stream disruption");
-      setTimeout(() => {
-        if (video.paused && currentPlayingChannel) safePlay(video);
-      }, 500);
-      return;
-    }
-    if (currentPlayingChannel && !isChannelTuning) {
-      shieldInterceptCount++;
-      failoverToNextProxy("Playback Pipeline Interruption");
+    if (currentPlayingChannel) {
+      if (checkIsAirPlay()) {
+        triggerShieldNotify("AirPlay: Synchronizing Stream Splice...");
+        setTimeout(() => reconnectCurrentStream(true), 1200);
+      } else {
+        shieldInterceptCount++;
+        triggerShieldNotify("Auto-Healed Broken Commercial Stream Splice");
+        setTimeout(() => reconnectCurrentStream(true), 600);
+      }
     }
   });
 
   video.addEventListener("waiting", () => {
     clearTimeout(stallRecoveryTimer);
-    if (isAirPlayActive) {
-      triggerShieldNotify("AirPlay: Buffering Remote Hardware...");
+    if (checkIsAirPlay()) {
+      triggerShieldNotify("AirPlay: Buffering Remote TV Hardware...");
       return;
     }
     stallRecoveryTimer = setTimeout(() => {
-      if (currentPlayingChannel && !video.paused && video.readyState < 3 && !isAirPlayActive && !isChannelTuning) {
+      if (currentPlayingChannel && !video.paused && video.readyState < 3 && !checkIsAirPlay() && !isChannelTuning) {
         shieldInterceptCount++;
         triggerShieldNotify("Auto-Shield: Resolving Prolonged Stall");
-        failoverToNextProxy("Buffer Stall Detected");
+        reconnectCurrentStream(true);
       }
     }, 4500);
   });
@@ -5072,14 +4890,12 @@ function setupCommercialAutoShield() {
   video.addEventListener("playing", () => {
     clearTimeout(stallRecoveryTimer);
     watchdogFrozenCount = 0;
-    fastStallCount = 0;
     isChannelTuning = false;
-    if (isAirPlayActive) {
+    if (checkIsAirPlay()) {
       updateStreamStatus("live", "📶 AIRPLAY LIVE");
     }
   });
 
-  // Auto-resync when an episode concludes
   video.addEventListener("ended", () => {
     if (currentPlayingChannel) {
       triggerShieldNotify("Episode Concluded — Auto-Advancing Stream...");
@@ -5090,56 +4906,45 @@ function setupCommercialAutoShield() {
     }
   });
 
-  // 500ms High-Frequency Ad & Discontinuity Auto-Healer (from File 1)
+  // Adaptive Watchdog Timer for frozen live loops & remote AirPlay
   setInterval(() => {
     if (document.hidden) return;
-    if (!video.paused && !video.ended && currentPlayingChannel && !isChannelTuning) {
-      if (video.currentTime === lastPlaybackTime) {
-        fastStallCount++;
-
-        // 1.5s stall (3 ticks): gently nudge forward past ad splice / frozen frame
-        if (fastStallCount === 3 && !isFastHealing && !isAirPlayActive) {
-          isFastHealing = true;
-          triggerShieldNotify("⚡ Auto-Healed Ad Break");
-          video.currentTime += 0.3;
-          setTimeout(() => { isFastHealing = false; }, 1000);
+    if (currentPlayingChannel && !video.paused && !video.ended && !isChannelTuning) {
+      const isRemote = checkIsAirPlay();
+      if (isRemote) {
+        if (video.currentTime === lastPlaybackTime) {
+          watchdogFrozenCount++;
+          // Generous 26-second tolerance for remote Apple TV buffering/ad transcode
+          if (watchdogFrozenCount >= 26) {
+            triggerShieldNotify("AirPlay: Remote Stream Dropped — Re-Aligning Live Edge");
+            reconnectCurrentStream(true);
+            watchdogFrozenCount = 0;
+          }
+        } else {
+          lastPlaybackTime = video.currentTime;
+          watchdogFrozenCount = 0;
         }
+        return;
+      }
 
-        // 2.5s stall (5 ticks): recover media pipeline
-        if (fastStallCount === 5 && hls && !isAirPlayActive) {
-          triggerShieldNotify("🔄 Recovering Buffer");
-          hls.recoverMediaError();
-        }
-
-        // AirPlay specific: if stalled on AirPlay for 7s (14 ticks), gently resync live edge
-        if (isAirPlayActive && fastStallCount >= 14) {
-          triggerShieldNotify("AirPlay: Re-aligning Live Edge");
+      if (video.currentTime === lastPlaybackTime || video.readyState < 3) {
+        watchdogFrozenCount++;
+        if (watchdogFrozenCount >= 6) {
+          shieldInterceptCount++;
+          triggerShieldNotify("Auto-Shield Watchdog: Healing Frozen Stream Splice");
           reconnectCurrentStream(true);
-          fastStallCount = 0;
-        }
-
-        // Local specific: if stalled for 5s (10 ticks), silent token resync
-        if (!isAirPlayActive && fastStallCount >= 10) {
-          triggerShieldNotify("🔄 Silent Token Re-Sync");
-          failoverToNextProxy("Prolonged Buffer Stall");
-          fastStallCount = 0;
+          watchdogFrozenCount = 0;
+        } else if (watchdogFrozenCount === 3) {
+          video.currentTime += 0.2;
         }
       } else {
         lastPlaybackTime = video.currentTime;
-        fastStallCount = 0;
+        watchdogFrozenCount = 0;
       }
     }
-  }, 500);
-
-  // Live Manifest Token Refresh (every 12 seconds, from File 1)
-  setInterval(() => {
-    if (hls && !video.paused && currentPlayingChannel) {
-      try {
-        hls.checkManifest();
-      } catch(e) {}
-    }
-  }, 12000);
+  }, 1000);
 }
+
 /* =========================================================
    HARDWARE GPU PICTURE EQUALIZER & SPATIAL SSR ENGINE
    ========================================================= */
@@ -5213,7 +5018,9 @@ function updateSvgConvolutionKernel(sharpness, acutance) {
 
 function applyPictureProcessing() {
   const s = pictureSettings;
-  const hasSharpen = updateSvgConvolutionKernel(s.sharpness, s.detailRecovery);
+  // On mobile devices or active AirPlay transmission, bypass heavy SVG convolution matrix to prevent WebKit GPU out-of-memory crashes
+  const bypassSvgSharpen = isMobileDevice || (typeof checkIsAirPlay === "function" && checkIsAirPlay());
+  const hasSharpen = bypassSvgSharpen ? false : updateSvgConvolutionKernel(s.sharpness, s.detailRecovery);
   const cssFilters = buildCssFilterString(s);
 
   let finalFilter = cssFilters;
@@ -5733,20 +5540,8 @@ function applyCaptionSettings() {
 }
 
 function unmuteVideo() {
-  unlockAudioEngine();
   video.muted = false;
-  if (video.volume === 0) video.volume = 1.0;
-  const volSlider = document.getElementById("volume-slider");
-  if (volSlider) volSlider.value = "1";
-  const volVal = document.getElementById("volume-val");
-  if (volVal) volVal.textContent = "100%";
-  if (unmuteBtn) unmuteBtn.style.display = "none";
-  video.play().catch(() => {});
-  if (isAirPlayActive) {
-    updateStreamStatus("live", "📶 AIRPLAY LIVE");
-    triggerShieldNotify("AirPlay Audio Clock Synced");
-  }
-  toast("Audio unmuted at 100%");
+  unmuteBtn.style.display = "none";
 }
 
 function toggleVideoPlayback() {
@@ -5818,39 +5613,33 @@ function playRandomChannel() {
    ========================================================= */
 
 function setupAirPlayIntegration() {
-  const registerAirPlayTargets = (vidEl) => {
-    if (!vidEl) return;
-    if (window.WebKitPlaybackTargetAvailabilityEvent) {
-      vidEl.addEventListener("webkitplaybacktargetavailabilitychanged", (event) => {
-        airPlayAvailable = (event.availability === "available");
-        if (airPlayBtn) airPlayBtn.style.display = (airPlayAvailable || isAirPlayActive || isIOS) ? "inline-flex" : "none";
-      });
-    }
-
-    vidEl.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", () => {
-      const isWireless = Boolean(vidEl.webkitCurrentPlaybackTargetIsWireless);
-      onAirPlayStateChange(isWireless);
-    });
-
-    if (vidEl.remote) {
-      vidEl.remote.addEventListener("connect", () => onAirPlayStateChange(true));
-      vidEl.remote.addEventListener("disconnect", () => onAirPlayStateChange(false));
-    }
-  };
-
-  registerAirPlayTargets(video);
-  registerAirPlayTargets(mirrorVideo);
-
-  // Always display AirPlay button on iOS Mobile Safari
-  if (isIOS && airPlayBtn) {
+  // On Apple devices (iPhone, iPad, Mac), always keep AirPlay button accessible
+  if (isAppleDevice && airPlayBtn) {
     airPlayBtn.style.display = "inline-flex";
+  }
+
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    video.addEventListener("webkitplaybacktargetavailabilitychanged", (event) => {
+      airPlayAvailable = (event.availability === "available");
+      if (airPlayBtn) {
+        airPlayBtn.style.display = (airPlayAvailable || isAirPlayActive || isAppleDevice) ? "inline-flex" : "none";
+      }
+    });
+  }
+
+  video.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", () => {
+    const isWireless = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
+    onAirPlayStateChange(isWireless);
+  });
+
+  if (video.remote) {
+    video.remote.addEventListener("connect", () => onAirPlayStateChange(true));
+    video.remote.addEventListener("disconnect", () => onAirPlayStateChange(false));
   }
 }
 
 function onAirPlayStateChange(connected) {
-  const wasAirPlay = isAirPlayActive;
   isAirPlayActive = connected;
-
   if (airPlayBtn) {
     airPlayBtn.classList.toggle("active", connected);
     airPlayBtn.textContent = connected ? "📶 AirPlay Active" : "📺 AirPlay";
@@ -5862,54 +5651,37 @@ function onAirPlayStateChange(connected) {
   }
 
   if (connected) {
-    airplayPreemptionCooldown = 0;
-    video.muted = false;
-    if (video.volume === 0) video.volume = 1.0;
-    if (unmuteBtn) unmuteBtn.style.display = "none";
     updateStreamStatus("live", "📶 AIRPLAY LIVE");
-    triggerShieldNotify("AirPlay 2 Active — Hardware Sync");
-    safePlay(video);
+    triggerShieldNotify("AirPlay 2 Connected — Transmitting to TV");
+    if (unmuteBtn) unmuteBtn.style.display = "none";
   } else {
     updateStreamStatus("live", "🟢 LIVE ON AIR");
-    if (wasAirPlay) {
-      // Graceful AirPlay handoff: Avoid crash & prevent reconnect ping-pong fight between 2 instances
-      airplayPreemptionCooldown = Date.now() + 6000;
-      triggerShieldNotify("AirPlay routed to another screen. Playing locally.");
-      toast("AirPlay route changed or claimed by another device. Continuing locally.");
-      setTimeout(() => {
-        if (video.paused && currentPlayingChannel) {
-          safePlay(video);
-        }
-      }, 300);
-    } else {
-      triggerShieldNotify("Returned to Local Screen");
-    }
+    triggerShieldNotify("Returned to Local Screen");
   }
+  applyPictureProcessing();
 }
 
 function toggleAirPlayPicker() {
-  const target = (isAirPlaySafe && mirrorVideo && mirrorVideo.style.display !== "none") ? mirrorVideo : video;
-  target.disableRemotePlayback = false;
-
-  if (target.webkitShowPlaybackTargetPicker) {
+  video.disableRemotePlayback = false;
+  if (video.webkitShowPlaybackTargetPicker) {
     try {
-      target.webkitShowPlaybackTargetPicker();
-    } catch (err) {
-      console.warn("AirPlay picker invocation notice:", err);
+      video.webkitShowPlaybackTargetPicker();
+    } catch(err) {
+      if (video.remote && video.remote.prompt) video.remote.prompt().catch(() => {});
     }
-  } else if (target.remote && target.remote.prompt) {
-    target.remote.prompt().catch(() => {});
+  } else if (video.remote && video.remote.prompt) {
+    video.remote.prompt().catch(() => {});
   } else {
-    toast("AirPlay is natively supported in Safari on iOS and macOS.");
+    toast("AirPlay is natively supported in Safari on Apple devices.");
   }
 }
 
 function disconnectAirPlay() {
-  const target = (isAirPlaySafe && mirrorVideo && mirrorVideo.style.display !== "none") ? mirrorVideo : video;
-  target.disableRemotePlayback = true;
+  video.disableRemotePlayback = true;
   isAirPlayActive = false;
   onAirPlayStateChange(false);
-  safePlay(video);
+  setTimeout(() => { video.disableRemotePlayback = false; }, 1000);
+  video.play().catch(() => {});
   toast("Playback returned to local screen");
 }
 
@@ -6308,12 +6080,9 @@ function updateStreamStatus(type, label) {
 }
 
 function updateStats() {
-  const tot = document.getElementById("stat-total");
-  if (tot) tot.textContent = allChannels.length.toLocaleString();
-  const show = document.getElementById("stat-showing");
-  if (show) show.textContent = filteredChannels.length.toLocaleString();
-  const fav = document.getElementById("stat-favs");
-  if (fav) fav.textContent = favorites.length.toLocaleString();
+  document.getElementById("stat-total").textContent = allChannels.length.toLocaleString();
+  document.getElementById("stat-showing").textContent = filteredChannels.length.toLocaleString();
+  document.getElementById("stat-favs").textContent = favorites.length.toLocaleString();
   renderDiagnosticsWidget();
 }
 
