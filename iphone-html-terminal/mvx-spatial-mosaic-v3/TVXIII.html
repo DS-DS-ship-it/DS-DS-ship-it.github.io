@@ -5713,13 +5713,16 @@ function toggleAirPlaySafeMode() {
       airplaySafeBtn.classList.add('active');
       airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON (No Drops)";
     }
-    video.setAttribute('disableRemotePlayback', 'true');
-    video.setAttribute('x-webkit-airplay', 'deny');
-    if (mirrorVideo) mirrorVideo.style.display = 'block';
-    if (video) video.style.display = 'none';
-    startCanvasMirrorStream();
-    triggerShieldNotify("AirPlay Safe Stream Enabled");
-    logToTerminal("AIRPLAY", "AirPlay Safe Canvas Mirroring Enabled");
+    // Keep video visible and fully enabled for native iOS/AirPlay device picker routing
+    video.removeAttribute('disableRemotePlayback');
+    video.setAttribute('x-webkit-airplay', 'allow');
+    if (mirrorVideo) mirrorVideo.style.display = 'none';
+    if (video) video.style.display = 'block';
+    
+    // Trigger native iOS/Safari AirPlay Device Picker immediately
+    toggleAirPlayPicker();
+    triggerShieldNotify("AirPlay Safe Mode Active (Native Pipeline)");
+    logToTerminal("AIRPLAY", "AirPlay Safe Mode Active (Native Pipeline)");
   } else {
     if (airplaySafeBtn) {
       airplaySafeBtn.classList.remove('active');
@@ -5729,9 +5732,8 @@ function toggleAirPlaySafeMode() {
     video.setAttribute('x-webkit-airplay', 'allow');
     if (mirrorVideo) mirrorVideo.style.display = 'none';
     if (video) video.style.display = 'block';
-    stopCanvasMirrorStream();
-    triggerShieldNotify("AirPlay Safe Stream Disabled");
-    logToTerminal("AIRPLAY", "AirPlay Safe Canvas Mirroring Disabled");
+    triggerShieldNotify("AirPlay Safe Mode Disabled");
+    logToTerminal("AIRPLAY", "AirPlay Safe Mode Disabled");
   }
 }
 
