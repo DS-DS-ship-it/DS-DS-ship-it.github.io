@@ -8,7 +8,104 @@
 <title>📡 Smart Antenna TV Pro 4K - Commercial Auto-Shield Broadcast Station & Aurora Engine</title>
 
 <!-- HLS.js Engine -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest">
+/* =========================================================
+   NATIVE & FRAMEWORK FULLSCREEN LANDSCAPE BRIDGE
+   ========================================================= */
+
+// 1. Dispatch orientation & fullscreen commands to Native App Wrappers
+function notifyNativeAppLandscapeFullscreen() {
+  try {
+    // Android (Native Java/Kotlin Interface)
+    if (window.AndroidInterface && typeof window.AndroidInterface.setLandscapeFullscreen === "function") {
+      window.AndroidInterface.setLandscapeFullscreen();
+    }
+    // iOS (WKWebView ScriptMessageHandler)
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+      window.webkit.messageHandlers.nativeApp.postMessage({ action: "setLandscapeFullscreen" });
+    }
+    // React Native (react-native-webview)
+    if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ action: "setLandscapeFullscreen" }));
+    }
+    // Flutter (webview_flutter JavascriptChannel)
+    if (window.FlutterChannel && typeof window.FlutterChannel.postMessage === "function") {
+      window.FlutterChannel.postMessage("setLandscapeFullscreen");
+    }
+  } catch (err) {
+    console.log("Native bridge dispatch notice:", err);
+  }
+}
+
+// 2. Universal Mobile Fullscreen & Orientation Lock Handler
+async function enterMobileLandscapeFullscreen(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  if (typeof unlockAudioEngine === "function") {
+    unlockAudioEngine();
+  }
+
+  // A. Notify Native Containers (Android/iOS/Flutter/RN)
+  notifyNativeAppLandscapeFullscreen();
+
+  const elem = document.documentElement;
+
+  // B. Standard HTML5 Fullscreen API
+  try {
+    if (elem.requestFullscreen) {
+      await elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      await elem.webkitRequestFullscreen();
+    } else if (elem.mozRequestFullScreen) {
+      await elem.mozRequestFullScreen();
+    } else if (elem.msRequestFullscreen) {
+      await elem.msRequestFullscreen();
+    }
+  } catch (err) {
+    console.warn("Fullscreen request warning:", err);
+  }
+
+  // C. Screen Orientation API Lock (Android Chrome, PWA Standalone)
+  try {
+    if (screen.orientation && typeof screen.orientation.lock === "function") {
+      await screen.orientation.lock("sensor-landscape").catch(() => screen.orientation.lock("landscape"));
+      if (typeof toast === "function") toast("Orientation locked to Landscape");
+    } else if (screen.lockOrientation) {
+      screen.lockOrientation("landscape");
+    } else if (screen.webkitLockOrientation) {
+      screen.webkitLockOrientation("landscape");
+    } else if (screen.mozLockOrientation) {
+      screen.mozLockOrientation("landscape");
+    }
+  } catch (err) {
+    console.log("Screen orientation lock notice:", err);
+  }
+
+  // D. iOS Safari Fallback: Native Video Fullscreen auto-rotates to Landscape
+  const v = document.getElementById("video");
+  if (v && v.webkitEnterFullscreen && (/iPad|iPhone|iPod/.test(navigator.userAgent))) {
+    v.webkitEnterFullscreen();
+  }
+
+  // Hide the floating button once landscape is engaged
+  const pill = document.getElementById("mobile-landscape-float-btn");
+  if (pill && window.innerHeight < window.innerWidth) {
+    pill.style.display = "none";
+  }
+}
+
+// 3. Orientation change listener on mobile devices
+window.addEventListener("orientationchange", () => {
+  const pill = document.getElementById("mobile-landscape-float-btn");
+  if (pill) {
+    const isPortrait = window.orientation === 0 || window.orientation === 180;
+    pill.style.display = (isPortrait && window.innerWidth <= 900) ? "inline-flex" : "none";
+  }
+});
+
+</script>
 
 <style>
 :root {
@@ -314,13 +411,6 @@ select:focus, input[type="text"]:focus {
   padding: 14px;
   box-shadow: var(--shadow-main);
   z-index: 50;
-}
-
-/* Hidden AirPlay Safe Mirror Video */
-#mirror-video {
-  display: none;
-  width: 100%;
-  aspect-ratio: 16/9;
 }
 
 /* VIDEO PLAYER BEZEL & FRAME */
@@ -1402,7 +1492,79 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
   padding: 40px 20px;
   color: var(--text-muted);
 }
+
+/* =========================================================
+   MOBILE IMMERSIVE LANDSCAPE & FLOATING TRIGGER ENGINE
+   ========================================================= */
+.mobile-float-pill {
+  display: none;
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 9999;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.95), rgba(161, 124, 255, 0.95));
+  color: #03060b;
+  font-weight: 900;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 30px;
+  border: 1px solid #fff;
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.6);
+  cursor: pointer;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  animation: pulse-glow 2.4s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+  50% { box-shadow: 0 0 22px rgba(0, 229, 255, 0.9); }
+  100% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .mobile-float-pill {
+    display: inline-flex !important;
+  }
+}
+
+@media screen and (orientation: landscape) and (max-height: 520px) {
+  body {
+    padding: 2px !important;
+    font-size: 11px !important;
+  }
+  header.master-header {
+    padding: 4px 8px !important;
+    margin-bottom: 4px !important;
+  }
+  .presets-ribbon {
+    margin-bottom: 4px !important;
+    padding: 3px 6px !important;
+  }
+  .player-panel-sticky {
+    top: 2px !important;
+    padding: 6px !important;
+  }
+  .main-layout {
+    grid-template-columns: minmax(300px, 46vw) 1fr !important;
+    gap: 6px !important;
+  }
+  .channels-container {
+    max-height: calc(100vh - 180px) !important;
+  }
+}
+
 </style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Smart Antenna TV">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="screen-orientation" content="landscape">
+<meta name="x5-orientation" content="landscape">
+<meta name="x5-fullscreen" content="true">
+<meta name="x5-page-mode" content="app">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Smart%20Antenna%20TV%20Pro%204K%22%2C%22short_name%22%3A%22AntennaTV%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%2303060b%22%2C%22theme_color%22%3A%22%2305070e%22%7D">
 </head>
 
 <body>
@@ -1476,7 +1638,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
       <div class="video-frame" id="playerScreen">
         <!-- Live Video Element -->
         <video id="video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video>
-        <video id="mirror-video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" style="display:none;"></video>
 
         <!-- Dynamic A/B Split Comparison Layer -->
         <div id="splitOverlay" class="split-compare-overlay"></div>
@@ -1568,7 +1729,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
 
       <div class="controls-row">
         <button onclick="toggleAirPlayPicker()" id="airplay-btn" title="Stream to Apple TV or AirPlay Screen">📺 AirPlay</button>
-        <button onclick="toggleAirPlaySafeMode()" id="airplay-safe-btn" title="Renders video locally so AirPlay NEVER drops or times out">🛡️ AirPlay Safe: OFF</button>
         <button onclick="disconnectAirPlay()" id="local-screen-btn" title="Switch playback back to laptop screen" style="display:none; background:#ec4899; color:#fff; border-color:#ec4899;">🖥️ Return to Laptop</button>
         <button onclick="toggleMainSplitCompare()" id="split-compare-btn" title="Toggle Main Screen A/B Split Compare">↔ Compare</button>
         <button onclick="reconnectCurrentStream(false)" title="Re-synchronize with live transmission edge">🔄 Re-Sync</button>
@@ -4294,26 +4454,9 @@ const PICTURE_PRESETS = {
 // APPLICATION STATE
 let allChannels = [];
 let filteredChannels = [];
-// Multi-instance session isolation ID to prevent cross-device/instance storage collisions
-const INSTANCE_ID = 'inst_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-
-function safeGetLocalStorage(key, fallback) {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch (e) {
-    return fallback;
-  }
-}
-function safeSetLocalStorage(key, val) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch (e) {}
-}
-
-let favorites = safeGetLocalStorage("smart_tv_pro_favs", []);
-let watchHistory = safeGetLocalStorage("smart_tv_pro_hist", []);
-let customPlaylists = safeGetLocalStorage("smart_tv_pro_custom", []);
+let favorites = JSON.parse(localStorage.getItem("smart_tv_pro_favs") || "[]");
+let watchHistory = JSON.parse(localStorage.getItem("smart_tv_pro_hist") || "[]");
+let customPlaylists = JSON.parse(localStorage.getItem("smart_tv_pro_custom") || "[]");
 
 let currentMainCat = "all";
 let currentSubCat = "all";
@@ -5030,7 +5173,7 @@ function setupPictureProcessing() {
 }
 
 function loadSavedPictureSettings() {
-  const saved = safeGetLocalStorage("sat_pro_pic_settings_v11", null);
+  const saved = localStorage.getItem("sat_pro_pic_settings_v11");
   if (saved) {
     try {
       Object.assign(pictureSettings, JSON.parse(saved));
@@ -5133,7 +5276,7 @@ function setPictureSetting(name, value) {
   }
 
   applyPictureProcessing();
-  safeSetLocalStorage("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
+  localStorage.setItem("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
 
   if (name === 'sharpness') triggerOSD(`🔮 Spatial Super-Resolution: ${value}%`);
   else if (name === 'detailRecovery') triggerOSD(`⚡ High Edge Acutance: ${value}%`);
@@ -5148,7 +5291,7 @@ function applyPicturePreset(name) {
 
   syncEqualizerInputs();
   applyPictureProcessing();
-  safeSetLocalStorage("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
+  localStorage.setItem("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
 
   triggerOSD(`🎨 Picture Mode: ${preset.badge}`);
   toast(`Picture mode: ${preset.label}`);
@@ -5214,7 +5357,7 @@ function resetPictureModeToDefaults() {
 }
 
 function saveCustomPictureProfile() {
-  safeSetLocalStorage("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
+  localStorage.setItem("sat_pro_pic_settings_v11", JSON.stringify(pictureSettings));
   toast('Custom picture equalizer profile saved');
 }
 
@@ -5698,80 +5841,11 @@ function playRandomChannel() {
    AIRPLAY 2 CONTINUITY
    ========================================================= */
 
-// 🛡️ AIRPLAY SAFE-STREAM CANVAS MIRRORING & MULTI-INSTANCE RESILIENCE
-let isAirPlaySafe = false;
-let mirrorCanvas = document.createElement('canvas');
-let mirrorCtx = mirrorCanvas.getContext('2d', { alpha: false });
-let animFrameId = null;
-const mirrorVideo = document.getElementById('mirror-video');
-const airplaySafeBtn = document.getElementById('airplay-safe-btn');
-
-function toggleAirPlaySafeMode() {
-  isAirPlaySafe = !isAirPlaySafe;
-  if (isAirPlaySafe) {
-    if (airplaySafeBtn) {
-      airplaySafeBtn.classList.add('active');
-      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON (No Drops)";
-    }
-    // Keep video visible and fully enabled for native iOS/AirPlay device picker routing
-    video.removeAttribute('disableRemotePlayback');
-    video.setAttribute('x-webkit-airplay', 'allow');
-    if (mirrorVideo) mirrorVideo.style.display = 'none';
-    if (video) video.style.display = 'block';
-    
-    // Trigger native iOS/Safari AirPlay Device Picker immediately
-    toggleAirPlayPicker();
-    triggerShieldNotify("AirPlay Safe Mode Active (Native Pipeline)");
-    logToTerminal("AIRPLAY", "AirPlay Safe Mode Active (Native Pipeline)");
-  } else {
-    if (airplaySafeBtn) {
-      airplaySafeBtn.classList.remove('active');
-      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: OFF";
-    }
-    video.removeAttribute('disableRemotePlayback');
-    video.setAttribute('x-webkit-airplay', 'allow');
-    if (mirrorVideo) mirrorVideo.style.display = 'none';
-    if (video) video.style.display = 'block';
-    triggerShieldNotify("AirPlay Safe Mode Disabled");
-    logToTerminal("AIRPLAY", "AirPlay Safe Mode Disabled");
-  }
-}
-
-function startCanvasMirrorStream() {
-  const drawLoop = () => {
-    if (video && !video.paused && !video.ended && video.videoWidth > 0) {
-      if (mirrorCanvas.width !== video.videoWidth) {
-        mirrorCanvas.width = video.videoWidth;
-        mirrorCanvas.height = video.videoHeight;
-        if (mirrorCanvas.captureStream) {
-          const stream = mirrorCanvas.captureStream(30);
-          if (mirrorVideo) {
-            mirrorVideo.srcObject = stream;
-            mirrorVideo.play().catch(() => {});
-          }
-        }
-      }
-      if (mirrorCtx && video) {
-        mirrorCtx.drawImage(video, 0, 0, mirrorCanvas.width, mirrorCanvas.height);
-      }
-    }
-    if (isAirPlaySafe) {
-      animFrameId = requestAnimationFrame(drawLoop);
-    }
-  };
-  drawLoop();
-}
-
-function stopCanvasMirrorStream() {
-  if (animFrameId) cancelAnimationFrame(animFrameId);
-  if (mirrorVideo) mirrorVideo.srcObject = null;
-}
-
 function setupAirPlayIntegration() {
   if (window.WebKitPlaybackTargetAvailabilityEvent) {
     video.addEventListener("webkitplaybacktargetavailabilitychanged", (event) => {
       airPlayAvailable = (event.availability === "available");
-      if (airPlayBtn) airPlayBtn.style.display = "inline-flex";
+      if (airPlayBtn) airPlayBtn.style.display = (airPlayAvailable || isAirPlayActive) ? "inline-flex" : "none";
     });
   }
 
@@ -5976,7 +6050,7 @@ function addCustomUrl() {
     if (parsed.length > 0) {
       if (!customPlaylists.includes(url)) {
         customPlaylists.push(url);
-        safeSetLocalStorage("smart_tv_pro_custom", JSON.stringify(customPlaylists));
+        localStorage.setItem("smart_tv_pro_custom", JSON.stringify(customPlaylists));
       }
       const channelMap = {};
       allChannels.forEach(c => { channelMap[c.url] = c; });
@@ -6131,7 +6205,7 @@ function toggleSave(e, url) {
     toast(`${ch.name} added to favorites`);
   }
 
-  safeSetLocalStorage("smart_tv_pro_favs", JSON.stringify(favorites));
+  localStorage.setItem("smart_tv_pro_favs", JSON.stringify(favorites));
   updateStats();
   applyFilters();
   renderFavoritesWidget();
@@ -6142,13 +6216,13 @@ function addToHistory(ch) {
   watchHistory = watchHistory.filter(h => h.url !== ch.url);
   watchHistory.unshift({ ...ch, seen: Date.now() });
   if (watchHistory.length > 50) watchHistory.pop();
-  safeSetLocalStorage("smart_tv_pro_hist", JSON.stringify(watchHistory));
+  localStorage.setItem("smart_tv_pro_hist", JSON.stringify(watchHistory));
   renderHistoryWidget();
 }
 
 function clearHistory() {
   watchHistory = [];
-  safeSetLocalStorage("smart_tv_pro_hist", JSON.stringify(watchHistory));
+  localStorage.setItem("smart_tv_pro_hist", JSON.stringify(watchHistory));
   renderHistoryWidget();
   toast("Watch history cleared");
 }
@@ -6308,6 +6382,11 @@ function handleBackdropClick(event, id) {
 }
 </script>
 
+
+<!-- Mobile Fullscreen Landscape Floating Trigger -->
+<button id="mobile-landscape-float-btn" onclick="enterMobileLandscapeFullscreen(event)" class="mobile-float-pill" title="Tap to Launch Fullscreen Landscape Mode">
+  📲 Fullscreen Landscape
+</button>
+
 </body>
 </html>
-
