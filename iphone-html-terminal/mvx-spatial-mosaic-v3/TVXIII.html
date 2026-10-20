@@ -8,104 +8,7 @@
 <title>📡 Smart Antenna TV Pro 4K - Commercial Auto-Shield Broadcast Station & Aurora Engine</title>
 
 <!-- HLS.js Engine -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest">
-/* =========================================================
-   NATIVE & FRAMEWORK FULLSCREEN LANDSCAPE BRIDGE
-   ========================================================= */
-
-// 1. Dispatch orientation & fullscreen commands to Native App Wrappers
-function notifyNativeAppLandscapeFullscreen() {
-  try {
-    // Android (Native Java/Kotlin Interface)
-    if (window.AndroidInterface && typeof window.AndroidInterface.setLandscapeFullscreen === "function") {
-      window.AndroidInterface.setLandscapeFullscreen();
-    }
-    // iOS (WKWebView ScriptMessageHandler)
-    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
-      window.webkit.messageHandlers.nativeApp.postMessage({ action: "setLandscapeFullscreen" });
-    }
-    // React Native (react-native-webview)
-    if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ action: "setLandscapeFullscreen" }));
-    }
-    // Flutter (webview_flutter JavascriptChannel)
-    if (window.FlutterChannel && typeof window.FlutterChannel.postMessage === "function") {
-      window.FlutterChannel.postMessage("setLandscapeFullscreen");
-    }
-  } catch (err) {
-    console.log("Native bridge dispatch notice:", err);
-  }
-}
-
-// 2. Universal Mobile Fullscreen & Orientation Lock Handler
-async function enterMobileLandscapeFullscreen(e) {
-  if (e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-  if (typeof unlockAudioEngine === "function") {
-    unlockAudioEngine();
-  }
-
-  // A. Notify Native Containers (Android/iOS/Flutter/RN)
-  notifyNativeAppLandscapeFullscreen();
-
-  const elem = document.documentElement;
-
-  // B. Standard HTML5 Fullscreen API
-  try {
-    if (elem.requestFullscreen) {
-      await elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
-      await elem.webkitRequestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-      await elem.mozRequestFullScreen();
-    } else if (elem.msRequestFullscreen) {
-      await elem.msRequestFullscreen();
-    }
-  } catch (err) {
-    console.warn("Fullscreen request warning:", err);
-  }
-
-  // C. Screen Orientation API Lock (Android Chrome, PWA Standalone)
-  try {
-    if (screen.orientation && typeof screen.orientation.lock === "function") {
-      await screen.orientation.lock("sensor-landscape").catch(() => screen.orientation.lock("landscape"));
-      if (typeof toast === "function") toast("Orientation locked to Landscape");
-    } else if (screen.lockOrientation) {
-      screen.lockOrientation("landscape");
-    } else if (screen.webkitLockOrientation) {
-      screen.webkitLockOrientation("landscape");
-    } else if (screen.mozLockOrientation) {
-      screen.mozLockOrientation("landscape");
-    }
-  } catch (err) {
-    console.log("Screen orientation lock notice:", err);
-  }
-
-  // D. iOS Safari Fallback: Native Video Fullscreen auto-rotates to Landscape
-  const v = document.getElementById("video");
-  if (v && v.webkitEnterFullscreen && (/iPad|iPhone|iPod/.test(navigator.userAgent))) {
-    v.webkitEnterFullscreen();
-  }
-
-  // Hide the floating button once landscape is engaged
-  const pill = document.getElementById("mobile-landscape-float-btn");
-  if (pill && window.innerHeight < window.innerWidth) {
-    pill.style.display = "none";
-  }
-}
-
-// 3. Orientation change listener on mobile devices
-window.addEventListener("orientationchange", () => {
-  const pill = document.getElementById("mobile-landscape-float-btn");
-  if (pill) {
-    const isPortrait = window.orientation === 0 || window.orientation === 180;
-    pill.style.display = (isPortrait && window.innerWidth <= 900) ? "inline-flex" : "none";
-  }
-});
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
 :root {
@@ -1492,79 +1395,7 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
   padding: 40px 20px;
   color: var(--text-muted);
 }
-
-/* =========================================================
-   MOBILE IMMERSIVE LANDSCAPE & FLOATING TRIGGER ENGINE
-   ========================================================= */
-.mobile-float-pill {
-  display: none;
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 9999;
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.95), rgba(161, 124, 255, 0.95));
-  color: #03060b;
-  font-weight: 900;
-  font-size: 0.82rem;
-  padding: 8px 14px;
-  border-radius: 30px;
-  border: 1px solid #fff;
-  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.6);
-  cursor: pointer;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-  animation: pulse-glow 2.4s infinite;
-}
-
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-  50% { box-shadow: 0 0 22px rgba(0, 229, 255, 0.9); }
-  100% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-}
-
-@media (max-width: 900px) and (orientation: portrait) {
-  .mobile-float-pill {
-    display: inline-flex !important;
-  }
-}
-
-@media screen and (orientation: landscape) and (max-height: 520px) {
-  body {
-    padding: 2px !important;
-    font-size: 11px !important;
-  }
-  header.master-header {
-    padding: 4px 8px !important;
-    margin-bottom: 4px !important;
-  }
-  .presets-ribbon {
-    margin-bottom: 4px !important;
-    padding: 3px 6px !important;
-  }
-  .player-panel-sticky {
-    top: 2px !important;
-    padding: 6px !important;
-  }
-  .main-layout {
-    grid-template-columns: minmax(300px, 46vw) 1fr !important;
-    gap: 6px !important;
-  }
-  .channels-container {
-    max-height: calc(100vh - 180px) !important;
-  }
-}
-
 </style>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Smart Antenna TV">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="screen-orientation" content="landscape">
-<meta name="x5-orientation" content="landscape">
-<meta name="x5-fullscreen" content="true">
-<meta name="x5-page-mode" content="app">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Smart%20Antenna%20TV%20Pro%204K%22%2C%22short_name%22%3A%22AntennaTV%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%2303060b%22%2C%22theme_color%22%3A%22%2305070e%22%7D">
 </head>
 
 <body>
@@ -1638,6 +1469,8 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
       <div class="video-frame" id="playerScreen">
         <!-- Live Video Element -->
         <video id="video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video>
+        <!-- AirPlay Safe Mirror Element (Desktop Canvas Mirror) -->
+        <video id="mirror-video" class="video-player aspect-16-9" controls playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" style="display:none;"></video>
 
         <!-- Dynamic A/B Split Comparison Layer -->
         <div id="splitOverlay" class="split-compare-overlay"></div>
@@ -1729,7 +1562,10 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
 
       <div class="controls-row">
         <button onclick="toggleAirPlayPicker()" id="airplay-btn" title="Stream to Apple TV or AirPlay Screen">📺 AirPlay</button>
+        <button onclick="toggleAirPlaySafeMode()" id="airplay-safe-btn" title="Desktop Canvas Mirror: Decodes stream locally so AirPlay never drops">🛡️ AirPlay Safe: OFF</button>
         <button onclick="disconnectAirPlay()" id="local-screen-btn" title="Switch playback back to laptop screen" style="display:none; background:#ec4899; color:#fff; border-color:#ec4899;">🖥️ Return to Laptop</button>
+        <button onclick="skipCommercialSlate()" title="Instantly fast-forward past looping commercial ad slates">⚡ Skip Slate</button>
+        <button onclick="findAlternateStream()" title="Find an alternate live feed for this channel">🔀 Alt Feed</button>
         <button onclick="toggleMainSplitCompare()" id="split-compare-btn" title="Toggle Main Screen A/B Split Compare">↔ Compare</button>
         <button onclick="reconnectCurrentStream(false)" title="Re-synchronize with live transmission edge">🔄 Re-Sync</button>
         <button onclick="tryPrevStream()" title="Previous Channel">⏮️ Prev</button>
@@ -4524,6 +4360,120 @@ const splitOverlay = document.getElementById("splitOverlay");
 const splitBar = document.getElementById("splitBar");
 const splitLabels = document.getElementById("splitLabels");
 const splitCompareBtn = document.getElementById("split-compare-btn");
+const mirrorVideo = document.getElementById("mirror-video");
+const airplaySafeBtn = document.getElementById("airplay-safe-btn");
+
+// Device & Multi-Instance AirPlay Engine
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
+const APP_INSTANCE_ID = 'sat_' + Math.random().toString(36).substring(2, 9);
+
+let isAirPlaySafe = false;
+let airplayPreemptionCooldown = 0;
+let mirrorCanvas = document.createElement("canvas");
+let mirrorCtx = mirrorCanvas.getContext("2d", { alpha: false });
+let mirrorAnimId = null;
+let fastStallCount = 0;
+let isFastHealing = false;
+
+function safePlay(v = video) {
+  if (!v) return;
+  const p = v.play();
+  if (p !== undefined) {
+    p.catch(err => {
+      if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+        console.warn("safePlay notice:", err);
+      }
+    });
+  }
+}
+
+// 🛡️ AIRPLAY SAFE-STREAM CANVAS MIRRORING (Desktop macOS Safari No-Drop Engine)
+function toggleAirPlaySafeMode() {
+  if (isIOS) {
+    toast("iOS Mobile natively uses Apple TV AirPlay hardware.");
+    return;
+  }
+  isAirPlaySafe = !isAirPlaySafe;
+  if (isAirPlaySafe) {
+    if (airplaySafeBtn) {
+      airplaySafeBtn.classList.add("active");
+      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: ON";
+    }
+    video.setAttribute("disableRemotePlayback", "true");
+    video.setAttribute("x-webkit-airplay", "deny");
+    if (mirrorVideo) mirrorVideo.style.display = "block";
+    video.style.display = "none";
+    startCanvasMirror();
+    triggerShieldNotify("AirPlay Safe Canvas Mode Enabled");
+    toast("AirPlay Safe Mode Active (Zero Dropouts)");
+  } else {
+    if (airplaySafeBtn) {
+      airplaySafeBtn.classList.remove("active");
+      airplaySafeBtn.textContent = "🛡️ AirPlay Safe: OFF";
+    }
+    video.removeAttribute("disableRemotePlayback");
+    video.setAttribute("x-webkit-airplay", "allow");
+    if (mirrorVideo) mirrorVideo.style.display = "none";
+    video.style.display = "block";
+    stopCanvasMirror();
+    triggerShieldNotify("Native AirPlay Restored");
+    toast("Native Direct AirPlay Mode Active");
+  }
+}
+
+function startCanvasMirror() {
+  const draw = () => {
+    if (!video.paused && !video.ended && video.videoWidth > 0) {
+      if (mirrorCanvas.width !== video.videoWidth) {
+        mirrorCanvas.width = video.videoWidth;
+        mirrorCanvas.height = video.videoHeight;
+        if (mirrorCanvas.captureStream) {
+          const st = mirrorCanvas.captureStream(30);
+          if (mirrorVideo) {
+            mirrorVideo.srcObject = st;
+            safePlay(mirrorVideo);
+          }
+        }
+      }
+      mirrorCtx.drawImage(video, 0, 0, mirrorCanvas.width, mirrorCanvas.height);
+    }
+    if (isAirPlaySafe) {
+      mirrorAnimId = requestAnimationFrame(draw);
+    }
+  };
+  draw();
+}
+
+function stopCanvasMirror() {
+  if (mirrorAnimId) cancelAnimationFrame(mirrorAnimId);
+  if (mirrorVideo) mirrorVideo.srcObject = null;
+}
+
+// ⚡ FAST-FORWARD PLUTO TV SLATE FILLER LOOPS
+function skipCommercialSlate() {
+  if (video && !video.paused) {
+    video.currentTime += 5.0;
+    triggerShieldNotify("Skipped Filler Slate (+5s)");
+    toast("Skipped +5s past filler slate");
+  }
+}
+
+// 🔲 FIND ALTERNATE STREAM FEED
+function findAlternateStream() {
+  if (!currentPlayingChannel) return;
+  const currentName = currentPlayingChannel.name.toLowerCase().replace(/pluto|tv|\(1080p\)|\(720p\)|live|hd|fhd/g, "").trim();
+  const alts = allChannels.filter(c => c.url !== currentPlayingChannel.url && currentName.length > 2 && c.name.toLowerCase().includes(currentName));
+  if (alts.length > 0) {
+    const nextAlt = alts[Math.floor(Math.random() * alts.length)];
+    triggerShieldNotify(`Switched to Alt Feed: ${nextAlt.name}`);
+    toast(`Switched to: ${nextAlt.name}`);
+    tuneChannelWithAudio(nextAlt.url, nextAlt.name, nextAlt.subName || nextAlt.group, nextAlt.logo, nextAlt.country, nextAlt.quality);
+  } else {
+    triggerShieldNotify("No Alt Feed found. Re-syncing stream edge...");
+    reconnectCurrentStream(true);
+  }
+}
 
 // INITIALIZATION
 window.addEventListener("DOMContentLoaded", () => {
@@ -4837,8 +4787,7 @@ function tuneChannelWithAudio(url, name, category, logo, country, quality) {
 function play(url, name, category, logo, country, quality, proxyIndex = 0) {
   // Synchronously claim audio permission inside user interaction
   unlockAudioEngine();
-  const prime = video.play();
-  if (prime !== undefined) prime.catch(() => {});
+  safePlay(video);
 
   currentPlayingChannel = { url, name, category, logo, country, quality, proxyIndex };
   logToTerminal("TUNE", `Tuning: "${name}" [${country || "Global"}] (Layer ${proxyIndex})`, { url, quality });
@@ -4865,6 +4814,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
 
   updateStreamStatus("connecting", isAirPlayActive ? "📶 CONNECTING AIRPLAY..." : (proxyIndex > 0 ? `🟡 PROXY LAYER ${proxyIndex}...` : "🟡 CONNECTING..."));
   watchdogFrozenCount = 0;
+  fastStallCount = 0;
   lastPlaybackTime = -1;
   isChannelTuning = true;
 
@@ -4894,44 +4844,42 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
     
     // Always attempt unmuted playback first
     video.muted = false;
-    video.play().then(() => {
-      updateStreamStatus("live", isAirPlayActive ? "📶 AIRPLAY LIVE" : "🟢 LIVE ON AIR");
-      if (unmuteBtn) unmuteBtn.style.display = "none";
-      isChannelTuning = false;
-      logToTerminal("ONLINE", `Playing: "${name}" (${video.videoWidth || 1920}x${video.videoHeight || 1080}) [${country || "Global"}]`);
-    }).catch((err) => {
-      if (!isAirPlayActive) {
-        // Fallback for initial load if browser blocks unmuted sound prior to user click
-        video.muted = true;
-        if (unmuteBtn) unmuteBtn.style.display = "flex";
-        video.play().then(() => {
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        updateStreamStatus("live", isAirPlayActive ? "📶 AIRPLAY LIVE" : "🟢 LIVE ON AIR");
+        if (unmuteBtn) unmuteBtn.style.display = "none";
+        isChannelTuning = false;
+        logToTerminal("ONLINE", `Playing: "${name}" (${video.videoWidth || 1920}x${video.videoHeight || 1080}) [${country || "Global"}]`);
+      }).catch((err) => {
+        if (!isAirPlayActive) {
+          // Fallback for initial load if browser blocks unmuted sound prior to user gesture
+          video.muted = true;
+          if (unmuteBtn) unmuteBtn.style.display = "flex";
+          safePlay(video);
           updateStreamStatus("live", "🟢 LIVE (MUTED)");
           isChannelTuning = false;
-        }).catch(() => {
-          updateStreamStatus("error", "🔴 CLICK TO PLAY");
+        } else {
+          // AirPlay active: keep unmuted so remote presentation clock syncs
+          video.muted = false;
+          if (unmuteBtn) {
+            unmuteBtn.style.display = "flex";
+            unmuteBtn.textContent = "🔊 Click to Stream Unmuted Sound to AirPlay";
+          }
+          updateStreamStatus("live", "📶 AIRPLAY LIVE");
           isChannelTuning = false;
-        });
-      } else {
-        // AirPlay active: keep unmuted so presentation clock syncs
-        video.muted = false;
-        if (unmuteBtn) {
-          unmuteBtn.style.display = "flex";
-          unmuteBtn.textContent = "🔊 Click to Stream Unmuted Sound to AirPlay";
         }
-        updateStreamStatus("live", "📶 AIRPLAY LIVE");
-        isChannelTuning = false;
-      }
-    });
+      });
+    }
   };
 
   // HYBRID ENGINE ARCHITECTURE:
-  // On Safari, native AVPlayer plays direct HLS streams with full AirPlay hardware acceleration.
-  // When a stream has CORS/hotlink protection or fails direct playback (proxyIndex > 0), HLS.js handles it.
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
-  const shouldUseNative = isSafari && (proxyIndex === 0 || isAirPlayActive) && Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
+  // On iOS Mobile Safari, MediaSource is unsupported for HLS; native AVPlayer must be used.
+  // On Desktop Safari, direct feeds (proxyIndex === 0) run natively unless AirPlay Safe Mode is active or Hls.js is required.
+  const shouldUseNative = (isIOS || (isSafari && proxyIndex === 0 && !isAirPlaySafe)) && Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
 
   if (shouldUseNative) {
-    // Safari Native AVPlayer pipeline
+    // Safari & iOS Native AVPlayer pipeline
     video.src = targetUrl;
     if (video.readyState >= 1) {
       startPlayback();
@@ -4945,26 +4893,25 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
       }, 1200);
     }
   } else if (typeof Hls !== "undefined" && Hls.isSupported()) {
-    // HLS.js with Anti-Blocking Headers & Proxy Cascading
+    // Upgraded HLS.js with 60MB Allocation & Non-Capping Level Engine (for pristine AirPlay transmission)
     hls = new Hls({
       loader: ShieldProxyLoader,
       enableWorker: true,
       lowLatencyMode: false,
-      capLevelToPlayerSize: true,
-      liveSyncDurationCount: 5,
-      backBufferLength: 30,
-      maxBufferLength: 30,
-      maxMaxBufferLength: 45,
-      maxBufferSize: 20 * 1024 * 1024,
-      maxBufferHole: 0.5,
+      capLevelToPlayerSize: false, // Prevents downsampling on small screens when AirPlaying to 4K TV
+      maxBufferLength: 90,         // Robust 90-second buffer
+      maxMaxBufferLength: 180,     // 180-second headroom
+      maxBufferSize: 60 * 1024 * 1024, // 60MB allocation
+      maxBufferHole: 1.0,
+      maxFragLookUpTolerance: 0.5,
       highBufferWatchdogPeriod: 2,
       nudgeOffset: 0.3,
-      nudgeMaxRetry: 5,
+      nudgeMaxRetry: 10,
       fragLoadingTimeOut: 25000,
       manifestLoadingTimeOut: 25000,
-      fragLoadingMaxRetry: 4,
-      manifestLoadingMaxRetry: 4,
-      levelLoadingMaxRetry: 4,
+      fragLoadingMaxRetry: 10,
+      manifestLoadingMaxRetry: 10,
+      levelLoadingMaxRetry: 10,
       xhrSetup: (xhr, reqUrl) => {
         xhr.withCredentials = false;
         try {
@@ -4979,7 +4926,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
 
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
       populateQualityDropdown(data.levels);
-      hls.currentLevel = -1; // Adaptive bitrate
+      forceMaxQualityLevel();
       startPlayback();
     });
 
@@ -5025,7 +4972,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
         if (hls && typeof hls.nudgeStream === "function") {
           hls.nudgeStream();
         } else {
-          video.currentTime += 0.1;
+          video.currentTime += 0.3;
         }
       }
     });
@@ -5040,6 +4987,10 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
 // Automatically cascades through Anti-Block Proxy layers when an origin server drops requests
 function failoverToNextProxy(reason) {
   if (!currentPlayingChannel) return;
+  if (Date.now() < airplayPreemptionCooldown) {
+    console.warn("Proxy failover suppressed during AirPlay preemption/handoff window");
+    return;
+  }
   const currentIdx = currentPlayingChannel.proxyIndex || 0;
   const nextIdx = currentIdx + 1;
   if (nextIdx < CORS_PROXIES.length) {
@@ -5065,6 +5016,8 @@ function failoverToNextProxy(reason) {
 let isReconnecting = false;
 function reconnectCurrentStream(silent = false) {
   if (!currentPlayingChannel || isReconnecting) return;
+  if (Date.now() < airplayPreemptionCooldown) return;
+
   isReconnecting = true;
   setTimeout(() => { isReconnecting = false; }, 4000);
 
@@ -5087,6 +5040,14 @@ function reconnectCurrentStream(silent = false) {
 
 function setupCommercialAutoShield() {
   video.addEventListener("error", () => {
+    // If an error fired because AirPlay was preempted or disconnected, DO NOT cascade proxies or tear down video!
+    if (Date.now() < airplayPreemptionCooldown) {
+      console.warn("Handled AirPlay preemption event without stream disruption");
+      setTimeout(() => {
+        if (video.paused && currentPlayingChannel) safePlay(video);
+      }, 500);
+      return;
+    }
     if (currentPlayingChannel && !isChannelTuning) {
       shieldInterceptCount++;
       failoverToNextProxy("Playback Pipeline Interruption");
@@ -5111,6 +5072,7 @@ function setupCommercialAutoShield() {
   video.addEventListener("playing", () => {
     clearTimeout(stallRecoveryTimer);
     watchdogFrozenCount = 0;
+    fastStallCount = 0;
     isChannelTuning = false;
     if (isAirPlayActive) {
       updateStreamStatus("live", "📶 AIRPLAY LIVE");
@@ -5128,41 +5090,55 @@ function setupCommercialAutoShield() {
     }
   });
 
-  // Watchdog: Detects frozen video frames while maintaining AirPlay link
+  // 500ms High-Frequency Ad & Discontinuity Auto-Healer (from File 1)
   setInterval(() => {
     if (document.hidden) return;
-    if (currentPlayingChannel && !video.paused && !video.ended && !isChannelTuning) {
-      if (isAirPlayActive) {
-        if (video.currentTime === lastPlaybackTime) {
-          watchdogFrozenCount++;
-          if (watchdogFrozenCount >= 14) {
-            triggerShieldNotify("AirPlay: Re-aligning Live Edge");
-            reconnectCurrentStream(true);
-            watchdogFrozenCount = 0;
-          }
-        } else {
-          lastPlaybackTime = video.currentTime;
-          watchdogFrozenCount = 0;
-        }
-        return;
-      }
+    if (!video.paused && !video.ended && currentPlayingChannel && !isChannelTuning) {
+      if (video.currentTime === lastPlaybackTime) {
+        fastStallCount++;
 
-      if (video.currentTime === lastPlaybackTime || video.readyState < 3) {
-        watchdogFrozenCount++;
-        if (watchdogFrozenCount >= 6) {
-          shieldInterceptCount++;
-          triggerShieldNotify("Auto-Shield Watchdog: Advancing Stream Connection");
-          failoverToNextProxy("Frozen Stream Detected");
-          watchdogFrozenCount = 0;
-        } else if (watchdogFrozenCount === 3) {
-          video.currentTime += 0.2;
+        // 1.5s stall (3 ticks): gently nudge forward past ad splice / frozen frame
+        if (fastStallCount === 3 && !isFastHealing && !isAirPlayActive) {
+          isFastHealing = true;
+          triggerShieldNotify("⚡ Auto-Healed Ad Break");
+          video.currentTime += 0.3;
+          setTimeout(() => { isFastHealing = false; }, 1000);
+        }
+
+        // 2.5s stall (5 ticks): recover media pipeline
+        if (fastStallCount === 5 && hls && !isAirPlayActive) {
+          triggerShieldNotify("🔄 Recovering Buffer");
+          hls.recoverMediaError();
+        }
+
+        // AirPlay specific: if stalled on AirPlay for 7s (14 ticks), gently resync live edge
+        if (isAirPlayActive && fastStallCount >= 14) {
+          triggerShieldNotify("AirPlay: Re-aligning Live Edge");
+          reconnectCurrentStream(true);
+          fastStallCount = 0;
+        }
+
+        // Local specific: if stalled for 5s (10 ticks), silent token resync
+        if (!isAirPlayActive && fastStallCount >= 10) {
+          triggerShieldNotify("🔄 Silent Token Re-Sync");
+          failoverToNextProxy("Prolonged Buffer Stall");
+          fastStallCount = 0;
         }
       } else {
         lastPlaybackTime = video.currentTime;
-        watchdogFrozenCount = 0;
+        fastStallCount = 0;
       }
     }
-  }, 1000);
+  }, 500);
+
+  // Live Manifest Token Refresh (every 12 seconds, from File 1)
+  setInterval(() => {
+    if (hls && !video.paused && currentPlayingChannel) {
+      try {
+        hls.checkManifest();
+      } catch(e) {}
+    }
+  }, 12000);
 }
 /* =========================================================
    HARDWARE GPU PICTURE EQUALIZER & SPATIAL SSR ENGINE
@@ -5842,26 +5818,39 @@ function playRandomChannel() {
    ========================================================= */
 
 function setupAirPlayIntegration() {
-  if (window.WebKitPlaybackTargetAvailabilityEvent) {
-    video.addEventListener("webkitplaybacktargetavailabilitychanged", (event) => {
-      airPlayAvailable = (event.availability === "available");
-      if (airPlayBtn) airPlayBtn.style.display = (airPlayAvailable || isAirPlayActive) ? "inline-flex" : "none";
+  const registerAirPlayTargets = (vidEl) => {
+    if (!vidEl) return;
+    if (window.WebKitPlaybackTargetAvailabilityEvent) {
+      vidEl.addEventListener("webkitplaybacktargetavailabilitychanged", (event) => {
+        airPlayAvailable = (event.availability === "available");
+        if (airPlayBtn) airPlayBtn.style.display = (airPlayAvailable || isAirPlayActive || isIOS) ? "inline-flex" : "none";
+      });
+    }
+
+    vidEl.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", () => {
+      const isWireless = Boolean(vidEl.webkitCurrentPlaybackTargetIsWireless);
+      onAirPlayStateChange(isWireless);
     });
-  }
 
-  video.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", () => {
-    const isWireless = Boolean(video.webkitCurrentPlaybackTargetIsWireless);
-    onAirPlayStateChange(isWireless);
-  });
+    if (vidEl.remote) {
+      vidEl.remote.addEventListener("connect", () => onAirPlayStateChange(true));
+      vidEl.remote.addEventListener("disconnect", () => onAirPlayStateChange(false));
+    }
+  };
 
-  if (video.remote) {
-    video.remote.addEventListener("connect", () => onAirPlayStateChange(true));
-    video.remote.addEventListener("disconnect", () => onAirPlayStateChange(false));
+  registerAirPlayTargets(video);
+  registerAirPlayTargets(mirrorVideo);
+
+  // Always display AirPlay button on iOS Mobile Safari
+  if (isIOS && airPlayBtn) {
+    airPlayBtn.style.display = "inline-flex";
   }
 }
 
 function onAirPlayStateChange(connected) {
+  const wasAirPlay = isAirPlayActive;
   isAirPlayActive = connected;
+
   if (airPlayBtn) {
     airPlayBtn.classList.toggle("active", connected);
     airPlayBtn.textContent = connected ? "📶 AirPlay Active" : "📺 AirPlay";
@@ -5873,36 +5862,54 @@ function onAirPlayStateChange(connected) {
   }
 
   if (connected) {
+    airplayPreemptionCooldown = 0;
     video.muted = false;
     if (video.volume === 0) video.volume = 1.0;
     if (unmuteBtn) unmuteBtn.style.display = "none";
     updateStreamStatus("live", "📶 AIRPLAY LIVE");
-    triggerShieldNotify("AirPlay 2 Synchronized — Unmuted Audio Clock Active");
-    if (video.paused) {
-      video.play().catch(() => {});
-    }
+    triggerShieldNotify("AirPlay 2 Active — Hardware Sync");
+    safePlay(video);
   } else {
     updateStreamStatus("live", "🟢 LIVE ON AIR");
-    triggerShieldNotify("Returned to Local Screen");
+    if (wasAirPlay) {
+      // Graceful AirPlay handoff: Avoid crash & prevent reconnect ping-pong fight between 2 instances
+      airplayPreemptionCooldown = Date.now() + 6000;
+      triggerShieldNotify("AirPlay routed to another screen. Playing locally.");
+      toast("AirPlay route changed or claimed by another device. Continuing locally.");
+      setTimeout(() => {
+        if (video.paused && currentPlayingChannel) {
+          safePlay(video);
+        }
+      }, 300);
+    } else {
+      triggerShieldNotify("Returned to Local Screen");
+    }
   }
 }
 
 function toggleAirPlayPicker() {
-  video.disableRemotePlayback = false;
-  if (video.webkitShowPlaybackTargetPicker) {
-    video.webkitShowPlaybackTargetPicker();
-  } else if (video.remote && video.remote.prompt) {
-    video.remote.prompt().catch(() => {});
+  const target = (isAirPlaySafe && mirrorVideo && mirrorVideo.style.display !== "none") ? mirrorVideo : video;
+  target.disableRemotePlayback = false;
+
+  if (target.webkitShowPlaybackTargetPicker) {
+    try {
+      target.webkitShowPlaybackTargetPicker();
+    } catch (err) {
+      console.warn("AirPlay picker invocation notice:", err);
+    }
+  } else if (target.remote && target.remote.prompt) {
+    target.remote.prompt().catch(() => {});
   } else {
-    toast("AirPlay is natively supported in Safari on Apple devices.");
+    toast("AirPlay is natively supported in Safari on iOS and macOS.");
   }
 }
 
 function disconnectAirPlay() {
-  video.disableRemotePlayback = true;
+  const target = (isAirPlaySafe && mirrorVideo && mirrorVideo.style.display !== "none") ? mirrorVideo : video;
+  target.disableRemotePlayback = true;
   isAirPlayActive = false;
   onAirPlayStateChange(false);
-  video.play().catch(() => {});
+  safePlay(video);
   toast("Playback returned to local screen");
 }
 
@@ -6381,12 +6388,6 @@ function handleBackdropClick(event, id) {
   }
 }
 </script>
-
-
-<!-- Mobile Fullscreen Landscape Floating Trigger -->
-<button id="mobile-landscape-float-btn" onclick="enterMobileLandscapeFullscreen(event)" class="mobile-float-pill" title="Tap to Launch Fullscreen Landscape Mode">
-  📲 Fullscreen Landscape
-</button>
 
 </body>
 </html>
