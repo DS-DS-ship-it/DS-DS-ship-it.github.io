@@ -1467,7 +1467,7 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
     <div class="player-bezel" id="playerBezel">
       <div class="video-frame" id="playerScreen">
         <!-- Live Video Element -->
-        <video id="video" controls autoplay playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video></video>
+        <video id="video" controls autoplay playsinline webkit-playsinline x-webkit-airplay="allow" airplay="allow" preload="auto"></video>
 
         <!-- Dynamic A/B Split Comparison Layer -->
         <div id="splitOverlay" class="split-compare-overlay"></div>
@@ -4207,27 +4207,22 @@ function getDualStreamCandidates(channelOrUrl) {
 
   if (plutoId) {
     const sid = generateStreamUUID();
-    const directWeb = `https://cfd-v4-service-channel-stitcher-use1-1.prd.pluto.tv/v2/stitch/hls/channel/${plutoId}/master.m3u8?advertisingId=&appName=web&appVersion=8.0.0&app_name=web&clientDeviceType=0&clientID=${sid}&clientModelNumber=1.0.0&deviceDNT=false&deviceId=${sid}&deviceMake=chrome&deviceModel=web&deviceType=web&deviceVersion=122.0.0&serverSideAds=false&sid=${sid}`;
-    const embedWeb = `https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/${plutoId}/master.m3u8?deviceId=${sid}&deviceModel=web&deviceVersion=1.0&appVersion=1.0&deviceType=rokuChannel&deviceMake=rokuChannel&deviceDNT=1&advertisingId=${sid}&embedPartner=rokuChannel&appName=rokuchannel&is_lat=1&bmodel=bm1&content=channel&platform=web&tags=ROKU_CONTENT_TAGS&coppa=false&content_type=livefeed&rdid=${sid}&genre=ROKU_ADS_CONTENT_GENRE&content_rating=ROKU_ADS_CONTENT_RATING&studio_id=viacom&channel_id=${plutoId}`;
+    // Candidate 1: Samsung TV Plus / Mobile direct embed (Works natively on iPhone Safari without CORS or JWT blocks)
+    const mobileDirect = `https://cfd-v4-service-channel-stitcher-use1-1.prd.pluto.tv/v2/stitch/embed/hls/channel/${plutoId}/master.m3u8?deviceType=samsung-tvplus&deviceMake=samsung&deviceModel=samsung&deviceVersion=unknown&appVersion=unknown&deviceLat=0&deviceLon=0&deviceDNT=1&deviceId=${sid}&advertisingId=${sid}&embedPartner=samsung-tvplus`;
+    
+    // Candidate 2: Roku Channel Embed
+    const rokuEmbed = `https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/${plutoId}/master.m3u8?deviceId=${sid}&deviceModel=web&deviceVersion=1.0&appVersion=1.0&deviceType=rokuChannel&deviceMake=rokuChannel&deviceDNT=1&advertisingId=${sid}&embedPartner=rokuChannel&appName=rokuchannel&is_lat=1&bmodel=bm1&content=channel&platform=web&tags=ROKU_CONTENT_TAGS&coppa=false&content_type=livefeed&rdid=${sid}&genre=ROKU_ADS_CONTENT_GENRE&content_rating=ROKU_ADS_CONTENT_RATING&studio_id=viacom&channel_id=${plutoId}`;
+    
+    // Candidate 3: jmp2.uk redirector
     const m3uRedirect = `https://jmp2.uk/plu-${plutoId}.m3u8`;
-    const clusterWeb = `https://service-stitcher.clusters.pluto.tv/stitch/hls/channel/${plutoId}/master.m3u8?deviceType=web&deviceMake=Chrome`;
 
-    candidates.push({ url: directWeb, type: "Web API (Direct v2)", plutoId });
-    candidates.push({ url: embedWeb, type: "Web Embed (Roku/Viacom v1)", plutoId });
-    candidates.push({ url: m3uRedirect, type: ".M3U Redirector (jmp2)", plutoId });
-    candidates.push({ url: clusterWeb, type: "Cluster Stitcher", plutoId });
+    candidates.push({ url: mobileDirect, type: "iPhone Native Stream (Samsung TV Plus)", plutoId });
+    candidates.push({ url: rokuEmbed, type: "Pluto Roku Embed", plutoId });
+    candidates.push({ url: m3uRedirect, type: ".M3U Redirector (jmp2.uk)", plutoId });
   } else {
-    if (url) {
-      const cleanUrl = url.replace(/^http:\/\/service-stitcher/, 'https://service-stitcher');
-      candidates.push({ url: cleanUrl, type: "Primary Stream" });
-    }
+    if (url) candidates.push({ url, type: "Primary Stream" });
     if (m3u && m3u !== url) candidates.push({ url: m3u, type: "M3U Stream Link" });
-    if (alt && alt !== url && alt !== m3u) candidates.push({ url: alt, type: "Alternate Web Stream" });
-    if (channelOrUrl && typeof channelOrUrl === 'object' && Array.isArray(channelOrUrl.fallbackUrls)) {
-      channelOrUrl.fallbackUrls.forEach(fu => {
-        if (fu && !candidates.some(c => c.url === fu)) candidates.push({ url: fu, type: "Fallback Mirror" });
-      });
-    }
+    if (alt && alt !== url) candidates.push({ url: alt, type: "Alternate Stream" });
   }
 
   if (candidates.length === 0 && url) {
@@ -5103,20 +5098,7 @@ function reconnectCurrentStream(silent = false) {
   }
 }
 
-  if (!silent) updateStreamStatus("connecting", isAirPlayActive ? "📶 SYNCING AIRPLAY..." : "🔄 RE-SYNCING...");
 
-  play(
-    currentPlayingChannel.originalUrl || currentPlayingChannel.url,
-    currentPlayingChannel.name,
-    currentPlayingChannel.category,
-    currentPlayingChannel.logo,
-    currentPlayingChannel.country,
-    currentPlayingChannel.quality,
-    currentCandidateIdx,
-    currentProxyIdx,
-    currentPlayingChannel
-  );
-}
 
 function setupCommercialAutoShield() {
   video.addEventListener("error", () => {
