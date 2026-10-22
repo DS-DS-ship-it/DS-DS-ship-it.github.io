@@ -1,0 +1,2043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📡 Smart Antenna TV Pro - Cross-Platform 4K & Late Night Station</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg-color: #070b14;
+  --card-bg: #0f172a;
+  --card-border: #1e293b;
+  --primary: #00ffcc;
+  --primary-glow: rgba(0, 255, 204, 0.35);
+  --accent: #ff007f;
+  --accent-glow: rgba(255, 0, 127, 0.35);
+  --fav-color: #ff007f;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --status-live: #00ff88;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
+  padding: 14px;
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  gap: 12px;
+}
+
+.logo-section h1 {
+  color: var(--primary);
+  font-size: 1.45rem;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-section p {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin-top: 3px;
+}
+
+.platform-badge {
+  font-size: 0.72rem;
+  background: rgba(0, 255, 204, 0.15);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  font-weight: bold;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 14px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.4);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+}
+
+.stats-bar span strong {
+  color: var(--primary);
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button, select {
+  background: var(--card-bg);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+button:hover, button:focus, select:hover, select:focus {
+  background: var(--primary);
+  color: #000;
+  box-shadow: 0 0 12px var(--primary-glow);
+  outline: none;
+}
+
+button.active {
+  background: var(--primary);
+  color: #000;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+@media (min-width: 1024px) {
+  .main-layout {
+    grid-template-columns: 460px 1fr;
+  }
+}
+
+/* Video Player Container */
+.player-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 14px;
+  position: sticky;
+  top: 14px;
+  height: fit-content;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+  z-index: 100;
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  outline: none;
+  object-fit: contain;
+  display: block;
+}
+
+.player-info {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.now-playing-title {
+  font-size: 1rem;
+  color: #fff;
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.now-playing-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.codec-badge {
+  color: var(--primary);
+  background: rgba(0, 255, 204, 0.12);
+  border: 1px solid rgba(0, 255, 204, 0.3);
+}
+
+.shield-badge {
+  color: #ffca28;
+  background: rgba(255, 202, 40, 0.12);
+  border: 1px solid rgba(255, 202, 40, 0.3);
+}
+
+.airplay-badge {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.adult-badge {
+  color: var(--accent);
+  background: rgba(255, 0, 127, 0.15);
+  border: 1px solid rgba(255, 0, 127, 0.4);
+}
+
+.status-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-live { background: rgba(0, 255, 136, 0.15); color: var(--status-live); border: 1px solid var(--status-live); }
+.status-connecting { background: rgba(255, 200, 0, 0.15); color: #ffca28; border: 1px solid #ffca28; }
+.status-error { background: rgba(255, 0, 80, 0.15); color: #ff0050; border: 1px solid #ff0050; }
+
+/* Zapper Controls */
+.zapper-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  background: rgba(0,0,0,0.35);
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+}
+
+.zapper-bar button {
+  flex: 1;
+  justify-content: center;
+  font-size: 0.78rem;
+  padding: 6px 8px;
+}
+
+.controller-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+  display: none;
+}
+
+.player-controls {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,0,0,0.35);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  flex-grow: 1;
+}
+
+.volume-container input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Category Navigation Bar */
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.cat-tab {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cat-tab:hover, .cat-tab.active {
+  color: #000;
+  background: var(--primary);
+  border-color: var(--primary);
+  font-weight: bold;
+}
+
+.cat-tab.cat-adult.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* Subcategories Grid */
+.subcategories-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.subcat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subcat-card:hover, .subcat-card:focus {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.subcat-card.active {
+  border-color: var(--primary);
+  background: rgba(0, 255, 204, 0.06);
+  box-shadow: 0 0 10px rgba(0,255,204,0.15);
+}
+
+.subcat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.subcat-title {
+  font-size: 0.88rem;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.subcat-count {
+  font-size: 0.7rem;
+  background: var(--card-border);
+  color: var(--primary);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.subcat-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* Controls & Filter Panel */
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  background: var(--card-bg);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+}
+
+.filter-mode-group {
+  display: flex;
+  gap: 4px;
+  background: #000;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+}
+
+.filter-pill {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.filter-pill.active {
+  background: var(--primary);
+  color: #000;
+}
+
+.filter-pill.pill-adult.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+input[type="text"] {
+  background: #000;
+  color: var(--text-main);
+  border: 1px solid var(--card-border);
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+#search {
+  flex-grow: 1;
+  min-width: 170px;
+}
+
+/* Channels Display Grid */
+.channels-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 520px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.channels-grid.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.channel-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.channel-card:hover, .channel-card:focus {
+  border-color: var(--primary);
+  background: rgba(0, 255, 204, 0.04);
+  outline: none;
+}
+
+.channel-card.playing {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 10px rgba(0,255,204,0.25);
+  background: rgba(0, 255, 204, 0.06);
+}
+
+.channel-card.is-adult-channel {
+  border-left: 3px solid var(--accent);
+}
+
+.channel-card.playing.is-adult-channel {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 10px rgba(255, 0, 127, 0.25);
+}
+
+.channel-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  background: #000;
+  border-radius: 5px;
+  border: 1px solid var(--card-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.channel-info {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.channel-name {
+  font-size: 0.82rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-main);
+}
+
+.channel-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.star-btn {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.star-btn.fav {
+  color: var(--fav-color);
+}
+
+/* Modals */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--card-bg);
+  border: 1px solid var(--primary);
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 0 25px var(--primary-glow);
+}
+
+.modal h3 {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.modal input {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  font-size: 0.8rem;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo-section">
+    <h1>📡 Smart Antenna TV Pro <span id="platform-tag" class="platform-badge">Universal</span></h1>
+    <p>Xbox Edge & AirPlay Stabilized • Commercial-Shield Live Engine</p>
+  </div>
+
+  <div class="stats-bar">
+    <span>Total: <strong id="stat-total">0</strong></span>
+    <span>Showing: <strong id="stat-showing">0</strong></span>
+    <span>⭐ Favs: <strong id="stat-favs">0</strong></span>
+  </div>
+
+  <div class="action-buttons">
+    <button onclick="triggerAirPlay()" id="airplay-btn" style="display:none; border-color:#38bdf8; color:#38bdf8;">📺 AirPlay</button>
+    <button onclick="scanRemotePlaylists()">🔄 Scan Playlists</button>
+    <button onclick="openDirectPlayModal()">▶️ Direct URL</button>
+    <button onclick="openModal('custom-modal')">➕ Add M3U</button>
+    <button onclick="exportFavoritesM3U()">💾 Export M3U</button>
+    <button onclick="toggleFavoritesView()" id="fav-tab-btn">⭐ My Playlist</button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- LEFT: Sticky Video Player Panel -->
+  <div class="player-container">
+    <div class="video-wrapper">
+      <video id="video" controls autoplay playsinline x-webkit-airplay="allow" airplay="allow" webkit-playsinline></video>
+    </div>
+    
+    <div class="player-info">
+      <div>
+        <div id="playing-title" class="now-playing-title">Ready - Select a Channel</div>
+        <div id="playing-meta" class="now-playing-meta">Commercial Auto-Shield Active</div>
+        <div class="badges-container">
+          <div id="codec-info" class="badge codec-badge" style="display:none;">Resolution: Auto</div>
+          <div id="shield-badge" class="badge shield-badge">🛡️ Ad Auto-Shield: ACTIVE</div>
+          <div id="airplay-badge" class="badge airplay-badge" style="display:none;">📡 AirPlay Live</div>
+          <div id="category-badge" class="badge adult-badge" style="display:none;">18+ ADULT</div>
+        </div>
+      </div>
+      <div id="stream-status" class="badge status-badge status-live" style="display:none;">LIVE</div>
+    </div>
+
+    <!-- Quick TV Zapper Remote -->
+    <div class="zapper-bar">
+      <button onclick="channelStep(-1)">⏮️ CH -</button>
+      <button onclick="reconnectCurrentStream(true)">🔄 Re-Sync Stream</button>
+      <button onclick="playRandomChannel()">🎲 Surprise</button>
+      <button onclick="channelStep(1)">CH + ⏭️</button>
+    </div>
+    <div id="controller-hint" class="controller-hint">🎮 Xbox Controller: [A] Play/Pause • [X] Surprise • [Y] Re-Sync • [D-Pad] CH/Vol</div>
+
+    <!-- Volume & Aspect Ratio -->
+    <div class="player-controls">
+      <div class="volume-container">
+        <span id="vol-icon">🔊</span>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.02" value="1" oninput="setPlayerVolume(this.value)">
+      </div>
+
+      <select id="aspect-ratio-select" onchange="changeAspectRatio(this.value)">
+        <option value="contain">📺 Fit (16:9)</option>
+        <option value="fill">↔️ Fill (Stretch)</option>
+        <option value="cover">🔍 Zoom</option>
+        <option value="4/3">📼 Retro (4:3)</option>
+      </select>
+
+      <select id="quality-select" onchange="onQualityChange()">
+        <option value="max">🏆 4K / Max</option>
+        <option value="auto">⚡ Auto (Adaptive)</option>
+      </select>
+    </div>
+
+    <!-- Additional Player Options -->
+    <div class="player-controls" style="margin-top:6px;">
+      <button onclick="unmuteVideo()" id="unmute-btn" style="display:none; background:#ff007f; color:#fff; border:none; width:100%;">🔊 Click to Unmute Audio</button>
+      <button onclick="copyCurrentStreamUrl()">📋 Copy URL</button>
+      <button onclick="toggleCaptions()" id="cc-btn">💬 CC: OFF</button>
+      <button onclick="togglePIP()">📺 PiP</button>
+      <button onclick="toggleFullscreen()" style="flex:1;">⛶ Fullscreen</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Explorer & Channel Browser Panel -->
+  <div>
+
+    <!-- Main Categories Bar -->
+    <div class="category-tabs">
+      <div class="cat-tab active" onclick="selectMainCategory('all', this)">🌐 All Channels</div>
+      <div class="cat-tab cat-adult" onclick="selectMainCategory('adult', this)">🔞 Adult & Late Night (18+)</div>
+      <div class="cat-tab" onclick="selectMainCategory('scripted', this)">🎭 Scripted Entertainment</div>
+      <div class="cat-tab" onclick="selectMainCategory('unscripted', this)">💡 Unscripted & Factual</div>
+      <div class="cat-tab" onclick="selectMainCategory('special_interest', this)">🌟 Special Interest</div>
+      <div class="cat-tab" onclick="selectMainCategory('other', this)">📻 General & Other</div>
+    </div>
+
+    <!-- Subcategory Cards Grid -->
+    <div id="subcategories-grid" class="subcategories-container"></div>
+
+    <!-- Filter & Search Controls -->
+    <div class="filter-panel">
+      <!-- 18+ Content Filtering Mode -->
+      <div class="filter-mode-group">
+        <button class="filter-pill active" id="mode-all" onclick="setAdultFilterMode('all')">All</button>
+        <button class="filter-pill pill-adult" id="mode-adult" onclick="setAdultFilterMode('adult_only')">🔞 18+ Only</button>
+        <button class="filter-pill" id="mode-safe" onclick="setAdultFilterMode('safe')">🛡️ Safe</button>
+      </div>
+
+      <input id="search" placeholder="🔍 Search channels by name or tag..." oninput="onSearchInput()">
+      
+      <select id="country-filter" onchange="applyFilters()">
+        <option value="all">🌍 All Countries</option>
+      </select>
+
+      <button onclick="toggleViewMode()" id="view-mode-btn">🔲 Grid View</button>
+    </div>
+
+    <!-- Channel List View -->
+    <div id="status-message" style="margin-bottom:8px; font-size:0.82rem; color: var(--primary);"></div>
+    <div id="channels" class="channels-grid"></div>
+
+    <!-- Pagination -->
+    <div class="pagination-bar">
+      <button onclick="prevPage()">⬅️ Previous</button>
+      <span id="page-info">Page 1</span>
+      <button onclick="nextPage()">Next ➡️</button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Custom M3U Source Modal -->
+<div class="modal-overlay" id="custom-modal">
+  <div class="modal">
+    <h3>➕ Add Custom M3U Playlist</h3>
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">Paste a public M3U / M3U8 IPTV URL below:</p>
+    <input type="text" id="custom-m3u-input" placeholder="https://example.com/playlist.m3u">
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button onclick="closeModal('custom-modal')">Cancel</button>
+      <button onclick="addCustomPlaylist()" style="background:var(--primary); color:#000;">Add & Scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Direct URL Quick-Play Modal -->
+<div class="modal-overlay" id="direct-modal">
+  <div class="modal">
+    <h3>▶️ Direct Stream Quick-Play</h3>
+    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">Paste any direct .m3u8, .mp4, or HLS stream link:</p>
+    <input type="text" id="direct-url-input" placeholder="http://example.com/stream.m3u8">
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button onclick="closeModal('direct-modal')">Cancel</button>
+      <button onclick="playDirectStreamInput()" style="background:var(--primary); color:#000;">Play Stream</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// TAXONOMY CLASSIFICATION SYSTEM
+const TAXONOMY = [
+  {
+    id: "adult",
+    title: "🔞 Adult & Late Night (18+)",
+    subcategories: [
+      {
+        id: "adult_studios",
+        name: "🏛️ TV Networks & Live Studios",
+        desc: "24/7 dedicated broadcast networks, live studio shows, and European adult satellite channels.",
+        keywords: ["babes", "asianbox", "babestation", "jasmin", "visit-x", "miami tv", "passiexxx", "rouge tv", "cellcast", "catcast", "livesexlatinas"]
+      },
+      {
+        id: "adult_hentai",
+        name: "🎌 Anime, Hentai & Cosplay",
+        desc: "Adult animated series, Japanese anime, 3D animations, and cosplay streams.",
+        keywords: ["hentai", "anime", "cartoon", "cartoons", "3d", "cosplay", "adn", "redtraffic toons"]
+      },
+      {
+        id: "adult_cams",
+        name: "📹 Live Cams & Models",
+        desc: "Live interactive model studios, lounge cams, and webcam broadcasts.",
+        keywords: ["livecams", "mycam", "camerasmile", "webcam", "striptease", "lingerie", "toys", "white"]
+      },
+      {
+        id: "adult_hardcore",
+        name: "🔥 Hardcore & Action",
+        desc: "Hardcore performance features, intensive scenes, and action.",
+        keywords: ["hardcore", "anal", "blowjob", "rough", "encoder22", "action"]
+      },
+      {
+        id: "adult_glamour",
+        name: "💃 Glamour, Babes & Solo",
+        desc: "Sensual babes, solo models, big booty, busty, POV, and MILF presentations.",
+        keywords: ["milf", "pov", "bigtits", "bigass", "blonde", "brunette", "pornstar", "squirt", "skinny", "medium", "massage", "masturbation"]
+      },
+      {
+        id: "adult_diverse",
+        name: "🌍 International & Exotic",
+        desc: "Global adult channels: Asian, Latina, Russian, Ebony, Arab, European.",
+        keywords: ["latina", "asian", "arab", "ebony", "russian", "interracial", "german", "french", "italian"]
+      },
+      {
+        id: "adult_specialty",
+        name: "🎞️ Specialty, Fetish & Couples",
+        desc: "Fetish, cuckold, threesome, lesbian, male, compilation, and vintage.",
+        keywords: ["fetish", "cuckold", "threesome", "lesbian", "gangbang", "compilation", "vintage", "amateur", "trans", "bbw", "bigdick"]
+      }
+    ]
+  },
+  {
+    id: "scripted",
+    title: "Scripted Entertainment",
+    subcategories: [
+      {
+        id: "dramas",
+        name: "Dramas & Cinema",
+        desc: "Serious fictional stories with emotional themes, character struggles, and ongoing plots.",
+        keywords: ["drama", "series", "novela", "cinema", "movie", "film", "hallmark", "cine", "theatre", "thriller", "action"]
+      },
+      {
+        id: "sitcoms",
+        name: "Sitcoms & Comedy",
+        desc: "Funny shows featuring recurring characters in everyday, amusing situations.",
+        keywords: ["sitcom", "comedy", "comedia", "humor", "funny", "laugh", "standup"]
+      },
+      {
+        id: "animation",
+        name: "Cartoons & Adult Swim",
+        desc: "Animated series, late-night animation, anime, and cartoon broadcasts.",
+        keywords: ["adult swim", "aswest", "disney", "nick", "boomerang", "pixar", "manga", "toon"]
+      }
+    ]
+  },
+  {
+    id: "unscripted",
+    title: "Unscripted and Factual",
+    subcategories: [
+      {
+        id: "news",
+        name: "News & Current Affairs",
+        desc: "Reports covering daily local, national, and world events as they happen.",
+        keywords: ["news", "noticias", "info", "bloomberg", "cnn", "bbc", "euronews", "dw", "france 24", "weather", "business"]
+      },
+      {
+        id: "docs",
+        name: "Documentaries & Science",
+        desc: "Non-fiction films or series that educate or record real-life events, history, or science.",
+        keywords: ["doc", "documentary", "nasa", "science", "history", "discovery", "nat geo", "nature", "wildlife"]
+      }
+    ]
+  },
+  {
+    id: "special_interest",
+    title: "Special Interest",
+    subcategories: [
+      {
+        id: "sports",
+        name: "Sports Programs",
+        desc: "Live or recorded coverage of athletic events and competitions.",
+        keywords: ["sport", "red bull", "football", "racing", "f1", "mma", "tennis", "golf", "arena", "stadium"]
+      },
+      {
+        id: "lifestyle",
+        name: "Lifestyle & Cookery",
+        desc: "Instructional programs focused on food, home improvement, fashion, or travel.",
+        keywords: ["cook", "food", "kitchen", "lifestyle", "travel", "chef", "fashion", "garden", "diy"]
+      }
+    ]
+  }
+];
+
+// MASSIVE EXPANDED CHANNEL CATALOG
+const BUILTIN_CHANNELS = [
+  // 1. Live Studio & Satellite Broadcast Networks
+  { name: "Babes TV HD", url: "https://cdn4.skygo.mn/live/disk1/Babes/HLSv3-FTA/Babes.m3u8", group: "Adult Studios", country: "Global", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "AsianBOX HD", url: "https://cdn4.skygo.mn/live/disk1/AsianBOX/HLSv3-FTA/AsianBOX.m3u8", group: "Adult Studios", country: "Asia", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Babestation 24 UK", url: "http://sdn-global-live-streaming-packager-cache.3qsdn.com/9528/9528_264_live.m3u8", group: "Adult Studios", country: "UK", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Jasmin TV HD Live", url: "http://109.71.162.112:1935/live/hd.jasminchannel.stream/chunklist_w1190948669.m3u8", group: "Adult Studios", country: "Global", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Jasmin TV Global SD", url: "http://109.71.162.112:1935/live/sd.jasminchannel.stream/PAZ_Chega_de_Guerras.m3u8", group: "Adult Studios", country: "Global", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Visit-X TV Live", url: "https://stream.visit-x.tv/vxtv/ngrp:live_all/playlist.m3u8", group: "Adult Studios", country: "Germany", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Miami TV Jenny Live", url: "https://59ec5453559f0.streamlock.net/jennyforyou/jennyforyou/.m3u8", group: "Adult Studios", country: "USA", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "PassieXXX Europe", url: "http://publish.thewebstream.co:1935/leved/_definst_/passiexxx/playlist.m3u8", group: "Adult Studios", country: "Netherlands", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "LiveSexLatinas Channel", url: "http://178.33.126.213:1935/leved/livesexlatinas/chunklist.m3u8", group: "Adult Studios", country: "Spain", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Cellcast Encoder 22", url: "http://46.105.116.159:1935/cellcast/encoder22/.m3u8", group: "Adult Studios", country: "UK", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Catcast Autopilot Adult", url: "https://autopilot.catcast.tv/content/40381/index.m3u8", group: "Adult Studios", country: "France", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Camera Smile (BozzTV)", url: "https://rpn.bozztv.com/gusa/gusa-camerasmile/index.m3u8", group: "Adult Studios", country: "Global", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+  { name: "Rouge TV Late Night", url: "http://event.vedge.infomaniak.com/livecast/event.stream/playlist.m3u8", group: "Adult Studios", country: "Switzerland", subCat: "adult_studios", mainCat: "adult", subName: "TV Networks & Live Studios", isAdult: true },
+
+  // 2. AdultIPTV Network
+  { name: "AdultIPTV - Hentai TV 1", url: "http://cdn.adultiptv.net/hentai.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - Hentai TV 2", url: "http://cdn.adultiptv.net/hentai2.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - Anime Adult", url: "http://cdn.adultiptv.net/anime.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - Cartoons TV", url: "http://cdn.adultiptv.net/cartoons.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - 3D Adult World", url: "http://cdn.adultiptv.net/3d.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - Cosplay TV", url: "http://cdn.adultiptv.net/cosplay.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "AdultIPTV - Live Cams Network", url: "http://cdn.adultiptv.net/livecams.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "AdultIPTV - MILF TV", url: "http://cdn.adultiptv.net/milf.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - POV Experience", url: "http://cdn.adultiptv.net/pov.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Big Tits TV", url: "http://cdn.adultiptv.net/bigtits.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Big Booty TV", url: "http://cdn.adultiptv.net/bigass.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Blonde Bombshells", url: "http://cdn.adultiptv.net/blonde.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Brunette Beauties", url: "http://cdn.adultiptv.net/brunette.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Latina Passion", url: "http://cdn.adultiptv.net/latina.m3u8", group: "Adult", country: "Latin America", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Asian Desire", url: "http://cdn.adultiptv.net/asian.m3u8", group: "Adult", country: "Asia", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Russian Elegance", url: "http://cdn.adultiptv.net/russian.m3u8", group: "Adult", country: "Russia", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Hardcore Action", url: "http://cdn.adultiptv.net/hardcore.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "AdultIPTV - Anal Classics", url: "http://cdn.adultiptv.net/anal.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "AdultIPTV - Blowjob Supreme", url: "http://cdn.adultiptv.net/blowjob.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "AdultIPTV - Rough Action", url: "http://cdn.adultiptv.net/rough.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "AdultIPTV - Interracial Lounge", url: "http://cdn.adultiptv.net/interracial.m3u8", group: "Adult", country: "Global", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Pornstar Elite", url: "http://cdn.adultiptv.net/pornstar.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Fetish & Kink", url: "http://cdn.adultiptv.net/fetish.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Big Male Power", url: "http://cdn.adultiptv.net/bigdick.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Cuckold Fantasy", url: "http://cdn.adultiptv.net/cuckold.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Threesome Passion", url: "http://cdn.adultiptv.net/threesome.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Lesbian Romance", url: "http://cdn.adultiptv.net/lesbian.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Group & Gangbang", url: "http://cdn.adultiptv.net/gangbang.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Mega Compilation", url: "http://cdn.adultiptv.net/compilation.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Striptease Club", url: "http://cdn.adultiptv.net/striptease.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "AdultIPTV - Massage & Oil", url: "http://cdn.adultiptv.net/massage.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Lingerie Lounge", url: "http://cdn.adultiptv.net/lingerie.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Masturbation Solo", url: "http://cdn.adultiptv.net/masturbation.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "AdultIPTV - Vintage Classics", url: "http://cdn.adultiptv.net/vintage.m3u8", group: "Adult", country: "USA", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - Amateur Homemade", url: "http://cdn.adultiptv.net/amateur.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "AdultIPTV - German Passion", url: "http://cdn.adultiptv.net/german.m3u8", group: "Adult", country: "Germany", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - French Amour", url: "http://cdn.adultiptv.net/french.m3u8", group: "Adult", country: "France", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Italian Cinema", url: "http://cdn.adultiptv.net/italian.m3u8", group: "Adult", country: "Italy", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "AdultIPTV - Curvy & Full", url: "http://cdn.adultiptv.net/curvy.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+
+  // 3. RedTraffic Network
+  { name: "RedTraffic - Adult Cartoons", url: "http://live.redtraffic.xyz/cartoon.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "RedTraffic - Hentai Live", url: "http://live.redtraffic.xyz/hentai.m3u8", group: "Adult", country: "Global", subCat: "adult_hentai", mainCat: "adult", subName: "Anime, Hentai & Cosplay", isAdult: true },
+  { name: "RedTraffic - Hardcore 24/7", url: "http://live.redtraffic.xyz/hardcore.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "RedTraffic - Curvy & Big Booty", url: "http://live.redtraffic.xyz/bigass.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - MILF World", url: "http://live.redtraffic.xyz/milf.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - Latina Passion", url: "http://live.redtraffic.xyz/latina.m3u8", group: "Adult", country: "Latin America", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "RedTraffic - Oral Pleasure", url: "http://live.redtraffic.xyz/blowjob.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "RedTraffic - Big Dick Power", url: "http://live.redtraffic.xyz/bigdick.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "RedTraffic - Big Tits", url: "http://live.redtraffic.xyz/bigtits.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - Fetish Vault", url: "http://live.redtraffic.xyz/fetish.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "RedTraffic - Lesbian Duos", url: "http://live.redtraffic.xyz/lesbian.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "RedTraffic - Russian Dolls", url: "http://live.redtraffic.xyz/russian.m3u8", group: "Adult", country: "Russia", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "RedTraffic - Threesome Mix", url: "http://live.redtraffic.xyz/threesome.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "RedTraffic - Amateur Real", url: "http://live.redtraffic.xyz/amateur.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+  { name: "RedTraffic - POV Action", url: "http://live.redtraffic.xyz/pov.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - Asian Elegance", url: "http://live.redtraffic.xyz/asian.m3u8", group: "Adult", country: "Asia", subCat: "adult_diverse", mainCat: "adult", subName: "International & Exotic", isAdult: true },
+  { name: "RedTraffic - Brunette Style", url: "http://live.redtraffic.xyz/brunette.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - Blonde Bombs", url: "http://live.redtraffic.xyz/blonde.m3u8", group: "Adult", country: "Global", subCat: "adult_glamour", mainCat: "adult", subName: "Glamour, Babes & Solo", isAdult: true },
+  { name: "RedTraffic - Rough Action", url: "http://live.redtraffic.xyz/rough.m3u8", group: "Adult", country: "Global", subCat: "adult_hardcore", mainCat: "adult", subName: "Hardcore & Action", isAdult: true },
+  { name: "RedTraffic - Cuckold Fantasy", url: "http://live.redtraffic.xyz/cuckold.m3u8", group: "Adult", country: "Global", subCat: "adult_specialty", mainCat: "adult", subName: "Specialty, Fetish & Couples", isAdult: true },
+
+  // 4. MyCamTV Network
+  { name: "MyCam - Latina Models", url: "http://live.mycamtv.com/latina.m3u8", group: "Adult", country: "Latin America", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - White Beauty", url: "http://live.mycamtv.com/white.m3u8", group: "Adult", country: "USA", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Blonde Models", url: "http://live.mycamtv.com/blonde.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Brunette Glamour", url: "http://live.mycamtv.com/brunette.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Asian Models", url: "http://live.mycamtv.com/asian.m3u8", group: "Adult", country: "Asia", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Ebony Dolls", url: "http://live.mycamtv.com/ebony.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Arab Exotic", url: "http://live.mycamtv.com/arab.m3u8", group: "Adult", country: "Middle East", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Anal Live", url: "http://live.mycamtv.com/anal.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Curvy & Big Ass", url: "http://live.mycamtv.com/bigass.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Squirt Sensation", url: "http://live.mycamtv.com/squirt.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Petite & Skinny", url: "http://live.mycamtv.com/skinny.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Medium Glam", url: "http://live.mycamtv.com/medium.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Oral & BJ", url: "http://live.mycamtv.com/blowjob.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Mature & MILF", url: "http://live.mycamtv.com/milf.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Busty & Big Tits", url: "http://live.mycamtv.com/bigtits.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Redhead Bombshells", url: "http://live.mycamtv.com/redhead.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Trans & Shemale", url: "http://live.mycamtv.com/trans.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - BBW & Plump", url: "http://live.mycamtv.com/bbw.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Striptease Live", url: "http://live.mycamtv.com/striptease.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Lingerie Private", url: "http://live.mycamtv.com/lingerie.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+  { name: "MyCam - Interactive Toys", url: "http://live.mycamtv.com/toys.m3u8", group: "Adult", country: "Global", subCat: "adult_cams", mainCat: "adult", subName: "Live Cams & Models", isAdult: true },
+
+  // 5. Entertainment, Animation & Late Night Networks
+  { name: "Adult Swim (West Coast HD)", url: "https://turnerlive.warnermediacdn.com/hls/live/2023185/aswest/noslate/VIDEO_1_5128000.m3u8", group: "Animation", country: "USA", subCat: "animation", mainCat: "scripted", subName: "Cartoons & Adult Swim", isAdult: false },
+  { name: "Adult Swim Primary Stream", url: "https://media.cdn.adultswim.com/streams/playlists/live-stream.primary.v2.m3u8", group: "Animation", country: "USA", subCat: "animation", mainCat: "scripted", subName: "Cartoons & Adult Swim", isAdult: false },
+  { name: "ADN - Animation Digital Network", url: "https://d3b73b34o7cvkq.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-gz2sgqzp076kf/adn.m3u8", group: "Anime", country: "France", subCat: "animation", mainCat: "scripted", subName: "Cartoons & Adult Swim", isAdult: false },
+
+  // 6. Global News, Documentaries & Sports
+  { name: "NASA TV HD (Public)", url: "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8", group: "Documentary", country: "USA", subCat: "docs", mainCat: "unscripted", subName: "Documentaries & Science", isAdult: false },
+  { name: "Bloomberg TV Global", url: "https://bloomberg.com/media-manifest/streams/us.m3u8", group: "News", country: "USA", subCat: "news", mainCat: "unscripted", subName: "News & Current Affairs", isAdult: false },
+  { name: "Red Bull TV Live", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", group: "Sports", country: "Austria", subCat: "sports", mainCat: "special_interest", subName: "Sports Programs", isAdult: false },
+  { name: "DW English Global HD", url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", group: "News", country: "Germany", subCat: "news", mainCat: "unscripted", subName: "News & Current Affairs", isAdult: false },
+  { name: "France 24 English HD", url: "https://stream.france24.com/hls/live/2037086/F24_EN_LO_HLS/master.m3u8", group: "News", country: "France", subCat: "news", mainCat: "unscripted", subName: "News & Current Affairs", isAdult: false },
+  { name: "Euronews English HD", url: "https://euronews-euronews-world-1-us.plex.tv/hls/master.m3u8", group: "News", country: "France", subCat: "news", mainCat: "unscripted", subName: "News & Current Affairs", isAdult: false }
+];
+
+const DEFAULT_PLAYLISTS = [
+  "https://iptv-org.github.io/iptv/index.category.m3u",
+  "https://iptv-org.github.io/iptv/categories/news.m3u",
+  "https://iptv-org.github.io/iptv/categories/animation.m3u",
+  "https://iptv-org.github.io/iptv/categories/sports.m3u",
+  "https://iptv-org.github.io/iptv/categories/movies.m3u",
+  "https://iptv-org.github.io/iptv/categories/xxx.m3u"
+];
+
+const CORS_PROXIES = [
+  u => u,
+  u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+];
+
+// STATE MANAGEMENT
+let allChannels = [];
+let filteredChannels = [];
+let favorites = JSON.parse(localStorage.getItem("smart_tv_favs_v5") || "[]");
+let customPlaylists = JSON.parse(localStorage.getItem("smart_tv_sources_v5") || "[]");
+
+let currentMainCategory = "all";
+let currentSubCategory = "all";
+let adultFilterMode = localStorage.getItem("smart_tv_adult_mode") || "all";
+let currentPage = 0;
+const PAGE_SIZE = 60;
+let isFavOnlyView = false;
+let isGridView = false;
+let hls = null;
+let currentPlayingChannel = null;
+
+let captionsEnabled = false;
+let lastPlaybackTime = 0;
+let stallCount = 0;
+let stallRecoveryTimer = null;
+let activeProxyIndex = 0;
+let isAirPlayActive = false;
+let wakeLock = null;
+
+// DOM Elements
+const video = document.getElementById('video');
+const channelsDiv = document.getElementById('channels');
+const statusMsg = document.getElementById('status-message');
+const streamStatusBadge = document.getElementById('stream-status');
+const codecBadge = document.getElementById('codec-info');
+const shieldBadge = document.getElementById('shield-badge');
+const airplayBadge = document.getElementById('airplay-badge');
+const categoryBadge = document.getElementById('category-badge');
+const unmuteBtn = document.getElementById('unmute-btn');
+const ccBtn = document.getElementById('cc-btn');
+const airplayBtn = document.getElementById('airplay-btn');
+const qualitySelect = document.getElementById('quality-select');
+const volumeSlider = document.getElementById('volume-slider');
+const volIcon = document.getElementById('vol-icon');
+const platformTag = document.getElementById('platform-tag');
+const controllerHint = document.getElementById('controller-hint');
+
+// INITIALIZATION
+window.onload = () => {
+  detectPlatformEnvironment();
+  initChannels();
+  setupVideoDiagnostics();
+  setupCommercialAutoShield();
+  setupAirPlayStabilityEngine();
+  setupXboxControllerEngine();
+  setupKeyboardHotkeys();
+  updateAdultPillUI();
+
+  if (allChannels.length > 0) {
+    const defaultPlay = allChannels[0];
+    play(defaultPlay.url, defaultPlay.name, defaultPlay.subName, defaultPlay.isAdult);
+  }
+};
+
+// DETECT XBOX EDGE, LG WEBOS, APPLE
+function detectPlatformEnvironment() {
+  const ua = navigator.userAgent;
+  if (/Xbox/i.test(ua)) {
+    platformTag.textContent = "🎮 Xbox Edge Mode";
+    controllerHint.style.display = "block";
+  } else if (/Web0S|webOS|LG/i.test(ua)) {
+    platformTag.textContent = "📺 Smart TV Mode";
+  } else if (/iPhone|iPad|iPod|Macintosh/i.test(ua)) {
+    platformTag.textContent = "🍎 Apple / AirPlay Ready";
+  } else {
+    platformTag.textContent = "💻 Universal Desktop";
+  }
+}
+
+function initChannels() {
+  allChannels = [...BUILTIN_CHANNELS];
+  populateCountryFilter();
+  renderSubcategories();
+  applyFilters();
+}
+
+// VIDEO EVENT HANDLERS
+function setupVideoDiagnostics() {
+  const updateResBadge = () => {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w && h) {
+      codecBadge.style.display = "inline-block";
+      if (h >= 2160) {
+        codecBadge.textContent = `✨ 4K UHD (${w}x${h})`;
+      } else if (h >= 1080) {
+        codecBadge.textContent = `🌟 1080p FHD (${w}x${h})`;
+      } else if (h >= 720) {
+        codecBadge.textContent = `📺 720p HD (${w}x${h})`;
+      } else {
+        codecBadge.textContent = `📺 SD (${w}x${h})`;
+      }
+    }
+  };
+
+  video.addEventListener('loadedmetadata', () => {
+    updateResBadge();
+    applyCaptionSettings();
+  });
+
+  video.addEventListener('resize', updateResBadge);
+
+  video.addEventListener('volumechange', () => {
+    unmuteBtn.style.display = video.muted ? 'inline-flex' : 'none';
+    volumeSlider.value = video.muted ? 0 : video.volume;
+    updateVolIcon(video.muted ? 0 : video.volume);
+  });
+
+  // Seamless auto-resync when an episode concludes without terminating the AirPlay session
+  video.addEventListener('ended', () => {
+    if (currentPlayingChannel) {
+      triggerShieldNotify("Episode End: Resyncing Live Edge");
+      if (hls && hls.liveSyncPosition) {
+        video.currentTime = hls.liveSyncPosition;
+        video.play().catch(() => {});
+      } else {
+        setTimeout(() => reconnectCurrentStream(true), 400);
+      }
+    }
+  });
+
+  if (video.textTracks) {
+    video.textTracks.addEventListener('addtrack', (e) => {
+      e.track.mode = captionsEnabled ? 'showing' : 'disabled';
+    });
+  }
+}
+
+// AIRPLAY REDUNDANCY & PERSISTENCE ENGINE
+function setupAirPlayStabilityEngine() {
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    video.addEventListener('webkitplaybacktargetavailabilitychanged', (event) => {
+      if (event.availability === 'available') {
+        airplayBtn.style.display = 'inline-flex';
+      } else {
+        airplayBtn.style.display = 'none';
+      }
+    });
+
+    video.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', () => {
+      isAirPlayActive = !!video.webkitCurrentPlaybackTargetIsWireless;
+      airplayBadge.style.display = isAirPlayActive ? 'inline-block' : 'none';
+      if (isAirPlayActive) {
+        triggerShieldNotify("AirPlay Mirroring: Stream Locked");
+        requestWakeLock();
+      }
+    });
+  }
+}
+
+function triggerAirPlay() {
+  if (video.webkitShowPlaybackTargetPicker) {
+    video.webkitShowPlaybackTargetPicker();
+  } else {
+    alert("AirPlay playback target picker is native to Safari on Apple devices.");
+  }
+}
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (err) {}
+}
+
+// 🎮 XBOX CONTROLLER GAMEPAD API NAVIGATION ENGINE
+function setupXboxControllerEngine() {
+  let lastButtonPress = 0;
+  function pollGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    if (gamepads && gamepads[0]) {
+      const gp = gamepads[0];
+      const now = Date.now();
+      if (now - lastButtonPress > 220) {
+        // [A] Button (index 0) = Play / Pause
+        if (gp.buttons[0] && gp.buttons[0].pressed) {
+          video.paused ? video.play() : video.pause();
+          lastButtonPress = now;
+        }
+        // [X] Button (index 2) = Surprise Me
+        else if (gp.buttons[2] && gp.buttons[2].pressed) {
+          playRandomChannel();
+          lastButtonPress = now;
+        }
+        // [Y] Button (index 3) = Re-Sync
+        else if (gp.buttons[3] && gp.buttons[3].pressed) {
+          reconnectCurrentStream(true);
+          lastButtonPress = now;
+        }
+        // [D-Pad Up] (index 12) = Prev CH
+        else if (gp.buttons[12] && gp.buttons[12].pressed) {
+          channelStep(-1);
+          lastButtonPress = now;
+        }
+        // [D-Pad Down] (index 13) = Next CH
+        else if (gp.buttons[13] && gp.buttons[13].pressed) {
+          channelStep(1);
+          lastButtonPress = now;
+        }
+        // [D-Pad Left] (index 14) = Volume Down
+        else if (gp.buttons[14] && gp.buttons[14].pressed) {
+          setPlayerVolume(Math.max(0, video.volume - 0.1));
+          lastButtonPress = now;
+        }
+        // [D-Pad Right] (index 15) = Volume Up
+        else if (gp.buttons[15] && gp.buttons[15].pressed) {
+          setPlayerVolume(Math.min(1, video.volume + 0.1));
+          lastButtonPress = now;
+        }
+        // [LB] (index 4) = Prev Page
+        else if (gp.buttons[4] && gp.buttons[4].pressed) {
+          prevPage();
+          lastButtonPress = now;
+        }
+        // [RB] (index 5) = Next Page
+        else if (gp.buttons[5] && gp.buttons[5].pressed) {
+          nextPage();
+          lastButtonPress = now;
+        }
+      }
+    }
+    requestAnimationFrame(pollGamepad);
+  }
+  window.addEventListener("gamepadconnected", () => {
+    controllerHint.style.display = "block";
+    requestAnimationFrame(pollGamepad);
+  });
+}
+
+// 🛡️ ADVANCED COMMERCIAL AUTO-SHIELD (TIERED LIVE-EDGE RECOVERY)
+function setupCommercialAutoShield() {
+  // 1. Intercept media errors without destroying the player
+  video.addEventListener('error', () => {
+    if (currentPlayingChannel) {
+      triggerShieldNotify("Auto-Recovering Media Pipeline");
+      if (hls) {
+        hls.recoverMediaError();
+      } else {
+        setTimeout(() => reconnectCurrentStream(true), 350);
+      }
+    }
+  });
+
+  // 2. Intercept commercial buffering stalls & bridge buffer holes
+  video.addEventListener('waiting', () => {
+    clearTimeout(stallRecoveryTimer);
+    stallRecoveryTimer = setTimeout(() => {
+      if (currentPlayingChannel && !video.paused && video.readyState < 3) {
+        triggerShieldNotify("Bridging Commercial Gap");
+
+        if (hls && hls.liveSyncPosition) {
+          video.currentTime = hls.liveSyncPosition;
+        } else if (video.buffered && video.buffered.length > 0) {
+          video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.5;
+        }
+
+        video.play().catch(() => {});
+
+        setTimeout(() => {
+          if (video.readyState < 3 && hls) {
+            hls.startLoad();
+          }
+        }, 1200);
+      }
+    }, 1800);
+  });
+
+  video.addEventListener('playing', () => {
+    clearTimeout(stallRecoveryTimer);
+    stallCount = 0;
+  });
+
+  // 3. Background Watchdog (Tiered Resolution - Prevents Infinite Reconnect Loops)
+  setInterval(() => {
+    if (currentPlayingChannel && !video.paused && !video.ended) {
+      if (video.currentTime === lastPlaybackTime) {
+        stallCount++;
+        
+        // Tier 1 (2s): Soft nudge & startLoad
+        if (stallCount === 2) {
+          triggerShieldNotify("Ad Sync: Nudging Buffer");
+          if (hls) hls.startLoad();
+          if (video.buffered && video.buffered.length > 0) {
+            const end = video.buffered.end(video.buffered.length - 1);
+            if (end > video.currentTime) video.currentTime = end - 0.3;
+          }
+          video.play().catch(() => {});
+        } 
+        // Tier 2 (5s): Live edge leap & recoverMediaError
+        else if (stallCount === 5) {
+          triggerShieldNotify("Ad Sync: Resyncing Live Edge");
+          if (hls) {
+            if (hls.liveSyncPosition) video.currentTime = hls.liveSyncPosition;
+            hls.recoverMediaError();
+          }
+          video.play().catch(() => {});
+        } 
+        // Tier 3 (9s): Full manifest fallback
+        else if (stallCount >= 9) {
+          triggerShieldNotify("Full Stream Re-Sync");
+          reconnectCurrentStream(true);
+          stallCount = 0;
+        }
+      } else {
+        lastPlaybackTime = video.currentTime;
+        stallCount = 0;
+      }
+    }
+  }, 1000);
+}
+
+function triggerShieldNotify(msg) {
+  shieldBadge.textContent = `⚡ ${msg}`;
+  shieldBadge.style.color = "#00ffcc";
+  shieldBadge.style.borderColor = "#00ffcc";
+  setTimeout(() => {
+    shieldBadge.textContent = "🛡️ Ad Auto-Shield: ACTIVE";
+    shieldBadge.style.color = "#ffca28";
+    shieldBadge.style.borderColor = "rgba(255, 202, 40, 0.3)";
+  }, 2400);
+}
+
+// HIGH-PERFORMANCE DIRECT MEDIA PLAYER ENGINE (EDGE & XBOX MSE FIXED)
+function play(url, name, category, isAdult = false, proxyIndex = 0) {
+  currentPlayingChannel = { url, name, category, isAdult };
+  activeProxyIndex = proxyIndex;
+
+  document.getElementById("playing-title").textContent = name;
+  document.getElementById("playing-meta").textContent = category ? `Category: ${category}` : "Live Feed";
+
+  if (isAdult) {
+    categoryBadge.style.display = "inline-block";
+    categoryBadge.textContent = "🔞 18+ ADULT";
+  } else {
+    categoryBadge.style.display = "none";
+  }
+
+  updateStreamStatus("connecting", "🟡 CONNECTING...");
+
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+
+  const targetUrl = proxyIndex < CORS_PROXIES.length ? CORS_PROXIES[proxyIndex](url) : url;
+
+  const startPlayback = () => {
+    applyCaptionSettings();
+    video.play().then(() => {
+      updateStreamStatus("live", "🟢 LIVE");
+      unmuteBtn.style.display = 'none';
+    }).catch(() => {
+      video.muted = true;
+      unmuteBtn.style.display = 'inline-flex';
+      video.play().then(() => {
+        updateStreamStatus("live", "🟢 LIVE (MUTED)");
+      }).catch(() => {
+        updateStreamStatus("error", "🔴 CLICK PLAY");
+      });
+    });
+  };
+
+  // CRITICAL COMPATIBILITY FIX:
+  // Edge on Xbox and Desktop reports truthy for video.canPlayType, but native HLS is fractured without MSE.
+  // ONLY Apple Safari should bypass Hls.js in favor of native AVFoundation.
+  const isPureAppleSafari = !window.chrome && !navigator.userAgent.includes("Edg") && !navigator.userAgent.includes("Xbox") && /Safari/.test(navigator.userAgent) && video.canPlayType('application/vnd.apple.mpegurl');
+
+  if (Hls.isSupported() && !isPureAppleSafari) {
+    // Xbox Edge / Desktop Edge / Chrome / Firefox / webOS path via MediaSource Extensions
+    hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      maxBufferLength: 15,          // Optimized for Xbox Edge memory limits
+      maxMaxBufferLength: 30,
+      maxBufferSize: 30 * 1024 * 1024,
+      maxBufferHole: 0.5,
+      nudgeOffset: 0.2,
+      nudgeMaxRetry: 10,
+      fragLoadingTimeOut: 20000,
+      manifestLoadingTimeOut: 15000,
+      levelLoadingTimeOut: 15000,
+      fragLoadingMaxRetry: 10,
+      manifestLoadingMaxRetry: 10,
+      levelLoadingMaxRetry: 10,
+      liveDurationInfinity: true,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 8,
+      highBufferWatchdogPeriod: 2,
+      xhrSetup: function(xhr) {
+        xhr.withCredentials = false;
+      }
+    });
+
+    hls.loadSource(targetUrl);
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+      populateQualityDropdown(data.levels);
+      forceMaxQualityLevel();
+      startPlayback();
+    });
+
+    hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      if (hls.levels && hls.levels[data.level]) {
+        const lvl = hls.levels[data.level];
+        const resStr = lvl.height ? `${lvl.width}x${lvl.height}` : 'HD Stream';
+        const mbpsStr = lvl.bitrate ? ` @ ${(lvl.bitrate / 1000000).toFixed(1)} Mbps` : '';
+        codecBadge.style.display = "inline-block";
+        if (lvl.height >= 2160) {
+          codecBadge.textContent = `✨ 4K Ultra HD (${resStr}${mbpsStr})`;
+        } else if (lvl.height >= 1080) {
+          codecBadge.textContent = `🌟 1080p Full HD (${resStr}${mbpsStr})`;
+        } else if (lvl.height >= 720) {
+          codecBadge.textContent = `📺 720p HD (${resStr}${mbpsStr})`;
+        } else {
+          codecBadge.textContent = `📺 SD (${resStr}${mbpsStr})`;
+        }
+      }
+    });
+
+    hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+      applyCaptionSettings();
+    });
+
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            if (proxyIndex + 1 < CORS_PROXIES.length) {
+              console.warn("Rotating proxy route for stream...");
+              play(url, name, category, isAdult, proxyIndex + 1);
+            } else {
+              hls.startLoad();
+            }
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            hls.recoverMediaError();
+            break;
+          default:
+            updateStreamStatus("error", "🔴 STREAM OFFLINE");
+            break;
+        }
+      } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR || data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
+        triggerShieldNotify("Bridging Commercial Segment Gap");
+        if (hls && hls.liveSyncPosition) {
+          video.currentTime = hls.liveSyncPosition;
+        } else {
+          video.currentTime += 0.3;
+        }
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Pure Apple WebKit AVFoundation execution (iOS & Safari)
+    video.src = targetUrl;
+    video.addEventListener('loadedmetadata', startPlayback, { once: true });
+  } else {
+    video.src = targetUrl;
+    startPlayback();
+  }
+
+  showPage();
+}
+
+// ZAPPING & PLAYLIST NAVIGATION
+function channelStep(delta) {
+  if (filteredChannels.length === 0) return;
+  let idx = 0;
+  if (currentPlayingChannel) {
+    idx = filteredChannels.findIndex(c => c.url === currentPlayingChannel.url);
+    if (idx === -1) idx = 0;
+  }
+  let newIdx = idx + delta;
+  if (newIdx < 0) newIdx = filteredChannels.length - 1;
+  if (newIdx >= filteredChannels.length) newIdx = 0;
+
+  const ch = filteredChannels[newIdx];
+  play(ch.url, ch.name, ch.subName, ch.isAdult);
+}
+
+function playRandomChannel() {
+  if (filteredChannels.length === 0) return;
+  const rnd = Math.floor(Math.random() * filteredChannels.length);
+  const ch = filteredChannels[rnd];
+  play(ch.url, ch.name, ch.subName, ch.isAdult);
+}
+
+function reconnectCurrentStream(silent = false) {
+  if (currentPlayingChannel) {
+    if (!silent) updateStreamStatus("connecting", "🔄 RE-SYNCING...");
+    play(currentPlayingChannel.url, currentPlayingChannel.name, currentPlayingChannel.category, currentPlayingChannel.isAdult, activeProxyIndex);
+  }
+}
+
+// QUALITY ENGINE CONTROLS
+function populateQualityDropdown(levels) {
+  qualitySelect.innerHTML = "";
+
+  if (!levels || levels.length === 0) {
+    qualitySelect.innerHTML = `<option value="auto">⚡ Auto (Adaptive)</option>`;
+    return;
+  }
+
+  const maxOpt = document.createElement("option");
+  maxOpt.value = "max";
+  maxOpt.textContent = "🏆 4K / Max Quality";
+  qualitySelect.appendChild(maxOpt);
+
+  const autoOpt = document.createElement("option");
+  autoOpt.value = "auto";
+  autoOpt.textContent = "⚡ Auto (Adaptive)";
+  qualitySelect.appendChild(autoOpt);
+
+  const sorted = levels.map((lvl, idx) => ({ ...lvl, origIdx: idx }))
+                        .sort((a,b) => (b.height || 0) - (a.height || 0));
+
+  sorted.forEach(lvl => {
+    const opt = document.createElement("option");
+    opt.value = lvl.origIdx;
+    const label = lvl.height ? `${lvl.height}p (${Math.round((lvl.bitrate || 0)/1000)} kbps)` : `Level ${lvl.origIdx + 1}`;
+    opt.textContent = `📺 ${label}`;
+    qualitySelect.appendChild(opt);
+  });
+
+  qualitySelect.value = "max";
+}
+
+function forceMaxQualityLevel() {
+  if (!hls || !hls.levels || hls.levels.length === 0) return;
+  let maxIdx = 0;
+  let maxRes = 0;
+  hls.levels.forEach((lvl, idx) => {
+    let res = (lvl.width || 0) * (lvl.height || 0) || lvl.bitrate || 0;
+    if (res > maxRes) {
+      maxRes = res;
+      maxIdx = idx;
+    }
+  });
+  hls.currentLevel = maxIdx;
+}
+
+function onQualityChange() {
+  const val = qualitySelect.value;
+  if (!hls) return;
+
+  if (val === "max") {
+    forceMaxQualityLevel();
+  } else if (val === "auto") {
+    hls.currentLevel = -1;
+  } else {
+    hls.currentLevel = parseInt(val, 10);
+  }
+}
+
+// VOLUME & DISPLAY CONTROLS
+function setPlayerVolume(val) {
+  video.volume = parseFloat(val);
+  video.muted = (video.volume === 0);
+  updateVolIcon(video.volume);
+}
+
+function updateVolIcon(val) {
+  if (val === 0) volIcon.textContent = "🔇";
+  else if (val < 0.4) volIcon.textContent = "🔈";
+  else if (val < 0.8) volIcon.textContent = "🔉";
+  else volIcon.textContent = "🔊";
+}
+
+function changeAspectRatio(ratio) {
+  if (ratio === "contain") {
+    video.style.objectFit = "contain";
+    video.style.aspectRatio = "16/9";
+  } else if (ratio === "fill") {
+    video.style.objectFit = "fill";
+    video.style.aspectRatio = "16/9";
+  } else if (ratio === "cover") {
+    video.style.objectFit = "cover";
+    video.style.aspectRatio = "16/9";
+  } else if (ratio === "4/3") {
+    video.style.objectFit = "contain";
+    video.style.aspectRatio = "4/3";
+  }
+}
+
+function unmuteVideo() {
+  video.muted = false;
+  video.volume = 1;
+  unmuteBtn.style.display = 'none';
+}
+
+function applyCaptionSettings() {
+  if (video.textTracks) {
+    for (let i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = captionsEnabled ? 'showing' : 'disabled';
+    }
+  }
+  if (hls) {
+    hls.subtitleTrack = captionsEnabled ? 0 : -1;
+    if (hls.subtitleDisplay !== undefined) {
+      hls.subtitleDisplay = captionsEnabled;
+    }
+  }
+  ccBtn.textContent = captionsEnabled ? "💬 CC: ON" : "💬 CC: OFF";
+  ccBtn.classList.toggle("active", captionsEnabled);
+}
+
+function toggleCaptions() {
+  captionsEnabled = !captionsEnabled;
+  applyCaptionSettings();
+}
+
+function togglePIP() {
+  if (document.pictureInPictureElement) {
+    document.exitPictureInPicture();
+  } else if (video.requestPictureInPicture) {
+    video.requestPictureInPicture();
+  }
+}
+
+function toggleFullscreen() {
+  if (video.requestFullscreen) video.requestFullscreen();
+}
+
+function copyCurrentStreamUrl() {
+  if (currentPlayingChannel) {
+    navigator.clipboard.writeText(currentPlayingChannel.url);
+    alert(`Copied Stream URL to clipboard:\n${currentPlayingChannel.url}`);
+  }
+}
+
+// ADULT FILTER TOGGLES
+function setAdultFilterMode(mode) {
+  adultFilterMode = mode;
+  localStorage.setItem("smart_tv_adult_mode", mode);
+  updateAdultPillUI();
+  applyFilters();
+}
+
+function updateAdultPillUI() {
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+  if (adultFilterMode === 'adult_only') {
+    document.getElementById('mode-adult').classList.add('active');
+  } else if (adultFilterMode === 'safe') {
+    document.getElementById('mode-safe').classList.add('active');
+  } else {
+    document.getElementById('mode-all').classList.add('active');
+  }
+}
+
+// CATEGORY & SUBCATEGORY SELECTION
+function selectMainCategory(mainId, el) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  currentMainCategory = mainId;
+  currentSubCategory = "all";
+  isFavOnlyView = false;
+  
+  renderSubcategories();
+  applyFilters();
+}
+
+function selectSubCategory(subId) {
+  currentSubCategory = (currentSubCategory === subId) ? "all" : subId;
+  renderSubcategories();
+  applyFilters();
+}
+
+function renderSubcategories() {
+  const container = document.getElementById("subcategories-grid");
+  container.innerHTML = "";
+
+  let activeSubcats = [];
+  if (currentMainCategory === "all") {
+    TAXONOMY.forEach(m => activeSubcats.push(...m.subcategories));
+  } else {
+    const found = TAXONOMY.find(m => m.id === currentMainCategory);
+    if (found) activeSubcats = found.subcategories;
+  }
+
+  activeSubcats.forEach(sub => {
+    const count = allChannels.filter(c => c.subCat === sub.id).length;
+    
+    const card = document.createElement("div");
+    card.className = `subcat-card ${currentSubCategory === sub.id ? 'active' : ''}`;
+    card.tabIndex = 0;
+    card.onclick = () => selectSubCategory(sub.id);
+    card.onkeydown = (e) => { if (e.key === 'Enter') selectSubCategory(sub.id); };
+
+    card.innerHTML = `
+      <div class="subcat-header">
+        <span class="subcat-title">${sub.name}</span>
+        <span class="subcat-count">${count.toLocaleString()}</span>
+      </div>
+      <div class="subcat-desc">${sub.desc}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// FILTER & PAGINATION
+function applyFilters() {
+  let list = isFavOnlyView ? [...favorites] : [...allChannels];
+
+  if (adultFilterMode === 'adult_only') {
+    list = list.filter(c => c.isAdult || c.mainCat === 'adult');
+  } else if (adultFilterMode === 'safe') {
+    list = list.filter(c => !c.isAdult && c.mainCat !== 'adult');
+  }
+
+  if (currentMainCategory !== "all" && !isFavOnlyView) {
+    list = list.filter(c => c.mainCat === currentMainCategory);
+  }
+
+  if (currentSubCategory !== "all" && !isFavOnlyView) {
+    list = list.filter(c => c.subCat === currentSubCategory);
+  }
+
+  const countryVal = document.getElementById("country-filter").value;
+  if (countryVal !== "all") {
+    list = list.filter(c => c.country === countryVal);
+  }
+
+  const searchTerm = document.getElementById("search").value.toLowerCase().trim();
+  if (searchTerm) {
+    list = list.filter(c => 
+      c.name.toLowerCase().includes(searchTerm) || 
+      (c.subName && c.subName.toLowerCase().includes(searchTerm)) ||
+      (c.group && c.group.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  filteredChannels = list;
+  currentPage = 0;
+  showPage();
+  updateStats();
+}
+
+function showPage() {
+  channelsDiv.innerHTML = "";
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, filteredChannels.length);
+  const pageItems = filteredChannels.slice(start, end);
+
+  if (pageItems.length === 0) {
+    channelsDiv.innerHTML = `<div style="padding: 24px; color: var(--text-muted); text-align:center;">No channels found matching your selection. Try selecting another category or searching.</div>`;
+    document.getElementById("page-info").textContent = "0 of 0";
+    return;
+  }
+
+  pageItems.forEach(ch => {
+    const isFav = favorites.some(f => f.url === ch.url);
+    const isPlaying = currentPlayingChannel && currentPlayingChannel.url === ch.url;
+
+    const card = document.createElement("div");
+    card.className = `channel-card ${isPlaying ? 'playing' : ''} ${ch.isAdult ? 'is-adult-channel' : ''}`;
+    card.tabIndex = 0;
+    
+    const logoContent = `<div class="channel-logo">${ch.isAdult ? '🔞' : '📺'}</div>`;
+
+    card.innerHTML = `
+      ${logoContent}
+      <div class="channel-info" onclick="play('${ch.url}', '${escapeHtml(ch.name)}', '${escapeHtml(ch.subName || '')}', ${Boolean(ch.isAdult)})">
+        <div class="channel-name">${ch.name}</div>
+        <div class="channel-sub">
+          <span>${ch.subName || 'General'}</span>
+          <span>•</span>
+          <span>${ch.country || 'Global'}</span>
+        </div>
+      </div>
+      <span class="star-btn ${isFav ? 'fav' : ''}" onclick="toggleSave(event, '${ch.url}')">★</span>
+    `;
+
+    card.onkeydown = (e) => {
+      if (e.key === 'Enter') play(ch.url, ch.name, ch.subName || '', Boolean(ch.isAdult));
+    };
+
+    channelsDiv.appendChild(card);
+  });
+
+  document.getElementById("page-info").textContent = `${start + 1}-${end} of ${filteredChannels.length.toLocaleString()}`;
+}
+
+function prevPage() {
+  if (currentPage > 0) {
+    currentPage--;
+    showPage();
+  }
+}
+
+function nextPage() {
+  if ((currentPage + 1) * PAGE_SIZE < filteredChannels.length) {
+    currentPage++;
+    showPage();
+  }
+}
+
+function onSearchInput() { applyFilters(); }
+
+// SCAN REMOTE PLAYLISTS
+async function scanRemotePlaylists() {
+  statusMsg.innerHTML = "📡 Fetching global category streams and online channels...";
+  const sourcesToFetch = [...DEFAULT_PLAYLISTS, ...customPlaylists];
+  
+  const fetchPromises = sourcesToFetch.map(url => 
+    fetchWithFallback(url)
+      .then(text => parseM3U(text))
+      .catch(() => [])
+  );
+
+  const results = await Promise.all(fetchPromises);
+  let aggregated = [];
+  results.forEach(list => aggregated.push(...list));
+
+  let urlMap = {};
+  allChannels.forEach(c => { urlMap[c.url] = c; });
+
+  aggregated.forEach(c => {
+    if (c.url && !urlMap[c.url]) {
+      categorizeChannel(c);
+      urlMap[c.url] = c;
+    }
+  });
+
+  allChannels = Object.values(urlMap);
+
+  populateCountryFilter();
+  renderSubcategories();
+  updateStats();
+  applyFilters();
+  
+  statusMsg.innerHTML = `✅ Scan complete! Synchronized <strong>${allChannels.length.toLocaleString()}</strong> live online channels.`;
+}
+
+async function fetchWithFallback(url) {
+  for (let proxyFn of CORS_PROXIES) {
+    try {
+      const res = await fetch(proxyFn(url));
+      if (res.ok) return await res.text();
+    } catch (e) {}
+  }
+  return "";
+}
+
+function parseM3U(text) {
+  const lines = text.split("\n");
+  const out = [];
+  let current = null;
+
+  for (let l of lines) {
+    l = l.trim();
+    if (!l) continue;
+
+    if (l.startsWith("#EXTINF:")) {
+      const commaIdx = l.lastIndexOf(",");
+      let name = commaIdx !== -1 ? l.substring(commaIdx + 1).trim() : "Live Channel";
+
+      const logoMatch = l.match(/tvg-logo="([^"]*)"/i);
+      const groupMatch = l.match(/group-title="([^"]*)"/i);
+      const countryMatch = l.match(/tvg-country="([^"]*)"/i);
+
+      current = {
+        name: name,
+        logo: logoMatch ? logoMatch[1] : "",
+        group: groupMatch ? groupMatch[1] : "",
+        country: countryMatch ? countryMatch[1] : "Global"
+      };
+    } else if (l.startsWith("http://") || l.startsWith("https://")) {
+      if (current) {
+        current.url = l;
+        out.push(current);
+        current = null;
+      }
+    }
+  }
+  return out;
+}
+
+function categorizeChannel(ch) {
+  const searchStr = `${ch.name} ${ch.group} ${ch.country}`.toLowerCase();
+
+  for (const mainCat of TAXONOMY) {
+    for (const sub of mainCat.subcategories) {
+      for (const kw of sub.keywords) {
+        if (searchStr.includes(kw)) {
+          ch.mainCat = mainCat.id;
+          ch.subCat = sub.id;
+          ch.subName = sub.name;
+          ch.isAdult = (mainCat.id === "adult");
+          return;
+        }
+      }
+    }
+  }
+
+  ch.mainCat = "other";
+  ch.subCat = "general";
+  ch.subName = "General TV";
+  ch.isAdult = false;
+}
+
+// FAVORITES & EXPORT
+function toggleSave(e, url) {
+  e.stopPropagation();
+  const ch = allChannels.find(c => c.url === url) || favorites.find(c => c.url === url);
+  if (!ch) return;
+
+  const idx = favorites.findIndex(f => f.url === url);
+  if (idx > -1) {
+    favorites.splice(idx, 1);
+  } else {
+    favorites.push(ch);
+  }
+
+  localStorage.setItem("smart_tv_favs_v5", JSON.stringify(favorites));
+  updateStats();
+  applyFilters();
+}
+
+function toggleFavoritesView() {
+  isFavOnlyView = !isFavOnlyView;
+  const btn = document.getElementById("fav-tab-btn");
+  btn.classList.toggle("active", isFavOnlyView);
+  btn.textContent = isFavOnlyView ? "📺 Back to All" : "⭐ My Playlist";
+  applyFilters();
+}
+
+function exportFavoritesM3U() {
+  if (favorites.length === 0) {
+    alert("No favorite channels in your playlist yet. Click the ★ star on any channel to save it.");
+    return;
+  }
+  let m3u = "#EXTM3U\n";
+  favorites.forEach(f => {
+    m3u += `#EXTINF:-1 group-title="${f.subName || 'Favorites'}", ${f.name}\n${f.url}\n`;
+  });
+  const blob = new Blob([m3u], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "My_SmartTV_Playlist.m3u";
+  a.click();
+}
+
+// KEYBOARD SHORTCUTS
+function setupKeyboardHotkeys() {
+  window.addEventListener('keydown', (e) => {
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        video.paused ? video.play() : video.pause();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        channelStep(-1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        channelStep(1);
+        break;
+      case 'm':
+      case 'M':
+        video.muted = !video.muted;
+        break;
+      case 'f':
+      case 'F':
+        toggleFullscreen();
+        break;
+      case 'p':
+      case 'P':
+        togglePIP();
+        break;
+    }
+  });
+}
+
+// MODALS & DIRECT STREAM INPUT
+function openModal(id) { document.getElementById(id).style.display = "flex"; }
+function openDirectPlayModal() { document.getElementById("direct-modal").style.display = "flex"; }
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+function addCustomPlaylist() {
+  const url = document.getElementById("custom-m3u-input").value.trim();
+  if (url && !customPlaylists.includes(url)) {
+    customPlaylists.push(url);
+    localStorage.setItem("smart_tv_sources_v5", JSON.stringify(customPlaylists));
+    closeModal('custom-modal');
+    scanRemotePlaylists();
+  }
+}
+
+function playDirectStreamInput() {
+  const url = document.getElementById("direct-url-input").value.trim();
+  if (url) {
+    const directCh = {
+      name: "Direct Stream URL",
+      url: url,
+      subName: "Direct Link",
+      isAdult: false,
+      country: "Custom"
+    };
+    allChannels.unshift(directCh);
+    closeModal('direct-modal');
+    play(url, "Direct Stream URL", "Direct Input", false);
+    applyFilters();
+  }
+}
+
+// HELPERS
+function populateCountryFilter() {
+  const select = document.getElementById("country-filter");
+  const countries = [...new Set(allChannels.map(c => c.country).filter(Boolean))].sort();
+  select.innerHTML = `<option value="all">🌍 All Countries (${countries.length})</option>`;
+  countries.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    select.appendChild(opt);
+  });
+}
+
+function toggleViewMode() {
+  isGridView = !isGridView;
+  channelsDiv.className = isGridView ? "channels-grid grid-view" : "channels-grid";
+  document.getElementById("view-mode-btn").textContent = isGridView ? "📄 Compact List" : "🔲 Grid View";
+}
+
+function updateStreamStatus(type, label) {
+  streamStatusBadge.style.display = "inline-block";
+  streamStatusBadge.className = `badge status-badge status-${type}`;
+  streamStatusBadge.textContent = label;
+}
+
+function updateStats() {
+  document.getElementById("stat-total").textContent = allChannels.length.toLocaleString();
+  document.getElementById("stat-showing").textContent = filteredChannels.length.toLocaleString();
+  document.getElementById("stat-favs").textContent = favorites.length.toLocaleString();
+}
+
+function escapeHtml(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+</script>
+
+</body>
+</html>
