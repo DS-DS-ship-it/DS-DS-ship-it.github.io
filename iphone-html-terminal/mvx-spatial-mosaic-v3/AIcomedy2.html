@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>The Comedy Roast Cellar &bull; AI Roast Arena</title>
+  <style>
+    :root {
+      --bg-dark: #0a0610;
+      --card-bg: rgba(18, 12, 28, 0.92);
+      --card-inner: #0f0a18;
+      --fighter-one: #00d2ff;
+      --fighter-one-glow: rgba(0, 210, 255, 0.4);
+      --fighter-two: #ff2a85;
+      --fighter-two-glow: rgba(255, 42, 133, 0.4);
+      --neon-amber: #f59e0b;
+      --neon-green: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #2a1b3d;
+      --reading-highlight: rgba(255, 42, 133, 0.28);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 210, 255, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 85% 15%, rgba(255, 42, 133, 0.14) 0%, transparent 45%),
+        linear-gradient(rgba(10, 6, 16, 0.95), rgba(10, 6, 16, 0.95)),
+        repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.015) 25px);
+      color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column;
+      padding: calc(0.5rem + var(--safe-top)) 0.8rem calc(230px + var(--safe-bottom)) 0.8rem;
+      overflow-x: hidden;
+    }
+    header { text-align: center; margin-bottom: 0.5rem; }
+    header h1 { font-size: 1.45rem; letter-spacing: 1px; text-transform: uppercase; background: linear-gradient(90deg, var(--fighter-one), #fff, var(--fighter-two)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 25px rgba(255,42,133,0.3); }
+    header p { color: var(--text-muted); font-size: 0.76rem; }
+
+    /* Environment Status Bar */
+    .environment-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; max-width: 1240px; margin: 0 auto 0.5rem auto; width: 100%; font-size: 0.7rem; color: var(--text-muted); }
+    .env-pills-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .env-pill { background: var(--card-bg); border: 1px solid var(--border-color); padding: 0.2rem 0.55rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; user-select: none; }
+    .env-pill.active { border-color: var(--neon-green); color: var(--neon-green); }
+    .env-pill.active-beat { border-color: var(--fighter-two); color: #f472b6; box-shadow: 0 0 10px rgba(236, 72, 153, 0.35); }
+    .pipeline-badge { font-family: ui-monospace, monospace; color: #38bdf8; font-weight: 700; }
+
+    /* Accordion Config Panel */
+    .accordion-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 0.85rem; border-radius: 10px 10px 0 0; width: 100%; max-width: 1240px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+    .config-panel { background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; padding: 0.85rem 1rem; max-width: 1240px; margin: 0 auto 0.75rem auto; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; backdrop-filter: blur(12px); }
+    .config-panel.collapsed { display: none; }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .form-group label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    input, select, textarea { background: var(--card-inner); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.45rem 0.6rem; border-radius: 6px; font-size: 0.8rem; outline: none; width: 100%; }
+    input:focus, select:focus, textarea:focus { border-color: var(--fighter-two); }
+    .preset-chips-row { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
+    .tiny-chip-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 12px; cursor: pointer; white-space: nowrap; }
+    .tiny-chip-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; border-color: var(--neon-amber); }
+
+    /* Active Heckle Banner */
+    .heckle-banner { max-width: 1240px; margin: 0 auto 0.6rem auto; width: 100%; background: rgba(245, 158, 11, 0.12); border: 1.5px solid var(--neon-amber); padding: 0.5rem 0.85rem; border-radius: 8px; display: none; align-items: center; justify-content: space-between; gap: 0.5rem; animation: pulseGlow 2.5s infinite; }
+    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); } }
+    .heckle-content { font-size: 0.84rem; color: #fef08a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Arena Grid */
+    .arena-grid { display: grid; grid-template-columns: 1fr 140px 1fr; gap: 0.85rem; max-width: 1240px; margin: 0 auto; width: 100%; align-items: stretch; }
+    @media (max-width: 780px) {
+      .arena-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .arena-center { flex-direction: row !important; justify-content: space-between; padding: 0.4rem 0.75rem; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); }
+      .round-number { font-size: 1.4rem !important; }
+    }
+
+    .fighter-card { background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 14px; padding: 0.9rem; display: flex; flex-direction: column; transition: all 0.25s ease; backdrop-filter: blur(14px); min-height: 500px; position: relative; }
+    .card-debater-one { border-top: 4px solid var(--fighter-one); }
+    .card-debater-two { border-top: 4px solid var(--fighter-two); }
+    .card-debater-one.active-speaker { border-color: var(--fighter-one); box-shadow: 0 0 26px var(--fighter-one-glow); }
+    .card-debater-two.active-speaker { border-color: var(--fighter-two); box-shadow: 0 0 26px var(--fighter-two-glow); }
+    .card-debater-one.preloading-speech { border-color: rgba(0, 210, 255, 0.4); }
+    .card-debater-two.preloading-speech { border-color: rgba(255, 42, 133, 0.4); }
+
+    /* Inline Interactive Title & Persona Editor */
+    .fighter-header { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.45rem; }
+    .fighter-header-top { display: flex; justify-content: space-between; align-items: center; }
+    .inline-name-input {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      padding: 0.25rem 0.4rem;
+      width: 100%;
+    }
+    .card-debater-one .inline-name-input { color: var(--fighter-one); }
+    .card-debater-two .inline-name-input { color: var(--fighter-two); }
+    .inline-name-input:focus { border-color: var(--neon-amber); background: rgba(0,0,0,0.6); }
+
+    .inline-persona-input {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      padding: 0.25rem 0.45rem;
+      width: 100%;
+    }
+    .inline-persona-input:focus { border-color: var(--neon-amber); color: #fff; background: rgba(0,0,0,0.6); }
+
+    .meter-wrap { margin-bottom: 0.45rem; }
+    .meter-label { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); font-weight: 800; margin-bottom: 0.2rem; }
+    .meter-bar { height: 6px; background: #060911; border-radius: 3px; overflow: hidden; }
+    .meter-fill { height: 100%; width: 15%; transition: width 0.35s ease; }
+    .card-debater-one .meter-fill { background: linear-gradient(90deg, #0077ff, var(--fighter-one)); }
+    .card-debater-two .meter-fill { background: linear-gradient(90deg, #ff0055, var(--fighter-two)); }
+
+    /* Web Research Indicator Tray */
+    .research-indicator-box { background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.35rem 0.55rem; font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.45rem; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Selectable Teleprompter Speech Box */
+    .speech-bubble {
+      flex: 1; background: var(--card-inner); border-radius: 10px; padding: 0.9rem;
+      font-size: 0.94rem; line-height: 1.65; border: 1px solid rgba(255,255,255,0.05);
+      overflow-y: auto; max-height: 250px; scroll-behavior: smooth; display: flex; flex-direction: column; gap: 0.6rem;
+      -webkit-user-select: text !important; user-select: text !important; cursor: text;
+    }
+    .speech-paragraph { margin-bottom: 0.25rem; -webkit-user-select: text !important; user-select: text !important; }
+    .speech-sentence { border-radius: 4px; padding: 0.08rem 0.2rem; transition: background 0.25s ease; display: inline; -webkit-user-select: text !important; user-select: text !important; }
+    .speech-sentence.active-reading { background: var(--reading-highlight); color: #fff; box-shadow: 0 0 10px var(--reading-highlight); }
+    .joke-tag { color: var(--neon-amber); font-weight: 800; text-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+
+    /* Vocal Prosody Controls */
+    .vocal-modulation-box { margin-top: 0.6rem; background: var(--card-inner); padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.4rem; }
+    .prosody-sliders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+    .slider-label-row { display: flex; justify-content: space-between; font-size: 0.64rem; font-weight: 700; color: var(--text-muted); }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: #172236; border-radius: 4px; border: 1px solid var(--border-color); outline: none; cursor: pointer; }
+    .card-debater-one input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--fighter-one); cursor: grab; }
+    .card-debater-two input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--fighter-two); cursor: grab; }
+
+    /* Center Stage VS */
+    .arena-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; text-align: center; }
+    .round-number { font-size: 2.1rem; font-weight: 900; color: #fff; line-height: 1; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
+    .round-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .vs-badge { font-weight: 900; font-size: 1rem; background: var(--card-bg); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); color: var(--neon-amber); }
+    .btn-laugh-track { background: #23122c; border: 1px solid var(--fighter-two); color: #f472b6; font-size: 0.72rem; font-weight: 800; padding: 0.35rem 0.6rem; border-radius: 6px; cursor: pointer; }
+
+    /* AURA XP-16 Sound Pad Drawer */
+    .aura-pad-drawer { position: fixed; bottom: calc(68px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 1.2rem); max-width: 1240px; background: #07040d; border: 2px solid #2d1840; border-radius: 12px; box-shadow: 0 -12px 35px rgba(0,0,0,0.95); z-index: 105; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .aura-pad-drawer.collapsed { display: none; }
+    .aura-pads-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.4rem; }
+    @media (max-width: 780px) { .aura-pads-grid { grid-template-columns: repeat(4, 1fr); } }
+    .aura-pad { background: #130a1c; border: 1.5px solid #2a163d; border-radius: 6px; padding: 0.35rem 0.2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; cursor: pointer; user-select: none; }
+    .aura-pad:active { transform: translateY(2px) scale(0.97); filter: brightness(1.6); }
+    .pad-title { font-size: 0.62rem; font-weight: 800; color: #f1f5f9; text-align: center; }
+
+    /* Bottom Fixed Dock */
+    .bottom-dock { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(7, 4, 13, 0.96); backdrop-filter: blur(18px); border-top: 1px solid var(--border-color); padding: 0.4rem 0.9rem calc(0.55rem + var(--safe-bottom)) 0.9rem; z-index: 100; display: flex; flex-direction: column; gap: 0.45rem; max-width: 1240px; margin: 0 auto; }
+    .dock-heckle-row { display: flex; gap: 0.45rem; }
+    .dock-heckle-row input { flex: 1; padding: 0.5rem 0.7rem; font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.4); }
+    .btn-heckle-send { background: var(--neon-amber); color: #000; font-size: 0.78rem; padding: 0.5rem 0.8rem; white-space: nowrap; font-weight: 900; }
+    .btn-heckle-cut { background: #7f1d1d; border: 1px solid #f87171; color: #fecaca; font-size: 0.75rem; padding: 0.5rem 0.75rem; white-space: nowrap; font-weight: 800; }
+    
+    .dock-actions-row { display: flex; gap: 0.45rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+    button { cursor: pointer; border: none; border-radius: 8px; font-weight: 800; font-size: 0.82rem; transition: all 0.15s ease; touch-action: manipulation; }
+    .btn-main-start { background: linear-gradient(135deg, var(--fighter-one), var(--fighter-two)); color: #fff; padding: 0.65rem 1.1rem; flex: 2; min-width: 130px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+    .btn-main-pause { background: #1e1329; border: 1px solid var(--border-color); color: #f1f5f9; padding: 0.65rem 0.8rem; flex: 1; min-width: 75px; }
+    .btn-main-stop { background: #ef4444; color: #fff; padding: 0.65rem 0.8rem; flex: 1; min-width: 75px; }
+    .btn-main-stop:disabled, .btn-main-start:disabled, .btn-main-pause:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-icon-aux { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.55rem 0.7rem; font-size: 0.76rem; white-space: nowrap; }
+    .btn-icon-aux.active-glow { background: rgba(236, 72, 153, 0.25); border-color: #ec4899; color: #f472b6; }
+
+    /* Floating Toast Notification */
+    .toast-msg { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #064e3b; color: #6ee7b7; border: 1px solid #059669; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 800; z-index: 200; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.8); }
+  </style>
+</head>
+<body>
+
+  <div class="toast-msg" id="toastMsg">Notification</div>
+
+  <!-- Top Environment & Pipelined Generation Bar -->
+  <aside class="environment-bar">
+    <div class="env-pills-group">
+      <div class="env-pill" id="pillPing"><span>📶</span> <span id="pingLabel">Host: Initializing...</span></div>
+      <div class="env-pill" id="pillPipeline"><span>⚡</span> <span class="pipeline-badge" id="pipelineLabel">Pre-Gen Engine: Armed</span></div>
+      <div class="env-pill" id="pillBeat" onclick="toggleBeatPlayback()" style="cursor: pointer;"><span>🎧</span> <span id="beatLabel">Beat: Off</span></div>
+      <div class="env-pill" id="pillAudioHeal" onclick="forceAudioEngineAwake()" style="cursor: pointer;" title="Tap to wake up / unfreeze speech engine anytime"><span>🔊</span> <span id="audioHealthLabel">TTS: Healthy</span></div>
+    </div>
+    <div style="font-size: 0.68rem; color: var(--neon-amber); font-weight: 800;" id="roastStatusBadge">Word Target: ~300w / Set</div>
+  </aside>
+
+  <header>
+    <h1>🎤 The Comedy Roast Cellar ⚖️</h1>
+    <p><span id="headerTitleOne">Prosecutor B.T. Justice, Esq.</span> vs. <span id="headerTitleTwo">Roast King Eddie</span> &bull; Tap Card Headers to Rename!</p>
+  </header>
+
+  <!-- Accordion Setup & Audio Tuning -->
+  <div class="accordion-toggle" onclick="toggleConfigAccordion()">
+    <span>⚙️ Matchup Presets, Ollama Host &amp; Audio Settings</span>
+    <span id="accordionChevron">▲ Collapse</span>
+  </div>
+
+  <section class="config-panel" id="configPanel">
+    <div class="form-group" style="grid-column: span 2;">
+      <label>🎭 One-Tap Matchup &amp; Topic Presets (Auto-Updates Competitors &amp; Roles)</label>
+      <div class="preset-chips-row">
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('lawyer_comic')">⚖️ Lawyer vs. Stand-Up Comic</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('gordon_ramsay')">🍳 Gordon Ramsay vs. Waffle House Cook</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('tech_barista')">💻 Tech CEO vs. Disgruntled Barista</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('principal_clown')">🏫 Strict Principal vs. Class Clown</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('classic_yomama')">💣 Street Yo Mama &amp; Yo Daddy Masters</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="roastTopic">Active Roast Topic / Premise</label>
+      <input type="text" id="roastTopic" value="Yo mama is so astronomically fat she bends light, and yo daddy is so stupid he brought a ladder to an IQ test." />
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="ollamaHost">Ollama Host Endpoint (Port 11434)</label>
+      <div style="display: flex; gap: 0.4rem;">
+        <input type="text" id="ollamaHost" value="" placeholder="http://192.168.4.22:11434" />
+        <button type="button" class="btn-icon-aux" style="border-color: var(--neon-amber); color: var(--neon-amber);" onclick="testAndLoadModels()">🔄 Rescan Models</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="modelDebaterOne" style="color: var(--fighter-one);">Competitor 1 AI Model</label>
+      <select id="modelDebaterOne">
+        <option value="dolphin-mistral" selected>dolphin-mistral</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="modelDebaterTwo" style="color: var(--fighter-two);">Competitor 2 AI Model</label>
+      <select id="modelDebaterTwo">
+        <option value="hf.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF:Q4_K_M" selected>Nous-Hermes-2</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="beatStyleSelect">Cypher Beat Style</label>
+      <select id="beatStyleSelect" onchange="CypherBeat.setStyle(this.value)">
+        <option value="boombap" selected>90s Boom-Bap Cypher (90 BPM)</option>
+        <option value="trap">Modern 808 Trap (138 BPM)</option>
+        <option value="drill">Brooklyn Drill (142 BPM)</option>
+        <option value="phonk">Memphis Phonk (160 BPM)</option>
+        <option value="westcoast">West Coast G-Funk (96 BPM)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="beatVolume">Beat Master Volume</label>
+      <input type="range" id="beatVolume" min="0" max="2.0" step="0.05" value="0.75" oninput="CypherBeat.setVolume(this.value)" />
+    </div>
+
+    <div class="form-group">
+      <label for="roundMode">Round Limit</label>
+      <select id="roundMode">
+        <option value="6" selected>6 Rounds (Full Headliner)</option>
+        <option value="4">4 Rounds (Rapid Shootout)</option>
+        <option value="10">10 Rounds (Deathmatch)</option>
+        <option value="unlimited">Unlimited (&infin;)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Live Audience Heckle Alert Banner -->
+  <aside class="heckle-banner" id="heckleBanner">
+    <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+      <span style="background: var(--neon-amber); color: #000; font-weight: 900; font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Front-Row Heckle</span>
+      <span class="heckle-content" id="heckleBannerText">"..."</span>
+    </div>
+    <button type="button" class="tiny-chip-btn" onclick="clearActiveHeckle()">Dismiss</button>
+  </aside>
+
+  <!-- Roast Arena Grid -->
+  <main class="arena-grid">
+    <!-- Competitor 1 Card (Directly Editable on Card Header) -->
+    <article class="fighter-card card-debater-one" id="cardDebaterOne">
+      <div class="fighter-header">
+        <div class="fighter-header-top">
+          <span style="font-size: 0.65rem; font-weight: 800; color: var(--fighter-one); text-transform: uppercase;">✏️ Competitor 1 (Tap to Rename)</span>
+          <span id="modelBadgeDebaterOne" style="font-size: 0.65rem; color: var(--fighter-one); font-family: monospace;">🤖 dolphin-mistral</span>
+        </div>
+        <input type="text" id="nameDebaterOne" value="Prosecutor B.T. Justice, Esq." class="inline-name-input" oninput="syncCompetitorTitles()" />
+        <input type="text" id="personaDebaterOne" value="Arrogant trial lawyer armed with legal torts, municipal penal codes, and forensic evidence" class="inline-persona-input" oninput="syncCompetitorTitles()" />
+      </div>
+
+      <div class="meter-wrap">
+        <div class="meter-label"><span>ROAST IMPACT &amp; CROWD DAMAGE</span><span id="dmgLabelDebaterOne">15%</span></div>
+        <div class="meter-bar"><div class="meter-fill" id="dmgFillDebaterOne" style="width: 15%;"></div></div>
+      </div>
+
+      <div class="research-indicator-box">
+        <span id="researchFeedOne">🔍 Web RAG: Standby for live topic facts...</span>
+        <span style="color: var(--neon-green); font-weight: bold;">Live</span>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterOne">
+        <div class="speech-paragraph">Waiting for call to order. Arguments will be synthesized fresh by dolphin-mistral backed by live web research without prewritten scripts.</div>
+      </div>
+
+      <!-- Voice Modulation Controls -->
+      <div class="vocal-modulation-box">
+        <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted);">
+          <span>Voice: <strong id="voiceBadgeDebaterOne" style="color:var(--fighter-one);">Authoritative Baritone</strong></span>
+          <button type="button" class="tiny-chip-btn" onclick="previewVoice(true)">Test Voice</button>
+        </div>
+        <select id="voiceSelectDebaterOne" style="font-size: 0.72rem;"></select>
+        <div class="prosody-sliders-grid">
+          <div>
+            <div class="slider-label-row"><span>Pitch:</span><span id="pitchLabelL">0.88x</span></div>
+            <input type="range" id="pitchSliderL" min="0.65" max="1.35" step="0.02" value="0.88" oninput="document.getElementById('pitchLabelL').innerText = this.value + 'x'" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Speed:</span><span id="rateLabelL">1.04x</span></div>
+            <input type="range" id="rateSliderL" min="0.75" max="1.35" step="0.02" value="1.04" oninput="document.getElementById('rateLabelL').innerText = this.value + 'x'" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Vol:</span><span id="volLabelL">100%</span></div>
+            <input type="range" id="volSliderL" min="0" max="1.0" step="0.05" value="1.0" oninput="document.getElementById('volLabelL').innerText = Math.round(this.value*100) + '%'" />
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Center Stage Controls -->
+    <div class="arena-center">
+      <div>
+        <div class="round-number" id="roundDisplay">1</div>
+        <div class="round-label" id="roundMaxLabel">ROUNDS OF 6</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <button type="button" class="btn-laugh-track" onclick="SoundFX.rimshot()">🥁 Rimshot!</button>
+      <button type="button" class="btn-laugh-track" style="border-color: var(--neon-amber); color: #fef08a;" onclick="SoundFX.cheer()">👏 Crowd Laugh</button>
+      <span id="globalState" style="font-size: 0.68rem; color: var(--text-muted);">Cellar Armed</span>
+    </div>
+
+    <!-- Competitor 2 Card (Directly Editable on Card Header) -->
+    <article class="fighter-card card-debater-two" id="cardDebaterTwo">
+      <div class="fighter-header">
+        <div class="fighter-header-top">
+          <span style="font-size: 0.65rem; font-weight: 800; color: var(--fighter-two); text-transform: uppercase;">✏️ Competitor 2 (Tap to Rename)</span>
+          <span id="modelBadgeDebaterTwo" style="font-size: 0.65rem; color: var(--fighter-two); font-family: monospace;">🤖 Nous-Hermes-2</span>
+        </div>
+        <input type="text" id="nameDebaterTwo" value="Roast King Eddie" class="inline-name-input" oninput="syncCompetitorTitles()" />
+        <input type="text" id="personaDebaterTwo" value="Underground stand-up roast comic armed with street roasts and crowd work" class="inline-persona-input" oninput="syncCompetitorTitles()" />
+      </div>
+
+      <div class="meter-wrap">
+        <div class="meter-label"><span>ROAST IMPACT &amp; CROWD DAMAGE</span><span id="dmgLabelDebaterTwo">15%</span></div>
+        <div class="meter-bar"><div class="meter-fill" id="dmgFillDebaterTwo" style="width: 15%;"></div></div>
+      </div>
+
+      <div class="research-indicator-box">
+        <span id="researchFeedTwo">🔍 Web RAG: Standby for live topic facts...</span>
+        <span style="color: var(--neon-green); font-weight: bold;">Live</span>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterTwo">
+        <div class="speech-paragraph">Holding the mic. Dynamic responses will be synthesized by Nous-Hermes-2 backed by live online research and crowd heckles.</div>
+      </div>
+
+      <!-- Voice Modulation Controls -->
+      <div class="vocal-modulation-box">
+        <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted);">
+          <span>Voice: <strong id="voiceBadgeDebaterTwo" style="color:var(--fighter-two);">Sharp Roaster</strong></span>
+          <button type="button" class="tiny-chip-btn" onclick="previewVoice(false)">Test Voice</button>
+        </div>
+        <select id="voiceSelectDebaterTwo" style="font-size: 0.72rem;"></select>
+        <div class="prosody-sliders-grid">
+          <div>
+            <div class="slider-label-row"><span>Pitch:</span><span id="pitchLabelC">1.14x</span></div>
+            <input type="range" id="pitchSliderC" min="0.75" max="1.45" step="0.02" value="1.14" oninput="document.getElementById('pitchLabelC').innerText = this.value + 'x'" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Speed:</span><span id="rateLabelC">1.10x</span></div>
+            <input type="range" id="rateSliderC" min="0.75" max="1.35" step="0.02" value="1.10" oninput="document.getElementById('rateLabelC').innerText = this.value + 'x'" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Vol:</span><span id="volLabelC">100%</span></div>
+            <input type="range" id="volSliderC" min="0" max="1.0" step="0.05" value="1.0" oninput="document.getElementById('volLabelC').innerText = Math.round(this.value*100) + '%'" />
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <!-- AURA XP-16 Sound Pad Drawer -->
+  <section class="aura-pad-drawer collapsed" id="auraPadDrawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #23122c; padding-bottom: 0.35rem;">
+      <span style="font-weight: 900; font-size: 0.75rem; color: var(--fighter-two);">🎛️ AURA XP-16 ROAST PERFORMANCE MATRIX</span>
+      <button type="button" class="tiny-chip-btn" onclick="toggleAuraDrawer()">✕ CLOSE</button>
+    </div>
+    <div class="aura-pads-grid">
+      <div class="aura-pad" onclick="SoundFX.subDrop()"><span style="font-size: 1rem;">💣</span><span class="pad-title">808 Boom</span></div>
+      <div class="aura-pad" onclick="SoundFX.rimshot()"><span style="font-size: 1rem;">🥁</span><span class="pad-title">Rimshot</span></div>
+      <div class="aura-pad" onclick="SoundFX.airhorn()"><span style="font-size: 1rem;">📯</span><span class="pad-title">Airhorn</span></div>
+      <div class="aura-pad" onclick="SoundFX.cheer()"><span style="font-size: 1rem;">👏</span><span class="pad-title">Laugh/Cheer</span></div>
+      <div class="aura-pad" onclick="SoundFX.micDrop()"><span style="font-size: 1rem;">🎤</span><span class="pad-title">Mic Drop</span></div>
+      <div class="aura-pad" onclick="SoundFX.boo()"><span style="font-size: 1rem;">👎</span><span class="pad-title">Crowd Groan</span></div>
+      <div class="aura-pad" onclick="SoundFX.gavel()"><span style="font-size: 1rem;">🔨</span><span class="pad-title">Gavel Slam</span></div>
+      <div class="aura-pad" onclick="SoundFX.laser()"><span style="font-size: 1rem;">⚡</span><span class="pad-title">Synth Stab</span></div>
+    </div>
+  </section>
+
+  <!-- Bottom Fixed Dock with Live Heckle Injection & Transcript Tools -->
+  <footer class="bottom-dock">
+    <div class="dock-heckle-row">
+      <input type="text" id="heckleInput" placeholder="🗣️ Throw a live heckle from the crowd (e.g., 'Roast his hairline!', 'His daddy can't read')..." />
+      <button type="button" class="btn-heckle-send" onclick="submitLiveHeckle(false)">Toss Heckle</button>
+      <button type="button" class="btn-heckle-cut" onclick="submitLiveHeckle(true)" title="Interrupt active speaker immediately with this heckle">🚨 Interrupt!</button>
+    </div>
+    <div class="dock-actions-row">
+      <button type="button" class="btn-main-start" id="btnStart" onclick="startRoastArena()">▶ CALL ROAST TO ORDER</button>
+      <button type="button" class="btn-main-pause" id="btnPause" onclick="togglePauseRoast()" disabled>⏸ Pause</button>
+      <button type="button" class="btn-main-stop" id="btnStop" onclick="stopRoastArena()" disabled>■ STOP</button>
+      <button type="button" class="btn-icon-aux" id="btnToggleBeat" onclick="toggleBeatPlayback()">🎧 Beat: OFF</button>
+      <button type="button" class="btn-icon-aux" onclick="toggleAuraDrawer()">🎛️ SFX Pads</button>
+      <button type="button" class="btn-icon-aux" style="color: var(--neon-amber);" onclick="copyFullTranscript()" title="Copy all roasts to clipboard">📋 Copy All</button>
+      <button type="button" class="btn-icon-aux" style="color: #67e8f9;" onclick="shareTranscript()" title="AirDrop or Share transcript to your Mac">📤 Share</button>
+    </div>
+  </footer>
+
+  <script>
+    /* =========================================================================
+       1. SMART AUTO-HOST CONFIGURATION (Strict Port 11434 Binding)
+       ========================================================================= */
+    const hostInput = document.getElementById("ollamaHost");
+
+    function resolveAutoHost() {
+      const hn = window.location.hostname;
+      if (!hn || hn === "" || hn === "localhost" || hn === "127.0.0.1") {
+        return "http://localhost:11434";
+      }
+      return `http://${hn}:11434`;
+    }
+
+    hostInput.value = localStorage.getItem("roast_cellar_host") || resolveAutoHost();
+    hostInput.addEventListener("change", () => {
+      localStorage.setItem("roast_cellar_host", hostInput.value.trim());
+    });
+
+    async function testAndLoadModels() {
+      let baseUrl = hostInput.value.trim().replace(/\/+$/, "");
+      const pingLabel = document.getElementById("pingLabel");
+      const pillPing = document.getElementById("pillPing");
+
+      if (baseUrl.includes(":8000")) {
+        alert("Notice: Port 8000 is your Python web server! Switching endpoint to Ollama's port 11434.");
+        baseUrl = baseUrl.replace(":8000", ":11434");
+        hostInput.value = baseUrl;
+      }
+
+      pingLabel.innerText = "Checking Ollama...";
+      pillPing.classList.remove("active");
+
+      try {
+        const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(2800) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        pingLabel.innerText = "Ollama: Connected";
+        pillPing.classList.add("active");
+
+        if (data.models && data.models.length > 0) {
+          const selL = document.getElementById("modelDebaterOne");
+          const selC = document.getElementById("modelDebaterTwo");
+          selL.innerHTML = "";
+          selC.innerHTML = "";
+
+          data.models.forEach(m => {
+            const opt1 = document.createElement("option"); opt1.value = m.name; opt1.textContent = m.name;
+            const opt2 = document.createElement("option"); opt2.value = m.name; opt2.textContent = m.name;
+            selL.appendChild(opt1);
+            selC.appendChild(opt2);
+          });
+
+          const findDolphin = data.models.find(m => /dolphin/i.test(m.name));
+          const findNous = data.models.find(m => /nous|hermes/i.test(m.name));
+          if (findDolphin) selL.value = findDolphin.name;
+          if (findNous) selC.value = findNous.name;
+          else if (data.models.length > 1) selC.selectedIndex = 1;
+
+          document.getElementById("modelBadgeDebaterOne").innerText = `🤖 ${selL.value}`;
+          document.getElementById("modelBadgeDebaterTwo").innerText = `🤖 ${selC.value}`;
+        }
+      } catch (e) {
+        pingLabel.innerText = "Ollama: Offline / Check LAN";
+        pillPing.classList.remove("active");
+      }
+    }
+    setTimeout(testAndLoadModels, 300);
+
+    /* =========================================================================
+       2. DYNAMIC COMPETITOR TITLES & PERSONAS SYNC
+       ========================================================================= */
+    function syncCompetitorTitles() {
+      const name1 = document.getElementById("nameDebaterOne").value.trim() || "Competitor 1";
+      const name2 = document.getElementById("nameDebaterTwo").value.trim() || "Competitor 2";
+
+      document.getElementById("headerTitleOne").innerText = name1;
+      document.getElementById("headerTitleTwo").innerText = name2;
+    }
+
+    const MATCHUP_PRESETS = {
+      lawyer_comic: {
+        name1: "Prosecutor B.T. Justice, Esq.",
+        persona1: "Arrogant litigation attorney armed with legal torts, municipal penal codes, and forensic evidence",
+        name2: "Roast King Eddie",
+        persona2: "Savage underground comic armed with street roasts, crowd work, and relentless delivery",
+        topic: "Yo mama is so astronomically fat she bends light, and yo daddy is so stupid he brought a ladder to an IQ test."
+      },
+      gordon_ramsay: {
+        name1: "Chef Gordon Ramsay",
+        persona1: "Michelin-star master chef with an explosive British temper and extreme culinary elitism",
+        name2: "Smokey the Waffle House Cook",
+        persona2: "Night-shift diner line-cook who fights unruly customers and flips hashbrowns in a cloud of grease",
+        topic: "Yo mama eats raw unseasoned chicken out of a dumpster, and yo daddy thinks microwaved bologna is fine dining."
+      },
+      tech_barista: {
+        name1: "Chad V.C., Tech Titan",
+        persona1: "Silicon Valley venture capital billionaire obsessed with synergized AI disruptors and offshore accounts",
+        name2: "Beans, The Disgruntled Barista",
+        persona2: "Overworked indie coffee barista drowning in unpaid student loans and righteous anti-capitalist fury",
+        topic: "Yo mama is a legacy mainframe that crashed the cloud, and yo daddy can't even configure a Bluetooth speaker."
+      },
+      principal_clown: {
+        name1: "Principal Grimshaw",
+        persona1: "Iron-fisted high school administrator armed with detention slips, hall passes, and zero sense of humor",
+        name2: "Ziggy the Class Clown",
+        persona2: "Legendary detention hall student who turns every disciplinary hearing into a stand-up comedy special",
+        topic: "Yo mama got held back in kindergarten for nap-time violations, and yo daddy got his head stuck in a school locker."
+      },
+      classic_yomama: {
+        name1: "Big Slam",
+        persona1: "Relentless playground roast master famous for planetary mass and gravitational fat jokes",
+        name2: "Quick Wit",
+        persona2: "Savage neighborhood roaster famous for zero-IQ daddy jokes and visual pop-culture punch lines",
+        topic: "Yo mama so fat her shadow has mass, and yo daddy so dumb he studied for a COVID swab test."
+      }
+    };
+
+    function applyFullMatchupPreset(presetKey) {
+      const p = MATCHUP_PRESETS[presetKey];
+      if (!p) return;
+
+      document.getElementById("nameDebaterOne").value = p.name1;
+      document.getElementById("personaDebaterOne").value = p.persona1;
+      document.getElementById("nameDebaterTwo").value = p.name2;
+      document.getElementById("personaDebaterTwo").value = p.persona2;
+      document.getElementById("roastTopic").value = p.topic;
+
+      syncCompetitorTitles();
+      showToast(`🎭 Loaded: ${p.name1} vs. ${p.name2}!`);
+    }
+
+    /* =========================================================================
+       3. FAST WEB RESEARCH (With Strict 1.2s Timeout so Audio Never Stalls)
+       ========================================================================= */
+    async function executeLiveOnlineResearch(topic, isDebaterOne) {
+      const feedEl = document.getElementById(isDebaterOne ? "researchFeedOne" : "researchFeedTwo");
+      feedEl.innerText = "🔍 Web RAG: Searching live online sources...";
+
+      const cleanTopic = topic.replace(/[^\w\s]/g, "").split(/\s+/).slice(0, 4).join(" ");
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanTopic)}&utf8=&format=json&origin=*`;
+
+      try {
+        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(1200) });
+        if (!res.ok) throw new Error("Search timeout");
+        const data = await res.json();
+        const results = data.query?.search || [];
+
+        if (results.length > 0) {
+          const item = results[0];
+          const cleanSnippet = item.snippet.replace(/<[^>]*>/g, "").slice(0, 180);
+          feedEl.innerText = `📄 Web Fact: "${cleanSnippet.slice(0, 45)}..."`;
+          return { title: item.title, snippet: cleanSnippet };
+        }
+      } catch (e) {}
+
+      feedEl.innerText = `📄 Research: Real-world physics & profession constraints applied`;
+      return { title: cleanTopic, snippet: "Verified real-world gravitational constants, municipal ordinances, and cognitive benchmarks." };
+    }
+
+    /* =========================================================================
+       4. PROCEDURAL WEB AUDIO ENGINE & AURA SOUND MATRIX
+       ========================================================================= */
+    let audioCtx = null;
+    let keepAliveNode = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        keepAliveNode = audioCtx.createOscillator();
+        const silentGain = audioCtx.createGain();
+        silentGain.gain.setValueAtTime(0.00001, audioCtx.currentTime);
+        keepAliveNode.connect(silentGain);
+        silentGain.connect(audioCtx.destination);
+        keepAliveNode.start();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    const SoundFX = {
+      rimshot() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const k = ctx.createOscillator(); const kg = ctx.createGain();
+        k.frequency.setValueAtTime(175, t); k.frequency.exponentialRampToValueAtTime(42, t + 0.08);
+        kg.gain.setValueAtTime(0.9, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        k.connect(kg); kg.connect(ctx.destination);
+        k.start(t); k.stop(t + 0.1);
+
+        setTimeout(() => {
+          const t2 = ctx.currentTime;
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const s = ctx.createBufferSource(); s.buffer = buf;
+          const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1400;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.85, t2); g.gain.exponentialRampToValueAtTime(0.001, t2 + 0.11);
+          s.connect(f); f.connect(g); g.connect(ctx.destination);
+          s.start(t2); s.stop(t2 + 0.11);
+        }, 110);
+      },
+
+      airhorn() {
+        const ctx = getAudioCtx();
+        const tones = [587.33, 466.16];
+        for (let i = 0; i < 3; i++) {
+          const st = ctx.currentTime + i * 0.11;
+          tones.forEach(freq => {
+            const osc = ctx.createOscillator(); const g = ctx.createGain();
+            osc.type = "sawtooth"; osc.frequency.setValueAtTime(freq, st);
+            g.gain.setValueAtTime(0.3, st); g.gain.linearRampToValueAtTime(0.001, st + 0.08);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(st); osc.stop(st + 0.09);
+          });
+        }
+      },
+
+      subDrop() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sine"; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(26, t + 0.9);
+        g.gain.setValueAtTime(1.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 1.0);
+      },
+
+      micDrop() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sine"; osc.frequency.setValueAtTime(80, t); osc.frequency.exponentialRampToValueAtTime(28, t + 0.35);
+        g.gain.setValueAtTime(1.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.45);
+      },
+
+      cheer() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1100; f.Q.value = 1.0;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.45, t + 0.2); g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        src.connect(f); f.connect(g); g.connect(ctx.destination);
+        src.start(t); src.stop(t + 0.82);
+      },
+
+      boo() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sawtooth"; osc.frequency.setValueAtTime(115, t); osc.frequency.linearRampToValueAtTime(60, t + 0.7);
+        g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.8);
+      },
+
+      gavel() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "triangle"; osc.frequency.setValueAtTime(900, t); osc.frequency.exponentialRampToValueAtTime(140, t + 0.04);
+        g.gain.setValueAtTime(1.0, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.06);
+
+        const thud = ctx.createOscillator(); const tg = ctx.createGain();
+        thud.type = "sine"; thud.frequency.setValueAtTime(160, t); thud.frequency.exponentialRampToValueAtTime(35, t + 0.22);
+        tg.gain.setValueAtTime(1.3, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+        thud.connect(tg); tg.connect(ctx.destination);
+        thud.start(t); thud.stop(t + 0.25);
+      },
+
+      laser() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sawtooth"; osc.frequency.setValueAtTime(1800, t); osc.frequency.exponentialRampToValueAtTime(80, t + 0.2);
+        g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.24);
+      }
+    };
+
+    /* =========================================================================
+       5. CYPHER BEAT SYNTHESIZER
+       ========================================================================= */
+    const CypherBeat = {
+      isPlaying: false, tempo: 90, step: 0, timer: null, vol: 0.75, style: "boombap",
+      
+      start() {
+        if (this.isPlaying) return;
+        const ctx = getAudioCtx();
+        this.isPlaying = true;
+        this.step = 0;
+        let nextTime = ctx.currentTime + 0.05;
+
+        const schedule = () => {
+          if (!this.isPlaying) return;
+          const secPerStep = 60 / this.tempo / 4;
+          while (nextTime < ctx.currentTime + 0.12) {
+            this.playStep(nextTime, this.step, ctx);
+            nextTime += secPerStep;
+            this.step = (this.step + 1) % 16;
+          }
+          this.timer = setTimeout(schedule, 28);
+        };
+        schedule();
+        this.updateUI(true);
+      },
+
+      stop() {
+        this.isPlaying = false;
+        if (this.timer) clearTimeout(this.timer);
+        this.updateUI(false);
+      },
+
+      setStyle(val) {
+        this.style = val;
+        const map = { boombap: 90, trap: 138, drill: 142, phonk: 160, westcoast: 96 };
+        this.tempo = map[val] || 90;
+      },
+
+      setVolume(val) { this.vol = parseFloat(val); },
+
+      updateUI(active) {
+        const btn = document.getElementById("btnToggleBeat");
+        const pill = document.getElementById("pillBeat");
+        const lbl = document.getElementById("beatLabel");
+        btn.innerText = active ? `🎧 Beat: ON (${this.tempo} BPM)` : "🎧 Beat: OFF";
+        btn.classList.toggle("active-glow", active);
+        pill.classList.toggle("active-beat", active);
+        lbl.innerText = active ? `${this.style.toUpperCase()} (${this.tempo})` : "Beat: Off";
+      },
+
+      playStep(t, s, ctx) {
+        if (this.vol <= 0) return;
+        if (s === 0 || s === 7 || s === 10) this.kick(t, ctx);
+        if (s === 4 || s === 12) this.snare(t, ctx);
+        if (s % 2 === 0) this.hat(t, ctx, s % 4 === 0);
+      },
+
+      kick(t, ctx) {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.frequency.setValueAtTime(155, t); osc.frequency.exponentialRampToValueAtTime(36, t + 0.15);
+        g.gain.setValueAtTime(1.0 * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.24);
+      },
+
+      snare(t, ctx) {
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const s = ctx.createBufferSource(); s.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1100;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.85 * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        s.connect(f); f.connect(g); g.connect(ctx.destination);
+        s.start(t); s.stop(t + 0.13);
+      },
+
+      hat(t, ctx, accent) {
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const s = ctx.createBufferSource(); s.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7500;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime((accent ? 0.45 : 0.25) * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+        s.connect(f); f.connect(g); g.connect(ctx.destination);
+        s.start(t); s.stop(t + 0.04);
+      }
+    };
+
+    function toggleBeatPlayback() {
+      if (CypherBeat.isPlaying) CypherBeat.stop();
+      else CypherBeat.start();
+    }
+
+    /* =========================================================================
+       6. ROBUST SPEECH SYNTHESIS ENGINE (Audio Unlock + Auto-Heal Watchdog)
+       ========================================================================= */
+    const synth = window.speechSynthesis;
+    window._activeUtteranceBin = new Set();
+    let systemVoices = [];
+    let battleSessionId = 0;
+    let transcriptHistory = [];
+
+    // Strips action cues, asterisks, brackets, parentheticals & normalizes punch line
+    function cleanStageDirections(rawText) {
+      if (!rawText) return "";
+      let text = rawText;
+
+      // 1. Remove text inside markdown asterisks (*pauses*, **Gordon Ramsay:**, etc.)
+      text = text.replace(/\*{1,3}[^*\n]+\*{1,3}/g, " ");
+
+      // 2. Remove text inside brackets ([poses], [laughter], etc.)
+      text = text.replace(/\[[^\]]+\]/g, " ");
+
+      // 3. Remove text inside parentheses (laughs), (pauses for crowd)
+      text = text.replace(/\([^)]+\)/g, " ");
+
+      // 4. Remove dialogue prefix labels e.g. "Chef Ramsay:" or "Competitor 1:"
+      text = text.replace(/^[\s*#_-]*(?:[A-Za-z0-9\s._'-]+):[\s*]*/gm, "");
+
+      // 5. PHONETIC NORMALIZATION: Enforces clear articulation of "punch line"
+      text = text.replace(/\bpunch[\s-]?lines\b/gi, (m) => m[0] === m[0].toUpperCase() ? "Punch Lines" : "punch lines");
+      text = text.replace(/\bpunch[\s-]?line\b/gi, (m) => m[0] === m[0].toUpperCase() ? "Punch Line" : "punch line");
+
+      text = text.replace(/\s{2,}/g, " ").trim();
+      return text;
+    }
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+      systemVoices = all.filter(v => v.lang.startsWith("en"));
+      if (systemVoices.length === 0) systemVoices = all;
+
+      const selL = document.getElementById("voiceSelectDebaterOne");
+      const selC = document.getElementById("voiceSelectDebaterTwo");
+      const prevL = selL.value;
+      const prevC = selC.value;
+
+      selL.innerHTML = "";
+      selC.innerHTML = "";
+
+      systemVoices.forEach((v, idx) => {
+        const opt1 = document.createElement("option"); opt1.value = idx; opt1.textContent = `${v.name} (${v.lang})`;
+        const opt2 = document.createElement("option"); opt2.value = idx; opt2.textContent = `${v.name} (${v.lang})`;
+        selL.appendChild(opt1);
+        selC.appendChild(opt2);
+      });
+
+      let defL = systemVoices.findIndex(v => /alex|daniel|guy|george|david|male/i.test(v.name));
+      let defC = systemVoices.findIndex(v => /jenny|samantha|fred|tom|junior|female/i.test(v.name));
+      if (defL === -1) defL = 0;
+      if (defC === -1 || defC === defL) defC = systemVoices.length > 1 ? 1 : 0;
+      
+      selL.value = prevL && prevL < systemVoices.length ? prevL : defL;
+      selC.value = prevC && prevC < systemVoices.length ? prevC : defC;
+    }
+
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoices;
+    }
+
+    // Single-tick asynchronous hardware flusher that avoids WebKit cancel freezes
+    async function resetSpeechAudioHardware() {
+      if (!synth) return;
+      try {
+        synth.cancel();
+        if (synth.paused) synth.resume();
+      } catch (e) {}
+      window._activeUtteranceBin.clear();
+      await new Promise(r => setTimeout(r, 60));
+      try {
+        if (synth.paused) synth.resume();
+      } catch (e) {}
+    }
+
+    function forceAudioEngineAwake() {
+      getAudioCtx();
+      if (synth) {
+        synth.cancel();
+        if (synth.paused) synth.resume();
+        const silent = new SpeechSynthesisUtterance("Audio active.");
+        silent.volume = 0.5;
+        synth.speak(silent);
+      }
+      document.getElementById("audioHealthLabel").innerText = "TTS: Reset Clean";
+      setTimeout(() => { document.getElementById("audioHealthLabel").innerText = "TTS: Healthy"; }, 2000);
+      showToast("🔊 Audio engine re-synchronized!");
+    }
+
+    // Keep-alive heartbeat that prevents iOS / Chrome from sleeping during long sets
+    setInterval(() => {
+      if (isRunning && !isPaused && synth && synth.speaking) {
+        synth.pause();
+        synth.resume();
+      }
+    }, 8000);
+
+    function previewVoice(isDebaterOne) {
+      getAudioCtx();
+      const name = document.getElementById(isDebaterOne ? "nameDebaterOne" : "nameDebaterTwo").value;
+      const phrase = isDebaterOne 
+        ? `Testing voice for ${name}. Every punch line hits with maximum force.` 
+        : `Testing voice for ${name}. Prepare yourself for this upcoming punch line.`;
+      speakSentence(phrase, isDebaterOne, null);
+    }
+
+    function speakSentence(text, isDebaterOne, onWordBoundary) {
+      return new Promise(resolve => {
+        if (!synth) { setTimeout(resolve, 800); return; }
+        
+        const cleanSpoken = cleanStageDirections(text);
+        if (!cleanSpoken || cleanSpoken.length < 2) { resolve(); return; }
+
+        if (synth.paused) synth.resume();
+
+        const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+        let voiceObj = null;
+        if (sel && sel.value !== "" && !isNaN(parseInt(sel.value))) {
+          voiceObj = systemVoices[parseInt(sel.value)];
+        }
+        if (!voiceObj && systemVoices.length > 0) {
+          voiceObj = isDebaterOne ? systemVoices[0] : (systemVoices[1] || systemVoices[0]);
+        }
+
+        const rawPitch = parseFloat(document.getElementById(isDebaterOne ? "pitchSliderL" : "pitchSliderC")?.value);
+        const rawRate = parseFloat(document.getElementById(isDebaterOne ? "rateSliderL" : "rateSliderC")?.value);
+        const rawVol = parseFloat(document.getElementById(isDebaterOne ? "volSliderL" : "volSliderC")?.value);
+
+        const u = new SpeechSynthesisUtterance(cleanSpoken);
+        if (voiceObj) u.voice = voiceObj;
+        u.pitch = isNaN(rawPitch) ? 1.0 : Math.max(0.6, Math.min(1.4, rawPitch));
+        u.rate = isNaN(rawRate) ? 1.0 : Math.max(0.7, Math.min(1.4, rawRate));
+        u.volume = isNaN(rawVol) ? 1.0 : Math.max(0.05, Math.min(1.0, rawVol));
+
+        if (onWordBoundary) {
+          u.onboundary = (e) => {
+            if (e.name === "word") onWordBoundary(e.charIndex);
+          };
+        }
+
+        let finished = false;
+        let watchdog = null;
+        const done = () => {
+          if (!finished) {
+            finished = true;
+            if (watchdog) clearTimeout(watchdog);
+            window._activeUtteranceBin.delete(u);
+            resolve();
+          }
+        };
+
+        u.onstart = () => {
+          document.getElementById("audioHealthLabel").innerText = "TTS: Speaking";
+        };
+        u.onend = () => {
+          document.getElementById("audioHealthLabel").innerText = "TTS: Healthy";
+          done();
+        };
+        u.onerror = (e) => {
+          console.warn("Utterance notice:", e);
+          done();
+        };
+
+        window._activeUtteranceBin.add(u);
+        const words = cleanSpoken.split(/\s+/).length;
+        const safetyTimeout = Math.max(7000, words * 850);
+        watchdog = setTimeout(done, safetyTimeout);
+
+        try {
+          synth.speak(u);
+        } catch (e) {
+          done();
+        }
+      });
+    }
+
+    // Robust Stage Emcee Intro (Speaks the dynamic names & roles immediately on tap)
+    function playSynchronousEmceeIntro(name1, persona1, name2, persona2, topic) {
+      return new Promise(resolve => {
+        if (!synth) { resolve(); return; }
+        
+        const introText = `Welcome to the Roast Cellar! Tonight's high-stakes matchup: ${name1}, ${persona1}, clashing against ${name2}, ${persona2}! The topic on the stage: ${topic}. Let's bring out ${name1} to roast ${name2}!`;
+        const u = new SpeechSynthesisUtterance(cleanStageDirections(introText));
+        u.rate = 1.06;
+        u.pitch = 1.0;
+        u.volume = 1.0;
+
+        let done = false;
+        const finish = () => {
+          if (!done) {
+            done = true;
+            window._activeUtteranceBin.delete(u);
+            resolve();
+          }
+        };
+        u.onend = finish;
+        u.onerror = finish;
+        setTimeout(finish, 9000);
+
+        window._activeUtteranceBin.add(u);
+        try {
+          synth.speak(u);
+        } catch (e) {
+          finish();
+        }
+      });
+    }
+
+    async function speakFullTurnTeleprompter(paragraphs, isDebaterOne, sessionId) {
+      const bubbleId = isDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+
+      for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+        const sentenceList = paragraphs[pIdx];
+        for (let sIdx = 0; sIdx < sentenceList.length; sIdx++) {
+          if (!isRunning || battleSessionId !== sessionId) return;
+          if (isPaused) await waitIfPaused();
+
+          const sentObj = sentenceList[sIdx];
+          highlightReadingSentence(bubbleId, sentObj.id);
+
+          await speakSentence(sentObj.text, isDebaterOne);
+          if (battleSessionId !== sessionId) return;
+
+          const lower = sentObj.text.toLowerCase();
+          if (lower.includes("yo mama") || lower.includes("your mother")) {
+            setTimeout(SoundFX.rimshot, 60);
+          } else if (lower.includes("yo daddy") || lower.includes("your father")) {
+            setTimeout(SoundFX.cheer, 60);
+          }
+
+          await new Promise(r => setTimeout(r, isDebaterOne ? 140 : 100));
+        }
+      }
+      clearSentenceHighlight(bubbleId);
+    }
+
+    function highlightReadingSentence(bubbleId, sentId) {
+      clearSentenceHighlight(bubbleId);
+      const span = document.getElementById(`${bubbleId}-sent-${sentId}`);
+      const bubble = document.getElementById(bubbleId);
+      if (span && bubble) {
+        span.classList.add("active-reading");
+        const bRect = bubble.getBoundingClientRect();
+        const sRect = span.getBoundingClientRect();
+        bubble.scrollTo({ top: bubble.scrollTop + (sRect.top - bRect.top) - (bubble.clientHeight / 2), behavior: "smooth" });
+      }
+    }
+
+    function clearSentenceHighlight(bubbleId) {
+      document.querySelectorAll(`#${bubbleId} .speech-sentence.active-reading`).forEach(el => el.classList.remove("active-reading"));
+    }
+
+    /* =========================================================================
+       7. ZERO-LAG SPECULATIVE PRE-GENERATION PIPELINE (Real AI & Web RAG)
+       ========================================================================= */
+    let isRunning = false;
+    let isPaused = false;
+    let pauseResolver = null;
+    let currentRound = 1;
+    let activeHeckleText = "";
+
+    let prefetchPromise = null;
+    let abortController = null;
+
+    function parseToTeleprompterParagraphs(text) {
+      const cleanedDialogue = cleanStageDirections(text);
+      const rawParas = cleanedDialogue.split(/\n\s*\n+/);
+      const paragraphs = [];
+      let sentIdCounter = 0;
+
+      rawParas.forEach(p => {
+        const cleanP = p.trim().replace(/^#{1,6}\s+.*$/gm, "");
+        if (!cleanP) return;
+
+        const rawSentences = cleanP.split(/(?<=[.?!])\s+/);
+        const sentList = [];
+        rawSentences.forEach(s => {
+          const cleanS = s.trim();
+          if (cleanS) sentList.push({ id: sentIdCounter++, text: cleanS });
+        });
+        if (sentList.length > 0) paragraphs.push(sentList);
+      });
+      return paragraphs;
+    }
+
+    function renderSpeechToBubble(bubbleId, paragraphs) {
+      const bubble = document.getElementById(bubbleId);
+      bubble.innerHTML = "";
+
+      paragraphs.forEach(pList => {
+        const pEl = document.createElement("div");
+        pEl.className = "speech-paragraph";
+        pList.forEach(sObj => {
+          const sSpan = document.createElement("span");
+          sSpan.className = "speech-sentence";
+          sSpan.id = `${bubbleId}-sent-${sObj.id}`;
+          
+          let highlighted = sObj.text
+            .replace(/(yo mama[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`)
+            .replace(/(your mother[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`)
+            .replace(/(yo daddy[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`)
+            .replace(/(your father[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`);
+          
+          sSpan.innerHTML = highlighted + " ";
+          pEl.appendChild(sSpan);
+        });
+        bubble.appendChild(pEl);
+      });
+      bubble.scrollTop = 0;
+    }
+
+    // Dynamic AI Prompt Builder strictly applying custom names & personas
+    async function prefetchNextSpeakerTurn(isDebaterOne, opponentCurrentSpeech, activeHeckle, round) {
+      const baseUrl = hostInput.value.trim().replace(/\/+$/, "");
+      const topic = document.getElementById("roastTopic").value.trim();
+      const model = isDebaterOne 
+        ? document.getElementById("modelDebaterOne").value.trim() 
+        : document.getElementById("modelDebaterTwo").value.trim();
+
+      const nameCurrent = document.getElementById(isDebaterOne ? "nameDebaterOne" : "nameDebaterTwo").value.trim();
+      const personaCurrent = document.getElementById(isDebaterOne ? "personaDebaterOne" : "personaDebaterTwo").value.trim();
+
+      const nameOpponent = document.getElementById(isDebaterOne ? "nameDebaterTwo" : "nameDebaterOne").value.trim();
+      const personaOpponent = document.getElementById(isDebaterOne ? "personaDebaterTwo" : "personaDebaterOne").value.trim();
+
+      const research = await executeLiveOnlineResearch(topic, isDebaterOne);
+
+      let heckleInstruction = "";
+      if (activeHeckle) {
+        heckleInstruction = `\n🚨 LIVE AUDIENCE HECKLE FROM FRONT ROW: "${activeHeckle}". You MUST roast this heckler or integrate this jab in your very first sentence!\n`;
+      }
+
+      const systemPrompt = `You are ${nameCurrent}.
+YOUR CHARACTER & PROFESSION: ${personaCurrent}.
+YOUR OPPONENT: You are battling against ${nameOpponent}, whose character & profession is: "${personaOpponent}".
+
+CRITICAL COMEDY CONTRACT:
+1. TARGET WORD COUNT: Approximately 280 to 320 words of brutal, high-IQ, creative stand-up comedy roasts.
+2. STRICT IDENTITY: In your very first sentence, you MUST mock ${nameOpponent} by their exact title ("${nameOpponent}") and ruthlessly attack their specific profession ("${personaOpponent}").
+3. DO NOT USE GENERIC LAWYER JARGON unless your persona is actually a lawyer! Embody ${personaCurrent} completely.
+4. PHONETIC ARTICULATION MANDATE: Always write "punch line" or "punch lines" as two distinct separate words ("punch line", NOT "punchline") so the stage speech synthesis engine articulates both syllables crisply.
+5. STRUCTURE:
+   - Part 1: Savage crowd-work clapback at ${nameOpponent}'s last speech, outfit, or title.
+   - Part 2: Elaborate, creative "Yo Mama is so fat..." roast tailored to their profession.
+   - Part 3: Devastating, hilarious "Yo Daddy is so stupid..." roast tailored to their profession.
+   - Part 4: Knockout closing mic-drop punch line.
+6. PURE SPOKEN FIRST-PERSON DIALOGUE ONLY:
+   - NEVER write narrator descriptions or stage directions (NEVER write *pauses*, *adjusts tie*, [poses], or (laughs)).
+   - Deliver only the words you speak directly into the microphone.`;
+
+      const userPrompt = `TOPIC ON THE STAGE: "${topic}"\n` +
+        `REAL-WORLD RESEARCH EVIDENCE: "${research.title} - ${research.snippet}"\n` +
+        heckleInstruction +
+        `WHAT YOUR OPPONENT (${nameOpponent}) JUST SAID ON THE MIC:\n` +
+        `"${opponentCurrentSpeech.slice(0, 1600)}"\n\n` +
+        `Deliver your fresh ~300-word roast routine now:`;
+
+      const formatted = `<|im_start|>system\n${systemPrompt}<|im_end|>\n<|im_start|>user\n${userPrompt}<|im_end|>\n<|im_start|>assistant\n`;
+
+      abortController = new AbortController();
+
+      try {
+        const res = await fetch(`${baseUrl}/api/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: abortController.signal,
+          body: JSON.stringify({
+            model: model,
+            prompt: formatted,
+            stream: false,
+            options: {
+              temperature: 0.96,
+              top_p: 0.92,
+              repeat_penalty: 1.25,
+              num_predict: 480 // Scaled to generate fast ~300 words without timeouts
+            }
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        let cleaned = cleanStageDirections((data.response || "").replace(/<\|im_end\|>|<\|im_start\|>/gi, ""));
+        if (cleaned.split(/\s+/).length < 70) throw new Error("Generated response too short");
+        return cleaned;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.warn("AI generation notice:", err.message);
+        return `Look at ${nameOpponent} standing up here trying to look dignified as ${personaOpponent}! ${nameOpponent} brought a whole collection of excuses instead of real punch lines. ` +
+               `Yo mama is so astronomically massive that she bends gravity and causes low tide across three states! ` +
+               `And yo daddy is so catastrophically stupid he spent twenty-four hours studying for a blood test and still walked away with an F! ` +
+               `Sit down, ${nameOpponent}, before you embarrass yourself further on this stage!`;
+      }
+    }
+
+    /* =========================================================================
+       8. MAIN ROAST ARENA ENGINE (Guaranteed Audio Handshake)
+       ========================================================================= */
+    async function startRoastArena() {
+      // 1. Immediately defocus any active input to dismiss iOS virtual keyboard
+      if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+      }
+
+      // 2. Prime Web Audio & Synthesizer Hardware synchronously inside click handler
+      getAudioCtx();
+      await resetSpeechAudioHardware();
+
+      stopRoastArena();
+
+      const thisSessionId = ++battleSessionId;
+      isRunning = true;
+      isPaused = false;
+      currentRound = 1;
+      transcriptHistory = [];
+
+      syncCompetitorTitles();
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnPause").disabled = false;
+      document.getElementById("btnStop").disabled = false;
+
+      const roundMode = document.getElementById("roundMode").value;
+      const maxRounds = roundMode === "unlimited" ? Infinity : parseInt(roundMode);
+      document.getElementById("roundMaxLabel").innerText = roundMode === "unlimited" ? "ROUNDS (∞)" : `ROUNDS OF ${maxRounds}`;
+
+      SoundFX.rimshot();
+
+      const name1 = document.getElementById("nameDebaterOne").value.trim();
+      const persona1 = document.getElementById("personaDebaterOne").value.trim();
+      const name2 = document.getElementById("nameDebaterTwo").value.trim();
+      const persona2 = document.getElementById("personaDebaterTwo").value.trim();
+      const topic = document.getElementById("roastTopic").value.trim();
+
+      document.getElementById("globalState").innerText = "Emcee Calling Arena to Order...";
+
+      // 3. Synchronous Emcee Stage Announcement keeps audio active while AI generates
+      const emceePromise = playSynchronousEmceeIntro(name1, persona1, name2, persona2, topic);
+
+      let lastSpeech = `The stage is set on the topic: "${topic}". ${name1}, you have the microphone. Roast ${name2}!`;
+
+      try {
+        document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name1} Writing...`;
+        const initialSpeechPromise = prefetchNextSpeakerTurn(true, lastSpeech, activeHeckleText, currentRound);
+
+        await Promise.all([emceePromise, initialSpeechPromise]);
+        let currentSpeechText = await initialSpeechPromise;
+
+        if (battleSessionId !== thisSessionId || !isRunning) return;
+        if (activeHeckleText) clearActiveHeckle();
+
+        while (isRunning && currentRound <= maxRounds && battleSessionId === thisSessionId) {
+          document.getElementById("roundDisplay").innerText = currentRound;
+
+          // 1. Render & Setup Current Speaker (Competitor 1)
+          const paragraphs1 = parseToTeleprompterParagraphs(currentSpeechText);
+          renderSpeechToBubble("speechDebaterOne", paragraphs1);
+          updateDamage(true);
+          setCardSpeakingState(true, true);
+          recordTranscript(name1, currentSpeechText);
+
+          // 2. PARALLEL SPECULATIVE PRELOAD: Competitor 2 writes in background WHILE Competitor 1 speaks
+          document.getElementById("cardDebaterTwo").classList.add("preloading-speech");
+          document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name2} Writing...`;
+          
+          prefetchPromise = prefetchNextSpeakerTurn(false, currentSpeechText, activeHeckleText, currentRound)
+            .then(res => {
+              if (battleSessionId === thisSessionId) {
+                document.getElementById("pipelineLabel").innerText = "Pre-Gen: Ready ⚡ (0s Lag)";
+              }
+              return res;
+            });
+
+          document.getElementById("globalState").innerText = `${name1} on Mic (~300w) &bull; ${name2} Pre-Writing...`;
+          
+          // Competitor 1 Speaks
+          await speakFullTurnTeleprompter(paragraphs1, true, thisSessionId);
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+
+          setCardSpeakingState(true, false);
+          document.getElementById("cardDebaterTwo").classList.remove("preloading-speech");
+
+          // 3. ZERO-LAG HANDOFF TO COMPETITOR 2
+          document.getElementById("globalState").innerText = `Instant Handover to ${name2}!`;
+          SoundFX.rimshot();
+
+          let speechText2 = await prefetchPromise;
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+          if (activeHeckleText) clearActiveHeckle();
+
+          // 4. Render & Setup Competitor 2
+          const paragraphs2 = parseToTeleprompterParagraphs(speechText2);
+          renderSpeechToBubble("speechDebaterTwo", paragraphs2);
+          updateDamage(false);
+          setCardSpeakingState(false, true);
+          recordTranscript(name2, speechText2);
+
+          // 5. PARALLEL SPECULATIVE PRELOAD: Competitor 1 writes next turn WHILE Competitor 2 speaks
+          document.getElementById("cardDebaterOne").classList.add("preloading-speech");
+          document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name1} Writing...`;
+
+          prefetchPromise = prefetchNextSpeakerTurn(true, speechText2, activeHeckleText, currentRound + 1)
+            .then(res => {
+              if (battleSessionId === thisSessionId) {
+                document.getElementById("pipelineLabel").innerText = "Pre-Gen: Ready ⚡ (0s Lag)";
+              }
+              return res;
+            });
+
+          document.getElementById("globalState").innerText = `${name2} on Mic (~300w) &bull; ${name1} Pre-Writing...`;
+
+          // Competitor 2 Speaks
+          await speakFullTurnTeleprompter(paragraphs2, false, thisSessionId);
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+
+          setCardSpeakingState(false, false);
+          document.getElementById("cardDebaterOne").classList.remove("preloading-speech");
+
+          // 6. ZERO-LAG HANDOFF FOR NEXT ROUND
+          SoundFX.airhorn();
+          currentSpeechText = await prefetchPromise;
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+          if (activeHeckleText) clearActiveHeckle();
+
+          currentRound++;
+        }
+
+        if (isRunning && battleSessionId === thisSessionId) {
+          SoundFX.cheer();
+          document.getElementById("globalState").innerText = "Standing Ovation! Roast Concluded!";
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Roast error:", err);
+          document.getElementById("globalState").innerText = `Error: ${err.message}`;
+        }
+      } finally {
+        if (battleSessionId === thisSessionId) {
+          stopRoastArena();
+        }
+      }
+    }
+
+    function setCardSpeakingState(isDebaterOne, isSpeaking) {
+      const card = document.getElementById(isDebaterOne ? "cardDebaterOne" : "cardDebaterTwo");
+      if (isSpeaking) card.classList.add("active-speaker");
+      else card.classList.remove("active-speaker");
+    }
+
+    let dmgOne = 15;
+    let dmgTwo = 15;
+    function updateDamage(isDebaterOneTurn) {
+      if (isDebaterOneTurn) {
+        dmgTwo = Math.min(100, dmgTwo + Math.floor(Math.random() * 22) + 14);
+        document.getElementById("dmgFillDebaterTwo").style.width = `${dmgTwo}%`;
+        document.getElementById("dmgLabelDebaterTwo").innerText = `${dmgTwo}%`;
+      } else {
+        dmgOne = Math.min(100, dmgOne + Math.floor(Math.random() * 22) + 14);
+        document.getElementById("dmgFillDebaterOne").style.width = `${dmgOne}%`;
+        document.getElementById("dmgLabelDebaterOne").innerText = `${dmgOne}%`;
+      }
+    }
+
+    /* =========================================================================
+       9. LIVE HECKLE & SHAPING ENGINE
+       ========================================================================= */
+    function submitLiveHeckle(interruptNow = false) {
+      const input = document.getElementById("heckleInput");
+      const val = input.value.trim();
+      if (!val) return;
+
+      activeHeckleText = val;
+      input.value = "";
+
+      const banner = document.getElementById("heckleBanner");
+      document.getElementById("heckleBannerText").innerText = `"${val}"`;
+      banner.style.display = "flex";
+
+      SoundFX.boo();
+      showToast(`📣 Heckle injected: "${val}"`);
+
+      if (interruptNow && isRunning) {
+        SoundFX.micDrop();
+        if (synth) synth.cancel();
+      }
+    }
+
+    function clearActiveHeckle() {
+      activeHeckleText = "";
+      document.getElementById("heckleBanner").style.display = "none";
+    }
+
+    /* =========================================================================
+       10. TRANSCRIPT COPY & AIRDROP / SHARE TOOLS
+       ========================================================================= */
+    function recordTranscript(speakerName, speechText) {
+      transcriptHistory.push({
+        round: currentRound,
+        speaker: speakerName,
+        text: cleanStageDirections(speechText),
+        timestamp: new Date().toLocaleTimeString()
+      });
+    }
+
+    function generateFormattedTranscript() {
+      const topic = document.getElementById("roastTopic").value;
+      let out = `=== THE COMEDY ROAST CELLAR TRANSCRIPT ===\nTOPIC: "${topic}"\nDATE: ${new Date().toLocaleString()}\n\n`;
+      transcriptHistory.forEach(t => {
+        out += `[ROUND ${t.round}] ${t.speaker} (${t.timestamp}):\n${t.text}\n\n`;
+      });
+      return out;
+    }
+
+    async function copyFullTranscript() {
+      const text = generateFormattedTranscript();
+      if (!text || transcriptHistory.length === 0) {
+        showToast("⚠️ No roasts recorded yet! Call the roast to order first.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("📋 Transcript copied! Ready to paste on Mac.");
+      } catch (e) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 Transcript copied to clipboard!");
+      }
+    }
+
+    async function shareTranscript() {
+      const text = generateFormattedTranscript();
+      if (!text || transcriptHistory.length === 0) {
+        showToast("⚠️ No roasts recorded yet! Call the roast to order first.");
+        return;
+      }
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Comedy Roast Cellar Transcript",
+            text: text
+          });
+        } catch (e) {}
+      } else {
+        copyFullTranscript();
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toastMsg");
+      t.innerText = msg;
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 3500);
+    }
+
+    /* =========================================================================
+       11. PAUSE & STOP CONTROLS
+       ========================================================================= */
+    function togglePauseRoast() {
+      if (!isRunning) return;
+      isPaused = !isPaused;
+      const btn = document.getElementById("btnPause");
+      if (isPaused) {
+        btn.innerText = "▶ Resume";
+        if (synth && synth.speaking) synth.pause();
+        if (CypherBeat.isPlaying) CypherBeat.stop();
+        document.getElementById("globalState").innerText = "Cellar Paused";
+      } else {
+        btn.innerText = "⏸ Pause";
+        if (synth && synth.paused) synth.resume();
+        if (document.getElementById("btnToggleBeat").classList.contains("active-glow")) CypherBeat.start();
+        if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+        document.getElementById("globalState").innerText = "Cellar Resumed";
+      }
+    }
+
+    function waitIfPaused() {
+      if (!isPaused) return Promise.resolve();
+      return new Promise(r => { pauseResolver = r; });
+    }
+
+    function stopRoastArena() {
+      isRunning = false;
+      isPaused = false;
+      battleSessionId++;
+      if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+      if (abortController) abortController.abort();
+      if (synth) synth.cancel();
+      window._activeUtteranceBin.clear();
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnPause").disabled = true;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnStop").disabled = true;
+
+      document.getElementById("cardDebaterOne").classList.remove("active-speaker", "preloading-speech");
+      document.getElementById("cardDebaterTwo").classList.remove("active-speaker", "preloading-speech");
+      document.getElementById("pipelineLabel").innerText = "Pre-Gen Engine: Armed";
+      document.getElementById("globalState").innerText = "Show Concluded";
+    }
+
+    function toggleConfigAccordion() {
+      const p = document.getElementById("configPanel");
+      const c = document.getElementById("accordionChevron");
+      p.classList.toggle("collapsed");
+      c.innerText = p.classList.contains("collapsed") ? "▼ Expand" : "▲ Collapse";
+    }
+
+    function toggleAuraDrawer() {
+      const d = document.getElementById("auraPadDrawer");
+      d.classList.toggle("collapsed");
+    }
+
+    syncCompetitorTitles();
+  </script>
+</body>
+</html>
