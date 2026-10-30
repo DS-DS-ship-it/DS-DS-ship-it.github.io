@@ -2809,6 +2809,10 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
      lowLatencyMode: false,
      capLevelToPlayerSize: true,
      liveSyncDurationCount: 5,
+     stretchShortVideoTrack: true, // Fix for Pluto TV ad-stitching (SSAI)
+     maxAudioFramesDrift: 3,       // Xbox audio desync fix during commercials
+     forceKeyFrameOnDiscontinuity: true, // Forces decoder reset on Xbox hardware
+     appendErrorMaxRetry: 10,
      // Xbox Edge Memory Optimizations (Prevents RAM crashes on console)
      backBufferLength: /Xbox/i.test(navigator.userAgent) ? 10 : 30,
      maxBufferLength: /Xbox/i.test(navigator.userAgent) ? 15 : 30,
@@ -2869,12 +2873,20 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
            break;
          case Hls.ErrorTypes.MEDIA_ERROR:
            triggerShieldNotify("Auto-Healing Broken Media Splice");
-           hls.recoverMediaError();
+           hls.recoverMediaError(); // Flushes corrupt Xbox hardware buffer
+           if (isJwtProtectedChannel(currentPlayingChannel)) {
+               try { video.currentTime += 0.5; } catch(e) {} // Nudge past Pluto TV ad-stitch
+           }
            setTimeout(() => {
              if (video.paused || video.readyState < 3) {
-               failoverToNextProxy("Media Codec Mismatch");
+               if (isJwtProtectedChannel(currentPlayingChannel)) {
+                 triggerShieldNotify("Ad Stall Recovered - Resyncing");
+                 reconnectCurrentStream(true); // Don't failover Pluto channels, just re-sync
+               } else {
+                 failoverToNextProxy("Media Codec Mismatch");
+               }
              }
-           }, 3000);
+           }, 2500);
            break;
          default:
            failoverToNextProxy(data.details || "Stream Ingestion Failure");
@@ -2886,6 +2898,11 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
          hls.nudgeStream();
        } else {
          video.currentTime += 0.1;
+       }
+       // Extremely aggressive recovery for Xbox Edge handling Pluto SSAI streams
+       if (isJwtProtectedChannel(currentPlayingChannel) && data.details === "bufferStalledError") {
+           if (hls) hls.recoverMediaError();
+           try { video.currentTime += 0.25; } catch(e) {}
        }
      }
    });
@@ -3016,7 +3033,12 @@ function setupCommercialAutoShield() {
        if (watchdogFrozenCount === 3) {
          triggerShieldNotify("Commercial Buffer Nudge");
          if (hls) hls.startLoad();
-         try { video.currentTime += 0.2; } catch(_) {}
+         if (isJwtProtectedChannel(currentPlayingChannel) && hls) {
+             hls.recoverMediaError(); // Hard flush MSE buffer on Xbox
+             try { video.currentTime += 0.5; } catch(_) {}
+         } else {
+             try { video.currentTime += 0.2; } catch(_) {}
+         }
        } else if (watchdogFrozenCount === 6) {
          triggerShieldNotify("Live Edge Leap");
          if (hls && hls.liveSyncPosition) {
