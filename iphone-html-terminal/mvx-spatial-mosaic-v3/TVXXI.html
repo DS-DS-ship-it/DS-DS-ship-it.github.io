@@ -52,18 +52,6 @@ html {
  -webkit-text-size-adjust: 100%;
 }
 
-
-/* TV OVERSCAN SAFE ZONE & XBOX GAMEPAD FOCUS RINGS */
-body {
- padding: max(14px, env(safe-area-inset-top, 14px)) max(20px, env(safe-area-inset-right, 20px)) max(14px, env(safe-area-inset-bottom, 14px)) max(20px, env(safe-area-inset-left, 20px));
-}
-button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible, .cat-tab:focus-visible, .subcat-card:focus-visible, .ch-item:focus-visible {
- outline: 3px solid var(--border-glow) !important;
- outline-offset: 2px !important;
- box-shadow: 0 0 22px var(--border-glow) !important;
- z-index: 10;
-}
-
 body {
  background-color: var(--bg-deep);
  min-height: 100vh;
@@ -80,6 +68,22 @@ body {
  font-size: 14px;
 }
 
+
+/* Xbox Edge Overscan Safe Zone & Spatial Nav Focus */
+@media (tv), (pointer: coarse) {
+  body {
+    padding: 4% !important; /* 4% safe zone so TV bezels don't clip UI */
+  }
+}
+:focus {
+  outline: 3px solid var(--primary) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 20px var(--primary) !important;
+}
+.ch-item:focus {
+  border-color: var(--primary);
+  background: rgba(0, 229, 255, 0.15);
+}
 ::-webkit-scrollbar {
  width: 8px;
  height: 8px;
@@ -1910,13 +1914,6 @@ video.aspect-fill { aspect-ratio: 16/9; object-fit: fill; }
 <script>
 'use strict';
 
-// XBOX & AIRPLAY PERSISTENCE ENVIRONMENT DETECT
-const isXbox = /Xbox/i.test(navigator.userAgent) || /Edge.*Xbox/i.test(navigator.userAgent);
-if (isXbox) {
-  console.log("Xbox Chromium Environment Detected - Optimizing UI and hiding Apple AirPlay controls.");
-}
-
-
 // TAXONOMY DEFINITION
 const TAXONOMY = [
  {
@@ -2133,7 +2130,7 @@ function isAlreadyProxied(u) {
 }
 
 function isJwtProtectedChannel(ch) {
-  return Boolean(ch && ch.authProtected && !/jmp2\.uk/i.test(ch.url || ""));
+  return Boolean(ch && (ch.authProtected || /jmp2\.uk\/plu-[^?#]+\.m3u8/i.test(ch.url || "")));
 }
 function showAuthRequired(message = "HTTP 401 / JWT verification fails") {
   const text = `${message}. The stream provider rejected this URL/token. A browser-side change or CORS proxy cannot create or refresh the provider's signed JWT. Obtain a fresh authorized playlist URL from the provider, then use Direct URL.`;
@@ -2150,11 +2147,7 @@ function isAuthFailure(data) {
 }
 
 function formatProxyUrl(rawUrl, pIdx) {
- if (!rawUrl) return rawUrl;
- if (pIdx <= 0 && (/jmp2\.uk|pluto\.tv|akamaized\.net|cloudfront\.net/i.test(rawUrl))) {
-   pIdx = 1;
- }
- if (pIdx <= 0 || pIdx >= CORS_PROXIES.length) return rawUrl;
+ if (!rawUrl || pIdx <= 0 || pIdx >= CORS_PROXIES.length) return rawUrl;
  if (isAlreadyProxied(rawUrl)) return rawUrl;
  return CORS_PROXIES[pIdx](rawUrl);
 }
@@ -2393,16 +2386,6 @@ window.addEventListener("DOMContentLoaded", () => {
  updateClock();
  setInterval(updateClock, 1000);
  setupKeepAwakeSupport();
-
- if (isXbox) {
-   const apBtn = document.getElementById("airplay-btn");
-   if (apBtn) apBtn.style.display = "none";
-   const localBtn = document.getElementById("local-screen-btn");
-   if (localBtn) localBtn.style.display = "none";
-   const apPill = document.getElementById("airplay-status-pill");
-   if (apPill) apPill.style.display = "none";
- }
-
  // Load the fast public catalog automatically; users can expand it from the header.
  setTimeout(() => { scanPreset("curated").catch(err => logToTerminal("CATALOG", "Initial sync failed", { error: String(err) })); }, 900);
 });
@@ -2594,7 +2577,15 @@ function showPage() {
 
    const card = document.createElement("div");
    card.className = `ch-item ${isPlaying ? 'playing' : ''}`;
+   card.tabIndex = 0; // Enable Xbox D-Pad Spatial Focus
    card.onclick = () => tuneChannelWithAudio(ch.url, ch.name, ch.subName || ch.group, ch.logo, ch.country, ch.quality);
+   card.onkeydown = (e) => { 
+     // Hook 'A' button (Enter/Space) for native Gamepad selection
+     if (e.key === 'Enter' || e.code === 'Space' || e.button === 0) { 
+       e.preventDefault(); 
+       tuneChannelWithAudio(ch.url, ch.name, ch.subName || ch.group, ch.logo, ch.country, ch.quality); 
+     } 
+   };
 
    const logoHtml = ch.logo
      ? `<img class="ch-logo-img" src="${ch.logo}" alt="${escapeHtml(ch.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -2749,7 +2740,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
  video.volume = targetVol > 0 ? targetVol : 1.0;
 
  // Resolve target stream URL with active proxy layer
- const targetUrl = isAirPlayActive ? url : formatProxyUrl(url, proxyIndex > 0 ? proxyIndex : (/jmp2\.uk/i.test(url) ? 1 : 0));
+ const targetUrl = (isAirPlayActive || isJwtProtectedChannel(currentPlayingChannel)) ? url : formatProxyUrl(url, proxyIndex);
 
  let started = false;
  const startPlayback = () => {
@@ -2794,7 +2785,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
  // On Safari, native AVPlayer plays direct HLS streams with full AirPlay hardware acceleration.
  // When a stream has CORS/hotlink protection or fails direct playback (proxyIndex > 0), HLS.js handles it.
  const nativeHls = Boolean(video.canPlayType("application/vnd.apple.mpegurl") || video.canPlayType("application/x-mpegURL"));
- const shouldUseNative = nativeHls && (proxyIndex === 0 || isAirPlayActive || isJwtProtectedChannel(currentPlayingChannel)) && !/jmp2\.uk/i.test(url);
+ const shouldUseNative = nativeHls && (proxyIndex === 0 || isAirPlayActive || isJwtProtectedChannel(currentPlayingChannel));
 
  if (shouldUseNative) {
    // Safari Native AVPlayer pipeline
@@ -2818,10 +2809,11 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
      lowLatencyMode: false,
      capLevelToPlayerSize: true,
      liveSyncDurationCount: 5,
-     backBufferLength: 30,
-     maxBufferLength: 30,
-     maxMaxBufferLength: 45,
-     maxBufferSize: 20 * 1024 * 1024,
+     // Xbox Edge Memory Optimizations (Prevents RAM crashes on console)
+     backBufferLength: /Xbox/i.test(navigator.userAgent) ? 10 : 30,
+     maxBufferLength: /Xbox/i.test(navigator.userAgent) ? 15 : 30,
+     maxMaxBufferLength: /Xbox/i.test(navigator.userAgent) ? 20 : 45,
+     maxBufferSize: /Xbox/i.test(navigator.userAgent) ? 10 * 1024 * 1024 : 20 * 1024 * 1024,
      maxBufferHole: 0.5,
      highBufferWatchdogPeriod: 2,
      nudgeOffset: 0.3,
@@ -3007,7 +2999,7 @@ function setupCommercialAutoShield() {
      if (isAirPlayActive) {
        if (video.currentTime === lastPlaybackTime) {
          watchdogFrozenCount++;
-         if (watchdogFrozenCount >= 14) {
+         if (watchdogFrozenCount >= 35) { // Increased tolerance to prevent persistent AirPlay dropouts
            triggerShieldNotify("AirPlay: Re-aligning Live Edge");
            reconnectCurrentStream(true);
            watchdogFrozenCount = 0;
@@ -3439,6 +3431,7 @@ function setupVideoEngine() {
  // BACKGROUND TAB OPTIMIZATION (PREVENTS GPU CRASHES ON LOW-END PCs)
  document.addEventListener("visibilitychange", () => {
    if (document.hidden && video && !video.paused) {
+     if (isAirPlayActive) return; // PERSISTENCE: Do not throttle stream if AirPlay is active in background!
      // Disable heavy SVG/CSS filters and force lowest quality to save RAM/GPU
      video.style.filter = "none";
      if (splitOverlay) splitOverlay.style.backdropFilter = "none";
@@ -4395,3 +4388,6 @@ function handleBackdropClick(event, id) {
 
 </body>
 </html>
+
+
+
