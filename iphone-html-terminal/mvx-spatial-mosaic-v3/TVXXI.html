@@ -2151,7 +2151,7 @@ function isAuthFailure(data) {
 
 function formatProxyUrl(rawUrl, pIdx) {
  if (!rawUrl) return rawUrl;
- if (pIdx <= 0 && /jmp2\.uk|pluto\.tv|akamaized\.net|cloudfront\.net/i.test(rawUrl)) {
+ if (pIdx <= 0 && (/jmp2\.uk|pluto\.tv|akamaized\.net|cloudfront\.net/i.test(rawUrl))) {
    pIdx = 1;
  }
  if (pIdx <= 0 || pIdx >= CORS_PROXIES.length) return rawUrl;
@@ -2794,7 +2794,7 @@ function play(url, name, category, logo, country, quality, proxyIndex = 0) {
  // On Safari, native AVPlayer plays direct HLS streams with full AirPlay hardware acceleration.
  // When a stream has CORS/hotlink protection or fails direct playback (proxyIndex > 0), HLS.js handles it.
  const nativeHls = Boolean(video.canPlayType("application/vnd.apple.mpegurl") || video.canPlayType("application/x-mpegURL"));
- const shouldUseNative = nativeHls && (proxyIndex === 0 || isAirPlayActive || isJwtProtectedChannel(currentPlayingChannel));
+ const shouldUseNative = nativeHls && (proxyIndex === 0 || isAirPlayActive || isJwtProtectedChannel(currentPlayingChannel)) && !/jmp2\.uk/i.test(url);
 
  if (shouldUseNative) {
    // Safari Native AVPlayer pipeline
