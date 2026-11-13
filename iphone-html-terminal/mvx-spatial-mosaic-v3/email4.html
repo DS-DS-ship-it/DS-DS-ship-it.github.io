@@ -6,24 +6,26 @@
   <title>ZeroMail — Device-Paired Local Mailbox</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Full Text Selection Enabled Everywhere */
+    * { user-select: text !important; -webkit-user-select: text !important; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .term-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none overflow-x-hidden">
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
-  <!-- TOP HEADER -->
+  <!-- TOP HEADER (NO CLIPPING, FULL TEXT SELECTION) -->
   <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
     <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
       <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
       <div class="min-w-0">
         <div class="flex items-center space-x-1.5 flex-wrap">
-          <span id="header-email" class="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[160px] sm:max-w-[280px]">Detecting Local Vault...</span>
+          <span id="header-email" class="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[170px] sm:max-w-[300px]">Detecting Local Vault...</span>
           <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
             ● Synced
           </span>
-          <button onclick="openPairingModal()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium shrink-0">
+          <button onclick="openPairingModal()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium shrink-0 cursor-pointer">
             Switch
           </button>
         </div>
@@ -38,19 +40,19 @@
         <span id="storage-readout" class="font-bold text-xs text-indigo-600 leading-none">0 KB</span>
       </div>
 
-      <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+      <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
         <span>🔄</span> <span class="hidden sm:inline">Check</span>
       </button>
 
-      <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+      <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
         <span>🧹</span> <span class="hidden sm:inline">Clean</span>
       </button>
 
-      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
         <span>🩺</span> <span class="hidden sm:inline">Logs</span>
       </button>
 
-      <button onclick="factoryReset()" title="Full reset" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg font-semibold transition shrink-0 shadow-sm">
+      <button onclick="factoryReset()" title="Full reset" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg font-semibold transition shrink-0 shadow-sm cursor-pointer">
         Reset
       </button>
     </div>
@@ -61,15 +63,15 @@
     <!-- Sidebar -->
     <aside class="w-60 sm:w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-3 sm:p-4">
       <div class="space-y-4">
-        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2 text-sm">
+        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2 text-sm cursor-pointer">
           <span>✏️ Compose</span>
         </button>
         <nav class="space-y-1 text-sm font-medium">
-          <button onclick="switchFolder('inbox')" id="btn-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold">
+          <button onclick="switchFolder('inbox')" id="btn-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold cursor-pointer">
             <span>📥 Inbox</span>
             <span id="badge-inbox" class="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">0</span>
           </button>
-          <button onclick="switchFolder('sent')" id="btn-sent" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100">
+          <button onclick="switchFolder('sent')" id="btn-sent" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer">
             <span>📤 Sent</span>
             <span id="badge-sent" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">0</span>
           </button>
@@ -90,7 +92,7 @@
     <!-- Email List -->
     <section class="w-72 sm:w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
       <div class="p-3 border-b border-slate-200">
-        <input type="text" id="search-input" oninput="filterEmails()" placeholder="Search local emails..." class="w-full text-sm px-3 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-indigo-400 outline-none" />
+        <input type="text" id="search-input" oninput="filterEmails()" placeholder="Search local emails..." class="w-full text-sm px-3 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-indigo-400 outline-none select-text cursor-text" />
       </div>
       <div id="email-list" class="flex-1 overflow-y-auto divide-y divide-slate-100"></div>
     </section>
@@ -117,75 +119,80 @@
         <h3 class="font-bold text-white text-sm">Live System Diagnostics & Storage</h3>
       </div>
       <div class="flex items-center space-x-2">
-        <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition">
+        <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition cursor-pointer">
           Force Re-Sync
         </button>
-        <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition">
+        <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition cursor-pointer">
           Clear
         </button>
-        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2 font-bold">&times;</button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2 font-bold cursor-pointer">&times;</button>
       </div>
     </div>
 
     <!-- Diagnostic Tabs -->
     <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
-      <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400">Live Network Logs</button>
-      <button onclick="switchDiagTab('outbound')" id="tab-btn-outbound" class="px-4 py-2 text-slate-400 hover:text-white">Outbound Email Rules</button>
+      <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer">Live Network Logs</button>
+      <button onclick="switchDiagTab('quota')" id="tab-btn-quota" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Mailbox Quotas & Sending</button>
     </div>
 
     <!-- TAB 1: Live Network Console -->
-    <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40">
+    <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40 select-text cursor-text">
       <div class="text-slate-500">// Real-time Gateway Re-Binding & Message Relaying:</div>
       <div id="log-stream" class="space-y-1"></div>
     </div>
 
-    <!-- TAB 2: Outbound Architecture -->
-    <div id="diag-panel-outbound" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed">
-      <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
-        <h4 class="font-bold text-amber-300 mb-1">⚠️ Why Port25 / External Send Requires a Relay:</h4>
-        <p>Browsers running on static GitHub Pages are forbidden from making direct TCP connections on Port 25/587 to send raw mail. To transmit across the internet, you must dispatch through your computer's native mail app or enter a free outbound API key (e.g., Resend).</p>
+    <!-- TAB 2: Quota & Outbound Architecture -->
+    <div id="diag-panel-quota" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
+      <div class="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-indigo-200">
+        <h4 class="font-bold text-indigo-300 mb-1">📬 Why Your Full Personal Accounts Failed to Receive:</h4>
+        <p>When an existing email account (Gmail, Outlook, Yahoo) runs out of storage, external mail servers reject every single message with error <code>552 Mailbox Quota Exceeded</code>. Because ZeroMail stores emails on your computer's hard drive instead of a full cloud account, it never suffers from cloud quota limits.</p>
+      </div>
+      <div class="p-3 bg-slate-800/60 border border-slate-700 rounded-xl text-slate-300">
+        <h4 class="font-bold text-white mb-1">Testing Without Personal Email:</h4>
+        <p>Use the <strong>"Send Test to My ZeroMail Address"</strong> button in the Compose window. It sends a message directly to your paired handle, verifying that your inbox can receive without touching your full personal accounts.</p>
       </div>
     </div>
   </div>
 
-  <!-- COMPOSE MODAL (WITH OUTBOUND DISPATCH & PORT25 ECHO HELPER) -->
+  <!-- COMPOSE MODAL (WITH DIRECT LOOPBACK & COPY-SAFE INPUTS) -->
   <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-slate-200 flex flex-col">
       <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <h3 class="font-bold text-slate-800 text-sm">New Message</h3>
-        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
       </div>
 
-      <!-- Outbound Delivery Selector -->
-      <div class="p-4 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between text-xs">
-        <div>
-          <div class="font-bold text-indigo-900">Delivery Reflector Test</div>
-          <div class="text-indigo-700 text-[11px]">Fill address for Port25 automated echo test.</div>
+      <!-- Quick Delivery Helper Buttons -->
+      <div class="p-3 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div class="font-bold text-indigo-900">Delivery Diagnostics:</div>
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="fillSelfLoopbackTest()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
+            🧪 Send Test to My ZeroMail Address
+          </button>
+          <button type="button" onclick="fillPort25Echo()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
+            Pre-fill Port25
+          </button>
         </div>
-        <button type="button" onclick="fillPort25Echo()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg text-xs transition shadow-sm">
-          Pre-fill Port25 Echo
-        </button>
       </div>
 
       <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col">
-        <input type="email" id="compose-to" required placeholder="To (e.g. check-auth@verifier.port25.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
-        <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
-        <textarea id="compose-body" required placeholder="Write your message here..." rows="6" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1"></textarea>
+        <input type="email" id="compose-to" required placeholder="To (e.g. your address or check-auth@verifier.port25.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+        <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+        <textarea id="compose-body" required placeholder="Write your message here..." rows="6" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1 select-text cursor-text"></textarea>
 
         <!-- Optional Free Outbound Gateway Key -->
         <div>
-          <input type="password" id="compose-api-key" placeholder="Optional: Resend API Key (re_...) for live web dispatch" class="w-full text-[11px] px-3 py-1.5 border border-slate-200 rounded-lg outline-none text-slate-600 bg-slate-50" />
+          <input type="password" id="compose-api-key" placeholder="Optional: Resend API Key (re_...) for live web dispatch" class="w-full text-[11px] px-3 py-1.5 border border-slate-200 rounded-lg outline-none text-slate-600 bg-slate-50 select-text cursor-text" />
         </div>
 
-        <div class="flex items-center justify-between pt-2">
-          <!-- Dispatch via native computer mailer -->
-          <button type="button" onclick="dispatchViaSystemMailer()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg transition flex items-center space-x-1">
+        <div class="flex items-center justify-between pt-2 flex-wrap gap-2">
+          <button type="button" onclick="dispatchViaSystemMailer()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg transition flex items-center space-x-1 cursor-pointer">
             <span>🚀</span> <span>Dispatch via Native Mailer</span>
           </button>
 
           <div class="flex space-x-2">
-            <button type="button" onclick="closeComposer()" class="px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-            <button type="submit" class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm">
+            <button type="button" onclick="closeComposer()" class="px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
+            <button type="submit" class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm cursor-pointer">
               Save / Send
             </button>
           </div>
@@ -197,7 +204,7 @@
   <!-- PAIRING / ACCOUNT SETUP MODAL -->
   <div id="pairing-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
-      <button onclick="closePairingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      <button onclick="closePairingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
       
       <div class="text-center mb-5">
         <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
@@ -217,9 +224,9 @@
               placeholder="Input your name or desired username" 
               value="" 
               autocomplete="off" 
-              class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800" 
+              class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800 select-text cursor-text" 
             />
-            <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none">
+            <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none cursor-pointer">
               <option value="guerrillamailblock.com">@guerrillamailblock.com</option>
               <option value="sharklasers.com">@sharklasers.com</option>
               <option value="guerrillamail.com">@guerrillamail.com</option>
@@ -228,7 +235,7 @@
           </div>
         </div>
 
-        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
+        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm cursor-pointer">
           Pair Mailbox to This Device
         </button>
       </form>
@@ -252,7 +259,7 @@
     async function safeGet(url) {
       logMessage("NETWORK", `GET ${url.slice(0, 65)}...`);
       const ctrl1 = new AbortController();
-      const timer1 = setTimeout(() => ctrl1.abort(), 4000);
+      const timer1 = setTimeout(() => ctrl1.abort(), 4500);
       try {
         const res = await fetch(url, { signal: ctrl1.signal });
         clearTimeout(timer1);
@@ -261,7 +268,7 @@
           try {
             return JSON.parse(rawText);
           } catch (jsonErr) {
-            throw new Error("Invalid response format: " + rawText.slice(0, 60));
+            throw new Error("Invalid format: " + rawText.slice(0, 50));
           }
         }
       } catch (err) {
@@ -270,7 +277,7 @@
       }
 
       const ctrl2 = new AbortController();
-      const timer2 = setTimeout(() => ctrl2.abort(), 4000);
+      const timer2 = setTimeout(() => ctrl2.abort(), 4500);
       try {
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
         const resProxy = await fetch(proxyUrl, { signal: ctrl2.signal });
@@ -294,7 +301,7 @@
 
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const row = document.createElement("div");
-      row.className = "flex space-x-2 leading-relaxed";
+      row.className = "flex space-x-2 leading-relaxed select-text cursor-text";
 
       let color = "text-slate-400";
       if (level === "SUCCESS") color = "text-emerald-400";
@@ -306,8 +313,8 @@
       row.innerHTML = `
         <span class="text-slate-600 select-none">[${time}]</span>
         <span class="${color} font-bold select-none">[${level}]</span>
-        <span class="text-slate-200">${escapeHtml(text)}</span>
-        ${details ? `<span class="text-slate-500">(${escapeHtml(details)})</span>` : ""}
+        <span class="text-slate-200 select-text">${escapeHtml(text)}</span>
+        ${details ? `<span class="text-slate-500 select-text">(${escapeHtml(details)})</span>` : ""}
       `;
       container.appendChild(row);
       container.scrollTop = container.scrollHeight;
@@ -321,9 +328,9 @@
     }
     function switchDiagTab(tab) {
       document.getElementById("diag-panel-logs").classList.toggle("hidden", tab !== 'logs');
-      document.getElementById("diag-panel-outbound").classList.toggle("hidden", tab !== 'outbound');
-      document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
-      document.getElementById("tab-btn-outbound").className = tab === 'outbound' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+      document.getElementById("diag-panel-quota").classList.toggle("hidden", tab !== 'quota');
+      document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
+      document.getElementById("tab-btn-quota").className = tab === 'quota' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
     }
 
     // --- 3. AUTO-RECOVERY & INITIALIZATION ---
@@ -340,7 +347,7 @@
         localStorage.getItem("zm_profile")
       );
 
-      // Restore from existing IndexedDB emails if localStorage was cleared
+      // Auto-recover from existing IndexedDB emails
       if (!accountProfile) {
         try {
           const storedEmails = await getAllEmails();
@@ -370,7 +377,6 @@
         grantAccess();
       }
 
-      // Pre-fill stored API key if exists
       const savedKey = localStorage.getItem("zm_resend_key");
       if (savedKey && document.getElementById("compose-api-key")) {
         document.getElementById("compose-api-key").value = savedKey;
@@ -416,7 +422,7 @@
           document.getElementById("header-email").innerText = accountProfile.email;
         }
       } catch (err) {
-        logMessage("WARN", "Gateway re-connecting in background.");
+        logMessage("WARN", "Gateway will re-connect in background.");
       }
     }
 
@@ -428,7 +434,7 @@
       loadFolder("inbox");
       syncMailboxWithGateway(true);
 
-      setInterval(() => syncMailboxWithGateway(false), 12000);
+      setInterval(() => syncMailboxWithGateway(false), 14000);
     }
 
     // --- 5. THE OFFLINE RELAY ---
@@ -501,7 +507,14 @@
       document.getElementById("compose-body").value = `Diagnostic verification from ZeroMail.\nAddress: ${accountProfile ? accountProfile.email : 'local-user'}\nTime: ${new Date().toISOString()}`;
     }
 
-    // Launch native mailer on Mac/PC (Apple Mail / Gmail) to send real mail to Port25
+    // Direct test send to own ZeroMail account (Bypasses full external inboxes!)
+    function fillSelfLoopbackTest() {
+      if (!accountProfile) return;
+      document.getElementById("compose-to").value = accountProfile.email;
+      document.getElementById("compose-subject").value = "ZeroMail Inbound & Outbound Pipeline Test";
+      document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent directly through your ZeroMail local pipeline at ${new Date().toLocaleTimeString()}.\n\nAll messages exist safely on this computer's hard drive.`;
+    }
+
     function dispatchViaSystemMailer() {
       const to = document.getElementById("compose-to").value;
       const subject = encodeURIComponent(document.getElementById("compose-subject").value);
@@ -512,7 +525,7 @@
         return;
       }
 
-      logMessage("NETWORK", `Launching system mailer to dispatch to ${to}...`);
+      logMessage("NETWORK", `Launching native mailer to dispatch to ${to}...`);
       window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
     }
 
@@ -524,6 +537,25 @@
       const apiKey = document.getElementById("compose-api-key").value.trim();
 
       let deliveryStatus = "💾 Stored Locally on this PC";
+
+      // If user is sending to themselves, write directly into their Inbox!
+      if (accountProfile && to.toLowerCase() === accountProfile.email.toLowerCase()) {
+        await saveEmail({
+          remoteId: "self_" + Date.now(),
+          from: accountProfile.email,
+          to: to,
+          subject: subject,
+          body: body,
+          htmlBody: `<div style="font-family: sans-serif; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <h3 style="color: #166534; margin-top: 0;">✅ Direct Self-Send Received!</h3>
+            <p>${escapeHtml(body)}</p>
+            <p style="font-size: 11px; color: #15803d; margin-bottom: 0;">Verified delivered directly to local storage.</p>
+          </div>`,
+          folder: "inbox",
+          timestamp: new Date().toISOString()
+        });
+        logMessage("SUCCESS", `Direct self-test delivered to Inbox.`);
+      }
 
       // If an outbound API key is provided, transmit over the internet
       if (apiKey) {
@@ -546,7 +578,7 @@
 
           if (res.ok) {
             deliveryStatus = "🌐 Dispatched via Web Gateway";
-            logMessage("SUCCESS", `Email successfully transmitted across the internet to ${to}`);
+            logMessage("SUCCESS", `Email successfully transmitted across internet to ${to}`);
           } else {
             const err = await res.json();
             logMessage("ERROR", "Gateway error: " + (err.message || res.statusText));
@@ -554,8 +586,6 @@
         } catch (err) {
           logMessage("ERROR", "Dispatch failed: " + err.message);
         }
-      } else {
-        logMessage("STORAGE", `Saved to local Sent folder. (Note: No external API key was entered, so message was archived locally and not broadcasted over SMTP).`);
       }
 
       const mail = {
@@ -633,13 +663,13 @@
       const container = document.getElementById("email-list");
       container.innerHTML = "";
       if (emails.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Folder is empty on this device.</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 select-text">Folder is empty on this device.</div>`;
         return;
       }
       emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       emails.forEach((mail) => {
         const item = document.createElement("div");
-        item.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 ${activeEmailId === mail.id ? "bg-indigo-50/70 border-l-4 border-l-indigo-600" : ""}`;
+        item.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 select-text ${activeEmailId === mail.id ? "bg-indigo-50/70 border-l-4 border-l-indigo-600" : ""}`;
         item.onclick = () => viewEmail(mail);
         item.innerHTML = `
           <div class="flex justify-between items-baseline mb-1">
@@ -653,44 +683,73 @@
       });
     }
 
+    // Helper: extracts verification codes (e.g. 578784)
+    function extractVerificationCode(text) {
+      if (!text) return null;
+      const match = text.match(/\b([0-9]{4,8})\b/);
+      return match ? match[1] : null;
+    }
+
+    function copyCodeToClipboard(code) {
+      navigator.clipboard.writeText(code);
+      alert(`📋 Copied code "${code}" to clipboard!`);
+    }
+
     function viewEmail(mail) {
       activeEmail = mail;
       activeEmailId = mail.id;
       loadFolder(currentFolder);
 
       const statusBadge = mail.deliveryStatus 
-        ? `<span class="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md font-medium">${mail.deliveryStatus}</span>` 
+        ? `<span class="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md font-medium select-text">${mail.deliveryStatus}</span>` 
         : "";
+
+      // Check if email contains an authentication code (like Shopify's 578784)
+      const foundCode = extractVerificationCode((mail.subject || '') + " " + (mail.body || ''));
+      const codeBanner = foundCode ? `
+        <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="font-semibold text-indigo-950">Detected Verification Code:</span>
+            <span class="font-mono font-bold text-sm bg-white px-2.5 py-0.5 rounded border border-indigo-300 text-indigo-600 select-all cursor-pointer">${foundCode}</span>
+          </div>
+          <button onclick="copyCodeToClipboard('${foundCode}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1 rounded text-xs transition cursor-pointer">
+            📋 Copy Code
+          </button>
+        </div>
+      ` : "";
 
       const pane = document.getElementById("reading-pane");
       pane.innerHTML = `
-        <div class="border-b border-slate-200 p-4 sm:p-5 bg-white">
+        <div class="border-b border-slate-200 p-4 sm:p-5 bg-white select-text">
           <div class="flex items-start justify-between flex-wrap gap-2">
             <div>
               <div class="flex items-center space-x-2">
-                <h2 class="text-sm sm:text-base font-bold text-slate-900">${escapeHtml(mail.subject)}</h2>
+                <h2 class="text-sm sm:text-base font-bold text-slate-900 select-text">${escapeHtml(mail.subject)}</h2>
                 ${statusBadge}
               </div>
-              <div class="text-xs text-slate-500 mt-1">From: <strong class="text-slate-800">${escapeHtml(mail.from)}</strong> • To: <strong>${escapeHtml(mail.to)}</strong></div>
+              <div class="text-xs text-slate-500 mt-1 select-text">
+                From: <strong class="text-slate-800 select-text">${escapeHtml(mail.from)}</strong> • To: <strong class="text-slate-800 select-text">${escapeHtml(mail.to)}</strong>
+              </div>
             </div>
             <div class="flex items-center space-x-2">
               <div class="bg-slate-100 p-1 rounded-lg border border-slate-200 flex text-xs">
-                <button onclick="setViewMode('html')" id="btn-view-html" class="px-2 py-1 rounded font-semibold ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
-                <button onclick="setViewMode('text')" id="btn-view-text" class="px-2 py-1 rounded font-semibold ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
+                <button onclick="setViewMode('html')" id="btn-view-html" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
+                <button onclick="setViewMode('text')" id="btn-view-text" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
               </div>
-              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold">Delete</button>
+              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold cursor-pointer">Delete</button>
             </div>
           </div>
         </div>
-        <div id="email-content-wrapper" class="flex-1 overflow-hidden bg-slate-50 flex flex-col"></div>
+        ${codeBanner}
+        <div id="email-content-wrapper" class="flex-1 overflow-hidden bg-slate-50 flex flex-col select-text"></div>
       `;
       renderEmailContent();
     }
 
     function setViewMode(mode) {
       activeViewMode = mode;
-      document.getElementById("btn-view-html").className = `px-2 py-1 rounded font-semibold ${mode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
-      document.getElementById("btn-view-text").className = `px-2 py-1 rounded font-semibold ${mode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      document.getElementById("btn-view-html").className = `px-2 py-1 rounded font-semibold cursor-pointer ${mode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      document.getElementById("btn-view-text").className = `px-2 py-1 rounded font-semibold cursor-pointer ${mode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
       renderEmailContent();
     }
 
@@ -701,9 +760,9 @@
       if (activeViewMode === "html" && activeEmail.htmlBody) {
         wrapper.innerHTML = `<iframe id="sandboxed-frame" sandbox="allow-popups" class="w-full h-full border-0 bg-white"></iframe>`;
         const iframe = document.getElementById("sandboxed-frame");
-        iframe.srcdoc = `<!DOCTYPE html><html><head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b; } img { max-width: 100%; border-radius: 6px; }</style></head><body>${activeEmail.htmlBody}</body></html>`;
+        iframe.srcdoc = `<!DOCTYPE html><html><head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b; user-select: text !important; -webkit-user-select: text !important; } img { max-width: 100%; border-radius: 6px; }</style></head><body>${activeEmail.htmlBody}</body></html>`;
       } else {
-        wrapper.innerHTML = `<div class="p-6 flex-1 overflow-y-auto text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-mono bg-white">${escapeHtml(activeEmail.body)}</div>`;
+        wrapper.innerHTML = `<div class="p-6 flex-1 overflow-y-auto text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-mono bg-white select-text cursor-text">${escapeHtml(activeEmail.body)}</div>`;
       }
     }
 
