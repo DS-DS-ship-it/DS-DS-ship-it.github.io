@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZeroMail — Device-Paired Local Mailbox</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { user-select: text !important; -webkit-user-select: text !important; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .term-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased overflow-x-hidden">
+
+  <!-- TOP HEADER (RESPONSIVE & CLEAN) -->
+  <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
+    <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
+      <div class="min-w-0">
+        <div class="flex items-center space-x-1.5 flex-wrap">
+          <span id="header-email" class="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[170px] sm:max-w-[300px]">Detecting Local Vault...</span>
+          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+            ● Synced
+          </span>
+          <button onclick="openPairingModal()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium shrink-0 cursor-pointer">
+            Switch
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 truncate">Stored on this Computer • GitHub Pages Host</p>
+      </div>
+    </div>
+
+    <!-- Right: Responsive Toolbar -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <div class="bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-right shrink-0">
+        <span class="text-[9px] text-slate-400 uppercase font-semibold block leading-none">Disk</span>
+        <span id="storage-readout" class="font-bold text-xs text-indigo-600 leading-none">0 KB</span>
+      </div>
+
+      <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
+        <span>🔄</span> <span class="hidden sm:inline">Check</span>
+      </button>
+
+      <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
+        <span>🧹</span> <span class="hidden sm:inline">Clean</span>
+      </button>
+
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
+        <span>🩺</span> <span class="hidden sm:inline">Logs</span>
+      </button>
+
+      <button onclick="factoryReset()" title="Full reset" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg font-semibold transition shrink-0 shadow-sm cursor-pointer">
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP WORKSPACE -->
+  <div id="app-workspace" class="flex flex-1 overflow-hidden w-full">
+    <!-- Sidebar -->
+    <aside class="w-60 sm:w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-3 sm:p-4">
+      <div class="space-y-4">
+        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2 text-sm cursor-pointer">
+          <span>✏️ Compose</span>
+        </button>
+        <nav class="space-y-1 text-sm font-medium">
+          <button onclick="switchFolder('inbox')" id="btn-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold cursor-pointer">
+            <span>📥 Inbox</span>
+            <span id="badge-inbox" class="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">0</span>
+          </button>
+          <button onclick="switchFolder('sent')" id="btn-sent" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer">
+            <span>📤 Sent</span>
+            <span id="badge-sent" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
+        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Device Sync Engine</div>
+          <div class="text-emerald-700 text-[11px] font-semibold flex items-center space-x-1">
+            <span>🔒 All Data Stored on this PC</span>
+          </div>
+          <div class="text-[10px] text-slate-400" id="last-sync-time">Last sync: Pending...</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Email List -->
+    <section class="w-72 sm:w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+      <div class="p-3 border-b border-slate-200">
+        <input type="text" id="search-input" oninput="filterEmails()" placeholder="Search local emails..." class="w-full text-sm px-3 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-indigo-400 outline-none select-text cursor-text" />
+      </div>
+      <div id="email-list" class="flex-1 overflow-y-auto divide-y divide-slate-100"></div>
+    </section>
+
+    <!-- Reading Pane -->
+    <main class="flex-1 bg-white flex flex-col overflow-hidden" id="reading-pane">
+      <div class="flex-1 flex items-center justify-center text-slate-400 text-sm">
+        Select an email to view its content
+      </div>
+    </main>
+  </div>
+
+  <!-- FLOATING DIAGNOSTICS LAUNCHER -->
+  <button onclick="toggleDiagnostics()" class="fixed bottom-4 right-4 z-[99999] bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 px-3.5 py-2 rounded-xl shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold transition transform hover:scale-105 active:scale-95 cursor-pointer">
+    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    <span>🩺 Diagnostics & Logs</span>
+  </button>
+
+  <!-- DIAGNOSTICS DRAWER (Z-INDEX 100000) -->
+  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100000] transform translate-x-full transition-transform duration-300">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+      <div class="flex items-center space-x-2">
+        <span class="text-emerald-400 text-sm font-bold">●</span>
+        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Storage</h3>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition cursor-pointer">
+          Force Re-Sync
+        </button>
+        <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition cursor-pointer">
+          Clear
+        </button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2 font-bold cursor-pointer">&times;</button>
+      </div>
+    </div>
+
+    <!-- Diagnostic Tabs -->
+    <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
+      <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer">Live Network Logs</button>
+      <button onclick="switchDiagTab('quota')" id="tab-btn-quota" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Sending to Yahoo/Gmail</button>
+    </div>
+
+    <!-- TAB 1: Live Network Console -->
+    <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40 select-text cursor-text">
+      <div class="text-slate-500">// Real-time Gateway Re-Binding & Message Relaying:</div>
+      <div id="log-stream" class="space-y-1"></div>
+    </div>
+
+    <!-- TAB 2: Outbound Architecture -->
+    <div id="diag-panel-quota" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
+      <div class="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-indigo-200">
+        <h4 class="font-bold text-indigo-300 mb-1">📬 How Outbound Delivery to Yahoo Works:</h4>
+        <p>1. <strong>Direct Resend API Dispatch:</strong> By pasting a free Resend API key in the Compose box, ZeroMail sends an HTTP payload to Resend, which delivers the email directly to Yahoo's servers.<br>
+           2. <strong>Webmail Popup Option:</strong> If you don't have an API key, click <em>"Open in Yahoo/Gmail Webmail"</em>. It opens a clean popup with To, Subject, and Body ready to send, bypassing the macOS split-screen freeze.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= COMPOSE MODAL (GLITCH-FREE OUTBOUND ENGINE) ================= -->
+  <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+      <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <h3 class="font-bold text-slate-800 text-sm">Compose & Dispatch Message</h3>
+        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Quick Delivery Helper Buttons -->
+      <div class="p-3 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between flex-wrap gap-2 text-xs shrink-0">
+        <div class="font-bold text-indigo-900">Delivery Diagnostics:</div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button type="button" onclick="fillSelfLoopbackTest()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
+            🧪 Send to Myself
+          </button>
+          <button type="button" onclick="fillPort25Echo()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
+            Pre-fill Port25
+          </button>
+        </div>
+      </div>
+
+      <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col overflow-y-auto">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">To Recipient</label>
+          <input type="email" id="compose-to" required placeholder="recipient@yahoo.com" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Subject</label>
+          <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+        </div>
+
+        <div class="flex-1 flex flex-col min-h-[140px]">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Message Body</label>
+          <textarea id="compose-body" required placeholder="Write your message here..." rows="5" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1 select-text cursor-text"></textarea>
+        </div>
+
+        <!-- Optional Free Outbound Gateway Key -->
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-semibold text-slate-700">Direct Web Dispatch Key (Resend)</label>
+            <span class="text-[10px] text-slate-400">Optional (Sends directly to Yahoo)</span>
+          </div>
+          <input type="password" id="compose-api-key" placeholder="Paste Resend API Key (re_...) to send directly from browser" class="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded bg-white outline-none text-slate-700 select-text cursor-text" />
+        </div>
+
+        <!-- OUTBOUND ACTION BAR -->
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2 shrink-0">
+          <!-- Webmail Launchers (Bypasses Mac Split-Screen Freeze Completely) -->
+          <div class="flex items-center space-x-1.5">
+            <span class="text-[11px] text-slate-400 font-medium">Or Send Via:</span>
+            <button type="button" onclick="dispatchViaWebmail('yahoo')" class="text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer">
+              Yahoo Web
+            </button>
+            <button type="button" onclick="dispatchViaWebmail('gmail')" class="text-xs bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer">
+              Gmail Web
+            </button>
+          </div>
+
+          <div class="flex space-x-2">
+            <button type="button" onclick="closeComposer()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
+            <button type="submit" id="compose-send-btn" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition cursor-pointer">
+              🚀 Send Message
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PAIRING / ACCOUNT SETUP MODAL -->
+  <div id="pairing-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
+      <button onclick="closePairingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
+      
+      <div class="text-center mb-5">
+        <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
+        <h2 class="text-xl font-bold text-slate-900">Pair Address to This Device</h2>
+        <p class="text-xs text-slate-500 mt-1">Incoming emails will route to and store on this computer.</p>
+      </div>
+
+      <form onsubmit="handleDevicePairing(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Desired Address Handle</label>
+          <div class="flex items-center">
+            <input 
+              type="text" 
+              id="setup-username" 
+              required 
+              pattern="[a-zA-Z0-9_\.-]+" 
+              placeholder="Input your name or desired username" 
+              value="" 
+              autocomplete="off" 
+              class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800 select-text cursor-text" 
+            />
+            <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none cursor-pointer">
+              <option value="guerrillamailblock.com">@guerrillamailblock.com</option>
+              <option value="sharklasers.com">@sharklasers.com</option>
+              <option value="guerrillamail.com">@guerrillamail.com</option>
+              <option value="grr.la">@grr.la</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm cursor-pointer">
+          Pair Mailbox to This Device
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const DB_NAME = "ZeroMailClientDB";
+    const G_API = "https://api.guerrillamail.com/ajax.php";
+    let db;
+    let currentFolder = "inbox";
+    let activeEmail = null;
+    let activeEmailId = null;
+    let accountProfile = null;
+    let isSyncing = false;
+    let diagOpen = false;
+    let activeViewMode = "html";
+
+    // --- 1. RESILIENT FETCH ---
+    async function safeGet(url) {
+      logMessage("NETWORK", `GET ${url.slice(0, 65)}...`);
+      const ctrl1 = new AbortController();
+      const timer1 = setTimeout(() => ctrl1.abort(), 4500);
+      try {
+        const res = await fetch(url, { signal: ctrl1.signal });
+        clearTimeout(timer1);
+        if (res.ok) {
+          const rawText = await res.text();
+          try {
+            return JSON.parse(rawText);
+          } catch (jsonErr) {
+            throw new Error("Invalid format: " + rawText.slice(0, 50));
+          }
+        }
+      } catch (err) {
+        clearTimeout(timer1);
+        logMessage("WARN", `Direct link slow: ${err.message}. Trying backup proxy...`);
+      }
+
+      const ctrl2 = new AbortController();
+      const timer2 = setTimeout(() => ctrl2.abort(), 4500);
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const resProxy = await fetch(proxyUrl, { signal: ctrl2.signal });
+        clearTimeout(timer2);
+        if (resProxy.ok) {
+          const text = await resProxy.text();
+          return JSON.parse(text);
+        }
+      } catch (proxyErr) {
+        clearTimeout(timer2);
+        logMessage("ERROR", "Proxy fallback failed: " + proxyErr.message);
+      }
+
+      throw new Error("Mail gateway busy. Retrying automatically.");
+    }
+
+    // --- 2. LIVE DIAGNOSTIC LOGS ---
+    function logMessage(level, text, details = "") {
+      const container = document.getElementById("log-stream");
+      if (!container) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const row = document.createElement("div");
+      row.className = "flex space-x-2 leading-relaxed select-text cursor-text";
+
+      let color = "text-slate-400";
+      if (level === "SUCCESS") color = "text-emerald-400";
+      if (level === "WARN") color = "text-amber-400";
+      if (level === "ERROR") color = "text-red-400";
+      if (level === "NETWORK") color = "text-sky-400";
+      if (level === "STORAGE") color = "text-purple-400";
+
+      row.innerHTML = `
+        <span class="text-slate-600 select-none">[${time}]</span>
+        <span class="${color} font-bold select-none">[${level}]</span>
+        <span class="text-slate-200 select-text">${escapeHtml(text)}</span>
+        ${details ? `<span class="text-slate-500 select-text">(${escapeHtml(details)})</span>` : ""}
+      `;
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearLogs() { document.getElementById("log-stream").innerHTML = ""; }
+    function toggleDiagnostics() {
+      const modal = document.getElementById("diagnostics-modal");
+      diagOpen = !diagOpen;
+      modal.classList.toggle("translate-x-full", !diagOpen);
+    }
+    function switchDiagTab(tab) {
+      document.getElementById("diag-panel-logs").classList.toggle("hidden", tab !== 'logs');
+      document.getElementById("diag-panel-quota").classList.toggle("hidden", tab !== 'quota');
+      document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
+      document.getElementById("tab-btn-quota").className = tab === 'quota' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
+    }
+
+    // --- 3. AUTO-RECOVERY & INITIALIZATION ---
+    async function initApp() {
+      await initDB();
+      await updateStorageMeter();
+
+      accountProfile = JSON.parse(
+        localStorage.getItem("zm_paired_profile") ||
+        localStorage.getItem("zm_profile_g") ||
+        localStorage.getItem("zm_profile_live") ||
+        localStorage.getItem("zm_profile_v2") ||
+        localStorage.getItem("zm_profile_e2ee") ||
+        localStorage.getItem("zm_profile")
+      );
+
+      // Auto-recover from existing IndexedDB emails
+      if (!accountProfile) {
+        try {
+          const storedEmails = await getAllEmails();
+          if (storedEmails && storedEmails.length > 0) {
+            const sample = storedEmails.find(m => m.to && m.to.includes("@"));
+            if (sample) {
+              const parts = sample.to.split("@");
+              accountProfile = {
+                username: parts[0],
+                domain: parts[1],
+                email: sample.to,
+                sidToken: "",
+                pairedDate: new Date().toISOString()
+              };
+              saveProfileLocally(accountProfile);
+              logMessage("SUCCESS", `Auto-recovered identity from local disk: ${accountProfile.email}`);
+            }
+          }
+        } catch (dbErr) {
+          console.warn("Recovery notice:", dbErr);
+        }
+      }
+
+      if (!accountProfile) {
+        openPairingModal();
+      } else {
+        grantAccess();
+      }
+
+      const savedKey = localStorage.getItem("zm_resend_key");
+      if (savedKey && document.getElementById("compose-api-key")) {
+        document.getElementById("compose-api-key").value = savedKey;
+      }
+    }
+
+    function saveProfileLocally(profile) {
+      localStorage.setItem("zm_paired_profile", JSON.stringify(profile));
+    }
+    function openPairingModal() {
+      document.getElementById("setup-username").value = accountProfile ? accountProfile.username : "";
+      document.getElementById("pairing-modal").classList.remove("hidden");
+    }
+    function closePairingModal() { document.getElementById("pairing-modal").classList.add("hidden"); }
+
+    // --- 4. DEVICE PAIRING ---
+    async function handleDevicePairing(e) {
+      e.preventDefault();
+      const user = document.getElementById("setup-username").value.trim().toLowerCase().replace(/[^a-z0-9_\.-]/g, "");
+      const domain = document.getElementById("setup-domain").value;
+      const fullAddress = `${user}@${domain}`;
+
+      accountProfile = {
+        username: user,
+        domain: domain,
+        email: fullAddress,
+        sidToken: "",
+        pairedDate: new Date().toISOString()
+      };
+      saveProfileLocally(accountProfile);
+      logMessage("SUCCESS", `Paired locally to: ${accountProfile.email}`);
+
+      grantAccess();
+
+      try {
+        const session = await safeGet(`${G_API}?f=get_email_address`);
+        const sid = session.sid_token;
+        const bindData = await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&sid_token=${sid}`);
+        if (bindData && bindData.email_addr) {
+          accountProfile.email = bindData.email_addr;
+          accountProfile.sidToken = sid;
+          saveProfileLocally(accountProfile);
+          document.getElementById("header-email").innerText = accountProfile.email;
+        }
+      } catch (err) {
+        logMessage("WARN", "Gateway will re-connect in background.");
+      }
+    }
+
+    function grantAccess() {
+      closePairingModal();
+      document.getElementById("header-email").innerText = accountProfile.email;
+      document.getElementById("live-badge").classList.remove("hidden");
+
+      loadFolder("inbox");
+      syncMailboxWithGateway(true);
+
+      setInterval(() => syncMailboxWithGateway(false), 14000);
+    }
+
+    // --- 5. THE OFFLINE RELAY ---
+    async function syncMailboxWithGateway(manual = false) {
+      if (!accountProfile || isSyncing) return;
+      isSyncing = true;
+
+      const refreshBtn = document.getElementById("refresh-btn");
+      if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span>`;
+
+      try {
+        let sid = accountProfile.sidToken;
+        let listData = null;
+        if (sid) {
+          try {
+            listData = await safeGet(`${G_API}?f=get_email_list&offset=0&sid_token=${sid}`);
+          } catch (e) {
+            listData = null;
+          }
+        }
+
+        if (!listData || !listData.list) {
+          logMessage("WARN", "Session refreshing. Re-binding address handle...");
+          const freshSession = await safeGet(`${G_API}?f=get_email_address`);
+          sid = freshSession.sid_token;
+          await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(accountProfile.username)}&site=${encodeURIComponent(accountProfile.domain)}&sid_token=${sid}`);
+          accountProfile.sidToken = sid;
+          saveProfileLocally(accountProfile);
+
+          listData = await safeGet(`${G_API}?f=get_email_list&offset=0&sid_token=${sid}`);
+        }
+
+        const messages = listData.list || [];
+        logMessage("SUCCESS", `Relay found ${messages.length} email(s) waiting on server.`);
+
+        for (const msg of messages) {
+          const alreadySaved = await isEmailSavedLocally(msg.mail_id);
+          if (!alreadySaved) {
+            logMessage("NETWORK", `Downloading email #${msg.mail_id} from ${msg.mail_from}...`);
+            const detail = await safeGet(`${G_API}?f=fetch_email&email_id=${msg.mail_id}&sid_token=${sid}`);
+
+            await saveEmail({
+              remoteId: msg.mail_id,
+              from: detail.mail_from,
+              to: accountProfile.email,
+              subject: detail.mail_subject || "(No Subject)",
+              body: stripHtml(detail.mail_body || "(No message body)"),
+              htmlBody: detail.mail_body || "",
+              folder: "inbox",
+              timestamp: detail.mail_date || new Date().toISOString()
+            });
+
+            logMessage("SUCCESS", `Email #${msg.mail_id} stored locally on this computer.`);
+          }
+        }
+
+        document.getElementById("last-sync-time").innerText = `Last sync: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } catch (err) {
+        logMessage("WARN", "Sync update: " + err.message);
+      } finally {
+        isSyncing = false;
+        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span class="hidden sm:inline">Check</span>`;
+      }
+    }
+
+    // --- 6. GLITCH-FREE OUTBOUND ENGINE (NO SPLIT-SCREEN FREEZE) ---
+    function fillPort25Echo() {
+      document.getElementById("compose-to").value = "check-auth@verifier.port25.com";
+      document.getElementById("compose-subject").value = "Port25 Delivery Echo Test";
+      document.getElementById("compose-body").value = `Diagnostic verification from ZeroMail.\nAddress: ${accountProfile ? accountProfile.email : 'local-user'}\nTime: ${new Date().toISOString()}`;
+    }
+
+    function fillSelfLoopbackTest() {
+      if (!accountProfile) return;
+      document.getElementById("compose-to").value = accountProfile.email;
+      document.getElementById("compose-subject").value = "ZeroMail Inbound & Outbound Pipeline Test";
+      document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent directly through your ZeroMail local pipeline at ${new Date().toLocaleTimeString()}.\n\nAll messages exist safely on this computer's hard drive.`;
+    }
+
+    // Opens an independent, non-freezing popup window in Yahoo or Gmail
+    function dispatchViaWebmail(service) {
+      const to = encodeURIComponent(document.getElementById("compose-to").value.trim());
+      const subject = encodeURIComponent(document.getElementById("compose-subject").value.trim());
+      const body = encodeURIComponent(document.getElementById("compose-body").value.trim());
+
+      if (!to) {
+        alert("Please enter a recipient email address.");
+        return;
+      }
+
+      let url = "";
+      if (service === "yahoo") {
+        url = `https://compose.mail.yahoo.com/?to=${to}&subject=${subject}&body=${body}`;
+      } else if (service === "gmail") {
+        url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+      }
+
+      logMessage("NETWORK", `Launching ${service.toUpperCase()} webmail popup to deliver to ${decodeURIComponent(to)}...`);
+
+      // Independent popup window: never triggers macOS split-screen lock!
+      const popup = window.open(url, "_blank", "width=850,height=680,resizable=yes,scrollbars=yes");
+      if (!popup) {
+        // Fallback if browser popup blocker intervened
+        window.open(url, "_blank");
+      }
+    }
+
+    async function handleSendEmail(e) {
+      e.preventDefault();
+      const sendBtn = document.getElementById("compose-send-btn");
+      const to = document.getElementById("compose-to").value.trim();
+      const subject = document.getElementById("compose-subject").value.trim();
+      const body = document.getElementById("compose-body").value.trim();
+      const apiKey = document.getElementById("compose-api-key").value.trim();
+
+      let deliveryStatus = "💾 Stored Locally on this PC";
+
+      // 1. Direct Self-Send Loopback
+      if (accountProfile && to.toLowerCase() === accountProfile.email.toLowerCase()) {
+        await saveEmail({
+          remoteId: "self_" + Date.now(),
+          from: accountProfile.email,
+          to: to,
+          subject: subject,
+          body: body,
+          htmlBody: `<div style="font-family: sans-serif; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <h3 style="color: #166534; margin-top: 0;">✅ Direct Self-Send Received!</h3>
+            <p>${escapeHtml(body)}</p>
+            <p style="font-size: 11px; color: #15803d; margin-bottom: 0;">Verified delivered directly to local storage.</p>
+          </div>`,
+          folder: "inbox",
+          timestamp: new Date().toISOString()
+        });
+        logMessage("SUCCESS", `Direct self-test delivered to Inbox.`);
+      }
+
+      // 2. Direct Web API Dispatch (Resend API)
+      if (apiKey) {
+        sendBtn.innerText = "Transmitting...";
+        sendBtn.disabled = true;
+        localStorage.setItem("zm_resend_key", apiKey);
+        logMessage("NETWORK", `Transmitting email directly to ${to} via Resend...`);
+
+        try {
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              from: "ZeroMail <onboarding@resend.dev>",
+              to: [to],
+              subject: subject,
+              text: body
+            })
+          });
+
+          if (res.ok) {
+            deliveryStatus = "🌐 Dispatched via Web Gateway";
+            logMessage("SUCCESS", `Email successfully transmitted across the internet to ${to}!`);
+            alert(`✅ Success: Your email has been transmitted to ${to}!`);
+          } else {
+            const err = await res.json();
+            logMessage("ERROR", "Gateway error: " + (err.message || res.statusText));
+            alert("Gateway Notice: " + (err.message || res.statusText) + "\n\nTip: You can also click 'Yahoo Web' or 'Gmail Web' below to send instantly!");
+          }
+        } catch (err) {
+          logMessage("ERROR", "Dispatch failed: " + err.message);
+          alert("Network error transmitting email: " + err.message);
+        } finally {
+          sendBtn.innerText = "🚀 Send Message";
+          sendBtn.disabled = false;
+        }
+      } else if (to.toLowerCase() !== (accountProfile ? accountProfile.email.toLowerCase() : '')) {
+        // Inform user that no API key was provided so they know to use Webmail for Yahoo recipients
+        logMessage("STORAGE", `Saved to local Sent folder. (Tip: To transmit to external Yahoo recipients without an API key, click 'Yahoo Web' or 'Gmail Web').`);
+      }
+
+      const mail = {
+        to: to,
+        from: accountProfile ? accountProfile.email : "me@zeromail.local",
+        subject: subject,
+        body: body,
+        htmlBody: `<div>${escapeHtml(body)}</div>`,
+        folder: "sent",
+        deliveryStatus: deliveryStatus,
+        timestamp: new Date().toISOString()
+      };
+
+      await saveEmail(mail);
+      closeComposer();
+      switchFolder("sent");
+    }
+
+    // --- 7. LOCAL STORAGE (IndexedDB) ---
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 4);
+        req.onupgradeneeded = (e) => {
+          const dbInstance = e.target.result;
+          if (!dbInstance.objectStoreNames.contains("emails")) {
+            const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
+            store.createIndex("remoteId", "remoteId", { unique: false });
+            store.createIndex("folder", "folder", { unique: false });
+          }
+        };
+        req.onsuccess = (e) => { db = e.target.result; resolve(); };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    function isEmailSavedLocally(remoteId) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readonly");
+        const idx = tx.objectStore("emails").index("remoteId");
+        const req = idx.get(remoteId);
+        req.onsuccess = () => resolve(!!req.result);
+        req.onerror = () => resolve(false);
+      });
+    }
+
+    function saveEmail(email) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readwrite");
+        tx.objectStore("emails").add(email);
+        tx.oncomplete = () => {
+          updateStorageMeter();
+          loadFolder(currentFolder);
+          resolve();
+        };
+      });
+    }
+
+    function getAllEmails() {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readonly");
+        const req = tx.objectStore("emails").getAll();
+        req.onsuccess = () => resolve(req.result || []);
+      });
+    }
+
+    async function loadFolder(folder) {
+      currentFolder = folder;
+      const emails = await getAllEmails();
+      document.getElementById("badge-inbox").innerText = emails.filter((m) => m.folder === "inbox").length;
+      document.getElementById("badge-sent").innerText = emails.filter((m) => m.folder === "sent").length;
+      renderList(emails.filter((m) => m.folder === folder));
+    }
+
+    function renderList(emails) {
+      const container = document.getElementById("email-list");
+      container.innerHTML = "";
+      if (emails.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 select-text">Folder is empty on this device.</div>`;
+        return;
+      }
+      emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      emails.forEach((mail) => {
+        const item = document.createElement("div");
+        item.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 select-text ${activeEmailId === mail.id ? "bg-indigo-50/70 border-l-4 border-l-indigo-600" : ""}`;
+        item.onclick = () => viewEmail(mail);
+        item.innerHTML = `
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(mail.from || mail.to)}</span>
+            <span class="text-[10px] text-slate-400 shrink-0">${new Date(mail.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="font-medium text-xs text-slate-700 truncate mb-1">${escapeHtml(mail.subject)}</div>
+          <div class="text-[11px] text-slate-400 line-clamp-1">${escapeHtml(mail.body)}</div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function extractVerificationCode(text) {
+      if (!text) return null;
+      const match = text.match(/\b([0-9]{4,8})\b/);
+      return match ? match[1] : null;
+    }
+
+    function copyCodeToClipboard(code) {
+      navigator.clipboard.writeText(code);
+      alert(`📋 Copied code "${code}" to clipboard!`);
+    }
+
+    function viewEmail(mail) {
+      activeEmail = mail;
+      activeEmailId = mail.id;
+      loadFolder(currentFolder);
+
+      const statusBadge = mail.deliveryStatus 
+        ? `<span class="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md font-medium select-text">${mail.deliveryStatus}</span>` 
+        : "";
+
+      const foundCode = extractVerificationCode((mail.subject || '') + " " + (mail.body || ''));
+      const codeBanner = foundCode ? `
+        <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="font-semibold text-indigo-950">Detected Verification Code:</span>
+            <span class="font-mono font-bold text-sm bg-white px-2.5 py-0.5 rounded border border-indigo-300 text-indigo-600 select-all cursor-pointer">${foundCode}</span>
+          </div>
+          <button onclick="copyCodeToClipboard('${foundCode}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1 rounded text-xs transition cursor-pointer">
+            📋 Copy Code
+          </button>
+        </div>
+      ` : "";
+
+      const pane = document.getElementById("reading-pane");
+      pane.innerHTML = `
+        <div class="border-b border-slate-200 p-4 sm:p-5 bg-white select-text">
+          <div class="flex items-start justify-between flex-wrap gap-2">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-sm sm:text-base font-bold text-slate-900 select-text">${escapeHtml(mail.subject)}</h2>
+                ${statusBadge}
+              </div>
+              <div class="text-xs text-slate-500 mt-1 select-text">
+                From: <strong class="text-slate-800 select-text">${escapeHtml(mail.from)}</strong> • To: <strong class="text-slate-800 select-text">${escapeHtml(mail.to)}</strong>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <div class="bg-slate-100 p-1 rounded-lg border border-slate-200 flex text-xs">
+                <button onclick="setViewMode('html')" id="btn-view-html" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
+                <button onclick="setViewMode('text')" id="btn-view-text" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
+              </div>
+              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold cursor-pointer">Delete</button>
+            </div>
+          </div>
+        </div>
+        ${codeBanner}
+        <div id="email-content-wrapper" class="flex-1 overflow-hidden bg-slate-50 flex flex-col select-text"></div>
+      `;
+      renderEmailContent();
+    }
+
+    function setViewMode(mode) {
+      activeViewMode = mode;
+      document.getElementById("btn-view-html").className = `px-2 py-1 rounded font-semibold cursor-pointer ${mode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      document.getElementById("btn-view-text").className = `px-2 py-1 rounded font-semibold cursor-pointer ${mode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      renderEmailContent();
+    }
+
+    function renderEmailContent() {
+      const wrapper = document.getElementById("email-content-wrapper");
+      if (!wrapper || !activeEmail) return;
+
+      if (activeViewMode === "html" && activeEmail.htmlBody) {
+        wrapper.innerHTML = `<iframe id="sandboxed-frame" sandbox="allow-popups" class="w-full h-full border-0 bg-white"></iframe>`;
+        const iframe = document.getElementById("sandboxed-frame");
+        iframe.srcdoc = `<!DOCTYPE html><html><head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b; user-select: text !important; -webkit-user-select: text !important; } img { max-width: 100%; border-radius: 6px; }</style></head><body>${activeEmail.htmlBody}</body></html>`;
+      } else {
+        wrapper.innerHTML = `<div class="p-6 flex-1 overflow-y-auto text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-mono bg-white select-text cursor-text">${escapeHtml(activeEmail.body)}</div>`;
+      }
+    }
+
+    async function deleteEmail(localId, remoteId) {
+      const tx = db.transaction("emails", "readwrite");
+      tx.objectStore("emails").delete(localId);
+      tx.oncomplete = async () => {
+        logMessage("STORAGE", `Email deleted. Local computer regained storage space.`);
+        await updateStorageMeter();
+        loadFolder(currentFolder);
+        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted. Local disk space reclaimed.</div>`;
+      };
+
+      if (remoteId && accountProfile && accountProfile.sidToken) {
+        try {
+          safeGet(`${G_API}?f=del_email&email_ids[]=${remoteId}&sid_token=${accountProfile.sidToken}`);
+        } catch (e) {}
+      }
+    }
+
+    async function clearAllStoredEmails() {
+      if (!confirm("🧹 CLEAR STORAGE:\n\nDelete all downloaded emails to regain disk space on this computer?\n(Your address pairing remains saved).")) return;
+
+      const tx = db.transaction("emails", "readwrite");
+      tx.objectStore("emails").clear();
+      tx.oncomplete = async () => {
+        logMessage("STORAGE", "All stored emails cleared. Disk space restored to 0 KB.");
+        await updateStorageMeter();
+        loadFolder(currentFolder);
+        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Storage cleared. All disk space reclaimed.</div>`;
+      };
+    }
+
+    async function updateStorageMeter() {
+      if (navigator.storage && navigator.storage.estimate) {
+        const { usage } = await navigator.storage.estimate();
+        const kb = (usage / 1024).toFixed(1);
+        const mb = (usage / (1024 * 1024)).toFixed(2);
+        document.getElementById("storage-readout").innerText = usage > 1048576 ? `${mb} MB` : `${kb} KB`;
+      }
+    }
+
+    async function factoryReset() {
+      if (!confirm("⚠️ FACTORY RESET:\n\nThis will completely unpair this device and clear 100% of stored emails from your computer.")) return;
+      if (db) db.close();
+      indexedDB.deleteDatabase(DB_NAME);
+      localStorage.clear();
+      location.reload();
+    }
+
+    function openComposer() { document.getElementById("compose-modal").classList.remove("hidden"); }
+    function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
+    function switchFolder(f) { currentFolder = f; loadFolder(f); }
+    function escapeHtml(t) { const d = document.createElement("div"); d.innerText = t || ""; return d.innerHTML; }
+    function stripHtml(html) { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
