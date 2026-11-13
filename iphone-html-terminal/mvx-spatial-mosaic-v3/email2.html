@@ -43,7 +43,6 @@
         <span>🔄</span> <span>Check Mail</span>
       </button>
 
-      <!-- DIAGNOSTICS TOGGLE BUTTON -->
       <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shadow-sm">
         <span>🩺</span> <span>Diagnostics & Logs</span>
       </button>
@@ -99,7 +98,7 @@
     </main>
   </div>
 
-  <!-- ================= DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100) ================= -->
+  <!-- DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100) -->
   <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100] transform translate-x-full transition-transform duration-300">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
       <div class="flex items-center space-x-2">
@@ -153,7 +152,7 @@
     </div>
   </div>
 
-  <!-- ================= SETUP / SWITCH ACCOUNT MODAL ================= -->
+  <!-- SETUP / SWITCH ACCOUNT MODAL -->
   <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
       <button onclick="closeSetupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
@@ -289,29 +288,46 @@
       document.getElementById("tab-btn-shopify").className = tab === 'shopify' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
     }
 
-    // --- 2. CORS-SAFE FETCH (Simple GET, No Preflight) ---
+    // --- 2. BULLETPROOF FETCH ENGINE (Text First, Then Parse) ---
     async function safeGet(url) {
+      logMessage("NETWORK", `GET ${url.slice(0, 65)}...`);
+
+      // 1. Direct connection
       try {
-        logMessage("NETWORK", `GET ${url.slice(0, 60)}...`);
         const res = await fetch(url);
         if (res.ok) {
-          logMessage("SUCCESS", `200 OK from ${new URL(url).hostname}`);
-          return await res.json();
+          const rawText = await res.text();
+          try {
+            const data = JSON.parse(rawText);
+            logMessage("SUCCESS", `200 OK from ${new URL(url).hostname}`);
+            return data;
+          } catch (jsonErr) {
+            throw new Error("Server returned non-JSON text: " + rawText.slice(0, 70));
+          }
         }
       } catch (err) {
-        logMessage("WARN", "Direct GET failed, trying proxy relay...", err.message);
+        logMessage("WARN", `Direct link: ${err.message}. Trying backup proxy...`);
       }
 
-      // Proxy fallback if browser blocks
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      logMessage("NETWORK", `GET via Proxy...`);
-      const resProxy = await fetch(proxyUrl);
-      if (resProxy.ok) {
-        logMessage("SUCCESS", "Proxy relay responded 200 OK");
-        return await resProxy.json();
+      // 2. Backup proxy with 5-second abort timer
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const resProxy = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        if (resProxy.ok) {
+          const text = await resProxy.text();
+          const data = JSON.parse(text);
+          logMessage("SUCCESS", "Proxy relay responded 200 OK");
+          return data;
+        }
+      } catch (proxyErr) {
+        clearTimeout(timer);
+        logMessage("ERROR", "Backup proxy failed: " + proxyErr.message);
       }
 
-      throw new Error("Unable to connect to mail network.");
+      throw new Error("Unable to connect to mail network. Inspect live logs.");
     }
 
     // --- 3. APP INITIALIZATION ---
@@ -338,26 +354,26 @@
       document.getElementById("setup-modal").classList.add("hidden");
     }
 
-    // --- 4. ACCOUNT ACTIVATION (Simple GET Flow) ---
+    // --- 4. ACCOUNT ACTIVATION (Using Official set_email_user) ---
     async function handleAccountSetup(e) {
       e.preventDefault();
       const btn = document.getElementById("setup-submit-btn");
       btn.disabled = true;
-      btn.innerText = "Connecting to live servers...";
+      btn.innerText = "Activating live mailbox...";
       document.getElementById("setup-error-card").classList.add("hidden");
 
       const user = document.getElementById("setup-username").value.trim().toLowerCase().replace(/[^a-z0-9_\.-]/g, "");
       const domain = document.getElementById("setup-domain").value;
 
       try {
-        // Step 1: Initialize session (Simple GET)
-        logMessage("NETWORK", "Initializing mail session on Guerrilla Gateway...");
+        // Step 1: Initialize session on Guerrilla Gateway
+        logMessage("NETWORK", "Initializing session on Guerrilla Gateway...");
         const sessionData = await safeGet(`${G_API}?f=get_email_address`);
         const sid = sessionData.sid_token;
 
-        // Step 2: Set user & domain (Simple GET)
-        logMessage("NETWORK", `Assigning handle: ${user}@${domain}...`);
-        const assignData = await safeGet(`${G_API}?f=set_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&sid_token=${sid}`);
+        // Step 2: Set user & domain using official Guerrilla Mail API method: set_email_user
+        logMessage("NETWORK", `Binding handle: ${user}@${domain}...`);
+        const assignData = await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&domain=${encodeURIComponent(domain)}&sid_token=${sid}`);
 
         accountProfile = {
           username: user,
@@ -368,12 +384,12 @@
         };
 
         localStorage.setItem("zm_profile_g", JSON.stringify(accountProfile));
-        logMessage("SUCCESS", `Address activated: ${accountProfile.email}`);
+        logMessage("SUCCESS", `Mailbox active: ${accountProfile.email}`);
         grantAccess();
       } catch (err) {
         logMessage("ERROR", "Setup Error: " + err.message);
         document.getElementById("setup-error-card").classList.remove("hidden");
-        document.getElementById("setup-error-msg").innerText = err.message + ". Check Diagnostics for details.";
+        document.getElementById("setup-error-msg").innerText = err.message;
       } finally {
         btn.disabled = false;
         btn.innerText = "Activate Live Mailbox";
@@ -386,9 +402,12 @@
       document.getElementById("live-badge").classList.remove("hidden");
       document.getElementById("gateway-detail").innerText = `Monitoring @${accountProfile.domain}`;
 
+      logMessage("INFO", "Active session for: " + accountProfile.email);
+
       loadFolder("inbox");
       checkIncomingMail();
 
+      // Poll every 10 seconds
       setInterval(() => checkIncomingMail(false), 10000);
     }
 
@@ -428,7 +447,7 @@
               timestamp: detail.mail_date || new Date().toISOString()
             });
 
-            logMessage("SUCCESS", `Email saved to local disk. Storage updated.`);
+            logMessage("SUCCESS", `Email saved to local IndexedDB. Storage updated.`);
           }
         }
       } catch (err) {
@@ -447,7 +466,7 @@
 
       let output = "";
 
-      // 1. Local Database
+      // 1. Local Database Check
       try {
         const tx = db.transaction("emails", "readonly");
         output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Local Storage (IndexedDB):</strong> Operational (Writing directly to your hard drive)</div>`;
@@ -455,7 +474,7 @@
         output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>IndexedDB:</strong> Failed: ${err.message}</div>`;
       }
 
-      // 2. Gateway Reachability
+      // 2. Gateway Reachability Check
       try {
         const t0 = performance.now();
         const res = await safeGet(`${G_API}?f=get_email_address`);
