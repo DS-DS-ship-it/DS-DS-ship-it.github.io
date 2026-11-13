@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZeroMail — Live Inbox & Local Storage</title>
+  <title>ZeroMail — Real Inbound Mail Client</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   </style>
 </head>
@@ -18,23 +19,23 @@
       <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
       <div>
         <div class="flex items-center space-x-2">
-          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">Connecting to live inbox...</span>
+          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">No Account Configured</span>
           <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-            ● Live Inbound Active
+            ● Inbound Gateway Active
           </span>
         </div>
-        <p class="text-xs text-slate-500" id="header-network">Host: GitHub Pages • Storage: Your Local PC</p>
+        <p class="text-xs text-slate-500" id="sync-status">Host: GitHub Pages • Storage: Your Local PC</p>
       </div>
     </div>
 
-    <!-- Storage Monitor & Factory Reset -->
+    <!-- Storage Monitor, Refresh & Reset -->
     <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
       <div class="text-xs text-right">
         <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
-        <div class="text-slate-400 text-[10px]">Stored on this PC</div>
+        <div class="text-slate-400 text-[10px]">IndexedDB on this PC</div>
       </div>
-      <button onclick="checkIncomingMail()" class="text-xs bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2.5 py-1.5 rounded-lg font-medium transition">
-        🔄 Refresh Mail
+      <button onclick="checkIncomingMail(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
+        <span>🔄</span> <span>Check Mail</span>
       </button>
       <button onclick="factoryReset()" title="Wipe storage and return to brand-new" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
         Reset to Like New
@@ -63,9 +64,10 @@
       </div>
 
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
-        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-          <div class="text-[10px] text-slate-400 font-semibold uppercase">Auto-Sync</div>
-          <div class="text-slate-600 text-[11px] mt-0.5">Polling every 15s for incoming mail.</div>
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Status</div>
+          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Auto-polling every 10 seconds</div>
+          <div class="text-[10px] text-slate-400" id="last-checked">Last check: Just now</div>
         </div>
       </div>
     </aside>
@@ -86,31 +88,44 @@
     </main>
   </div>
 
-  <!-- SETUP MODAL (Choose Handle) -->
+  <!-- SETUP MODAL (Blank input, No registration failure) -->
   <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200">
       <div class="text-center mb-5">
         <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
-        <h2 class="text-xl font-bold text-slate-900">Activate Your Live Mailbox</h2>
-        <p class="text-xs text-slate-500 mt-1">Pick your username. Your real address will be assigned immediately.</p>
+        <h2 class="text-xl font-bold text-slate-900">Activate Your Inbound Mailbox</h2>
+        <p class="text-xs text-slate-500 mt-1">Pick any address name. It will be ready to receive mail instantly.</p>
       </div>
 
       <form onsubmit="handleAccountSetup(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Desired Username</label>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Choose Address Name</label>
           <div class="flex items-center">
-            <input type="text" id="setup-username" required placeholder="Name" class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500" />
-            <span id="setup-domain-label" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-500 text-xs px-3 py-2.5 rounded-r-lg font-medium">@loading...</span>
+            <input 
+              type="text" 
+              id="setup-username" 
+              required 
+              pattern="[a-zA-Z0-9_\.-]+" 
+              placeholder="Input your name or desired username" 
+              value="" 
+              autocomplete="off" 
+              class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800" 
+            />
+            <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none">
+              <option value="1secmail.com">@1secmail.com</option>
+              <option value="1secmail.net">@1secmail.net</option>
+              <option value="1secmail.org">@1secmail.org</option>
+            </select>
           </div>
+          <p class="text-[10px] text-slate-400 mt-1">Only letters, numbers, dots, and hyphens (no spaces).</p>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Master Password / PIN</label>
-          <input type="password" id="setup-password" required minlength="6" placeholder="Choose a password (min 6 chars)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+        <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-indigo-800 text-[11px] leading-relaxed">
+          <strong>Instant Inbound:</strong> No external signup or passwords required. Once activated, emails sent from Gmail or personal inboxes will show up here directly.
         </div>
 
-        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm">
-          Activate Live Inbound Mailbox
+        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
+          Activate Mailbox
         </button>
       </form>
     </div>
@@ -135,133 +150,139 @@
     </div>
   </div>
 
-  <!-- SCRIPT -->
+  <!-- CLIENT JAVASCRIPT -->
   <script>
-    const DB_NAME = "ZeroMailLiveDB";
+    const DB_NAME = "ZeroMailClientDB";
     let db;
     let currentFolder = "inbox";
     let activeEmailId = null;
-    let liveDomain = "";
     let accountProfile = null;
+    let isCheckingMail = false;
 
-    // --- 1. INITIALIZE & FETCH AVAILABLE LIVE DOMAINS ---
+    // --- 1. RESILIENT FETCH ENGINE WITH FAILOVER ---
+    async function safeFetchJSON(targetUrl) {
+      // Level 1: Direct fetch
+      try {
+        const res = await fetch(targetUrl);
+        if (res.ok) return await res.json();
+      } catch (err) {
+        console.warn("Direct fetch blocked or failed. Trying Fallback 1...", err);
+      }
+
+      // Level 2: AllOrigins proxy fallback
+      try {
+        const proxyUrl1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+        const res1 = await fetch(proxyUrl1);
+        if (res1.ok) return await res1.json();
+      } catch (err) {
+        console.warn("Fallback 1 failed. Trying Fallback 2...", err);
+      }
+
+      // Level 3: CorsProxy.io fallback
+      try {
+        const proxyUrl2 = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+        const res2 = await fetch(proxyUrl2);
+        if (res2.ok) return await res2.json();
+      } catch (err) {
+        console.error("All CORS gateways failed:", err);
+      }
+
+      throw new Error("Unable to reach the mail gateway. Please check your internet connection.");
+    }
+
+    // --- 2. INITIALIZATION ---
     async function initApp() {
       await initDB();
       await updateStorageMeter();
 
-      accountProfile = JSON.parse(localStorage.getItem("zm_live_profile"));
+      accountProfile = JSON.parse(localStorage.getItem("zm_profile_v2"));
 
       if (!accountProfile) {
-        // Fetch real active domain from Mail.tm gateway
-        try {
-          const res = await fetch("https://api.mail.tm/domains");
-          const data = await res.json();
-          liveDomain = data["hydra:member"][0].domain;
-          document.getElementById("setup-domain-label").innerText = `@${liveDomain}`;
-        } catch (e) {
-          liveDomain = "mailtm.net";
-          document.getElementById("setup-domain-label").innerText = `@${liveDomain}`;
-        }
+        // Show setup modal with clean blank text box
+        document.getElementById("setup-username").value = "";
         document.getElementById("setup-modal").classList.remove("hidden");
       } else {
         grantAccess();
       }
     }
 
-    // --- 2. CREATE LIVE INBOUND MAILBOX ---
-    async function handleAccountSetup(e) {
+    // --- 3. ACCOUNT ACTIVATION ---
+    function handleAccountSetup(e) {
       e.preventDefault();
-      const btn = document.getElementById("setup-submit-btn");
-      btn.innerText = "Registering on live mail gateway...";
-      btn.disabled = true;
-
       const user = document.getElementById("setup-username").value.trim().toLowerCase();
-      const pass = document.getElementById("setup-password").value;
-      const fullAddress = `${user}@${liveDomain}`;
+      const domain = document.getElementById("setup-domain").value;
+      const fullAddress = `${user}@${domain}`;
 
-      try {
-        // 1. Create the mailbox on the live internet relay
-        const regRes = await fetch("https://api.mail.tm/accounts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: fullAddress, password: pass })
-        });
+      accountProfile = {
+        username: user,
+        domain: domain,
+        email: fullAddress,
+        createdDate: new Date().toISOString()
+      };
 
-        // 2. Obtain the bearer token for receiving mail
-        const tokenRes = await fetch("https://api.mail.tm/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: fullAddress, password: pass })
-        });
-        const tokenData = await tokenRes.json();
-
-        accountProfile = {
-          email: fullAddress,
-          token: tokenData.token,
-          password: pass
-        };
-
-        localStorage.setItem("zm_live_profile", JSON.stringify(accountProfile));
-        grantAccess();
-      } catch (err) {
-        alert("Error registering address: " + err.message);
-        btn.innerText = "Activate Live Inbound Mailbox";
-        btn.disabled = false;
-      }
+      localStorage.setItem("zm_profile_v2", JSON.stringify(accountProfile));
+      grantAccess();
     }
 
     function grantAccess() {
       document.getElementById("setup-modal").classList.add("hidden");
       document.getElementById("app-workspace").classList.remove("hidden");
+      
+      // Update header with chosen address
       document.getElementById("header-email").innerText = accountProfile.email;
       document.getElementById("live-badge").classList.remove("hidden");
+      document.getElementById("gateway-detail").innerText = `Monitoring @${accountProfile.domain}`;
 
       loadFolder("inbox");
       checkIncomingMail();
 
-      // Poll for new incoming mail every 15 seconds
-      setInterval(checkIncomingMail, 15000);
+      // Background auto-refresh every 10 seconds
+      setInterval(() => checkIncomingMail(false), 10000);
     }
 
-    // --- 3. FETCH REAL EMAILS FROM THE INTERNET ---
-    async function checkIncomingMail() {
-      if (!accountProfile || !accountProfile.token) return;
+    // --- 4. CHECK & DOWNLOAD REAL EMAILS ---
+    async function checkIncomingMail(manual = false) {
+      if (!accountProfile || isCheckingMail) return;
+      isCheckingMail = true;
+
+      const refreshBtn = document.getElementById("refresh-btn");
+      if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span> <span>Checking...</span>`;
 
       try {
-        const res = await fetch("https://api.mail.tm/messages", {
-          headers: { Authorization: `Bearer ${accountProfile.token}` }
-        });
-        const data = await res.json();
-        const incomingList = data["hydra:member"] || [];
+        const listUrl = `https://www.1secmail.com/api/v1/?action=getMessages&login=${encodeURIComponent(accountProfile.username)}&domain=${accountProfile.domain}`;
+        const messages = await safeFetchJSON(listUrl);
 
-        for (const item of incomingList) {
-          // Check if already saved on your local computer
-          const exists = await isEmailSavedLocally(item.id);
-          if (!exists) {
-            // Fetch the full message content
-            const detailRes = await fetch(`https://api.mail.tm/messages/${item.id}`, {
-              headers: { Authorization: `Bearer ${accountProfile.token}` }
-            });
-            const detail = await detailRes.json();
+        document.getElementById("last-checked").innerText = `Last check: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 
-            // Save directly into your local machine's disk
-            await saveEmail({
-              remoteId: item.id,
-              from: detail.from.address,
-              to: accountProfile.email,
-              subject: detail.subject || "(No Subject)",
-              body: detail.text || detail.intro || "(Empty message body)",
-              folder: "inbox",
-              timestamp: detail.createdAt
-            });
+        if (Array.isArray(messages)) {
+          for (const msg of messages) {
+            const alreadyExists = await isEmailSavedLocally(msg.id);
+            if (!alreadyExists) {
+              // Fetch full content
+              const detailUrl = `https://www.1secmail.com/api/v1/?action=readMessage&login=${encodeURIComponent(accountProfile.username)}&domain=${accountProfile.domain}&id=${msg.id}`;
+              const detail = await safeFetchJSON(detailUrl);
+
+              await saveEmail({
+                remoteId: msg.id,
+                from: detail.from,
+                to: accountProfile.email,
+                subject: detail.subject || "(No Subject)",
+                body: detail.textBody || detail.body || "(No message content)",
+                folder: "inbox",
+                timestamp: detail.date || new Date().toISOString()
+              });
+            }
           }
         }
       } catch (err) {
-        console.warn("Could not check incoming mail:", err);
+        console.warn("Mail check error:", err.message);
+      } finally {
+        isCheckingMail = false;
+        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span>Check Mail</span>`;
       }
     }
 
-    // --- 4. LOCAL DATABASE (IndexedDB) ---
+    // --- 5. LOCAL STORAGE ENGINE (IndexedDB) ---
     function initDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 1);
@@ -320,7 +341,7 @@
       const container = document.getElementById("email-list");
       container.innerHTML = "";
       if (emails.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No emails here yet.<br>Send an email to your address to test!</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Folder is empty.<br>Incoming emails will automatically appear here.</div>`;
         return;
       }
       emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -352,12 +373,39 @@
               <h2 class="text-lg font-bold text-slate-900">${escapeHtml(mail.subject)}</h2>
               <div class="text-xs text-slate-500 mt-1">From: <strong>${escapeHtml(mail.from)}</strong> • To: <strong>${escapeHtml(mail.to)}</strong></div>
             </div>
+            <button onclick="deleteEmail(${mail.id})" class="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
           </div>
         </div>
-        <div class="p-6 flex-1 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${escapeHtml(mail.body)}</div>
+        <div class="p-6 flex-1 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-mono">${escapeHtml(mail.body)}</div>
       `;
     }
 
+    function deleteEmail(id) {
+      const tx = db.transaction("emails", "readwrite");
+      tx.objectStore("emails").delete(id);
+      tx.oncomplete = () => {
+        updateStorageMeter();
+        loadFolder(currentFolder);
+        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted.</div>`;
+      };
+    }
+
+    async function handleSendEmail(e) {
+      e.preventDefault();
+      const mail = {
+        to: document.getElementById("compose-to").value,
+        from: accountProfile.email,
+        subject: document.getElementById("compose-subject").value,
+        body: document.getElementById("compose-body").value,
+        folder: "sent",
+        timestamp: new Date().toISOString()
+      };
+      await saveEmail(mail);
+      closeComposer();
+      switchFolder("sent");
+    }
+
+    // --- 6. REAL-TIME STORAGE & FACTORY RESET ---
     async function updateStorageMeter() {
       if (navigator.storage && navigator.storage.estimate) {
         const { usage } = await navigator.storage.estimate();
@@ -368,17 +416,30 @@
     }
 
     async function factoryReset() {
-      if (!confirm("⚠️ Reset to brand new? This deletes all local messages from your computer.")) return;
+      const confirmed = confirm(
+        "⚠️ FACTORY RESET:\n\n" +
+        "This will permanently clear all downloaded emails from your computer and restore storage to 0 bytes used.\n\n" +
+        "Do you want to reset?"
+      );
+      if (!confirmed) return;
+
       if (db) db.close();
       indexedDB.deleteDatabase(DB_NAME);
       localStorage.clear();
+      alert("✨ Cleaned! Your email program is back to brand-new condition.");
       location.reload();
     }
 
+    // --- 7. UI CONTROLS ---
     function openComposer() { document.getElementById("compose-modal").classList.remove("hidden"); }
     function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
     function switchFolder(folder) {
-      currentFolder = folder;
+      document.getElementById("btn-inbox").className = folder === 'inbox' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
+      document.getElementById("btn-sent").className = folder === 'sent' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
       loadFolder(folder);
     }
     function escapeHtml(t) {
