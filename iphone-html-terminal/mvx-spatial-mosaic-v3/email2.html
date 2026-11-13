@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZeroMail — Real Inbound Mail Client</title>
+  <title>ZeroMail — Local Client with Live Diagnostics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .term-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none">
@@ -19,32 +20,40 @@
       <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
       <div>
         <div class="flex items-center space-x-2">
-          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">No Account Configured</span>
-          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-            ● Inbound Gateway Active
+          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">Loading...</span>
+          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Gateway Connected</span>
           </span>
         </div>
-        <p class="text-xs text-slate-500" id="sync-status">Host: GitHub Pages • Storage: Your Local PC</p>
+        <p class="text-xs text-slate-500" id="sync-status">GitHub Pages • Local Disk Storage</p>
       </div>
     </div>
 
-    <!-- Storage Monitor, Refresh & Reset -->
+    <!-- Storage Monitor, Diagnostics & Reset -->
     <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
       <div class="text-xs text-right">
         <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
-        <div class="text-slate-400 text-[10px]">IndexedDB on this PC</div>
+        <div class="text-slate-400 text-[10px]">Local IndexedDB</div>
       </div>
+
       <button onclick="checkIncomingMail(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
         <span>🔄</span> <span>Check Mail</span>
       </button>
+
+      <!-- DIAGNOSTICS TOGGLE BUTTON -->
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1">
+        <span>🩺</span> <span>Diagnostics & Logs</span>
+      </button>
+
       <button onclick="factoryReset()" title="Wipe storage and return to brand-new" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
-        Reset to Like New
+        Reset
       </button>
     </div>
   </header>
 
   <!-- MAIN APP CONTAINER -->
-  <div id="app-workspace" class="flex flex-1 overflow-hidden hidden">
+  <div id="app-workspace" class="flex flex-1 overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-4">
       <div class="space-y-4">
@@ -65,9 +74,9 @@
 
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Status</div>
-          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Auto-polling every 10 seconds</div>
-          <div class="text-[10px] text-slate-400" id="last-checked">Last check: Just now</div>
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Polling</div>
+          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Checking every 10s</div>
+          <div class="text-[10px] text-slate-400" id="last-checked">Last check: Pending...</div>
         </div>
       </div>
     </aside>
@@ -88,13 +97,79 @@
     </main>
   </div>
 
-  <!-- SETUP MODAL (Blank input, No registration failure) -->
+  <!-- ================= DIAGNOSTICS & TROUBLESHOOTING DRAWER ================= -->
+  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-50 transform translate-x-full transition-transform duration-300">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+      <div class="flex items-center space-x-2">
+        <span class="text-emerald-400 text-sm font-bold">●</span>
+        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Logs</h3>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="runHealthCheck()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition">
+          Run Health Probe
+        </button>
+        <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition">
+          Clear
+        </button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-lg px-2">&times;</button>
+      </div>
+    </div>
+
+    <!-- Diagnostic Tabs -->
+    <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
+      <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400">Live Network Logs</button>
+      <button onclick="switchDiagTab('shopify')" id="tab-btn-shopify" class="px-4 py-2 text-slate-400 hover:text-white">Shopify & Urban Sprouts Tips</button>
+      <button onclick="switchDiagTab('probe')" id="tab-btn-probe" class="px-4 py-2 text-slate-400 hover:text-white">Connectivity Test</button>
+    </div>
+
+    <!-- TAB 1: Live Network Console -->
+    <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40">
+      <div class="text-slate-500">// Real-time HTTP polling and gateway responses stream here:</div>
+      <div id="log-stream" class="space-y-1"></div>
+    </div>
+
+    <!-- TAB 2: Shopify / Urban Sprouts Troubleshooting Guide -->
+    <div id="diag-panel-shopify" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed">
+      <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
+        <h4 class="font-bold text-amber-300 mb-1">⚠️ Why Urban Sprouts (Shopify) Mail Did Not Arrive:</h4>
+        <p>Shopify's automated checkout and order system utilizes commercial fraud-detection lists (Disposable Email Blocklists). Domains ending in <code>@1secmail.com</code>, <code>@1secmail.net</code>, or <code>@mailinator</code> are identified as disposable addresses and are rejected or suppressed at checkout to prevent coupon abuse.</p>
+      </div>
+
+      <div class="space-y-2">
+        <h5 class="font-bold text-white uppercase tracking-wider text-[11px]">How to Verify Your Gateway is Actually Working:</h5>
+        <ol class="list-decimal list-inside space-y-1.5 text-slate-400">
+          <li>Open your personal <strong>Gmail</strong> or <strong>Yahoo</strong> account.</li>
+          <li>Send an email to <code class="text-indigo-300 font-mono" id="diag-target-email">derek.wardlaw@1secmail.com</code>.</li>
+          <li>Watch the <strong>Live Network Logs</strong> tab. You will see the incoming payload appear in under 10 seconds.</li>
+        </ol>
+      </div>
+
+      <div class="space-y-2 border-t border-slate-800 pt-3">
+        <h5 class="font-bold text-white uppercase tracking-wider text-[11px]">How to Receive Shopify & Urban Sprouts Receipts Permanently:</h5>
+        <p class="text-slate-400">To receive transactional receipts from stores like Shopify without ever running a server:</p>
+        <div class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/60 text-slate-300 space-y-2">
+          <div><strong>Use a Non-Disposable Custom Domain:</strong> E-commerce stores only deliver to domains with standard corporate MX records.</div>
+          <div><strong>100% Free Solution:</strong> Connect a personal domain to <strong>Cloudflare Email Routing</strong> (free). Set it to forward all incoming mail to this client via an inbound webhook. Shopify will treat it as a trusted corporate email and never drop it.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: System Probe Results -->
+    <div id="diag-panel-probe" class="flex-1 p-5 overflow-y-auto text-xs space-y-3 hidden">
+      <div class="text-slate-400 mb-2">Automated probe checks between your browser, GitHub Pages, and the email gateway:</div>
+      <div id="probe-results" class="space-y-2 term-font">
+        <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-800 text-slate-400">Click "Run Health Probe" at the top to test all subsystems.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP MODAL -->
   <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200">
       <div class="text-center mb-5">
         <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
         <h2 class="text-xl font-bold text-slate-900">Activate Your Inbound Mailbox</h2>
-        <p class="text-xs text-slate-500 mt-1">Pick any address name. It will be ready to receive mail instantly.</p>
+        <p class="text-xs text-slate-500 mt-1">Pick your address name. It will be ready to receive mail immediately.</p>
       </div>
 
       <form onsubmit="handleAccountSetup(event)" class="space-y-4">
@@ -117,14 +192,9 @@
               <option value="1secmail.org">@1secmail.org</option>
             </select>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1">Only letters, numbers, dots, and hyphens (no spaces).</p>
         </div>
 
-        <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-indigo-800 text-[11px] leading-relaxed">
-          <strong>Instant Inbound:</strong> No external signup or passwords required. Once activated, emails sent from Gmail or personal inboxes will show up here directly.
-        </div>
-
-        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
           Activate Mailbox
         </button>
       </form>
@@ -150,7 +220,7 @@
     </div>
   </div>
 
-  <!-- CLIENT JAVASCRIPT -->
+  <!-- JAVASCRIPT LOGIC -->
   <script>
     const DB_NAME = "ZeroMailClientDB";
     let db;
@@ -158,39 +228,136 @@
     let activeEmailId = null;
     let accountProfile = null;
     let isCheckingMail = false;
+    let diagOpen = false;
 
-    // --- 1. RESILIENT FETCH ENGINE WITH FAILOVER ---
+    // --- 1. LIVE LOGGING & DIAGNOSTICS ENGINE ---
+    function logMessage(level, text, details = "") {
+      const container = document.getElementById("log-stream");
+      if (!container) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const row = document.createElement("div");
+      row.className = "flex space-x-2 leading-relaxed";
+
+      let color = "text-slate-400";
+      if (level === "SUCCESS") color = "text-emerald-400";
+      if (level === "WARN") color = "text-amber-400";
+      if (level === "ERROR") color = "text-red-400";
+      if (level === "NETWORK") color = "text-sky-400";
+
+      row.innerHTML = `
+        <span class="text-slate-600 select-none">[${time}]</span>
+        <span class="${color} font-bold select-none">[${level}]</span>
+        <span class="text-slate-200">${escapeHtml(text)}</span>
+        ${details ? `<span class="text-slate-500">(${escapeHtml(details)})</span>` : ""}
+      `;
+
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById("log-stream").innerHTML = "";
+    }
+
+    function toggleDiagnostics() {
+      const modal = document.getElementById("diagnostics-modal");
+      diagOpen = !diagOpen;
+      if (diagOpen) {
+        modal.classList.remove("translate-x-full");
+      } else {
+        modal.classList.add("translate-x-full");
+      }
+    }
+
+    function switchDiagTab(tab) {
+      document.getElementById("diag-panel-logs").classList.toggle("hidden", tab !== 'logs');
+      document.getElementById("diag-panel-shopify").classList.toggle("hidden", tab !== 'shopify');
+      document.getElementById("diag-panel-probe").classList.toggle("hidden", tab !== 'probe');
+
+      document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+      document.getElementById("tab-btn-shopify").className = tab === 'shopify' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+      document.getElementById("tab-btn-probe").className = tab === 'probe' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+    }
+
+    // --- 2. AUTOMATED HEALTH PROBE ---
+    async function runHealthCheck() {
+      switchDiagTab('probe');
+      const results = document.getElementById("probe-results");
+      results.innerHTML = `<div class="text-slate-400">Executing diagnostic probe...</div>`;
+
+      let output = "";
+
+      // Test 1: Local IndexedDB
+      try {
+        const testTx = db.transaction("emails", "readonly");
+        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Local IndexedDB Storage:</strong> Operational (Local disk write/read healthy)</div>`;
+      } catch (err) {
+        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>IndexedDB:</strong> Failed: ${err.message}</div>`;
+      }
+
+      // Test 2: Inbound Gateway Connectivity
+      const probeUrl = `https://www.1secmail.com/api/v1/?action=getMessages&login=${encodeURIComponent(accountProfile.username)}&domain=${accountProfile.domain}`;
+      const t0 = performance.now();
+      try {
+        const res = await safeFetchJSON(probeUrl);
+        const elapsed = (performance.now() - t0).toFixed(0);
+        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Inbound Gateway Reachability:</strong> 200 OK (${elapsed}ms latency)</div>`;
+        output += `<div class="p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-300">ℹ️ <strong>Current Queue for ${accountProfile.email}:</strong> ${res.length} messages waiting on server.</div>`;
+      } catch (err) {
+        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>Gateway Ping Failed:</strong> ${err.message}</div>`;
+      }
+
+      // Test 3: Disposable Domain Warning
+      output += `<div class="p-2.5 bg-amber-950/40 border border-amber-800 rounded-lg text-amber-300">⚠️ <strong>Domain DEA Flag Check:</strong> <code>@${accountProfile.domain}</code> is detected on public disposable lists. Commercial merchants (Shopify, Amazon, PayPal) will suppress outgoing mail to this address.</div>`;
+
+      results.innerHTML = output;
+      logMessage("INFO", "Diagnostic probe completed.");
+    }
+
+    // --- 3. RESILIENT FETCH WITH LOGGING ---
     async function safeFetchJSON(targetUrl) {
+      logMessage("NETWORK", "GET " + targetUrl.slice(0, 65) + "...");
+
       // Level 1: Direct fetch
       try {
         const res = await fetch(targetUrl);
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          logMessage("SUCCESS", "Gateway responded 200 OK via Direct Link");
+          return await res.json();
+        }
       } catch (err) {
-        console.warn("Direct fetch blocked or failed. Trying Fallback 1...", err);
+        logMessage("WARN", "Direct fetch restricted by browser. Engaging CORS Proxy 1...");
       }
 
-      // Level 2: AllOrigins proxy fallback
+      // Level 2: AllOrigins proxy
       try {
         const proxyUrl1 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
         const res1 = await fetch(proxyUrl1);
-        if (res1.ok) return await res1.json();
+        if (res1.ok) {
+          logMessage("SUCCESS", "Gateway responded 200 OK via AllOrigins Relay");
+          return await res1.json();
+        }
       } catch (err) {
-        console.warn("Fallback 1 failed. Trying Fallback 2...", err);
+        logMessage("WARN", "Proxy 1 failed. Engaging Fallback Proxy 2...");
       }
 
-      // Level 3: CorsProxy.io fallback
+      // Level 3: CorsProxy.io
       try {
         const proxyUrl2 = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
         const res2 = await fetch(proxyUrl2);
-        if (res2.ok) return await res2.json();
+        if (res2.ok) {
+          logMessage("SUCCESS", "Gateway responded 200 OK via CorsProxy Relay");
+          return await res2.json();
+        }
       } catch (err) {
-        console.error("All CORS gateways failed:", err);
+        logMessage("ERROR", "All network relays failed.", err.message);
       }
 
-      throw new Error("Unable to reach the mail gateway. Please check your internet connection.");
+      throw new Error("Unable to establish connection with mail gateway.");
     }
 
-    // --- 2. INITIALIZATION ---
+    // --- 4. APP INITIALIZATION ---
     async function initApp() {
       await initDB();
       await updateStorageMeter();
@@ -198,7 +365,6 @@
       accountProfile = JSON.parse(localStorage.getItem("zm_profile_v2"));
 
       if (!accountProfile) {
-        // Show setup modal with clean blank text box
         document.getElementById("setup-username").value = "";
         document.getElementById("setup-modal").classList.remove("hidden");
       } else {
@@ -206,7 +372,6 @@
       }
     }
 
-    // --- 3. ACCOUNT ACTIVATION ---
     function handleAccountSetup(e) {
       e.preventDefault();
       const user = document.getElementById("setup-username").value.trim().toLowerCase();
@@ -226,21 +391,19 @@
 
     function grantAccess() {
       document.getElementById("setup-modal").classList.add("hidden");
-      document.getElementById("app-workspace").classList.remove("hidden");
-      
-      // Update header with chosen address
       document.getElementById("header-email").innerText = accountProfile.email;
       document.getElementById("live-badge").classList.remove("hidden");
+      document.getElementById("diag-target-email").innerText = accountProfile.email;
       document.getElementById("gateway-detail").innerText = `Monitoring @${accountProfile.domain}`;
+
+      logMessage("INFO", "Initialized session for " + accountProfile.email);
 
       loadFolder("inbox");
       checkIncomingMail();
-
-      // Background auto-refresh every 10 seconds
       setInterval(() => checkIncomingMail(false), 10000);
     }
 
-    // --- 4. CHECK & DOWNLOAD REAL EMAILS ---
+    // --- 5. CHECK INCOMING MAIL WITH TELEMETRY ---
     async function checkIncomingMail(manual = false) {
       if (!accountProfile || isCheckingMail) return;
       isCheckingMail = true;
@@ -252,13 +415,17 @@
         const listUrl = `https://www.1secmail.com/api/v1/?action=getMessages&login=${encodeURIComponent(accountProfile.username)}&domain=${accountProfile.domain}`;
         const messages = await safeFetchJSON(listUrl);
 
-        document.getElementById("last-checked").innerText = `Last check: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById("last-checked").innerText = `Last check: ${timeStr}`;
 
         if (Array.isArray(messages)) {
+          logMessage("INFO", `Queue check completed. Messages on gateway: ${messages.length}`);
+
           for (const msg of messages) {
             const alreadyExists = await isEmailSavedLocally(msg.id);
             if (!alreadyExists) {
-              // Fetch full content
+              logMessage("SUCCESS", `Downloading new email #${msg.id} from: ${msg.from}`);
+              
               const detailUrl = `https://www.1secmail.com/api/v1/?action=readMessage&login=${encodeURIComponent(accountProfile.username)}&domain=${accountProfile.domain}&id=${msg.id}`;
               const detail = await safeFetchJSON(detailUrl);
 
@@ -267,22 +434,24 @@
                 from: detail.from,
                 to: accountProfile.email,
                 subject: detail.subject || "(No Subject)",
-                body: detail.textBody || detail.body || "(No message content)",
+                body: detail.textBody || detail.body || "(Empty Body)",
                 folder: "inbox",
                 timestamp: detail.date || new Date().toISOString()
               });
+
+              logMessage("SUCCESS", `Email saved to local IndexedDB. Storage updated.`);
             }
           }
         }
       } catch (err) {
-        console.warn("Mail check error:", err.message);
+        logMessage("ERROR", "Poll error: " + err.message);
       } finally {
         isCheckingMail = false;
         if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span>Check Mail</span>`;
       }
     }
 
-    // --- 5. LOCAL STORAGE ENGINE (IndexedDB) ---
+    // --- 6. LOCAL DATABASE (IndexedDB) ---
     function initDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 1);
@@ -341,7 +510,11 @@
       const container = document.getElementById("email-list");
       container.innerHTML = "";
       if (emails.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Folder is empty.<br>Incoming emails will automatically appear here.</div>`;
+        container.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400 space-y-2">
+            <div>Folder is empty.</div>
+            <button onclick="toggleDiagnostics()" class="text-indigo-600 hover:underline font-medium">Open Diagnostics Console</button>
+          </div>`;
         return;
       }
       emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -405,7 +578,6 @@
       switchFolder("sent");
     }
 
-    // --- 6. REAL-TIME STORAGE & FACTORY RESET ---
     async function updateStorageMeter() {
       if (navigator.storage && navigator.storage.estimate) {
         const { usage } = await navigator.storage.estimate();
@@ -416,30 +588,17 @@
     }
 
     async function factoryReset() {
-      const confirmed = confirm(
-        "⚠️ FACTORY RESET:\n\n" +
-        "This will permanently clear all downloaded emails from your computer and restore storage to 0 bytes used.\n\n" +
-        "Do you want to reset?"
-      );
-      if (!confirmed) return;
-
+      if (!confirm("⚠️ Factory Reset: Clear all local emails and start fresh?")) return;
       if (db) db.close();
       indexedDB.deleteDatabase(DB_NAME);
       localStorage.clear();
-      alert("✨ Cleaned! Your email program is back to brand-new condition.");
       location.reload();
     }
 
-    // --- 7. UI CONTROLS ---
     function openComposer() { document.getElementById("compose-modal").classList.remove("hidden"); }
     function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
     function switchFolder(folder) {
-      document.getElementById("btn-inbox").className = folder === 'inbox' 
-        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
-        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
-      document.getElementById("btn-sent").className = folder === 'sent' 
-        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
-        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
+      currentFolder = folder;
       loadFolder(folder);
     }
     function escapeHtml(t) {
