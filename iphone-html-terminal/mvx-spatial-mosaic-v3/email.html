@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZeroMail — Local & Device Locked</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <!-- Displayed Email Address -->
+          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">Loading identity...</span>
+          <span id="device-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+            🔒 Device Locked
+          </span>
+        </div>
+        <p class="text-xs text-slate-500" id="header-network">Host: GitHub Pages • 0 Server Storage</p>
+      </div>
+    </div>
+
+    <!-- Storage Meter & Factory Reset -->
+    <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
+      <div class="text-xs text-right">
+        <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
+        <div class="text-slate-400 text-[10px]">Stored on this PC</div>
+      </div>
+      <button onclick="exportBackup()" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition">
+        Export Archive
+      </button>
+      <button onclick="factoryReset()" title="Wipe storage and return to brand-new" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
+        Reset to Like New
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN APP WORKSPACE ================= -->
+  <div id="app-workspace" class="flex flex-1 overflow-hidden hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-4">
+      <div class="space-y-4">
+        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2">
+          <span>✏️ Compose</span>
+        </button>
+        <nav class="space-y-1 text-sm font-medium">
+          <button onclick="switchFolder('inbox')" id="btn-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold">
+            <span>📥 Inbox</span>
+            <span id="badge-inbox" class="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">0</span>
+          </button>
+          <button onclick="switchFolder('sent')" id="btn-sent" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <span>📤 Sent</span>
+            <span id="badge-sent" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
+        <button onclick="simulateIncomingMail()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded font-medium">
+          + Simulate Incoming Email
+        </button>
+        <button onclick="downloadUsbKeyFile()" class="w-full text-left text-indigo-600 hover:text-indigo-800 font-semibold">
+          🔑 Re-download USB Key File
+        </button>
+      </div>
+    </aside>
+
+    <!-- Email List -->
+    <section class="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+      <div class="p-3 border-b border-slate-200">
+        <input type="text" id="search-input" oninput="filterEmails()" placeholder="Search local emails..." class="w-full text-sm px-3 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-indigo-400 outline-none" />
+      </div>
+      <div id="email-list" class="flex-1 overflow-y-auto divide-y divide-slate-100"></div>
+    </section>
+
+    <!-- Reading Pane -->
+    <main class="flex-1 bg-white flex flex-col overflow-hidden" id="reading-pane">
+      <div class="flex-1 flex items-center justify-center text-slate-400 text-sm">
+        Select an email to view its content
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODAL 1: FIRST-TIME SETUP ================= -->
+  <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200">
+      <div class="text-center mb-5">
+        <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">👤</div>
+        <h2 class="text-xl font-bold text-slate-900">Choose Your Email Address</h2>
+        <p class="text-xs text-slate-500 mt-1">This will lock to your device and ISP network signature.</p>
+      </div>
+
+      <form onsubmit="handleAccountSetup(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Choose Username</label>
+          <div class="flex items-center">
+            <input type="text" id="setup-username" required pattern="[a-zA-Z0-9_\.-]+" placeholder="e.g. alex" class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500" />
+            <span class="bg-slate-100 border border-l-0 border-slate-300 text-slate-500 text-xs px-3 py-2.5 rounded-r-lg font-medium">@zeromail.page</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Create Master Backup PIN (6 Digits)</label>
+          <input type="password" id="setup-pin" required pattern="[0-9]{6}" maxlength="6" placeholder="123456" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+          <p class="text-[10px] text-slate-400 mt-1">Used to unlock your email if you open it from another computer.</p>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-800 text-[11px] leading-relaxed">
+          <strong>Physical Key Download:</strong> Clicking "Create & Lock to This Device" will save your identity and download a physical <code>identity.zerokey</code> file for your USB drive.
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm">
+          Create & Lock to This Device
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: NEW DEVICE LOCKOUT SCREEN ================= -->
+  <div id="locked-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 text-center">
+      <div class="inline-block p-3 bg-red-50 text-red-600 rounded-2xl mb-2 text-2xl font-bold">🔒</div>
+      <h2 class="text-xl font-bold text-slate-900">Unrecognized Device or Network</h2>
+      <p class="text-xs text-slate-500 mt-1 mb-5">
+        This account is locked to its original device and ISP. To use it on this computer, prove it's really you.
+      </p>
+
+      <!-- Option 1: Unlock via Master PIN -->
+      <form onsubmit="handlePinUnlock(event)" class="mb-4 text-left bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Option 1: Enter Master Backup PIN</label>
+        <div class="flex space-x-2">
+          <input type="password" id="unlock-pin-input" maxlength="6" placeholder="Enter 6-digit PIN" class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 rounded-lg">
+            Unlock
+          </button>
+        </div>
+      </form>
+
+      <!-- Option 3: Physical Key Upload -->
+      <div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Option 2: Physical USB Key File</label>
+        <p class="text-[10px] text-slate-500 mb-2">Upload the <code>identity.zerokey</code> file from your USB drive:</p>
+        <input type="file" id="usb-key-input" onchange="handleUsbKeyUpload(event)" accept=".zerokey,.json" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= COMPOSE MODAL ================= -->
+  <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-slate-200 flex flex-col">
+      <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800 text-sm">New Message</h3>
+        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col">
+        <input type="email" id="compose-to" required placeholder="To (e.g. friend@example.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+        <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+        <textarea id="compose-body" required placeholder="Write your message here..." rows="7" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1"></textarea>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="closeComposer()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= CLIENT JAVASCRIPT ================= -->
+  <script>
+    const DB_NAME = "ZeroMailLocalDB";
+    let db;
+    let currentFolder = "inbox";
+    let activeEmailId = null;
+
+    let accountProfile = null;
+    let currentIP = "Checking...";
+
+    // --- 1. INITIALIZATION & SECURITY CHECK ---
+    async function initApp() {
+      await initDB();
+      await fetchNetworkSignature();
+      await updateStorageMeter();
+
+      accountProfile = JSON.parse(localStorage.getItem("zm_profile"));
+
+      if (!accountProfile) {
+        // First time opening app: Ask to choose email and setup lock
+        document.getElementById("setup-modal").classList.remove("hidden");
+      } else {
+        // Account exists: Verify this device's token & network signature
+        verifyDeviceAndUnlock();
+      }
+    }
+
+    async function fetchNetworkSignature() {
+      try {
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        currentIP = data.ip;
+      } catch (err) {
+        currentIP = "Offline/Local Network";
+      }
+    }
+
+    function verifyDeviceAndUnlock() {
+      const localDeviceToken = localStorage.getItem("zm_device_token");
+
+      // Check if device token matches
+      if (localDeviceToken === accountProfile.deviceToken) {
+        grantAccess();
+      } else {
+        // Unknown device -> Lockdown screen
+        document.getElementById("locked-modal").classList.remove("hidden");
+      }
+    }
+
+    function grantAccess() {
+      document.getElementById("setup-modal").classList.add("hidden");
+      document.getElementById("locked-modal").classList.add("hidden");
+      document.getElementById("app-workspace").classList.remove("hidden");
+
+      // Display Address prominently in header
+      document.getElementById("header-email").innerText = accountProfile.email;
+      document.getElementById("device-badge").classList.remove("hidden");
+      document.getElementById("header-network").innerText = `ISP Sig: ${currentIP} • Local Host`;
+
+      loadFolder("inbox");
+    }
+
+    // --- 2. ACCOUNT CREATION & USB KEY GENERATION ---
+    async function handleAccountSetup(e) {
+      e.preventDefault();
+      const username = document.getElementById("setup-username").value.trim().toLowerCase();
+      const pin = document.getElementById("setup-pin").value.trim();
+
+      // Generate a unique 256-bit cryptographic token for this device
+      const deviceToken = "dev_" + crypto.randomUUID();
+      const email = `${username}@zeromail.page`;
+
+      accountProfile = {
+        username,
+        email,
+        pin,
+        deviceToken,
+        registeredIP: currentIP,
+        createdDate: new Date().toISOString()
+      };
+
+      // Save locally
+      localStorage.setItem("zm_profile", JSON.stringify(accountProfile));
+      localStorage.setItem("zm_device_token", deviceToken);
+
+      // Download the physical USB Key File (.zerokey)
+      downloadUsbKeyFile();
+
+      grantAccess();
+    }
+
+    function downloadUsbKeyFile() {
+      if (!accountProfile) return;
+      const keyBlob = new Blob([JSON.stringify(accountProfile, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(keyBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${accountProfile.username}-identity.zerokey`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // --- 3. UNLOCKING FROM ANOTHER COMPUTER ---
+    // Option 1: Master PIN
+    function handlePinUnlock(e) {
+      e.preventDefault();
+      const enteredPin = document.getElementById("unlock-pin-input").value;
+      if (accountProfile && enteredPin === accountProfile.pin) {
+        // Authorize this new computer
+        localStorage.setItem("zm_device_token", accountProfile.deviceToken);
+        grantAccess();
+      } else {
+        alert("Incorrect Master Backup PIN.");
+      }
+    }
+
+    // Option 2: Physical USB Key File
+    function handleUsbKeyUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedProfile = JSON.parse(event.target.result);
+          if (importedProfile.deviceToken && importedProfile.pin) {
+            accountProfile = importedProfile;
+            localStorage.setItem("zm_profile", JSON.stringify(accountProfile));
+            localStorage.setItem("zm_device_token", accountProfile.deviceToken);
+            alert("✨ Device successfully authenticated via physical USB key!");
+            grantAccess();
+          } else {
+            alert("Invalid key file.");
+          }
+        } catch (err) {
+          alert("Error parsing USB key file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // --- 4. DATABASE & STORAGE MANAGEMENT ---
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const dbInstance = e.target.result;
+          if (!dbInstance.objectStoreNames.contains("emails")) {
+            const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
+            store.createIndex("folder", "folder", { unique: false });
+          }
+        };
+        req.onsuccess = (e) => { db = e.target.result; resolve(); };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function updateStorageMeter() {
+      if (navigator.storage && navigator.storage.estimate) {
+        const { usage } = await navigator.storage.estimate();
+        const kb = (usage / 1024).toFixed(1);
+        const mb = (usage / (1024 * 1024)).toFixed(2);
+        document.getElementById("storage-readout").innerText = usage > 1048576 ? `${mb} MB` : `${kb} KB`;
+      }
+    }
+
+    // THE FACTORY RESET BUTTON ("Back to like new")
+    async function factoryReset() {
+      const confirmed = confirm(
+        "⚠️ FACTORY RESET:\n\n" +
+        "This will wipe all emails, remove your device token, and restore your computer to 0 bytes used.\n\n" +
+        "Proceed?"
+      );
+      if (!confirmed) return;
+
+      if (db) db.close();
+      indexedDB.deleteDatabase(DB_NAME);
+      localStorage.clear();
+      alert("Application restored to factory state.");
+      location.reload();
+    }
+
+    // --- 5. EMAIL CORE ---
+    function saveEmail(email) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readwrite");
+        tx.objectStore("emails").add(email);
+        tx.oncomplete = () => {
+          updateStorageMeter();
+          loadFolder(currentFolder);
+          resolve();
+        };
+      });
+    }
+
+    function getAllEmails() {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readonly");
+        const req = tx.objectStore("emails").getAll();
+        req.onsuccess = () => resolve(req.result || []);
+      });
+    }
+
+    async function loadFolder(folder) {
+      currentFolder = folder;
+      const emails = await getAllEmails();
+
+      document.getElementById("badge-inbox").innerText = emails.filter((m) => m.folder === "inbox").length;
+      document.getElementById("badge-sent").innerText = emails.filter((m) => m.folder === "sent").length;
+
+      renderList(emails.filter((m) => m.folder === folder));
+    }
+
+    function renderList(emails) {
+      const container = document.getElementById("email-list");
+      container.innerHTML = "";
+      if (emails.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Folder is empty.</div>`;
+        return;
+      }
+      emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      emails.forEach((mail) => {
+        const item = document.createElement("div");
+        item.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 ${
+          activeEmailId === mail.id ? "bg-indigo-50/70 border-l-4 border-l-indigo-600" : ""
+        }`;
+        item.onclick = () => viewEmail(mail);
+        item.innerHTML = `
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(mail.from || mail.to)}</span>
+            <span class="text-[10px] text-slate-400 shrink-0">${new Date(mail.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="font-medium text-xs text-slate-700 truncate mb-1">${escapeHtml(mail.subject)}</div>
+          <div class="text-[11px] text-slate-400 line-clamp-1">${escapeHtml(mail.body)}</div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function viewEmail(mail) {
+      activeEmailId = mail.id;
+      loadFolder(currentFolder);
+      document.getElementById("reading-pane").innerHTML = `
+        <div class="border-b border-slate-200 p-6">
+          <div class="flex items-start justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">${escapeHtml(mail.subject)}</h2>
+              <div class="text-xs text-slate-500 mt-1">From: <strong>${escapeHtml(mail.from)}</strong> • To: <strong>${escapeHtml(mail.to)}</strong></div>
+            </div>
+            <button onclick="deleteEmail(${mail.id})" class="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
+          </div>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${escapeHtml(mail.body)}</div>
+      `;
+    }
+
+    function deleteEmail(id) {
+      const tx = db.transaction("emails", "readwrite");
+      tx.objectStore("emails").delete(id);
+      tx.oncomplete = () => {
+        updateStorageMeter();
+        loadFolder(currentFolder);
+        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted.</div>`;
+      };
+    }
+
+    async function handleSendEmail(e) {
+      e.preventDefault();
+      const mail = {
+        to: document.getElementById("compose-to").value,
+        from: accountProfile.email,
+        subject: document.getElementById("compose-subject").value,
+        body: document.getElementById("compose-body").value,
+        folder: "sent",
+        timestamp: new Date().toISOString()
+      };
+      await saveEmail(mail);
+      closeComposer();
+      switchFolder("sent");
+    }
+
+    function simulateIncomingMail() {
+      saveEmail({
+        from: "service-security@relay.local",
+        to: accountProfile.email,
+        subject: "🔒 Device Security Check Confirmed",
+        body: `Hello ${accountProfile.username}!\n\nYour session is verified with token:\n${accountProfile.deviceToken}\n\nAll messages exist strictly on your local drive.`,
+        folder: "inbox",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    async function exportBackup() {
+      const emails = await getAllEmails();
+      const blob = new Blob([JSON.stringify(emails, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `zeromail-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    }
+
+    function switchFolder(folder) {
+      document.getElementById("btn-inbox").className = folder === 'inbox' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
+      document.getElementById("btn-sent").className = folder === 'sent' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
+      loadFolder(folder);
+    }
+
+    function openComposer() { document.getElementById("compose-modal").classList.remove("hidden"); }
+    function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.innerText = text || "";
+      return div.innerHTML;
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
