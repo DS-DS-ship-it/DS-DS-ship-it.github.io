@@ -3,49 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZeroMail — Local & Device Locked</title>
+  <title>ZeroMail — Active Inbound & Diagnostics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .term-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none">
 
-  <!-- ================= TOP HEADER ================= -->
-  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
     <div class="flex items-center space-x-3">
       <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
       <div>
         <div class="flex items-center space-x-2">
-          <!-- Displayed Email Address -->
-          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">Loading identity...</span>
-          <span id="device-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-            🔒 Device Locked
+          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">No Active Mailbox</span>
+          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Gateway Online</span>
           </span>
+          <button onclick="openSetupModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-medium transition ml-1">
+            Switch Account
+          </button>
         </div>
-        <p class="text-xs text-slate-500" id="header-network">Host: GitHub Pages • 0 Server Storage</p>
+        <p class="text-xs text-slate-500" id="sync-status">GitHub Pages • Local Disk Storage (IndexedDB)</p>
       </div>
     </div>
 
-    <!-- Storage Meter & Factory Reset -->
+    <!-- Storage Monitor, Diagnostics & Reset -->
     <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
       <div class="text-xs text-right">
         <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
-        <div class="text-slate-400 text-[10px]">Stored on this PC</div>
+        <div class="text-slate-400 text-[10px]">Local IndexedDB</div>
       </div>
-      <button onclick="exportBackup()" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition">
-        Export Archive
+
+      <button onclick="checkIncomingMail(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
+        <span>🔄</span> <span>Check Mail</span>
       </button>
+
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shadow-sm">
+        <span>🩺</span> <span>Diagnostics & Logs</span>
+      </button>
+
       <button onclick="factoryReset()" title="Wipe storage and return to brand-new" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
-        Reset to Like New
+        Reset
       </button>
     </div>
   </header>
 
-  <!-- ================= MAIN APP WORKSPACE ================= -->
-  <div id="app-workspace" class="flex flex-1 overflow-hidden hidden">
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-workspace" class="flex flex-1 overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-4">
       <div class="space-y-4">
@@ -65,12 +74,11 @@
       </div>
 
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
-        <button onclick="simulateIncomingMail()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded font-medium">
-          + Simulate Incoming Email
-        </button>
-        <button onclick="downloadUsbKeyFile()" class="w-full text-left text-indigo-600 hover:text-indigo-800 font-semibold">
-          🔑 Re-download USB Key File
-        </button>
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Polling</div>
+          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Monitoring Inbound</div>
+          <div class="text-[10px] text-slate-400" id="last-checked">Last check: Pending...</div>
+        </div>
       </div>
     </aside>
 
@@ -90,71 +98,117 @@
     </main>
   </div>
 
-  <!-- ================= MODAL 1: FIRST-TIME SETUP ================= -->
+  <!-- DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100) -->
+  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100] transform translate-x-full transition-transform duration-300">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+      <div class="flex items-center space-x-2">
+        <span class="text-emerald-400 text-sm font-bold">●</span>
+        <h3 class="font-bold text-white text-sm">System Diagnostics & Network Log</h3>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="runHealthCheck()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition">
+          Run Health Probe
+        </button>
+        <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition">
+          Clear
+        </button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2">&times;</button>
+      </div>
+    </div>
+
+    <!-- Diagnostic Tabs -->
+    <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
+      <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400">Live Network Logs</button>
+      <button onclick="switchDiagTab('probe')" id="tab-btn-probe" class="px-4 py-2 text-slate-400 hover:text-white">Health Probe</button>
+      <button onclick="switchDiagTab('shopify')" id="tab-btn-shopify" class="px-4 py-2 text-slate-400 hover:text-white">Shopify & Delivery Tips</button>
+    </div>
+
+    <!-- TAB 1: Live Network Console -->
+    <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40">
+      <div class="text-slate-500">// Real-time HTTP polling and gateway responses stream here:</div>
+      <div id="log-stream" class="space-y-1"></div>
+    </div>
+
+    <!-- TAB 2: System Probe Results -->
+    <div id="diag-panel-probe" class="flex-1 p-5 overflow-y-auto text-xs space-y-3 hidden">
+      <div class="text-slate-400 mb-2">Automated probe checks between your browser, local database, and the gateway:</div>
+      <div id="probe-results" class="space-y-2 term-font">
+        <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-800 text-slate-400">Click "Run Health Probe" at the top to test all subsystems.</div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Shopify Troubleshooting Guide -->
+    <div id="diag-panel-shopify" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed">
+      <div class="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-indigo-200">
+        <h4 class="font-bold text-indigo-300 mb-1">📬 Testing External Email Delivery:</h4>
+        <p>1. Copy your active address shown in the header.<br>
+           2. Send a test email from your personal <strong>Gmail</strong> or <strong>Yahoo</strong>.<br>
+           3. Click <strong>"Check Mail"</strong>. The message will download directly to your local computer.</p>
+      </div>
+      <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
+        <h4 class="font-bold text-amber-300 mb-1">⚠️ Why Stores (Shopify) Reject Temporary Domains:</h4>
+        <p>Shopify actively blocks known disposable domains to prevent checkout fraud. If a store refuses your address, connect a custom domain to Cloudflare's free Email Routing to forward mail to this client without a server.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETUP / SWITCH ACCOUNT MODAL -->
   <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
+      <button onclick="closeSetupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      
       <div class="text-center mb-5">
-        <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">👤</div>
-        <h2 class="text-xl font-bold text-slate-900">Choose Your Email Address</h2>
-        <p class="text-xs text-slate-500 mt-1">This will lock to your device and ISP network signature.</p>
+        <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
+        <h2 class="text-xl font-bold text-slate-900">Activate Your Inbound Mailbox</h2>
+        <p class="text-xs text-slate-500 mt-1">Pick your username and domain. Connects to live mail servers.</p>
+      </div>
+
+      <!-- INLINE ERROR CARD -->
+      <div id="setup-error-card" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+        <div class="font-bold mb-1" id="setup-error-title">Connection Error</div>
+        <div id="setup-error-msg" class="leading-relaxed"></div>
       </div>
 
       <form onsubmit="handleAccountSetup(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Choose Username</label>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Choose Address Name</label>
           <div class="flex items-center">
-            <input type="text" id="setup-username" required pattern="[a-zA-Z0-9_\.-]+" placeholder="e.g. alex" class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500" />
-            <span class="bg-slate-100 border border-l-0 border-slate-300 text-slate-500 text-xs px-3 py-2.5 rounded-r-lg font-medium">@zeromail.page</span>
+            <input 
+              type="text" 
+              id="setup-username" 
+              required 
+              pattern="[a-zA-Z0-9_\.-]+" 
+              placeholder="Input your name or desired username" 
+              value="" 
+              autocomplete="off" 
+              class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800" 
+            />
+            <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none">
+              <option value="sharklasers.com">@sharklasers.com</option>
+              <option value="guerrillamail.com">@guerrillamail.com</option>
+              <option value="grr.la">@grr.la</option>
+              <option value="guerrillamail.net">@guerrillamail.net</option>
+              <option value="guerrillamail.biz">@guerrillamail.biz</option>
+              <option value="guerrillamail.org">@guerrillamail.org</option>
+            </select>
           </div>
+          <p class="text-[10px] text-slate-400 mt-1">Active global mail servers with live MX records.</p>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Create Master Backup PIN (6 Digits)</label>
-          <input type="password" id="setup-pin" required pattern="[0-9]{6}" maxlength="6" placeholder="123456" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
-          <p class="text-[10px] text-slate-400 mt-1">Used to unlock your email if you open it from another computer.</p>
-        </div>
-
-        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-800 text-[11px] leading-relaxed">
-          <strong>Physical Key Download:</strong> Clicking "Create & Lock to This Device" will save your identity and download a physical <code>identity.zerokey</code> file for your USB drive.
-        </div>
-
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm">
-          Create & Lock to This Device
+        <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
+          Activate Live Mailbox
         </button>
-      </form>
-    </div>
-  </div>
 
-  <!-- ================= MODAL 2: NEW DEVICE LOCKOUT SCREEN ================= -->
-  <div id="locked-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 text-center">
-      <div class="inline-block p-3 bg-red-50 text-red-600 rounded-2xl mb-2 text-2xl font-bold">🔒</div>
-      <h2 class="text-xl font-bold text-slate-900">Unrecognized Device or Network</h2>
-      <p class="text-xs text-slate-500 mt-1 mb-5">
-        This account is locked to its original device and ISP. To use it on this computer, prove it's really you.
-      </p>
-
-      <!-- Option 1: Unlock via Master PIN -->
-      <form onsubmit="handlePinUnlock(event)" class="mb-4 text-left bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Option 1: Enter Master Backup PIN</label>
-        <div class="flex space-x-2">
-          <input type="password" id="unlock-pin-input" maxlength="6" placeholder="Enter 6-digit PIN" class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
-          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 rounded-lg">
-            Unlock
+        <div class="pt-2 text-center">
+          <button type="button" onclick="toggleDiagnostics()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+            🩺 Open Diagnostics & Error Logs
           </button>
         </div>
       </form>
-
-      <!-- Option 3: Physical Key Upload -->
-      <div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Option 2: Physical USB Key File</label>
-        <p class="text-[10px] text-slate-500 mb-2">Upload the <code>identity.zerokey</code> file from your USB drive:</p>
-        <input type="file" id="usb-key-input" onchange="handleUsbKeyUpload(event)" accept=".zerokey,.json" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-      </div>
     </div>
   </div>
 
-  <!-- ================= COMPOSE MODAL ================= -->
+  <!-- COMPOSE MODAL -->
   <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-slate-200 flex flex-col">
       <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -162,200 +216,308 @@
         <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
       </div>
       <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col">
-        <input type="email" id="compose-to" required placeholder="To (e.g. friend@example.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
+        <input type="email" id="compose-to" required placeholder="To (e.g. friend@gmail.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
         <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
         <textarea id="compose-body" required placeholder="Write your message here..." rows="7" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1"></textarea>
         <div class="flex justify-end space-x-2 pt-2">
           <button type="button" onclick="closeComposer()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-          <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Send</button>
+          <button type="submit" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Save to Sent</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ================= CLIENT JAVASCRIPT ================= -->
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    const DB_NAME = "ZeroMailLocalDB";
+    const DB_NAME = "ZeroMailClientDB";
+    const G_API = "https://api.guerrillamail.com/ajax.php";
     let db;
     let currentFolder = "inbox";
     let activeEmailId = null;
-
     let accountProfile = null;
-    let currentIP = "Checking...";
+    let isCheckingMail = false;
+    let diagOpen = false;
 
-    // --- 1. INITIALIZATION & SECURITY CHECK ---
+    // --- 1. LOGGING ENGINE ---
+    function logMessage(level, text, details = "") {
+      const container = document.getElementById("log-stream");
+      if (!container) return;
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const row = document.createElement("div");
+      row.className = "flex space-x-2 leading-relaxed";
+
+      let color = "text-slate-400";
+      if (level === "SUCCESS") color = "text-emerald-400";
+      if (level === "WARN") color = "text-amber-400";
+      if (level === "ERROR") color = "text-red-400";
+      if (level === "NETWORK") color = "text-sky-400";
+
+      row.innerHTML = `
+        <span class="text-slate-600 select-none">[${time}]</span>
+        <span class="${color} font-bold select-none">[${level}]</span>
+        <span class="text-slate-200">${escapeHtml(text)}</span>
+        ${details ? `<span class="text-slate-500">(${escapeHtml(details)})</span>` : ""}
+      `;
+
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById("log-stream").innerHTML = "";
+    }
+
+    function toggleDiagnostics() {
+      const modal = document.getElementById("diagnostics-modal");
+      diagOpen = !diagOpen;
+      if (diagOpen) {
+        modal.classList.remove("translate-x-full");
+      } else {
+        modal.classList.add("translate-x-full");
+      }
+    }
+
+    function switchDiagTab(tab) {
+      document.getElementById("diag-panel-logs").classList.toggle("hidden", tab !== 'logs');
+      document.getElementById("diag-panel-probe").classList.toggle("hidden", tab !== 'probe');
+      document.getElementById("diag-panel-shopify").classList.toggle("hidden", tab !== 'shopify');
+
+      document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+      document.getElementById("tab-btn-probe").className = tab === 'probe' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+      document.getElementById("tab-btn-shopify").className = tab === 'shopify' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
+    }
+
+    // --- 2. BULLETPROOF FETCH ENGINE (Text First, Then Parse) ---
+    async function safeGet(url) {
+      logMessage("NETWORK", `GET ${url.slice(0, 65)}...`);
+
+      // 1. Direct connection
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const rawText = await res.text();
+          try {
+            const data = JSON.parse(rawText);
+            logMessage("SUCCESS", `200 OK from ${new URL(url).hostname}`);
+            return data;
+          } catch (jsonErr) {
+            throw new Error("Server returned non-JSON text: " + rawText.slice(0, 70));
+          }
+        }
+      } catch (err) {
+        logMessage("WARN", `Direct link: ${err.message}. Trying backup proxy...`);
+      }
+
+      // 2. Backup proxy with 5-second abort timer
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const resProxy = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        if (resProxy.ok) {
+          const text = await resProxy.text();
+          const data = JSON.parse(text);
+          logMessage("SUCCESS", "Proxy relay responded 200 OK");
+          return data;
+        }
+      } catch (proxyErr) {
+        clearTimeout(timer);
+        logMessage("ERROR", "Backup proxy failed: " + proxyErr.message);
+      }
+
+      throw new Error("Unable to connect to mail network. Inspect live logs.");
+    }
+
+    // --- 3. APP INITIALIZATION ---
     async function initApp() {
       await initDB();
-      await fetchNetworkSignature();
       await updateStorageMeter();
 
-      accountProfile = JSON.parse(localStorage.getItem("zm_profile"));
+      accountProfile = JSON.parse(localStorage.getItem("zm_profile_g"));
 
       if (!accountProfile) {
-        // First time opening app: Ask to choose email and setup lock
-        document.getElementById("setup-modal").classList.remove("hidden");
+        openSetupModal();
       } else {
-        // Account exists: Verify this device's token & network signature
-        verifyDeviceAndUnlock();
-      }
-    }
-
-    async function fetchNetworkSignature() {
-      try {
-        const res = await fetch("https://api.ipify.org?format=json");
-        const data = await res.json();
-        currentIP = data.ip;
-      } catch (err) {
-        currentIP = "Offline/Local Network";
-      }
-    }
-
-    function verifyDeviceAndUnlock() {
-      const localDeviceToken = localStorage.getItem("zm_device_token");
-
-      // Check if device token matches
-      if (localDeviceToken === accountProfile.deviceToken) {
         grantAccess();
-      } else {
-        // Unknown device -> Lockdown screen
-        document.getElementById("locked-modal").classList.remove("hidden");
+      }
+    }
+
+    function openSetupModal() {
+      document.getElementById("setup-error-card").classList.add("hidden");
+      document.getElementById("setup-username").value = "";
+      document.getElementById("setup-modal").classList.remove("hidden");
+    }
+
+    function closeSetupModal() {
+      document.getElementById("setup-modal").classList.add("hidden");
+    }
+
+    // --- 4. ACCOUNT ACTIVATION (Using Official set_email_user) ---
+    async function handleAccountSetup(e) {
+      e.preventDefault();
+      const btn = document.getElementById("setup-submit-btn");
+      btn.disabled = true;
+      btn.innerText = "Activating live mailbox...";
+      document.getElementById("setup-error-card").classList.add("hidden");
+
+      const user = document.getElementById("setup-username").value.trim().toLowerCase().replace(/[^a-z0-9_\.-]/g, "");
+      const domain = document.getElementById("setup-domain").value;
+
+      try {
+        // Step 1: Initialize session on Guerrilla Gateway
+        logMessage("NETWORK", "Initializing session on Guerrilla Gateway...");
+        const sessionData = await safeGet(`${G_API}?f=get_email_address`);
+        const sid = sessionData.sid_token;
+
+        // Step 2: Set user & domain using official Guerrilla Mail API method: set_email_user
+        logMessage("NETWORK", `Binding handle: ${user}@${domain}...`);
+        const assignData = await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&domain=${encodeURIComponent(domain)}&sid_token=${sid}`);
+
+        accountProfile = {
+          username: user,
+          domain: domain,
+          email: assignData.email_addr || `${user}@${domain}`,
+          sidToken: sid,
+          createdDate: new Date().toISOString()
+        };
+
+        localStorage.setItem("zm_profile_g", JSON.stringify(accountProfile));
+        logMessage("SUCCESS", `Mailbox active: ${accountProfile.email}`);
+        grantAccess();
+      } catch (err) {
+        logMessage("ERROR", "Setup Error: " + err.message);
+        document.getElementById("setup-error-card").classList.remove("hidden");
+        document.getElementById("setup-error-msg").innerText = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Activate Live Mailbox";
       }
     }
 
     function grantAccess() {
-      document.getElementById("setup-modal").classList.add("hidden");
-      document.getElementById("locked-modal").classList.add("hidden");
-      document.getElementById("app-workspace").classList.remove("hidden");
-
-      // Display Address prominently in header
+      closeSetupModal();
       document.getElementById("header-email").innerText = accountProfile.email;
-      document.getElementById("device-badge").classList.remove("hidden");
-      document.getElementById("header-network").innerText = `ISP Sig: ${currentIP} • Local Host`;
+      document.getElementById("live-badge").classList.remove("hidden");
+      document.getElementById("gateway-detail").innerText = `Monitoring @${accountProfile.domain}`;
+
+      logMessage("INFO", "Active session for: " + accountProfile.email);
 
       loadFolder("inbox");
+      checkIncomingMail();
+
+      // Poll every 10 seconds
+      setInterval(() => checkIncomingMail(false), 10000);
     }
 
-    // --- 2. ACCOUNT CREATION & USB KEY GENERATION ---
-    async function handleAccountSetup(e) {
-      e.preventDefault();
-      const username = document.getElementById("setup-username").value.trim().toLowerCase();
-      const pin = document.getElementById("setup-pin").value.trim();
+    // --- 5. CHECK & DOWNLOAD LIVE EMAILS ---
+    async function checkIncomingMail(manual = false) {
+      if (!accountProfile || !accountProfile.sidToken || isCheckingMail) return;
+      isCheckingMail = true;
 
-      // Generate a unique 256-bit cryptographic token for this device
-      const deviceToken = "dev_" + crypto.randomUUID();
-      const email = `${username}@zeromail.page`;
+      const refreshBtn = document.getElementById("refresh-btn");
+      if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span> <span>Checking...</span>`;
 
-      accountProfile = {
-        username,
-        email,
-        pin,
-        deviceToken,
-        registeredIP: currentIP,
-        createdDate: new Date().toISOString()
-      };
+      try {
+        const checkUrl = `${G_API}?f=check_email&seq=0&sid_token=${accountProfile.sidToken}`;
+        const data = await safeGet(checkUrl);
+        const messages = data.list || [];
 
-      // Save locally
-      localStorage.setItem("zm_profile", JSON.stringify(accountProfile));
-      localStorage.setItem("zm_device_token", deviceToken);
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById("last-checked").innerText = `Last check: ${timeStr}`;
 
-      // Download the physical USB Key File (.zerokey)
-      downloadUsbKeyFile();
+        logMessage("SUCCESS", `Poll 200 OK. (${messages.length} messages on server)`);
 
-      grantAccess();
-    }
+        for (const msg of messages) {
+          const alreadyExists = await isEmailSavedLocally(msg.mail_id);
+          if (!alreadyExists) {
+            logMessage("NETWORK", `Downloading message #${msg.mail_id} from ${msg.mail_from}...`);
 
-    function downloadUsbKeyFile() {
-      if (!accountProfile) return;
-      const keyBlob = new Blob([JSON.stringify(accountProfile, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(keyBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${accountProfile.username}-identity.zerokey`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+            const fetchUrl = `${G_API}?f=fetch_email&email_id=${msg.mail_id}&sid_token=${accountProfile.sidToken}`;
+            const detail = await safeGet(fetchUrl);
 
-    // --- 3. UNLOCKING FROM ANOTHER COMPUTER ---
-    // Option 1: Master PIN
-    function handlePinUnlock(e) {
-      e.preventDefault();
-      const enteredPin = document.getElementById("unlock-pin-input").value;
-      if (accountProfile && enteredPin === accountProfile.pin) {
-        // Authorize this new computer
-        localStorage.setItem("zm_device_token", accountProfile.deviceToken);
-        grantAccess();
-      } else {
-        alert("Incorrect Master Backup PIN.");
+            await saveEmail({
+              remoteId: msg.mail_id,
+              from: detail.mail_from,
+              to: accountProfile.email,
+              subject: detail.mail_subject || "(No Subject)",
+              body: stripHtml(detail.mail_body || "(No message body)"),
+              folder: "inbox",
+              timestamp: detail.mail_date || new Date().toISOString()
+            });
+
+            logMessage("SUCCESS", `Email saved to local IndexedDB. Storage updated.`);
+          }
+        }
+      } catch (err) {
+        logMessage("ERROR", "Poll error: " + err.message);
+      } finally {
+        isCheckingMail = false;
+        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span>Check Mail</span>`;
       }
     }
 
-    // Option 2: Physical USB Key File
-    function handleUsbKeyUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    // --- 6. HEALTH PROBE ---
+    async function runHealthCheck() {
+      switchDiagTab('probe');
+      const results = document.getElementById("probe-results");
+      results.innerHTML = `<div class="text-slate-400">Executing diagnostic probe...</div>`;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const importedProfile = JSON.parse(event.target.result);
-          if (importedProfile.deviceToken && importedProfile.pin) {
-            accountProfile = importedProfile;
-            localStorage.setItem("zm_profile", JSON.stringify(accountProfile));
-            localStorage.setItem("zm_device_token", accountProfile.deviceToken);
-            alert("✨ Device successfully authenticated via physical USB key!");
-            grantAccess();
-          } else {
-            alert("Invalid key file.");
-          }
-        } catch (err) {
-          alert("Error parsing USB key file.");
-        }
-      };
-      reader.readAsText(file);
+      let output = "";
+
+      // 1. Local Database Check
+      try {
+        const tx = db.transaction("emails", "readonly");
+        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Local Storage (IndexedDB):</strong> Operational (Writing directly to your hard drive)</div>`;
+      } catch (err) {
+        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>IndexedDB:</strong> Failed: ${err.message}</div>`;
+      }
+
+      // 2. Gateway Reachability Check
+      try {
+        const t0 = performance.now();
+        const res = await safeGet(`${G_API}?f=get_email_address`);
+        const elapsed = (performance.now() - t0).toFixed(0);
+        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Inbound Gateway:</strong> 200 OK (${elapsed}ms latency, Simple GET active)</div>`;
+      } catch (err) {
+        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>Gateway Ping:</strong> Failed: ${err.message}</div>`;
+      }
+
+      // 3. Current Mailbox Status
+      if (accountProfile) {
+        output += `<div class="p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-300">ℹ️ <strong>Active Mailbox:</strong> ${accountProfile.email} (Ready for incoming mail)</div>`;
+      }
+
+      results.innerHTML = output;
+      logMessage("INFO", "Diagnostic probe completed.");
     }
 
-    // --- 4. DATABASE & STORAGE MANAGEMENT ---
+    // --- 7. LOCAL STORAGE (IndexedDB) ---
     function initDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 1);
         req.onupgradeneeded = (e) => {
           const dbInstance = e.target.result;
-          if (!dbInstance.objectStoreNames.contains("emails")) {
-            const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
-            store.createIndex("folder", "folder", { unique: false });
-          }
+          const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
+          store.createIndex("remoteId", "remoteId", { unique: false });
+          store.createIndex("folder", "folder", { unique: false });
         };
         req.onsuccess = (e) => { db = e.target.result; resolve(); };
         req.onerror = (e) => reject(e);
       });
     }
 
-    async function updateStorageMeter() {
-      if (navigator.storage && navigator.storage.estimate) {
-        const { usage } = await navigator.storage.estimate();
-        const kb = (usage / 1024).toFixed(1);
-        const mb = (usage / (1024 * 1024)).toFixed(2);
-        document.getElementById("storage-readout").innerText = usage > 1048576 ? `${mb} MB` : `${kb} KB`;
-      }
+    function isEmailSavedLocally(remoteId) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("emails", "readonly");
+        const idx = tx.objectStore("emails").index("remoteId");
+        const req = idx.get(remoteId);
+        req.onsuccess = () => resolve(!!req.result);
+        req.onerror = () => resolve(false);
+      });
     }
 
-    // THE FACTORY RESET BUTTON ("Back to like new")
-    async function factoryReset() {
-      const confirmed = confirm(
-        "⚠️ FACTORY RESET:\n\n" +
-        "This will wipe all emails, remove your device token, and restore your computer to 0 bytes used.\n\n" +
-        "Proceed?"
-      );
-      if (!confirmed) return;
-
-      if (db) db.close();
-      indexedDB.deleteDatabase(DB_NAME);
-      localStorage.clear();
-      alert("Application restored to factory state.");
-      location.reload();
-    }
-
-    // --- 5. EMAIL CORE ---
     function saveEmail(email) {
       return new Promise((resolve) => {
         const tx = db.transaction("emails", "readwrite");
@@ -390,7 +552,11 @@
       const container = document.getElementById("email-list");
       container.innerHTML = "";
       if (emails.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Folder is empty.</div>`;
+        container.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400 space-y-2">
+            <div>Folder is empty.</div>
+            <button onclick="toggleDiagnostics()" class="text-indigo-600 hover:underline font-medium">Open Diagnostics Console</button>
+          </div>`;
         return;
       }
       emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -425,7 +591,7 @@
             <button onclick="deleteEmail(${mail.id})" class="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
           </div>
         </div>
-        <div class="p-6 flex-1 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${escapeHtml(mail.body)}</div>
+        <div class="p-6 flex-1 overflow-y-auto text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-mono">${escapeHtml(mail.body)}</div>
       `;
     }
 
@@ -443,7 +609,7 @@
       e.preventDefault();
       const mail = {
         to: document.getElementById("compose-to").value,
-        from: accountProfile.email,
+        from: accountProfile ? accountProfile.email : "me@zeromail.local",
         subject: document.getElementById("compose-subject").value,
         body: document.getElementById("compose-body").value,
         folder: "sent",
@@ -454,42 +620,37 @@
       switchFolder("sent");
     }
 
-    function simulateIncomingMail() {
-      saveEmail({
-        from: "service-security@relay.local",
-        to: accountProfile.email,
-        subject: "🔒 Device Security Check Confirmed",
-        body: `Hello ${accountProfile.username}!\n\nYour session is verified with token:\n${accountProfile.deviceToken}\n\nAll messages exist strictly on your local drive.`,
-        folder: "inbox",
-        timestamp: new Date().toISOString()
-      });
+    // --- 8. REAL-TIME STORAGE & FACTORY RESET ---
+    async function updateStorageMeter() {
+      if (navigator.storage && navigator.storage.estimate) {
+        const { usage } = await navigator.storage.estimate();
+        const kb = (usage / 1024).toFixed(1);
+        const mb = (usage / (1024 * 1024)).toFixed(2);
+        document.getElementById("storage-readout").innerText = usage > 1048576 ? `${mb} MB` : `${kb} KB`;
+      }
     }
 
-    async function exportBackup() {
-      const emails = await getAllEmails();
-      const blob = new Blob([JSON.stringify(emails, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `zeromail-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-    }
-
-    function switchFolder(folder) {
-      document.getElementById("btn-inbox").className = folder === 'inbox' 
-        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
-        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
-      document.getElementById("btn-sent").className = folder === 'sent' 
-        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold"
-        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100";
-      loadFolder(folder);
+    async function factoryReset() {
+      if (!confirm("⚠️ Factory Reset: Clear all local emails and start fresh?")) return;
+      if (db) db.close();
+      indexedDB.deleteDatabase(DB_NAME);
+      localStorage.clear();
+      location.reload();
     }
 
     function openComposer() { document.getElementById("compose-modal").classList.remove("hidden"); }
     function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.innerText = text || "";
-      return div.innerHTML;
+    function switchFolder(folder) {
+      currentFolder = folder;
+      loadFolder(folder);
+    }
+    function escapeHtml(t) {
+      const d = document.createElement("div"); d.innerText = t || ""; return d.innerHTML;
+    }
+    function stripHtml(html) {
+      const tmp = document.createElement("DIV");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
     }
 
     window.addEventListener("DOMContentLoaded", initApp);
