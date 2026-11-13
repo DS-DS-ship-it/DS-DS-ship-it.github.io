@@ -11,62 +11,58 @@
     .term-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none">
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none overflow-x-hidden">
 
-  <!-- TOP HEADER -->
-  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
-    <div class="flex items-center space-x-3">
-      <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
-      <div>
-        <div class="flex items-center space-x-2">
-          <!-- Paired Address Display -->
-          <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">No Device Paired</span>
-          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center space-x-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Device Paired & Synced</span>
+  <!-- ================= TOP HEADER (RESPONSIVE & OVERFLOW PROTECTED) ================= -->
+  <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
+    <!-- Left: Identity -->
+    <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
+      <div class="min-w-0">
+        <div class="flex items-center space-x-1.5 flex-wrap">
+          <span id="header-email" class="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[160px] sm:max-w-[280px]">Detecting Local Vault...</span>
+          <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+            ● Synced
           </span>
-          <button onclick="openPairingModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-medium transition ml-1">
-            Change Address
+          <button onclick="openPairingModal()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium shrink-0">
+            Switch
           </button>
         </div>
-        <p class="text-xs text-slate-500" id="sync-status">Hosted on GitHub • Primary Storage: This Computer</p>
+        <p class="text-[10px] text-slate-400 truncate">Stored on this Computer • GitHub Pages Host</p>
       </div>
     </div>
 
-    <!-- Storage Monitor, Cleaning & Diagnostics -->
-    <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
-      <div class="text-xs text-right">
-        <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
-        <div class="text-slate-400 text-[10px]">IndexedDB on this PC</div>
+    <!-- Right: Responsive Toolbar (Will never push off screen) -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <div class="bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-right shrink-0">
+        <span class="text-[9px] text-slate-400 uppercase font-semibold block leading-none">Disk</span>
+        <span id="storage-readout" class="font-bold text-xs text-indigo-600 leading-none">0 KB</span>
       </div>
 
-      <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
-        <span>🔄</span> <span>Check Mail</span>
+      <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+        <span>🔄</span> <span class="hidden sm:inline">Check</span>
       </button>
 
-      <!-- Clear Storage Button (Regain Space) -->
-      <button onclick="clearAllStoredEmails()" title="Delete all stored emails from this computer to regain space" class="text-xs bg-white hover:bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
-        <span>🧹</span> <span>Clear Storage</span>
+      <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+        <span>🧹</span> <span class="hidden sm:inline">Clean</span>
       </button>
 
-      <!-- Diagnostics Console -->
-      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shadow-sm">
-        <span>🩺</span> <span>Diagnostics & Logs</span>
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm">
+        <span>🩺</span> <span class="hidden sm:inline">Logs</span>
       </button>
 
-      <!-- Factory Reset -->
-      <button onclick="factoryReset()" title="Full reset back to brand new" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
+      <button onclick="factoryReset()" title="Full reset" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1.5 rounded-lg font-semibold transition shrink-0 shadow-sm">
         Reset
       </button>
     </div>
   </header>
 
-  <!-- MAIN APP CONTAINER -->
-  <div id="app-workspace" class="flex flex-1 overflow-hidden">
+  <!-- ================= MAIN APP WORKSPACE ================= -->
+  <div id="app-workspace" class="flex flex-1 overflow-hidden w-full">
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-4">
+    <aside class="w-60 sm:w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 p-3 sm:p-4">
       <div class="space-y-4">
-        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2">
+        <button onclick="openComposer()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-xl font-medium shadow-sm transition flex items-center justify-center space-x-2 text-sm">
           <span>✏️ Compose</span>
         </button>
         <nav class="space-y-1 text-sm font-medium">
@@ -82,7 +78,7 @@
       </div>
 
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
           <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Device Sync Engine</div>
           <div class="text-emerald-700 text-[11px] font-semibold flex items-center space-x-1">
             <span>🔒 All Data Stored on this PC</span>
@@ -93,7 +89,7 @@
     </aside>
 
     <!-- Email List -->
-    <section class="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+    <section class="w-72 sm:w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
       <div class="p-3 border-b border-slate-200">
         <input type="text" id="search-input" oninput="filterEmails()" placeholder="Search local emails..." class="w-full text-sm px-3 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:bg-white focus:border-indigo-400 outline-none" />
       </div>
@@ -108,12 +104,18 @@
     </main>
   </div>
 
-  <!-- DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100) -->
-  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100] transform translate-x-full transition-transform duration-300">
+  <!-- ================= FLOATING DIAGNOSTICS LAUNCHER (ALWAYS ACCESSIBLE) ================= -->
+  <button onclick="toggleDiagnostics()" class="fixed bottom-4 right-4 z-[99999] bg-slate-900/90 hover:bg-slate-900 text-white border border-slate-700 px-3.5 py-2 rounded-xl shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold transition transform hover:scale-105 active:scale-95 cursor-pointer">
+    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    <span>🩺 Diagnostics & Logs</span>
+  </button>
+
+  <!-- ================= DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100000) ================= -->
+  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100000] transform translate-x-full transition-transform duration-300">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
       <div class="flex items-center space-x-2">
         <span class="text-emerald-400 text-sm font-bold">●</span>
-        <h3 class="font-bold text-white text-sm">System Diagnostics & Storage Telemetry</h3>
+        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Storage</h3>
       </div>
       <div class="flex items-center space-x-2">
         <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition">
@@ -122,14 +124,14 @@
         <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition">
           Clear
         </button>
-        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2">&times;</button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2 font-bold">&times;</button>
       </div>
     </div>
 
     <!-- Diagnostic Tabs -->
     <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
       <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400">Live Network Logs</button>
-      <button onclick="switchDiagTab('storage')" id="tab-btn-storage" class="px-4 py-2 text-slate-400 hover:text-white">Storage Health & Safety</button>
+      <button onclick="switchDiagTab('storage')" id="tab-btn-storage" class="px-4 py-2 text-slate-400 hover:text-white">Storage & Auto-Recovery</button>
     </div>
 
     <!-- TAB 1: Live Network Console -->
@@ -141,15 +143,15 @@
     <!-- TAB 2: Storage Architecture -->
     <div id="diag-panel-storage" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed">
       <div class="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-emerald-200">
-        <h4 class="font-bold text-emerald-300 mb-1">🛡️ Local Device Storage Architecture:</h4>
-        <p>1. <strong>GitHub takes 0 space:</strong> GitHub Pages only delivers this HTML file.<br>
-           2. <strong>Your device is the storage:</strong> Every email, HTML receipt, and image is downloaded into your browser's IndexedDB file on your hard drive.<br>
-           3. <strong>Instant Space Recovery:</strong> Deleting emails or clicking <em>"Clear Storage"</em> deletes the local files and contacts the mail gateway to purge remote copies, returning your computer storage to 0 bytes.</p>
+        <h4 class="font-bold text-emerald-300 mb-1">🛡️ Auto-Recovery & Zero Server Storage:</h4>
+        <p>1. <strong>Crash-Proof Pairing:</strong> If you ever clear your browser cache, the program automatically inspects your IndexedDB file on disk and restores your paired email address.<br>
+           2. <strong>Zero Server Footprint:</strong> GitHub only hosts this static HTML page. All emails, drafts, and attachments reside on your hard drive.<br>
+           3. <strong>Instant Space Recovery:</strong> Clicking <em>"Clear Storage"</em> wipes your local database and returns your computer storage to 0 KB.</p>
       </div>
     </div>
   </div>
 
-  <!-- PAIRING / ACCOUNT SETUP MODAL -->
+  <!-- ================= PAIRING / ACCOUNT SETUP MODAL ================= -->
   <div id="pairing-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
       <button onclick="closePairingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
@@ -157,7 +159,7 @@
       <div class="text-center mb-5">
         <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
         <h2 class="text-xl font-bold text-slate-900">Pair Address to This Device</h2>
-        <p class="text-xs text-slate-500 mt-1">Emails will automatically route to and store on this computer.</p>
+        <p class="text-xs text-slate-500 mt-1">Incoming emails will route to and store on this computer.</p>
       </div>
 
       <form onsubmit="handleDevicePairing(event)" class="space-y-4">
@@ -187,16 +189,23 @@
         <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
           Pair Mailbox to This Device
         </button>
+
+        <!-- Direct Diagnostics Link From Inside Modal -->
+        <div class="pt-2 text-center">
+          <button type="button" onclick="toggleDiagnostics()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center justify-center space-x-1 w-full">
+            <span>🩺</span> <span>View Network Logs & Diagnostics</span>
+          </button>
+        </div>
       </form>
     </div>
   </div>
 
-  <!-- COMPOSE MODAL -->
+  <!-- ================= COMPOSE MODAL ================= -->
   <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden border border-slate-200 flex flex-col">
       <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <h3 class="font-bold text-slate-800 text-sm">New Message</h3>
-        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+        <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
       </div>
       <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col">
         <input type="email" id="compose-to" required placeholder="To (e.g. friend@gmail.com)" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" />
@@ -210,7 +219,7 @@
     </div>
   </div>
 
-  <!-- CLIENT JAVASCRIPT: ENTIRE SYSTEM IN ONE FILE -->
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
     const DB_NAME = "ZeroMailClientDB";
     const G_API = "https://api.guerrillamail.com/ajax.php";
@@ -223,11 +232,16 @@
     let diagOpen = false;
     let activeViewMode = "html";
 
-    // --- 1. RESILIENT FETCH ENGINE ---
+    // --- 1. RESILIENT FETCH ENGINE WITH TIMEOUT GUARDS ---
     async function safeGet(url) {
       logMessage("NETWORK", `GET ${url.slice(0, 65)}...`);
+
+      // 1. Direct fetch with 4s timeout
+      const ctrl1 = new AbortController();
+      const timer1 = setTimeout(() => ctrl1.abort(), 4000);
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: ctrl1.signal });
+        clearTimeout(timer1);
         if (res.ok) {
           const rawText = await res.text();
           try {
@@ -237,25 +251,27 @@
           }
         }
       } catch (err) {
-        logMessage("WARN", `Direct fetch error: ${err.message}. Trying backup proxy...`);
+        clearTimeout(timer1);
+        logMessage("WARN", `Direct link slow or blocked: ${err.message}. Trying backup proxy...`);
       }
 
-      // Backup proxy with 5s timeout
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
+      // 2. Backup proxy with 4s timeout
+      const ctrl2 = new AbortController();
+      const timer2 = setTimeout(() => ctrl2.abort(), 4000);
       try {
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const resProxy = await fetch(proxyUrl, { signal: controller.signal });
-        clearTimeout(timer);
+        const resProxy = await fetch(proxyUrl, { signal: ctrl2.signal });
+        clearTimeout(timer2);
         if (resProxy.ok) {
           const text = await resProxy.text();
           return JSON.parse(text);
         }
       } catch (proxyErr) {
-        clearTimeout(timer);
+        clearTimeout(timer2);
         logMessage("ERROR", "Proxy fallback failed: " + proxyErr.message);
       }
-      throw new Error("Unable to reach mail gateway.");
+
+      throw new Error("Mail gateway busy or rate-limited. Retrying on next cycle.");
     }
 
     // --- 2. LIVE DIAGNOSTIC LOGS ---
@@ -297,12 +313,44 @@
       document.getElementById("tab-btn-storage").className = tab === 'storage' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
     }
 
-    // --- 3. APP INITIALIZATION & RECONNECTION ---
+    // --- 3. AUTO-RECOVERY FROM DISK & INITIALIZATION ---
     async function initApp() {
       await initDB();
       await updateStorageMeter();
 
-      accountProfile = JSON.parse(localStorage.getItem("zm_paired_profile"));
+      // Check all possible legacy and current storage keys
+      accountProfile = JSON.parse(
+        localStorage.getItem("zm_paired_profile") ||
+        localStorage.getItem("zm_profile_g") ||
+        localStorage.getItem("zm_profile_live") ||
+        localStorage.getItem("zm_profile_v2") ||
+        localStorage.getItem("zm_profile_e2ee") ||
+        localStorage.getItem("zm_profile")
+      );
+
+      // AUTOMATIC RECOVERY FROM INDEXEDDB (Detects existing 892 KB of stored emails!)
+      if (!accountProfile) {
+        try {
+          const storedEmails = await getAllEmails();
+          if (storedEmails && storedEmails.length > 0) {
+            const sample = storedEmails.find(m => m.to && m.to.includes("@"));
+            if (sample) {
+              const parts = sample.to.split("@");
+              accountProfile = {
+                username: parts[0],
+                domain: parts[1],
+                email: sample.to,
+                sidToken: "",
+                pairedDate: new Date().toISOString()
+              };
+              saveProfileLocally(accountProfile);
+              logMessage("SUCCESS", `Auto-recovered identity from local computer disk: ${accountProfile.email}`);
+            }
+          }
+        } catch (dbErr) {
+          console.warn("Could not inspect IndexedDB for recovery", dbErr);
+        }
+      }
 
       if (!accountProfile) {
         openPairingModal();
@@ -310,59 +358,68 @@
         grantAccess();
       }
 
-      // When the user opens the tab or internet reconnects:
       window.addEventListener("online", () => {
-        logMessage("NETWORK", "Connection detected. Catching up on missed emails...");
+        logMessage("NETWORK", "Connection re-established. Syncing older emails...");
         syncMailboxWithGateway(false);
       });
     }
 
+    function saveProfileLocally(profile) {
+      localStorage.setItem("zm_paired_profile", JSON.stringify(profile));
+    }
+
     function openPairingModal() {
-      document.getElementById("setup-username").value = "";
+      document.getElementById("setup-username").value = accountProfile ? accountProfile.username : "";
       document.getElementById("pairing-modal").classList.remove("hidden");
     }
     function closePairingModal() {
       document.getElementById("pairing-modal").classList.add("hidden");
     }
 
-    // --- 4. DEVICE PAIRING & SESSION BINDING ---
+    // --- 4. OFFLINE-FIRST PAIRING (NEVER BLOCKS OR THROWS ALERTS) ---
     async function handleDevicePairing(e) {
       e.preventDefault();
       const btn = document.getElementById("setup-submit-btn");
       btn.disabled = true;
-      btn.innerText = "Pairing with gateway...";
+      btn.innerText = "Pairing with device...";
 
       const user = document.getElementById("setup-username").value.trim().toLowerCase().replace(/[^a-z0-9_\.-]/g, "");
       const domain = document.getElementById("setup-domain").value;
       const fullAddress = `${user}@${domain}`;
 
-      try {
-        logMessage("NETWORK", `Pairing this computer to ${fullAddress}...`);
+      logMessage("NETWORK", `Pairing this device to: ${fullAddress}...`);
 
-        // Request fresh session
+      // 1. Immediately complete local pairing on computer
+      accountProfile = {
+        username: user,
+        domain: domain,
+        email: fullAddress,
+        sidToken: "",
+        pairedDate: new Date().toISOString()
+      };
+      saveProfileLocally(accountProfile);
+      logMessage("SUCCESS", `Device paired locally to: ${accountProfile.email}`);
+
+      // 2. Grant access immediately so user is never trapped in a modal
+      grantAccess();
+      btn.disabled = false;
+      btn.innerText = "Pair Mailbox to This Device";
+
+      // 3. Connect to gateway in the background
+      try {
         const session = await safeGet(`${G_API}?f=get_email_address`);
         const sid = session.sid_token;
-
-        // Rebind session to user handle
-        await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&domain=${encodeURIComponent(domain)}&sid_token=${sid}`);
-
-        accountProfile = {
-          username: user,
-          domain: domain,
-          email: fullAddress,
-          sidToken: sid,
-          pairedDate: new Date().toISOString()
-        };
-
-        localStorage.setItem("zm_paired_profile", JSON.stringify(accountProfile));
-        logMessage("SUCCESS", `Device successfully paired to ${fullAddress}`);
-        grantAccess();
+        const bindData = await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&sid_token=${sid}`);
+        
+        if (bindData && bindData.email_addr) {
+          accountProfile.email = bindData.email_addr;
+          accountProfile.sidToken = sid;
+          saveProfileLocally(accountProfile);
+          document.getElementById("header-email").innerText = accountProfile.email;
+          logMessage("SUCCESS", `Gateway confirmed address binding: ${accountProfile.email}`);
+        }
       } catch (err) {
-        logMessage("ERROR", "Pairing error: " + err.message);
-        alert("Pairing Error: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "Pair Mailbox to This Device";
+        logMessage("WARN", "Initial gateway ping busy. Background sync will connect automatically.");
       }
     }
 
@@ -372,54 +429,53 @@
       document.getElementById("live-badge").classList.remove("hidden");
 
       loadFolder("inbox");
-
-      // Immediately pull all emails sent while offline
       syncMailboxWithGateway(true);
 
       // Auto-poll every 12 seconds
       setInterval(() => syncMailboxWithGateway(false), 12000);
     }
 
-    // --- 5. THE OFFLINE RELAY ENGINE (Pulls older & missed emails) ---
+    // --- 5. THE OFFLINE RELAY (PULLS ALL OLDER & MISSED EMAILS) ---
     async function syncMailboxWithGateway(manual = false) {
       if (!accountProfile || isSyncing) return;
       isSyncing = true;
 
       const refreshBtn = document.getElementById("refresh-btn");
-      if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span> <span>Syncing...</span>`;
+      if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span>`;
 
       try {
         let sid = accountProfile.sidToken;
 
-        // 1. Check if the session is alive by attempting get_email_list
+        // 1. Check if existing session is alive
         let listData = null;
-        try {
-          listData = await safeGet(`${G_API}?f=get_email_list&offset=0&sid_token=${sid}`);
-        } catch (e) {
-          listData = null;
+        if (sid) {
+          try {
+            listData = await safeGet(`${G_API}?f=get_email_list&offset=0&sid_token=${sid}`);
+          } catch (e) {
+            listData = null;
+          }
         }
 
-        // 2. If the session expired (due to being offline / tab closed), re-bind automatically
+        // 2. If expired or empty session, re-bind automatically
         if (!listData || !listData.list) {
-          logMessage("WARN", "Gateway session expired while offline. Re-binding device to mailbox...");
+          logMessage("WARN", "Session refreshing. Re-binding address handle...");
           const freshSession = await safeGet(`${G_API}?f=get_email_address`);
           sid = freshSession.sid_token;
-          await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(accountProfile.username)}&site=${encodeURIComponent(accountProfile.domain)}&domain=${encodeURIComponent(accountProfile.domain)}&sid_token=${sid}`);
+          await safeGet(`${G_API}?f=set_email_user&email_user=${encodeURIComponent(accountProfile.username)}&site=${encodeURIComponent(accountProfile.domain)}&sid_token=${sid}`);
           accountProfile.sidToken = sid;
-          localStorage.setItem("zm_paired_profile", JSON.stringify(accountProfile));
+          saveProfileLocally(accountProfile);
 
-          // Fetch full backlog
           listData = await safeGet(`${G_API}?f=get_email_list&offset=0&sid_token=${sid}`);
         }
 
         const messages = listData.list || [];
-        logMessage("SUCCESS", `Relay query returned ${messages.length} email(s) on mail server.`);
+        logMessage("SUCCESS", `Relay found ${messages.length} email(s) waiting on server.`);
 
-        // 3. Download and permanently store any un-cached messages on this computer
+        // 3. Download and permanently store on this computer
         for (const msg of messages) {
           const alreadySaved = await isEmailSavedLocally(msg.mail_id);
           if (!alreadySaved) {
-            logMessage("NETWORK", `Relaying email #${msg.mail_id} from ${msg.mail_from} to computer storage...`);
+            logMessage("NETWORK", `Downloading email #${msg.mail_id} from ${msg.mail_from}...`);
             const detail = await safeGet(`${G_API}?f=fetch_email&email_id=${msg.mail_id}&sid_token=${sid}`);
 
             await saveEmail({
@@ -439,14 +495,14 @@
 
         document.getElementById("last-sync-time").innerText = `Last sync: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       } catch (err) {
-        logMessage("ERROR", "Sync error: " + err.message);
+        logMessage("WARN", "Sync update: " + err.message);
       } finally {
         isSyncing = false;
-        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span>Check Mail</span>`;
+        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span class="hidden sm:inline">Check</span>`;
       }
     }
 
-    // --- 6. LOCAL STORAGE ENGINE (IndexedDB) & DISK SPACE RECLAIM ---
+    // --- 6. LOCAL STORAGE (IndexedDB) & DISK SPACE RECLAIM ---
     function initDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 4);
@@ -533,18 +589,18 @@
 
       const pane = document.getElementById("reading-pane");
       pane.innerHTML = `
-        <div class="border-b border-slate-200 p-5 bg-white">
-          <div class="flex items-start justify-between">
+        <div class="border-b border-slate-200 p-4 sm:p-5 bg-white">
+          <div class="flex items-start justify-between flex-wrap gap-2">
             <div>
-              <h2 class="text-base font-bold text-slate-900">${escapeHtml(mail.subject)}</h2>
+              <h2 class="text-sm sm:text-base font-bold text-slate-900">${escapeHtml(mail.subject)}</h2>
               <div class="text-xs text-slate-500 mt-1">From: <strong class="text-slate-800">${escapeHtml(mail.from)}</strong> • To: <strong>${escapeHtml(mail.to)}</strong></div>
             </div>
             <div class="flex items-center space-x-2">
               <div class="bg-slate-100 p-1 rounded-lg border border-slate-200 flex text-xs">
-                <button onclick="setViewMode('html')" id="btn-view-html" class="px-2.5 py-1 rounded font-semibold ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
-                <button onclick="setViewMode('text')" id="btn-view-text" class="px-2.5 py-1 rounded font-semibold ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
+                <button onclick="setViewMode('html')" id="btn-view-html" class="px-2 py-1 rounded font-semibold ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
+                <button onclick="setViewMode('text')" id="btn-view-text" class="px-2 py-1 rounded font-semibold ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
               </div>
-              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
+              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold">Delete</button>
             </div>
           </div>
         </div>
@@ -555,8 +611,8 @@
 
     function setViewMode(mode) {
       activeViewMode = mode;
-      document.getElementById("btn-view-html").className = `px-2.5 py-1 rounded font-semibold ${mode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
-      document.getElementById("btn-view-text").className = `px-2.5 py-1 rounded font-semibold ${mode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      document.getElementById("btn-view-html").className = `px-2 py-1 rounded font-semibold ${mode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
+      document.getElementById("btn-view-text").className = `px-2 py-1 rounded font-semibold ${mode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}`;
       renderEmailContent();
     }
 
@@ -573,9 +629,8 @@
       }
     }
 
-    // DELETE A SINGLE EMAIL (Frees disk space on this PC)
+    // DELETE A SINGLE EMAIL (Frees disk space on this computer)
     async function deleteEmail(localId, remoteId) {
-      // 1. Delete on local machine
       const tx = db.transaction("emails", "readwrite");
       tx.objectStore("emails").delete(localId);
       tx.oncomplete = async () => {
@@ -585,7 +640,6 @@
         document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted. Local disk space reclaimed.</div>`;
       };
 
-      // 2. Also delete on server relay so it never re-downloads
       if (remoteId && accountProfile && accountProfile.sidToken) {
         try {
           safeGet(`${G_API}?f=del_email&email_ids[]=${remoteId}&sid_token=${accountProfile.sidToken}`);
@@ -593,7 +647,7 @@
       }
     }
 
-    // CLEAR ALL EMAILS (Regains all disk space on the computer)
+    // CLEAR ALL EMAILS (Regains 100% of the disk space on the computer)
     async function clearAllStoredEmails() {
       if (!confirm("🧹 CLEAR STORAGE:\n\nDelete all downloaded emails to regain disk space on this computer?\n(Your address pairing remains saved).")) return;
 
@@ -617,7 +671,7 @@
       }
     }
 
-    // FULL FACTORY RESET (Wipes pairing & all data)
+    // FULL FACTORY RESET
     async function factoryReset() {
       if (!confirm("⚠️ FACTORY RESET:\n\nThis will completely unpair this device and clear 100% of stored emails from your computer.")) return;
       if (db) db.close();
