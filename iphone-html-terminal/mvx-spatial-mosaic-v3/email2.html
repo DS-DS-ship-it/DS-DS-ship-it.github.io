@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZeroMail — Active Gateway & Local Client</title>
+  <title>ZeroMail — Active Inbound & Diagnostics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { width: 6px; }
@@ -14,19 +14,17 @@
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased select-none">
 
   <!-- TOP HEADER -->
-  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-20">
     <div class="flex items-center space-x-3">
       <div class="bg-indigo-600 text-white p-2 rounded-xl font-bold text-lg shadow-sm">⚡</div>
       <div>
         <div class="flex items-center space-x-2">
-          <!-- Active Address Display -->
           <span id="header-email" class="font-bold text-slate-900 text-base tracking-tight">No Active Mailbox</span>
           <span id="live-badge" class="hidden text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center space-x-1">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Gateway Online</span>
           </span>
-          <!-- Switch / Change Account Button -->
-          <button onclick="promptSwitchAccount()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-medium transition ml-1">
+          <button onclick="openSetupModal()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-medium transition ml-1">
             Switch Account
           </button>
         </div>
@@ -38,7 +36,7 @@
     <div class="flex items-center space-x-3 bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
       <div class="text-xs text-right">
         <div class="font-medium text-slate-700">Disk Used: <span id="storage-readout" class="font-bold text-indigo-600">0 KB</span></div>
-        <div class="text-slate-400 text-[10px]">IndexedDB on this PC</div>
+        <div class="text-slate-400 text-[10px]">Local IndexedDB</div>
       </div>
 
       <button onclick="checkIncomingMail(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition flex items-center space-x-1">
@@ -46,7 +44,7 @@
       </button>
 
       <!-- DIAGNOSTICS TOGGLE BUTTON -->
-      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1">
+      <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shadow-sm">
         <span>🩺</span> <span>Diagnostics & Logs</span>
       </button>
 
@@ -79,7 +77,7 @@
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
           <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Polling</div>
-          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Checking every 10s</div>
+          <div class="text-slate-700 text-[11px] font-medium" id="gateway-detail">Monitoring Inbound</div>
           <div class="text-[10px] text-slate-400" id="last-checked">Last check: Pending...</div>
         </div>
       </div>
@@ -101,8 +99,8 @@
     </main>
   </div>
 
-  <!-- DIAGNOSTICS & TROUBLESHOOTING DRAWER -->
-  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-50 transform translate-x-full transition-transform duration-300">
+  <!-- ================= DIAGNOSTICS & TROUBLESHOOTING DRAWER (Z-INDEX 100) ================= -->
+  <div id="diagnostics-modal" class="fixed inset-y-0 right-0 w-full max-w-xl bg-slate-900 text-slate-200 shadow-2xl border-l border-slate-800 flex flex-col z-[100] transform translate-x-full transition-transform duration-300">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
       <div class="flex items-center space-x-2">
         <span class="text-emerald-400 text-sm font-bold">●</span>
@@ -115,7 +113,7 @@
         <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition">
           Clear
         </button>
-        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-lg px-2">&times;</button>
+        <button onclick="toggleDiagnostics()" class="text-slate-400 hover:text-white text-xl px-2">&times;</button>
       </div>
     </div>
 
@@ -155,20 +153,27 @@
     </div>
   </div>
 
-  <!-- SETUP / SWITCH ACCOUNT MODAL -->
+  <!-- ================= SETUP / SWITCH ACCOUNT MODAL ================= -->
   <div id="setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200">
+    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-200 relative">
+      <button onclick="closeSetupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      
       <div class="text-center mb-5">
         <div class="inline-block p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-2 text-2xl font-bold">📬</div>
         <h2 class="text-xl font-bold text-slate-900">Activate Your Inbound Mailbox</h2>
         <p class="text-xs text-slate-500 mt-1">Pick your username and domain. Connects to live mail servers.</p>
       </div>
 
+      <!-- INLINE ERROR CARD -->
+      <div id="setup-error-card" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">
+        <div class="font-bold mb-1" id="setup-error-title">Connection Error</div>
+        <div id="setup-error-msg" class="leading-relaxed"></div>
+      </div>
+
       <form onsubmit="handleAccountSetup(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Choose Address Name</label>
           <div class="flex items-center">
-            <!-- Completely Blank Text Box -->
             <input 
               type="text" 
               id="setup-username" 
@@ -179,17 +184,27 @@
               autocomplete="off" 
               class="flex-1 text-sm px-3 py-2 border border-slate-300 rounded-l-lg outline-none focus:border-indigo-500 text-slate-800" 
             />
-            <!-- Dynamic Domains Pulled from Live Gateway -->
             <select id="setup-domain" class="bg-slate-100 border border-l-0 border-slate-300 text-slate-700 text-xs px-2.5 py-2.5 rounded-r-lg font-medium outline-none">
-              <option value="">Fetching active domains...</option>
+              <option value="sharklasers.com">@sharklasers.com</option>
+              <option value="guerrillamail.com">@guerrillamail.com</option>
+              <option value="grr.la">@grr.la</option>
+              <option value="guerrillamail.net">@guerrillamail.net</option>
+              <option value="guerrillamail.biz">@guerrillamail.biz</option>
+              <option value="guerrillamail.org">@guerrillamail.org</option>
             </select>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1">Letters, numbers, dots, and hyphens (no spaces).</p>
+          <p class="text-[10px] text-slate-400 mt-1">Active global mail servers with live MX records.</p>
         </div>
 
         <button type="submit" id="setup-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-sm">
           Activate Live Mailbox
         </button>
+
+        <div class="pt-2 text-center">
+          <button type="button" onclick="toggleDiagnostics()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+            🩺 Open Diagnostics & Error Logs
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -216,7 +231,7 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     const DB_NAME = "ZeroMailClientDB";
-    const API_BASE = "https://api.mail.gw";
+    const G_API = "https://api.guerrillamail.com/ajax.php";
     let db;
     let currentFolder = "inbox";
     let activeEmailId = null;
@@ -274,29 +289,29 @@
       document.getElementById("tab-btn-shopify").className = tab === 'shopify' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400" : "px-4 py-2 text-slate-400 hover:text-white";
     }
 
-    // --- 2. FETCH LIVE DOMAINS ---
-    async function loadActiveDomains() {
-      const select = document.getElementById("setup-domain");
+    // --- 2. CORS-SAFE FETCH (Simple GET, No Preflight) ---
+    async function safeGet(url) {
       try {
-        logMessage("NETWORK", "Fetching active domains from " + API_BASE + "/domains");
-        const res = await fetch(`${API_BASE}/domains`);
-        const data = await res.json();
-        const domains = data["hydra:member"] || [];
-
-        select.innerHTML = "";
-        domains.forEach(d => {
-          if (d.isActive) {
-            const opt = document.createElement("option");
-            opt.value = d.domain;
-            opt.innerText = `@${d.domain}`;
-            select.appendChild(opt);
-          }
-        });
-        logMessage("SUCCESS", `Loaded ${domains.length} live operational domains.`);
+        logMessage("NETWORK", `GET ${url.slice(0, 60)}...`);
+        const res = await fetch(url);
+        if (res.ok) {
+          logMessage("SUCCESS", `200 OK from ${new URL(url).hostname}`);
+          return await res.json();
+        }
       } catch (err) {
-        logMessage("ERROR", "Failed to fetch domains: " + err.message);
-        select.innerHTML = `<option value="mail.gw">@mail.gw</option>`;
+        logMessage("WARN", "Direct GET failed, trying proxy relay...", err.message);
       }
+
+      // Proxy fallback if browser blocks
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      logMessage("NETWORK", `GET via Proxy...`);
+      const resProxy = await fetch(proxyUrl);
+      if (resProxy.ok) {
+        logMessage("SUCCESS", "Proxy relay responded 200 OK");
+        return await resProxy.json();
+      }
+
+      throw new Error("Unable to connect to mail network.");
     }
 
     // --- 3. APP INITIALIZATION ---
@@ -304,82 +319,61 @@
       await initDB();
       await updateStorageMeter();
 
-      accountProfile = JSON.parse(localStorage.getItem("zm_profile_live"));
+      accountProfile = JSON.parse(localStorage.getItem("zm_profile_g"));
 
       if (!accountProfile) {
-        await promptSwitchAccount();
+        openSetupModal();
       } else {
         grantAccess();
       }
     }
 
-    async function promptSwitchAccount() {
+    function openSetupModal() {
+      document.getElementById("setup-error-card").classList.add("hidden");
       document.getElementById("setup-username").value = "";
       document.getElementById("setup-modal").classList.remove("hidden");
-      await loadActiveDomains();
     }
 
-    // --- 4. ACCOUNT CREATION ON LIVE GATEWAY ---
+    function closeSetupModal() {
+      document.getElementById("setup-modal").classList.add("hidden");
+    }
+
+    // --- 4. ACCOUNT ACTIVATION (Simple GET Flow) ---
     async function handleAccountSetup(e) {
       e.preventDefault();
       const btn = document.getElementById("setup-submit-btn");
       btn.disabled = true;
-      btn.innerText = "Registering on live network...";
+      btn.innerText = "Connecting to live servers...";
+      document.getElementById("setup-error-card").classList.add("hidden");
 
       const user = document.getElementById("setup-username").value.trim().toLowerCase().replace(/[^a-z0-9_\.-]/g, "");
       const domain = document.getElementById("setup-domain").value;
-      const fullAddress = `${user}@${domain}`;
-      const password = "zm_" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-
-      logMessage("NETWORK", `Creating account for ${fullAddress}...`);
 
       try {
-        // 1. Register account
-        const regRes = await fetch(`${API_BASE}/accounts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: fullAddress, password: password })
-        });
+        // Step 1: Initialize session (Simple GET)
+        logMessage("NETWORK", "Initializing mail session on Guerrilla Gateway...");
+        const sessionData = await safeGet(`${G_API}?f=get_email_address`);
+        const sid = sessionData.sid_token;
 
-        // 409 means account already exists; we proceed to fetch token
-        if (!regRes.ok && regRes.status !== 409) {
-          const errData = await regRes.json();
-          throw new Error(errData.message || `HTTP ${regRes.status}`);
-        }
-
-        logMessage("SUCCESS", "Mailbox registered on network.");
-
-        // 2. Obtain token
-        const tokenRes = await fetch(`${API_BASE}/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: fullAddress, password: password })
-        });
-
-        if (!tokenRes.ok) {
-          if (tokenRes.status === 401) {
-            throw new Error("This username is already taken on this domain. Please pick another name.");
-          }
-          throw new Error("Failed to authenticate session token.");
-        }
-
-        const tokenData = await tokenRes.json();
-        logMessage("SUCCESS", "Bearer token granted. Inbox active!");
+        // Step 2: Set user & domain (Simple GET)
+        logMessage("NETWORK", `Assigning handle: ${user}@${domain}...`);
+        const assignData = await safeGet(`${G_API}?f=set_user&email_user=${encodeURIComponent(user)}&site=${encodeURIComponent(domain)}&sid_token=${sid}`);
 
         accountProfile = {
           username: user,
           domain: domain,
-          email: fullAddress,
-          token: tokenData.token,
-          password: password,
+          email: assignData.email_addr || `${user}@${domain}`,
+          sidToken: sid,
           createdDate: new Date().toISOString()
         };
 
-        localStorage.setItem("zm_profile_live", JSON.stringify(accountProfile));
+        localStorage.setItem("zm_profile_g", JSON.stringify(accountProfile));
+        logMessage("SUCCESS", `Address activated: ${accountProfile.email}`);
         grantAccess();
       } catch (err) {
-        logMessage("ERROR", "Registration failed: " + err.message);
-        alert("Registration Error:\n" + err.message);
+        logMessage("ERROR", "Setup Error: " + err.message);
+        document.getElementById("setup-error-card").classList.remove("hidden");
+        document.getElementById("setup-error-msg").innerText = err.message + ". Check Diagnostics for details.";
       } finally {
         btn.disabled = false;
         btn.innerText = "Activate Live Mailbox";
@@ -387,64 +381,54 @@
     }
 
     function grantAccess() {
-      document.getElementById("setup-modal").classList.add("hidden");
+      closeSetupModal();
       document.getElementById("header-email").innerText = accountProfile.email;
       document.getElementById("live-badge").classList.remove("hidden");
       document.getElementById("gateway-detail").innerText = `Monitoring @${accountProfile.domain}`;
 
-      logMessage("INFO", "Session active for " + accountProfile.email);
-
       loadFolder("inbox");
       checkIncomingMail();
 
-      // Poll every 10 seconds
       setInterval(() => checkIncomingMail(false), 10000);
     }
 
     // --- 5. CHECK & DOWNLOAD LIVE EMAILS ---
     async function checkIncomingMail(manual = false) {
-      if (!accountProfile || !accountProfile.token || isCheckingMail) return;
+      if (!accountProfile || !accountProfile.sidToken || isCheckingMail) return;
       isCheckingMail = true;
 
       const refreshBtn = document.getElementById("refresh-btn");
       if (manual && refreshBtn) refreshBtn.innerHTML = `<span>⏳</span> <span>Checking...</span>`;
 
       try {
-        logMessage("NETWORK", `GET ${API_BASE}/messages`);
-        const res = await fetch(`${API_BASE}/messages`, {
-          headers: { "Authorization": `Bearer ${accountProfile.token}` }
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
-        const messages = data["hydra:member"] || [];
-        logMessage("SUCCESS", `Gateway checked: 200 OK. (${messages.length} messages on server)`);
+        const checkUrl = `${G_API}?f=check_email&seq=0&sid_token=${accountProfile.sidToken}`;
+        const data = await safeGet(checkUrl);
+        const messages = data.list || [];
 
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         document.getElementById("last-checked").innerText = `Last check: ${timeStr}`;
 
-        for (const msg of messages) {
-          const alreadyExists = await isEmailSavedLocally(msg.id);
-          if (!alreadyExists) {
-            logMessage("NETWORK", `Downloading new message from: ${msg.from.address}...`);
+        logMessage("SUCCESS", `Poll 200 OK. (${messages.length} messages on server)`);
 
-            const detailRes = await fetch(`${API_BASE}/messages/${msg.id}`, {
-              headers: { "Authorization": `Bearer ${accountProfile.token}` }
-            });
-            const detail = await detailRes.json();
+        for (const msg of messages) {
+          const alreadyExists = await isEmailSavedLocally(msg.mail_id);
+          if (!alreadyExists) {
+            logMessage("NETWORK", `Downloading message #${msg.mail_id} from ${msg.mail_from}...`);
+
+            const fetchUrl = `${G_API}?f=fetch_email&email_id=${msg.mail_id}&sid_token=${accountProfile.sidToken}`;
+            const detail = await safeGet(fetchUrl);
 
             await saveEmail({
-              remoteId: msg.id,
-              from: detail.from.address || detail.from.name,
+              remoteId: msg.mail_id,
+              from: detail.mail_from,
               to: accountProfile.email,
-              subject: detail.subject || "(No Subject)",
-              body: detail.text || detail.intro || "(Empty message content)",
+              subject: detail.mail_subject || "(No Subject)",
+              body: stripHtml(detail.mail_body || "(No message body)"),
               folder: "inbox",
-              timestamp: detail.createdAt || new Date().toISOString()
+              timestamp: detail.mail_date || new Date().toISOString()
             });
 
-            logMessage("SUCCESS", `Email saved to local computer disk. Storage updated.`);
+            logMessage("SUCCESS", `Email saved to local disk. Storage updated.`);
           }
         }
       } catch (err) {
@@ -471,26 +455,26 @@
         output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>IndexedDB:</strong> Failed: ${err.message}</div>`;
       }
 
-      // 2. Live Network Gateway
+      // 2. Gateway Reachability
       try {
         const t0 = performance.now();
-        const res = await fetch(`${API_BASE}/domains`);
+        const res = await safeGet(`${G_API}?f=get_email_address`);
         const elapsed = (performance.now() - t0).toFixed(0);
-        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Mail Gateway (${API_BASE}):</strong> 200 OK (${elapsed}ms latency, Native CORS active)</div>`;
+        output += `<div class="p-2.5 bg-emerald-950/40 border border-emerald-800 rounded-lg text-emerald-300">✅ <strong>Inbound Gateway:</strong> 200 OK (${elapsed}ms latency, Simple GET active)</div>`;
       } catch (err) {
-        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>Mail Gateway:</strong> Failed: ${err.message}</div>`;
+        output += `<div class="p-2.5 bg-red-950/40 border border-red-800 rounded-lg text-red-300">❌ <strong>Gateway Ping:</strong> Failed: ${err.message}</div>`;
       }
 
       // 3. Current Mailbox Status
-      if (accountProfile && accountProfile.token) {
-        output += `<div class="p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-300">ℹ️ <strong>Active Mailbox:</strong> ${accountProfile.email} (Authenticated)</div>`;
+      if (accountProfile) {
+        output += `<div class="p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-300">ℹ️ <strong>Active Mailbox:</strong> ${accountProfile.email} (Ready for incoming mail)</div>`;
       }
 
       results.innerHTML = output;
       logMessage("INFO", "Diagnostic probe completed.");
     }
 
-    // --- 7. LOCAL STORAGE ENGINE (IndexedDB) ---
+    // --- 7. LOCAL STORAGE (IndexedDB) ---
     function initDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 1);
@@ -606,7 +590,7 @@
       e.preventDefault();
       const mail = {
         to: document.getElementById("compose-to").value,
-        from: accountProfile.email,
+        from: accountProfile ? accountProfile.email : "me@zeromail.local",
         subject: document.getElementById("compose-subject").value,
         body: document.getElementById("compose-body").value,
         folder: "sent",
@@ -643,6 +627,11 @@
     }
     function escapeHtml(t) {
       const d = document.createElement("div"); d.innerText = t || ""; return d.innerHTML;
+    }
+    function stripHtml(html) {
+      const tmp = document.createElement("DIV");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
     }
 
     window.addEventListener("DOMContentLoaded", initApp);
