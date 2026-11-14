@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZeroMail — Device-Paired Local Mailbox</title>
+  <title>ZeroMail — Standalone Local Mailbox</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { user-select: text !important; -webkit-user-select: text !important; }
@@ -14,7 +14,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
-  <!-- TOP HEADER -->
+  <!-- TOP HEADER (RESPONSIVE & CLEAN) -->
   <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
     <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
       <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
@@ -28,7 +28,7 @@
             Switch
           </button>
         </div>
-        <p class="text-[10px] text-slate-400 truncate">Stored on this Computer • GitHub Pages Host</p>
+        <p class="text-[10px] text-slate-400 truncate">Standalone Email Service • Local Disk Storage</p>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
       </div>
 
       <button onclick="syncMailboxWithGateway(true)" id="refresh-btn" class="text-xs bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
-        <span>🔄</span> <span class="hidden sm:inline">Check</span>
+        <span>🔄</span> <span class="hidden sm:inline">Check Mail</span>
       </button>
 
       <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
@@ -68,22 +68,29 @@
         <nav class="space-y-1 text-sm font-medium">
           <button onclick="switchFolder('inbox')" id="btn-inbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold cursor-pointer">
             <span>📥 Inbox</span>
-            <span id="badge-inbox" class="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">0</span>
+            <span id="badge-inbox" class="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full font-bold">0</span>
           </button>
+          
+          <!-- Persistent Outbox Queue -->
+          <button onclick="switchFolder('outbox')" id="btn-outbox" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer">
+            <span>⏳ Outbox (Queued)</span>
+            <span id="badge-outbox" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          </button>
+
           <button onclick="switchFolder('sent')" id="btn-sent" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer">
             <span>📤 Sent</span>
-            <span id="badge-sent" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">0</span>
+            <span id="badge-sent" class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">0</span>
           </button>
         </nav>
       </div>
 
       <div class="border-t border-slate-200 pt-3 text-xs text-slate-500 space-y-2">
         <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Device Sync Engine</div>
-          <div class="text-emerald-700 text-[11px] font-semibold flex items-center space-x-1">
-            <span>🔒 All Data Stored on this PC</span>
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Outbox Dispatcher</div>
+          <div id="dispatcher-status" class="text-emerald-700 text-[11px] font-semibold flex items-center space-x-1">
+            <span>⚡ Auto-Retry Persistence Active</span>
           </div>
-          <div class="text-[10px] text-slate-400" id="last-sync-time">Last sync: Pending...</div>
+          <div class="text-[10px] text-slate-400" id="last-sync-time">Last check: Pending...</div>
         </div>
       </div>
     </aside>
@@ -115,11 +122,11 @@
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
       <div class="flex items-center space-x-2">
         <span class="text-emerald-400 text-sm font-bold">●</span>
-        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Telemetry</h3>
+        <h3 class="font-bold text-white text-sm">System Diagnostics & Outbox Logs</h3>
       </div>
       <div class="flex items-center space-x-2">
-        <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition cursor-pointer">
-          Force Re-Sync
+        <button onclick="processOutboxQueue(true)" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded font-medium transition cursor-pointer">
+          Flush Outbox
         </button>
         <button onclick="clearLogs()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded font-medium transition cursor-pointer">
           Clear
@@ -131,34 +138,35 @@
     <!-- Diagnostic Tabs -->
     <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
       <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer">Live Network Logs</button>
-      <button onclick="switchDiagTab('yahoo')" id="tab-btn-yahoo" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Inbound vs Outbound Rules</button>
+      <button onclick="switchDiagTab('outbox-info')" id="tab-btn-outbox-info" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Persistence & Retries</button>
     </div>
 
     <!-- TAB 1: Live Network Console -->
     <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40 select-text cursor-text">
-      <div class="text-slate-500">// Real-time Inbound Polls & Outbound Events stream here:</div>
+      <div class="text-slate-500">// Real-time Inbound Polls & Outbound Retry Dispatches:</div>
       <div id="log-stream" class="space-y-1"></div>
     </div>
 
-    <!-- TAB 2: Architecture Breakdown -->
-    <div id="diag-panel-yahoo" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
+    <!-- TAB 2: Outbox Architecture -->
+    <div id="diag-panel-outbox-info" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
       <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
-        <h4 class="font-bold text-amber-300 mb-1">ℹ️ Understanding Inbound vs Outbound:</h4>
-        <p>1. <strong>"Relay found X email(s) waiting":</strong> This is your <em>INBOUND</em> receiver checking for incoming mail every 14 seconds. It has nothing to do with sending messages out.<br>
-           2. <strong>Anonymous Outbound Sending is Blocked:</strong> Guerrilla Mail permanently disabled public outbound relaying to prevent spam bots. To deliver to external Yahoo accounts, click <strong>"Yahoo Web"</strong> or <strong>"Gmail Web"</strong> in the Compose box.</p>
+        <h4 class="font-bold text-amber-300 mb-1">⏳ How Outbox Persistence Works:</h4>
+        <p>1. When you click <strong>"Send Message"</strong>, your email is stored on your hard drive in your local Outbox.<br>
+           2. The background engine attempts transmission immediately. If a receiving server (like Yahoo) is temporarily rate-limiting or greylisting, the email stays in your Outbox.<br>
+           3. The engine automatically retries transmission every 15–30 seconds. Even if you turn off your computer or close Safari, it resumes retrying automatically when you return.</p>
       </div>
     </div>
   </div>
 
-  <!-- ================= COMPOSE MODAL ================= -->
+  <!-- ================= COMPOSE MODAL (STANDALONE WITH OUTBOX QUEUE) ================= -->
   <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
       <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-        <h3 class="font-bold text-slate-800 text-sm">Compose & Dispatch Message</h3>
+        <h3 class="font-bold text-slate-800 text-sm">New Message (Queued Dispatch)</h3>
         <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
       </div>
 
-      <!-- Quick Helpers -->
+      <!-- Quick Delivery Helper Buttons -->
       <div class="p-3 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between flex-wrap gap-2 text-xs shrink-0">
         <div class="font-bold text-indigo-900">Delivery Diagnostics:</div>
         <div class="flex items-center gap-1.5 flex-wrap">
@@ -171,13 +179,10 @@
         </div>
       </div>
 
-      <!-- Outbound Status Notification -->
-      <div id="compose-status-bar" class="hidden px-4 py-2 text-xs flex items-center justify-between"></div>
-
-      <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col overflow-y-auto">
+      <form onsubmit="handleQueueEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col overflow-y-auto">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">To Recipient</label>
-          <input type="email" id="compose-to" oninput="handleRecipientChange(this.value)" required placeholder="recipient@yahoo.com" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+          <input type="email" id="compose-to" required placeholder="recipient@yahoo.com" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
         </div>
 
         <div>
@@ -187,28 +192,19 @@
 
         <div class="flex-1 flex flex-col min-h-[140px]">
           <label class="block text-xs font-semibold text-slate-600 mb-1">Message Body</label>
-          <textarea id="compose-body" required placeholder="Write your message here..." rows="5" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1 select-text cursor-text"></textarea>
+          <textarea id="compose-body" required placeholder="Write your message here..." rows="6" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1 select-text cursor-text"></textarea>
         </div>
 
-        <!-- OUTBOUND ACTION BAR -->
-        <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
-          <!-- Webmail Launchers (Guaranteed Delivery) -->
-          <div class="flex items-center space-x-1.5">
-            <span class="text-[11px] text-slate-500 font-semibold">Deliver Via:</span>
-            <button type="button" onclick="dispatchViaWebmail('yahoo')" class="text-xs bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-800 font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm">
-              Yahoo Web
-            </button>
-            <button type="button" onclick="dispatchViaWebmail('gmail')" class="text-xs bg-red-50 hover:bg-red-100 border border-red-300 text-red-800 font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm">
-              Gmail Web
-            </button>
-          </div>
+        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500 leading-relaxed">
+          ⚡ <strong>Store-and-Forward Engine:</strong> When submitted, your message is queued in your local Outbox and continuously retried in the background until received.
+        </div>
 
-          <div class="flex space-x-2">
-            <button type="button" onclick="closeComposer()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
-            <button type="submit" id="compose-send-btn" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition cursor-pointer">
-              💾 Save to Sent
-            </button>
-          </div>
+        <!-- ACTION BAR -->
+        <div class="pt-2 border-t border-slate-200 flex items-center justify-end space-x-2 shrink-0">
+          <button type="button" onclick="closeComposer()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
+          <button type="submit" id="compose-send-btn" class="px-5 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition cursor-pointer flex items-center space-x-1.5">
+            <span>🚀</span> <span>Queue & Send</span>
+          </button>
         </div>
       </form>
     </div>
@@ -265,6 +261,7 @@
     let activeEmailId = null;
     let accountProfile = null;
     let isSyncing = false;
+    let isProcessingOutbox = false;
     let diagOpen = false;
     let activeViewMode = "html";
 
@@ -322,7 +319,7 @@
       if (level === "ERROR") color = "text-red-400";
       if (level === "NETWORK") color = "text-sky-400";
       if (level === "STORAGE") color = "text-purple-400";
-      if (level === "OUTBOUND") color = "text-pink-400";
+      if (level === "OUTBOX") color = "text-pink-400";
 
       row.innerHTML = `
         <span class="text-slate-600 select-none">[${time}]</span>
@@ -342,9 +339,9 @@
     }
     function switchDiagTab(tab) {
       document.getElementById("diag-panel-logs").classList.toggle("hidden", tab !== 'logs');
-      document.getElementById("diag-panel-yahoo").classList.toggle("hidden", tab !== 'yahoo');
+      document.getElementById("diag-panel-outbox-info").classList.toggle("hidden", tab !== 'outbox-info');
       document.getElementById("tab-btn-logs").className = tab === 'logs' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
-      document.getElementById("tab-btn-yahoo").className = tab === 'yahoo' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
+      document.getElementById("tab-btn-outbox-info").className = tab === 'outbox-info' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
     }
 
     // --- 3. AUTO-RECOVERY & INITIALIZATION ---
@@ -442,8 +439,13 @@
 
       loadFolder("inbox");
       syncMailboxWithGateway(true);
+      processOutboxQueue(true);
 
+      // Auto-poll inbound every 14 seconds
       setInterval(() => syncMailboxWithGateway(false), 14000);
+
+      // Auto-retry outbound persistence queue every 15 seconds
+      setInterval(() => processOutboxQueue(false), 15000);
     }
 
     // --- 5. THE INBOUND RELAY LOOP ---
@@ -502,12 +504,12 @@
           }
         }
 
-        document.getElementById("last-sync-time").innerText = `Last sync: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        document.getElementById("last-sync-time").innerText = `Last check: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       } catch (err) {
         logMessage("WARN", "Sync update: " + err.message);
       } finally {
         isSyncing = false;
-        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span class="hidden sm:inline">Check</span>`;
+        if (refreshBtn) refreshBtn.innerHTML = `<span>🔄</span> <span class="hidden sm:inline">Check Mail</span>`;
       }
     }
 
@@ -541,22 +543,11 @@
       }
     }
 
-    // --- 7. OUTBOUND DISPATCH & REALITY ENGINE ---
-    function handleRecipientChange(email) {
-      const statusBar = document.getElementById("compose-status-bar");
-      if (email.toLowerCase().includes("@yahoo.") || email.toLowerCase().includes("@ymail.")) {
-        statusBar.className = "px-4 py-2 text-xs bg-amber-50 border-b border-amber-200 text-amber-900 block";
-        statusBar.innerHTML = `⚠️ <strong>Sending to Yahoo:</strong> Click the purple <strong>"Yahoo Web"</strong> button below to guarantee delivery to their Inbox!`;
-      } else {
-        statusBar.className = "hidden";
-      }
-    }
-
+    // --- 7. OUTBOX QUEUE & STORE-AND-FORWARD PERSISTENCE ---
     function fillPort25Echo() {
       document.getElementById("compose-to").value = "check-auth@verifier.port25.com";
       document.getElementById("compose-subject").value = "Port25 Delivery Echo Test";
       document.getElementById("compose-body").value = `Diagnostic verification from ZeroMail.\nAddress: ${accountProfile ? accountProfile.email : 'local-user'}\nTime: ${new Date().toISOString()}`;
-      handleRecipientChange("check-auth@verifier.port25.com");
     }
 
     function fillSelfLoopbackTest() {
@@ -564,90 +555,186 @@
       document.getElementById("compose-to").value = accountProfile.email;
       document.getElementById("compose-subject").value = "ZeroMail Inbound & Outbound Pipeline Test";
       document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent directly through your ZeroMail local pipeline at ${new Date().toLocaleTimeString()}.\n\nAll messages exist safely on this computer's hard drive.`;
-      handleRecipientChange(accountProfile.email);
     }
 
-    // Guaranteed, non-freezing webmail popup
-    function dispatchViaWebmail(service) {
-      const to = encodeURIComponent(document.getElementById("compose-to").value.trim());
-      const subject = encodeURIComponent(document.getElementById("compose-subject").value.trim());
-      const body = encodeURIComponent(document.getElementById("compose-body").value.trim());
-
-      if (!to) {
-        alert("Please enter a recipient email address.");
-        return;
-      }
-
-      let url = "";
-      if (service === "yahoo") {
-        url = `https://compose.mail.yahoo.com/?to=${to}&subject=${subject}&body=${body}`;
-      } else if (service === "gmail") {
-        url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
-      }
-
-      logMessage("OUTBOUND", `Opening ${service.toUpperCase()} popup to transmit message to ${decodeURIComponent(to)}...`);
-      window.open(url, "_blank", "width=850,height=680,resizable=yes,scrollbars=yes");
-    }
-
-    async function handleSendEmail(e) {
+    // When clicking "Queue & Send" in the Compose box
+    async function handleQueueEmail(e) {
       e.preventDefault();
       const to = document.getElementById("compose-to").value.trim();
       const subject = document.getElementById("compose-subject").value.trim();
       const body = document.getElementById("compose-body").value.trim();
 
-      // 1. If self-send, immediately deliver to inbox locally
-      if (accountProfile && to.toLowerCase() === accountProfile.email.toLowerCase()) {
-        await saveEmail({
-          remoteId: "self_" + Date.now(),
-          from: accountProfile.email,
-          to: to,
-          subject: subject,
-          body: body,
-          htmlBody: `<div style="font-family: sans-serif; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
-            <h3 style="color: #166534; margin-top: 0;">✅ Direct Self-Send Received!</h3>
-            <p>${escapeHtml(body)}</p>
-            <p style="font-size: 11px; color: #15803d; margin-bottom: 0;">Delivered directly to local computer vault.</p>
-          </div>`,
-          folder: "inbox",
-          timestamp: new Date().toISOString()
-        });
-        logMessage("SUCCESS", `[OUTBOUND] Direct self-test delivered to Inbox.`);
-      }
-
-      // Save local record in Sent folder
-      const mail = {
+      const outboxItem = {
         to: to,
         from: accountProfile ? accountProfile.email : "me@zeromail.local",
         subject: subject,
         body: body,
         htmlBody: `<div>${escapeHtml(body)}</div>`,
-        folder: "sent",
-        deliveryStatus: "💾 Stored Locally on this PC",
-        timestamp: new Date().toISOString()
+        status: "queued",
+        attempts: 0,
+        maxAttempts: 10,
+        nextRetry: Date.now(),
+        lastLog: "Queued on local computer for background delivery",
+        createdAt: new Date().toISOString()
       };
 
-      await saveEmail(mail);
-      closeComposer();
-      switchFolder("sent");
+      await saveToOutbox(outboxItem);
+      logMessage("OUTBOX", `Message to ${to} added to local Outbox queue.`);
 
-      // Clear alert and guidance
-      logMessage("OUTBOUND", `Email saved to local Sent archive on this computer.`);
-      alert(
-        `💾 Saved to Local Sent Archive!\n\n` +
-        `Note: To transmit this message across the live internet to external recipients (like ${to}), click the purple "Yahoo Web" or red "Gmail Web" button in Compose to dispatch it through an active mail server!`
-      );
+      closeComposer();
+      switchFolder("outbox");
+
+      // Trigger immediate background retry attempt
+      processOutboxQueue(true);
     }
 
-    // --- 8. LOCAL STORAGE (IndexedDB) ---
+    // The Background Dispatcher that runs continuously
+    async function processOutboxQueue(force = false) {
+      if (isProcessingOutbox) return;
+      isProcessingOutbox = true;
+
+      try {
+        const queue = await getAllFromOutbox();
+        const now = Date.now();
+
+        // Update outbox badge in sidebar
+        document.getElementById("badge-outbox").innerText = queue.length;
+
+        for (const item of queue) {
+          if (!force && item.nextRetry > now) {
+            continue; // Not time to retry yet
+          }
+
+          logMessage("OUTBOX", `[ATTEMPT ${item.attempts + 1}/${item.maxAttempts}] Dispatching to ${item.to}...`);
+
+          // 1. Direct Self-Send (Instantly deliverable without external network)
+          if (accountProfile && item.to.toLowerCase() === accountProfile.email.toLowerCase()) {
+            await saveEmail({
+              remoteId: "self_" + Date.now(),
+              from: accountProfile.email,
+              to: item.to,
+              subject: item.subject,
+              body: item.body,
+              htmlBody: `<div style="font-family: sans-serif; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                <h3 style="color: #166534; margin-top: 0;">✅ Direct Self-Send Received!</h3>
+                <p>${escapeHtml(item.body)}</p>
+                <p style="font-size: 11px; color: #15803d; margin-bottom: 0;">Delivered directly to local computer vault.</p>
+              </div>`,
+              folder: "inbox",
+              timestamp: new Date().toISOString()
+            });
+
+            await markOutboxDelivered(item);
+            logMessage("SUCCESS", `[OUTBOX] Message to ${item.to} delivered directly to local Inbox.`);
+            continue;
+          }
+
+          // 2. Outbound Network Relay Attempt
+          try {
+            let sid = accountProfile ? accountProfile.sidToken : "";
+            if (!sid) {
+              const fresh = await safeGet(`${G_API}?f=get_email_address`);
+              sid = fresh.sid_token;
+            }
+
+            const params = new URLSearchParams();
+            params.append("f", "send_email");
+            params.append("sid_token", sid);
+            params.append("to", item.to);
+            params.append("subject", item.subject);
+            params.append("body", item.body);
+
+            const res = await fetch(G_API, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: params
+            });
+
+            const result = await res.json();
+
+            if (result && (result.site || result.result === "success")) {
+              await markOutboxDelivered(item);
+              logMessage("SUCCESS", `[OUTBOX] Message to ${item.to} successfully transmitted by gateway!`);
+              continue;
+            } else {
+              throw new Error("Gateway deferred transmission (greylisting or queue busy)");
+            }
+          } catch (err) {
+            // Temporary error: apply exponential backoff and keep in Outbox
+            item.attempts += 1;
+            if (item.attempts >= item.maxAttempts) {
+              item.status = "failed";
+              item.lastLog = `Delivery failed after ${item.maxAttempts} attempts: ${err.message}`;
+              await updateOutboxItem(item);
+              logMessage("ERROR", `[OUTBOX] Message to ${item.to} reached max retry limit.`);
+            } else {
+              // Exponential backoff: 15s, 30s, 60s, 120s...
+              const delay = Math.min(300000, 15000 * Math.pow(1.5, item.attempts));
+              item.nextRetry = Date.now() + delay;
+              item.status = "queued";
+              item.lastLog = `Deferred by mail network (${err.message}). Retrying in ${(delay / 1000).toFixed(0)}s...`;
+              await updateOutboxItem(item);
+              logMessage("WARN", `[OUTBOX] Outbound deferred for ${item.to}. Next retry in ${(delay / 1000).toFixed(0)}s (Attempt ${item.attempts}/${item.maxAttempts})`);
+            }
+          }
+        }
+
+        if (currentFolder === "outbox") {
+          loadFolder("outbox");
+        }
+      } catch (err) {
+        logMessage("WARN", "Outbox queue runner update: " + err.message);
+      } finally {
+        isProcessingOutbox = false;
+      }
+    }
+
+    async function markOutboxDelivered(item) {
+      // Move to Sent folder permanently
+      await saveEmail({
+        to: item.to,
+        from: item.from,
+        subject: item.subject,
+        body: item.body,
+        htmlBody: item.htmlBody,
+        folder: "sent",
+        deliveryStatus: "🌐 Delivered via Store-and-Forward Relay",
+        timestamp: new Date().toISOString()
+      });
+
+      // Remove from Outbox
+      await deleteFromOutbox(item.id);
+      await updateStorageMeter();
+      loadFolder(currentFolder);
+    }
+
+    // Force retry for an outbox message immediately
+    async function forceRetryOutbox(id) {
+      const item = await getOutboxItem(id);
+      if (item) {
+        item.nextRetry = Date.now();
+        item.attempts = Math.max(0, item.attempts - 1);
+        await updateOutboxItem(item);
+        logMessage("OUTBOX", `Forcing immediate retry for message #${id}...`);
+        processOutboxQueue(true);
+      }
+    }
+
+    // --- 8. LOCAL STORAGE (IndexedDB v5: EMAILS + OUTBOX) ---
     function initDB() {
       return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 4);
+        const req = indexedDB.open(DB_NAME, 5);
         req.onupgradeneeded = (e) => {
           const dbInstance = e.target.result;
           if (!dbInstance.objectStoreNames.contains("emails")) {
             const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
             store.createIndex("remoteId", "remoteId", { unique: false });
             store.createIndex("folder", "folder", { unique: false });
+          }
+          if (!dbInstance.objectStoreNames.contains("outbox")) {
+            const outboxStore = dbInstance.createObjectStore("outbox", { keyPath: "id", autoIncrement: true });
+            outboxStore.createIndex("status", "status", { unique: false });
+            outboxStore.createIndex("nextRetry", "nextRetry", { unique: false });
           }
         };
         req.onsuccess = (e) => { db = e.target.result; resolve(); };
@@ -685,32 +772,109 @@
       });
     }
 
+    // Outbox DB helpers
+    function saveToOutbox(item) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("outbox", "readwrite");
+        tx.objectStore("outbox").add(item);
+        tx.oncomplete = () => {
+          updateStorageMeter();
+          resolve();
+        };
+      });
+    }
+
+    function getAllFromOutbox() {
+      return new Promise((resolve) => {
+        const tx = db.transaction("outbox", "readonly");
+        const req = tx.objectStore("outbox").getAll();
+        req.onsuccess = () => resolve(req.result || []);
+      });
+    }
+
+    function getOutboxItem(id) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("outbox", "readonly");
+        const req = tx.objectStore("outbox").get(id);
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+
+    function updateOutboxItem(item) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("outbox", "readwrite");
+        tx.objectStore("outbox").put(item);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    function deleteFromOutbox(id) {
+      return new Promise((resolve) => {
+        const tx = db.transaction("outbox", "readwrite");
+        tx.objectStore("outbox").delete(id);
+        tx.oncomplete = () => {
+          updateStorageMeter();
+          resolve();
+        };
+      });
+    }
+
     async function loadFolder(folder) {
       currentFolder = folder;
       const emails = await getAllEmails();
+      const outbox = await getAllFromOutbox();
+
       document.getElementById("badge-inbox").innerText = emails.filter((m) => m.folder === "inbox").length;
       document.getElementById("badge-sent").innerText = emails.filter((m) => m.folder === "sent").length;
-      renderList(emails.filter((m) => m.folder === folder));
+      document.getElementById("badge-outbox").innerText = outbox.length;
+
+      // Update sidebar active button styling
+      document.getElementById("btn-inbox").className = folder === 'inbox' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold cursor-pointer"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer";
+
+      document.getElementById("btn-outbox").className = folder === 'outbox' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-amber-800 bg-amber-50 font-semibold cursor-pointer"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer";
+
+      document.getElementById("btn-sent").className = folder === 'sent' 
+        ? "w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-700 bg-indigo-50 font-semibold cursor-pointer"
+        : "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer";
+
+      if (folder === "outbox") {
+        renderList(outbox, true);
+      } else {
+        renderList(emails.filter((m) => m.folder === folder), false);
+      }
     }
 
-    function renderList(emails) {
+    function renderList(items, isOutbox = false) {
       const container = document.getElementById("email-list");
       container.innerHTML = "";
-      if (emails.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 select-text">Folder is empty on this device.</div>`;
+      if (items.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 select-text">${isOutbox ? 'Outbox is clear. All messages dispatched.' : 'Folder is empty.'}</div>`;
         return;
       }
-      emails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      emails.forEach((mail) => {
+      items.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
+
+      items.forEach((mail) => {
         const item = document.createElement("div");
         item.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-b border-slate-100 select-text ${activeEmailId === mail.id ? "bg-indigo-50/70 border-l-4 border-l-indigo-600" : ""}`;
-        item.onclick = () => viewEmail(mail);
+        item.onclick = () => viewEmail(mail, isOutbox);
+
+        const statusTag = isOutbox 
+          ? `<span class="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${mail.status || 'queued'}</span>`
+          : "";
+
         item.innerHTML = `
           <div class="flex justify-between items-baseline mb-1">
-            <span class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(mail.from || mail.to)}</span>
-            <span class="text-[10px] text-slate-400 shrink-0">${new Date(mail.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(mail.to || mail.from)}</span>
+            <span class="text-[10px] text-slate-400 shrink-0">${new Date(mail.createdAt || mail.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
-          <div class="font-medium text-xs text-slate-700 truncate mb-1">${escapeHtml(mail.subject)}</div>
+          <div class="flex items-center space-x-1.5 mb-1">
+            ${statusTag}
+            <div class="font-medium text-xs text-slate-700 truncate">${escapeHtml(mail.subject)}</div>
+          </div>
           <div class="text-[11px] text-slate-400 line-clamp-1">${escapeHtml(mail.body)}</div>
         `;
         container.appendChild(item);
@@ -728,7 +892,7 @@
       alert(`📋 Copied code "${code}" to clipboard!`);
     }
 
-    function viewEmail(mail) {
+    function viewEmail(mail, isOutbox = false) {
       activeEmail = mail;
       activeEmailId = mail.id;
       loadFolder(currentFolder);
@@ -737,8 +901,30 @@
         ? `<span class="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md font-medium select-text">${mail.deliveryStatus}</span>` 
         : "";
 
+      // OUTBOX RETRY CARD
+      const outboxRetryCard = isOutbox ? `
+        <div class="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between text-xs text-amber-900 flex-wrap gap-2">
+          <div>
+            <div class="font-bold flex items-center space-x-1.5">
+              <span>⏳ Store-and-Forward Status:</span>
+              <span class="uppercase bg-white px-2 py-0.5 rounded border border-amber-300 font-mono text-[11px]">${mail.status}</span>
+              <span>(Attempt ${mail.attempts}/${mail.maxAttempts})</span>
+            </div>
+            <div class="text-amber-700 text-[11px] mt-0.5">${escapeHtml(mail.lastLog)}</div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="forceRetryOutbox(${mail.id})" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer shadow-sm">
+              ⚡ Retry Now
+            </button>
+            <button onclick="cancelOutboxSend(${mail.id})" class="border border-amber-300 text-amber-800 hover:bg-amber-100 font-semibold px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ` : "";
+
       const foundCode = extractVerificationCode((mail.subject || '') + " " + (mail.body || ''));
-      const codeBanner = foundCode ? `
+      const codeBanner = (!isOutbox && foundCode) ? `
         <div class="px-4 py-2 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between text-xs">
           <div class="flex items-center space-x-2">
             <span class="font-semibold text-indigo-950">Detected Verification Code:</span>
@@ -768,10 +954,11 @@
                 <button onclick="setViewMode('html')" id="btn-view-html" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'html' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">🖼️ Rich HTML</button>
                 <button onclick="setViewMode('text')" id="btn-view-text" class="px-2 py-1 rounded font-semibold cursor-pointer ${activeViewMode === 'text' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600'}">📄 Plain Text</button>
               </div>
-              <button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold cursor-pointer">Delete</button>
+              ${!isOutbox ? `<button onclick="deleteEmail(${mail.id}, '${mail.remoteId}')" class="text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-semibold cursor-pointer">Delete</button>` : ''}
             </div>
           </div>
         </div>
+        ${outboxRetryCard}
         ${codeBanner}
         <div id="email-content-wrapper" class="flex-1 overflow-hidden bg-slate-50 flex flex-col select-text"></div>
       `;
@@ -798,6 +985,13 @@
       }
     }
 
+    async function cancelOutboxSend(id) {
+      if (!confirm("Cancel delivery of this message and remove it from Outbox?")) return;
+      await deleteFromOutbox(id);
+      loadFolder("outbox");
+      document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Message removed from Outbox.</div>`;
+    }
+
     async function deleteEmail(localId, remoteId) {
       const tx = db.transaction("emails", "readwrite");
       tx.objectStore("emails").delete(localId);
@@ -816,12 +1010,13 @@
     }
 
     async function clearAllStoredEmails() {
-      if (!confirm("🧹 CLEAR STORAGE:\n\nDelete all downloaded emails to regain disk space on this computer?\n(Your address pairing remains saved).")) return;
+      if (!confirm("🧹 CLEAR STORAGE:\n\nDelete all downloaded emails and queued outbox messages to regain disk space on this computer?\n(Your address pairing remains saved).")) return;
 
-      const tx = db.transaction("emails", "readwrite");
+      const tx = db.transaction(["emails", "outbox"], "readwrite");
       tx.objectStore("emails").clear();
+      tx.objectStore("outbox").clear();
       tx.oncomplete = async () => {
-        logMessage("STORAGE", "All stored emails cleared. Disk space restored to 0 KB.");
+        logMessage("STORAGE", "All stored emails and outbox items cleared. Disk space restored to 0 KB.");
         await updateStorageMeter();
         loadFolder(currentFolder);
         document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Storage cleared. All disk space reclaimed.</div>`;
