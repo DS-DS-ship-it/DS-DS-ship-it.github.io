@@ -6,7 +6,6 @@
   <title>ZeroMail — Device-Paired Local Mailbox</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Full Text Selection Enabled Everywhere */
     * { user-select: text !important; -webkit-user-select: text !important; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -15,7 +14,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
-  <!-- TOP HEADER (RESPONSIVE & CLEAN) -->
+  <!-- TOP HEADER -->
   <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
     <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
       <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
@@ -116,7 +115,7 @@
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
       <div class="flex items-center space-x-2">
         <span class="text-emerald-400 text-sm font-bold">●</span>
-        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Outbound Logs</h3>
+        <h3 class="font-bold text-white text-sm">Live System Diagnostics & Telemetry</h3>
       </div>
       <div class="flex items-center space-x-2">
         <button onclick="syncMailboxWithGateway(true)" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded font-medium transition cursor-pointer">
@@ -132,30 +131,26 @@
     <!-- Diagnostic Tabs -->
     <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
       <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer">Live Network Logs</button>
-      <button onclick="switchDiagTab('yahoo')" id="tab-btn-yahoo" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Yahoo Delivery & Spam Rules</button>
+      <button onclick="switchDiagTab('yahoo')" id="tab-btn-yahoo" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Inbound vs Outbound Rules</button>
     </div>
 
     <!-- TAB 1: Live Network Console -->
     <div id="diag-panel-logs" class="flex-1 p-4 overflow-y-auto term-font text-xs space-y-1 bg-black/40 select-text cursor-text">
-      <div class="text-slate-500">// Real-time Gateway Re-Binding & Message Relaying:</div>
+      <div class="text-slate-500">// Real-time Inbound Polls & Outbound Events stream here:</div>
       <div id="log-stream" class="space-y-1"></div>
     </div>
 
-    <!-- TAB 2: Yahoo Delivery Breakdown -->
+    <!-- TAB 2: Architecture Breakdown -->
     <div id="diag-panel-yahoo" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
       <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
-        <h4 class="font-bold text-amber-300 mb-1">⚠️ Why Yahoo Says "1 Unread" But Shows Nothing:</h4>
-        <p>When an email is sent from an anonymous or temporary mail service, Yahoo automatically routes it straight into the <strong>Spam / Bulk folder</strong>. Yahoo's app icon still shows <em>1 unread message</em>, but the user must click into their <strong>Spam folder</strong> to view and open it.</p>
-      </div>
-      <div class="p-3 bg-slate-800/60 border border-slate-700 rounded-xl space-y-2 text-slate-300">
-        <h5 class="font-bold text-white">How to Get 100% Guaranteed Inbox Placement:</h5>
-        <p>1. Tell your recipient to check their <strong>Spam folder</strong> and click <strong>"Not Spam"</strong>.<br>
-           2. Alternatively, use the purple <strong>"Yahoo Web"</strong> button in the Compose box to dispatch through an authenticated Yahoo session.</p>
+        <h4 class="font-bold text-amber-300 mb-1">ℹ️ Understanding Inbound vs Outbound:</h4>
+        <p>1. <strong>"Relay found X email(s) waiting":</strong> This is your <em>INBOUND</em> receiver checking for incoming mail every 14 seconds. It has nothing to do with sending messages out.<br>
+           2. <strong>Anonymous Outbound Sending is Blocked:</strong> Guerrilla Mail permanently disabled public outbound relaying to prevent spam bots. To deliver to external Yahoo accounts, click <strong>"Yahoo Web"</strong> or <strong>"Gmail Web"</strong> in the Compose box.</p>
       </div>
     </div>
   </div>
 
-  <!-- ================= COMPOSE MODAL (WITH ANONYMOUS SEND & WEBMAIL) ================= -->
+  <!-- ================= COMPOSE MODAL ================= -->
   <div id="compose-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-xl shadow-xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
       <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
@@ -163,7 +158,7 @@
         <button onclick="closeComposer()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
       </div>
 
-      <!-- Quick Delivery Helper Buttons -->
+      <!-- Quick Helpers -->
       <div class="p-3 bg-indigo-50/60 border-b border-indigo-100 flex items-center justify-between flex-wrap gap-2 text-xs shrink-0">
         <div class="font-bold text-indigo-900">Delivery Diagnostics:</div>
         <div class="flex items-center gap-1.5 flex-wrap">
@@ -176,15 +171,13 @@
         </div>
       </div>
 
-      <!-- Live Yahoo Delivery Notice Banner -->
-      <div id="yahoo-warning-banner" class="hidden px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs flex items-center justify-between">
-        <span>⚠️ Yahoo recipient detected: Message will land in their <strong>Spam / Bulk</strong> folder!</span>
-      </div>
+      <!-- Outbound Status Notification -->
+      <div id="compose-status-bar" class="hidden px-4 py-2 text-xs flex items-center justify-between"></div>
 
       <form onsubmit="handleSendEmail(event)" class="p-5 space-y-3 flex-1 flex flex-col overflow-y-auto">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">To Recipient</label>
-          <input type="email" id="compose-to" oninput="checkRecipientDomain(this.value)" required placeholder="recipient@yahoo.com" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
+          <input type="email" id="compose-to" oninput="handleRecipientChange(this.value)" required placeholder="recipient@yahoo.com" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
         </div>
 
         <div>
@@ -198,22 +191,22 @@
         </div>
 
         <!-- OUTBOUND ACTION BAR -->
-        <div class="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2 shrink-0">
+        <div class="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
           <!-- Webmail Launchers (Guaranteed Delivery) -->
           <div class="flex items-center space-x-1.5">
-            <span class="text-[11px] text-slate-400 font-medium">Or Send Via:</span>
-            <button type="button" onclick="dispatchViaWebmail('yahoo')" class="text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer">
+            <span class="text-[11px] text-slate-500 font-semibold">Deliver Via:</span>
+            <button type="button" onclick="dispatchViaWebmail('yahoo')" class="text-xs bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-800 font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm">
               Yahoo Web
             </button>
-            <button type="button" onclick="dispatchViaWebmail('gmail')" class="text-xs bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-semibold px-2 py-1.5 rounded-lg transition cursor-pointer">
+            <button type="button" onclick="dispatchViaWebmail('gmail')" class="text-xs bg-red-50 hover:bg-red-100 border border-red-300 text-red-800 font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-sm">
               Gmail Web
             </button>
           </div>
 
           <div class="flex space-x-2">
             <button type="button" onclick="closeComposer()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
-            <button type="submit" id="compose-send-btn" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition cursor-pointer">
-              🚀 Send via Relay
+            <button type="submit" id="compose-send-btn" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-sm transition cursor-pointer">
+              💾 Save to Sent
             </button>
           </div>
         </div>
@@ -329,6 +322,7 @@
       if (level === "ERROR") color = "text-red-400";
       if (level === "NETWORK") color = "text-sky-400";
       if (level === "STORAGE") color = "text-purple-400";
+      if (level === "OUTBOUND") color = "text-pink-400";
 
       row.innerHTML = `
         <span class="text-slate-600 select-none">[${time}]</span>
@@ -452,7 +446,7 @@
       setInterval(() => syncMailboxWithGateway(false), 14000);
     }
 
-    // --- 5. THE OFFLINE RELAY ---
+    // --- 5. THE INBOUND RELAY LOOP ---
     async function syncMailboxWithGateway(manual = false) {
       if (!accountProfile || isSyncing) return;
       isSyncing = true;
@@ -483,15 +477,14 @@
         }
 
         const messages = listData.list || [];
-        logMessage("SUCCESS", `Relay found ${messages.length} email(s) waiting on server.`);
+        logMessage("SUCCESS", `[INBOUND SYNC] Gateway inbox has ${messages.length} email(s) on server.`);
 
         for (const msg of messages) {
           const alreadySaved = await isEmailSavedLocally(msg.mail_id);
           if (!alreadySaved) {
-            logMessage("NETWORK", `Downloading email #${msg.mail_id} from ${msg.mail_from}...`);
+            logMessage("NETWORK", `[INBOUND SYNC] Downloading incoming email #${msg.mail_id} from ${msg.mail_from}...`);
             const detail = await safeGet(`${G_API}?f=fetch_email&email_id=${msg.mail_id}&sid_token=${sid}`);
 
-            // Sanitize images to fix HTTP mixed content
             const repairedHtml = sanitizeEmailHtml(detail.mail_body || "");
 
             await saveEmail({
@@ -525,7 +518,6 @@
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawHtml, "text/html");
 
-        // Upgrade insecure HTTP images so GitHub Pages does not block them
         doc.querySelectorAll("img").forEach((img) => {
           const src = img.getAttribute("src") || "";
           if (src.startsWith("http://")) {
@@ -536,7 +528,6 @@
           img.style.height = "auto";
         });
 
-        // Convert legacy embed/object to HTML5
         doc.querySelectorAll("embed, object").forEach((el) => {
           const fallback = document.createElement("p");
           fallback.className = "text-xs text-slate-400 p-2 bg-slate-100 rounded";
@@ -550,13 +541,14 @@
       }
     }
 
-    // --- 7. OUTBOUND DISPATCH & YAHOO NOTIFIER ---
-    function checkRecipientDomain(email) {
-      const banner = document.getElementById("yahoo-warning-banner");
+    // --- 7. OUTBOUND DISPATCH & REALITY ENGINE ---
+    function handleRecipientChange(email) {
+      const statusBar = document.getElementById("compose-status-bar");
       if (email.toLowerCase().includes("@yahoo.") || email.toLowerCase().includes("@ymail.")) {
-        banner.classList.remove("hidden");
+        statusBar.className = "px-4 py-2 text-xs bg-amber-50 border-b border-amber-200 text-amber-900 block";
+        statusBar.innerHTML = `⚠️ <strong>Sending to Yahoo:</strong> Click the purple <strong>"Yahoo Web"</strong> button below to guarantee delivery to their Inbox!`;
       } else {
-        banner.classList.add("hidden");
+        statusBar.className = "hidden";
       }
     }
 
@@ -564,7 +556,7 @@
       document.getElementById("compose-to").value = "check-auth@verifier.port25.com";
       document.getElementById("compose-subject").value = "Port25 Delivery Echo Test";
       document.getElementById("compose-body").value = `Diagnostic verification from ZeroMail.\nAddress: ${accountProfile ? accountProfile.email : 'local-user'}\nTime: ${new Date().toISOString()}`;
-      checkRecipientDomain("check-auth@verifier.port25.com");
+      handleRecipientChange("check-auth@verifier.port25.com");
     }
 
     function fillSelfLoopbackTest() {
@@ -572,9 +564,10 @@
       document.getElementById("compose-to").value = accountProfile.email;
       document.getElementById("compose-subject").value = "ZeroMail Inbound & Outbound Pipeline Test";
       document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent directly through your ZeroMail local pipeline at ${new Date().toLocaleTimeString()}.\n\nAll messages exist safely on this computer's hard drive.`;
-      checkRecipientDomain(accountProfile.email);
+      handleRecipientChange(accountProfile.email);
     }
 
+    // Guaranteed, non-freezing webmail popup
     function dispatchViaWebmail(service) {
       const to = encodeURIComponent(document.getElementById("compose-to").value.trim());
       const subject = encodeURIComponent(document.getElementById("compose-subject").value.trim());
@@ -592,24 +585,17 @@
         url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
       }
 
-      logMessage("NETWORK", `Launching ${service.toUpperCase()} popup for guaranteed inbox delivery...`);
-      const popup = window.open(url, "_blank", "width=850,height=680,resizable=yes,scrollbars=yes");
-      if (!popup) window.open(url, "_blank");
+      logMessage("OUTBOUND", `Opening ${service.toUpperCase()} popup to transmit message to ${decodeURIComponent(to)}...`);
+      window.open(url, "_blank", "width=850,height=680,resizable=yes,scrollbars=yes");
     }
 
     async function handleSendEmail(e) {
       e.preventDefault();
-      const sendBtn = document.getElementById("compose-send-btn");
       const to = document.getElementById("compose-to").value.trim();
       const subject = document.getElementById("compose-subject").value.trim();
       const body = document.getElementById("compose-body").value.trim();
 
-      sendBtn.innerText = "Transmitting...";
-      sendBtn.disabled = true;
-
-      let deliveryStatus = "💾 Stored Locally";
-
-      // 1. Direct Self-Send Loopback
+      // 1. If self-send, immediately deliver to inbox locally
       if (accountProfile && to.toLowerCase() === accountProfile.email.toLowerCase()) {
         await saveEmail({
           remoteId: "self_" + Date.now(),
@@ -625,65 +611,10 @@
           folder: "inbox",
           timestamp: new Date().toISOString()
         });
-        logMessage("SUCCESS", `Direct self-test delivered to Inbox.`);
-        deliveryStatus = "🟢 Delivered to Local Inbox";
-      } else {
-        // 2. Anonymous Outbound Relay Call (Guerrilla Mail API)
-        logMessage("NETWORK", `Submitting message to outbound relay for ${to}...`);
-        try {
-          let sid = accountProfile ? accountProfile.sidToken : "";
-          if (!sid) {
-            const fresh = await safeGet(`${G_API}?f=get_email_address`);
-            sid = fresh.sid_token;
-          }
-
-          const params = new URLSearchParams();
-          params.append("f", "send_email");
-          params.append("sid_token", sid);
-          params.append("to", to);
-          params.append("subject", subject);
-          params.append("body", body);
-
-          const res = await fetch(G_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: params
-          });
-
-          const result = await res.json();
-
-          if (result && result.site) {
-            deliveryStatus = "🌐 Dispatched via Relay";
-            logMessage("SUCCESS", `Relay confirmed message dispatch to ${to}`);
-            
-            if (to.toLowerCase().includes("@yahoo.")) {
-              alert(`✅ Message Dispatched!\n\nNote: Because this was dispatched from an anonymous relay, Yahoo Mail routes it into the recipient's SPAM / BULK folder.\n\nTell the recipient to open their Spam folder to read it!`);
-            } else {
-              alert(`✅ Message successfully dispatched to ${to}!`);
-            }
-          } else {
-            // If public relay rate-limited sending
-            logMessage("WARN", "Relay notice: Anonymous sending restricted by gateway. Launching Webmail backup...");
-            deliveryStatus = "⚠️ Sent via Webmail Backup";
-            
-            const confirmed = confirm("The anonymous mail relay has rate-limited automated sending to prevent spam bots.\n\nWould you like to deliver this instantly using Yahoo Webmail or Gmail Webmail instead?");
-            if (confirmed) {
-              if (to.toLowerCase().includes("@yahoo.")) {
-                dispatchViaWebmail("yahoo");
-              } else {
-                dispatchViaWebmail("gmail");
-              }
-            }
-          }
-        } catch (err) {
-          logMessage("WARN", "Direct relay network error: " + err.message);
-          dispatchViaWebmail(to.toLowerCase().includes("@yahoo.") ? "yahoo" : "gmail");
-        }
+        logMessage("SUCCESS", `[OUTBOUND] Direct self-test delivered to Inbox.`);
       }
 
-      sendBtn.innerText = "🚀 Send via Relay";
-      sendBtn.disabled = false;
-
+      // Save local record in Sent folder
       const mail = {
         to: to,
         from: accountProfile ? accountProfile.email : "me@zeromail.local",
@@ -691,13 +622,20 @@
         body: body,
         htmlBody: `<div>${escapeHtml(body)}</div>`,
         folder: "sent",
-        deliveryStatus: deliveryStatus,
+        deliveryStatus: "💾 Stored Locally on this PC",
         timestamp: new Date().toISOString()
       };
 
       await saveEmail(mail);
       closeComposer();
       switchFolder("sent");
+
+      // Clear alert and guidance
+      logMessage("OUTBOUND", `Email saved to local Sent archive on this computer.`);
+      alert(
+        `💾 Saved to Local Sent Archive!\n\n` +
+        `Note: To transmit this message across the live internet to external recipients (like ${to}), click the purple "Yahoo Web" or red "Gmail Web" button in Compose to dispatch it through an active mail server!`
+      );
     }
 
     // --- 8. LOCAL STORAGE (IndexedDB) ---
@@ -854,7 +792,7 @@
       if (activeViewMode === "html" && activeEmail.htmlBody) {
         wrapper.innerHTML = `<iframe id="sandboxed-frame" sandbox="allow-popups allow-same-origin" class="w-full h-full border-0 bg-white"></iframe>`;
         const iframe = document.getElementById("sandboxed-frame");
-        iframe.srcdoc = `<!DOCTYPE html><html><head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b; user-select: text !important; -webkit-user-select: text !important; } img { max-width: 100%; height: auto; border-radius: 6px; }</style></head><body>${activeEmail.htmlBody}</body></html>`;
+        iframe.srcdoc = `<!DOCTYPE html><html><head><style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b; user-select: text !important; -webkit-user-select: text !important; } img { max-width: 100%; border-radius: 6px; }</style></head><body>${activeEmail.htmlBody}</body></html>`;
       } else {
         wrapper.innerHTML = `<div class="p-6 flex-1 overflow-y-auto text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-mono bg-white select-text cursor-text">${escapeHtml(activeEmail.body)}</div>`;
       }
