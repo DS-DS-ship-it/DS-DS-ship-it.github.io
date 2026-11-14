@@ -6,6 +6,7 @@
   <title>ZeroMail — Device-Paired Local Mailbox</title>
   <meta name="referrer" content="no-referrer" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@5/dist/email.min.js"></script>
   <style>
     /* Full Text Selection Enabled Everywhere */
     * { user-select: text !important; -webkit-user-select: text !important; }
@@ -48,6 +49,8 @@
       <button onclick="clearAllStoredEmails()" title="Purge local emails to regain disk space" class="text-xs bg-white hover:bg-amber-50 border border-amber-300 text-amber-800 px-2 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
         <span>🧹</span> <span class="hidden sm:inline">Clean</span>
       </button>
+
+      <button onclick="openEmailJSSetup()" title="Connect outbound email" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1.5 rounded-lg font-semibold transition shrink-0 shadow-sm cursor-pointer">Send Setup</button>
 
       <button onclick="toggleDiagnostics()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1 shrink-0 shadow-sm cursor-pointer">
         <span>🩺</span> <span class="hidden sm:inline">Logs</span>
@@ -150,11 +153,11 @@
       </div>
       <div class="p-3 bg-slate-800/60 border border-slate-700 rounded-xl text-slate-300">
         <h4 class="font-bold text-white mb-1">Testing Without Personal Email:</h4>
-        <p>Use <strong>"Send Test to My ZeroMail Address"</strong> to test the local inbox pipeline. This writes a local test message; it does not send an Internet email.</p>
+        <p>Use <strong>"Fill Self-Test Message"</strong> to prefill a message addressed to your paired ZeroMail address. Press <strong>Send Email</strong> to transmit it through your connected EmailJS service; the successful outbound copy is stored in Sent.</p>
       </div>
-      <div class="p-3 bg-amber-950/30 border border-amber-800/60 rounded-xl text-amber-200">
-        <h4 class="font-bold mb-1">🌐 Outbound delivery</h4>
-        <p>GitHub Pages is static hosting and cannot act as an SMTP server. Configure a serverless endpoint (for example, a Cloudflare Worker) to send through a provider. Never put provider API keys in this page. Without an endpoint, ZeroMail saves a local copy or opens your device's mail app.</p>
+      <div class="p-3 bg-emerald-950/30 border border-emerald-800/60 rounded-xl text-emerald-200">
+        <h4 class="font-bold mb-1">🌐 Outbound delivery with EmailJS</h4>
+        <p>ZeroMail can send directly from its Compose window through EmailJS. Connect an email provider, create one EmailJS template, then enter your Service ID, Template ID and Public Key in ZeroMail's one-time setup. No Cloudflare Worker or private provider password is placed in this page. EmailJS confirms provider acceptance, not final inbox delivery.</p>
       </div>
     </div>
   </div>
@@ -172,7 +175,7 @@
         <div class="font-bold text-indigo-900">Delivery Diagnostics:</div>
         <div class="flex items-center gap-1.5">
           <button type="button" onclick="fillSelfLoopbackTest()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
-            🧪 Send Test to My ZeroMail Address
+            🧪 Fill Self-Test Message
           </button>
           <button type="button" onclick="fillPort25Echo()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2 py-1 rounded text-xs transition cursor-pointer">
             Pre-fill Port25
@@ -185,11 +188,15 @@
         <input type="text" id="compose-subject" required placeholder="Subject" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 select-text cursor-text" />
         <textarea id="compose-body" required placeholder="Write your message here..." rows="6" class="w-full text-sm p-3 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 flex-1 select-text cursor-text"></textarea>
 
-        <!-- Public endpoint URL only. The mail-provider secret stays on the server. -->
-        <div class="space-y-1">
-          <label for="compose-send-endpoint" class="block text-[10px] font-semibold text-slate-500">Secure outbound mail endpoint (optional)</label>
-          <input type="url" id="compose-send-endpoint" placeholder="https://your-worker.example.workers.dev/send" class="w-full text-[11px] px-3 py-1.5 border border-slate-200 rounded-lg outline-none text-slate-600 bg-slate-50 select-text cursor-text" />
-          <p class="text-[10px] text-slate-400">This is a public endpoint URL, not an API key. Configure the private mail-provider key in your server/Worker secrets.</p>
+        <div class="rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-bold text-indigo-950">EmailJS outbound connection</div>
+              <div id="emailjs-connection-status" class="text-[10px] text-amber-700">Not connected — one-time setup required</div>
+            </div>
+            <button type="button" onclick="openEmailJSSetup()" class="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-indigo-700">Connect / Settings</button>
+          </div>
+          <p class="text-[10px] text-slate-500">Connect once, then send directly from this window. ZeroMail stores only your EmailJS public configuration on this device — never your email password or provider private key.</p>
         </div>
         <div id="send-status" class="hidden text-[11px] rounded-lg px-3 py-2" role="status" aria-live="polite"></div>
 
@@ -201,9 +208,42 @@
           <div class="flex space-x-2">
             <button type="button" onclick="closeComposer()" class="px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
             <button type="submit" class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm cursor-pointer">
-              Save / Send
+              Send Email
             </button>
           </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EMAILJS ONE-TIME OUTBOUND SETUP -->
+  <div id="emailjs-setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-[60] overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-5 sm:p-6 border border-slate-200 my-auto">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="text-[10px] uppercase tracking-wider font-bold text-indigo-600">One-time connection</div>
+          <h2 class="text-lg font-bold text-slate-900">Connect EmailJS to ZeroMail</h2>
+          <p class="text-xs text-slate-500 mt-1">Free EmailJS account required. No Worker, server URL, private API key or email password.</p>
+        </div>
+        <button type="button" onclick="closeEmailJSSetup()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+      </div>
+
+      <ol class="list-decimal pl-5 space-y-2 text-xs text-slate-700 mb-4">
+        <li><a class="font-semibold text-indigo-700 underline" href="https://www.emailjs.com/" target="_blank" rel="noopener">Create a free EmailJS account</a>, then open <a class="text-indigo-700 underline" href="https://dashboard.emailjs.com/admin" target="_blank" rel="noopener">the EmailJS dashboard</a>.</li>
+        <li>Under <strong>Email Services</strong>, connect the email account you want ZeroMail to send from and note its <strong>Service ID</strong>.</li>
+        <li>Under <strong>Email Templates</strong>, create a template. Set <strong>To Email</strong> to <code>{{to_email}}</code>, <strong>Subject</strong> to <code>{{subject}}</code>, <strong>Reply To</strong> to <code>{{reply_to}}</code>, and the message body to <code>{{message}}</code>. Save and note the <strong>Template ID</strong>.</li>
+        <li>Open <strong>Account</strong> in EmailJS and copy your <strong>Public Key</strong>. This is designed for browser use; do not use your Private Key here.</li>
+      </ol>
+
+      <form id="emailjs-setup-form" onsubmit="saveEmailJSSetup(event)" class="space-y-3">
+        <div><label for="emailjs-service-id" class="block text-xs font-semibold text-slate-700 mb-1">Service ID</label><input id="emailjs-service-id" required autocomplete="off" placeholder="service_xxxxxxx" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" /></div>
+        <div><label for="emailjs-template-id" class="block text-xs font-semibold text-slate-700 mb-1">Template ID</label><input id="emailjs-template-id" required autocomplete="off" placeholder="template_xxxxxxx" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" /></div>
+        <div><label for="emailjs-public-key" class="block text-xs font-semibold text-slate-700 mb-1">EmailJS Public Key <span class="font-normal text-slate-400">(not your Private Key)</span></label><input id="emailjs-public-key" required autocomplete="off" placeholder="Your EmailJS public key" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500" /></div>
+        <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[10px] text-amber-900"><strong>Important:</strong> In EmailJS, add your published ZeroMail website domain to the allowed origins / domain restrictions and enable rate limiting. Never paste an EmailJS Private Key or your Gmail/Outlook password into ZeroMail.</div>
+        <div id="emailjs-setup-status" class="hidden text-xs rounded-lg px-3 py-2" role="status" aria-live="polite"></div>
+        <div class="flex flex-wrap justify-between gap-2 pt-1">
+          <button type="button" onclick="clearEmailJSSetup()" class="px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg">Disconnect</button>
+          <div class="flex gap-2"><button type="button" onclick="closeEmailJSSetup()" class="px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button><button type="submit" class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Save Connection</button></div>
         </div>
       </form>
     </div>
@@ -254,9 +294,8 @@
   <script>
     const DB_NAME = "ZeroMailClientDB";
     const G_API = "https://api.guerrillamail.com/ajax.php";
-    // GitHub Pages cannot host SMTP or protect provider secrets. Outbound mail
-    // is sent only through the optional HTTPS serverless endpoint configured by the user.
-    // Guerrilla Mail's published API documents inbox functions; do not assume send_email exists.
+    // EmailJS handles outbound delivery from this static GitHub Pages app.
+    // Only EmailJS public configuration is stored in localStorage; never store private keys.
     let db;
     let currentFolder = "inbox";
     let activeEmail = null;
@@ -394,9 +433,13 @@
         grantAccess();
       }
 
-      const savedEndpoint = localStorage.getItem("zm_send_endpoint") || "";
-      const endpointInput = document.getElementById("compose-send-endpoint");
-      if (endpointInput) endpointInput.value = savedEndpoint;
+      updateEmailJSConnectionStatus();
+      const emailjsConfig = getEmailJSConfig();
+      if (emailjsConfig) {
+        document.getElementById("emailjs-service-id").value = emailjsConfig.serviceId;
+        document.getElementById("emailjs-template-id").value = emailjsConfig.templateId;
+        document.getElementById("emailjs-public-key").value = emailjsConfig.publicKey;
+      }
     }
 
     function saveProfileLocally(profile) {
@@ -528,7 +571,7 @@
       if (!accountProfile) return;
       document.getElementById("compose-to").value = accountProfile.email;
       document.getElementById("compose-subject").value = "ZeroMail Inbound & Outbound Pipeline Test";
-      document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent directly through your ZeroMail local pipeline at ${new Date().toLocaleTimeString()}.\n\nAll messages exist safely on this computer's hard drive.`;
+      document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a ZeroMail outbound test sent through EmailJS at ${new Date().toLocaleTimeString()}.\n\nIf EmailJS accepts it, a copy will appear in the ZeroMail Sent folder.`;
     }
 
     function getComposeValues() {
@@ -568,98 +611,135 @@
       window.location.href = `mailto:${encodeURIComponent(to)}?${params.toString()}`;
     }
 
-    async function sendThroughEndpoint(endpoint, payload) {
-      let parsed;
+    // --- EMAILJS OUTBOUND CONNECTION ---
+    function getEmailJSConfig() {
       try {
-        const url = new URL(endpoint);
-        if (url.protocol !== "https:") {
-          throw new Error("The outbound endpoint must use HTTPS.");
-        }
-        const response = await fetch(url.toString(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
+        const config = JSON.parse(localStorage.getItem("zm_emailjs_config") || "null");
+        if (!config || !config.serviceId || !config.templateId || !config.publicKey) return null;
+        return config;
+      } catch (_) { return null; }
+    }
 
-        const raw = await response.text();
-        try { parsed = raw ? JSON.parse(raw) : {}; }
-        catch (_) { parsed = { message: raw.slice(0, 300) }; }
+    function updateEmailJSConnectionStatus() {
+      const status = document.getElementById("emailjs-connection-status");
+      if (!status) return;
+      const connected = !!getEmailJSConfig();
+      status.textContent = connected ? "Connected — ready to send" : "Not connected — one-time setup required";
+      status.className = connected ? "text-[10px] text-emerald-700" : "text-[10px] text-amber-700";
+    }
 
-        if (!response.ok) {
-          const message = parsed.error || parsed.message || `Endpoint returned HTTP ${response.status}`;
-          throw new Error(message);
-        }
-        if (parsed.ok !== true && !parsed.id && !parsed.messageId) {
-          throw new Error("The endpoint did not return an explicit success result. No send confirmation was recorded.");
-        }
-        return parsed;
-      } catch (err) {
-        if (err instanceof TypeError) {
-          throw new Error("Could not reach the endpoint. Check its URL, HTTPS certificate, and CORS preflight settings.");
-        }
-        throw err;
+    function openEmailJSSetup() {
+      const config = getEmailJSConfig();
+      document.getElementById("emailjs-service-id").value = config?.serviceId || "";
+      document.getElementById("emailjs-template-id").value = config?.templateId || "";
+      document.getElementById("emailjs-public-key").value = config?.publicKey || "";
+      const status = document.getElementById("emailjs-setup-status");
+      status.classList.add("hidden");
+      const modal = document.getElementById("emailjs-setup-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeEmailJSSetup() {
+      const modal = document.getElementById("emailjs-setup-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function saveEmailJSSetup(e) {
+      e.preventDefault();
+      const config = {
+        serviceId: document.getElementById("emailjs-service-id").value.trim(),
+        templateId: document.getElementById("emailjs-template-id").value.trim(),
+        publicKey: document.getElementById("emailjs-public-key").value.trim()
+      };
+      if (!config.serviceId || !config.templateId || !config.publicKey) {
+        showEmailJSSetupStatus("Complete all three fields to connect EmailJS.", "error");
+        return;
       }
+      if (!window.emailjs || typeof window.emailjs.send !== "function") {
+        showEmailJSSetupStatus("The EmailJS browser library did not load. Check your connection, reload ZeroMail, and try again.", "error");
+        return;
+      }
+      localStorage.setItem("zm_emailjs_config", JSON.stringify(config));
+      updateEmailJSConnectionStatus();
+      showEmailJSSetupStatus("EmailJS configuration saved on this device. Send a test message from Compose to verify the template and service.", "success");
+      logMessage("SUCCESS", "EmailJS public configuration saved locally on this device.");
+    }
+
+    function showEmailJSSetupStatus(message, kind = "info") {
+      const el = document.getElementById("emailjs-setup-status");
+      el.textContent = message;
+      el.className = "text-xs rounded-lg px-3 py-2 " + (kind === "error" ? "bg-red-50 text-red-700" : kind === "success" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-700");
+    }
+
+    function clearEmailJSSetup() {
+      if (!confirm("Disconnect EmailJS from this device? Your mailbox and saved messages will remain.")) return;
+      localStorage.removeItem("zm_emailjs_config");
+      document.getElementById("emailjs-service-id").value = "";
+      document.getElementById("emailjs-template-id").value = "";
+      document.getElementById("emailjs-public-key").value = "";
+      updateEmailJSConnectionStatus();
+      showEmailJSSetupStatus("EmailJS disconnected. Your mailbox and saved messages were not changed.", "success");
+      logMessage("WARN", "EmailJS connection removed from this device.");
+    }
+
+    async function sendThroughEmailJS({ to, subject, body }) {
+      const config = getEmailJSConfig();
+      if (!config) throw new Error("EmailJS is not connected. Choose Connect / Settings and complete the one-time setup.");
+      if (!window.emailjs || typeof window.emailjs.send !== "function") throw new Error("EmailJS library is unavailable. Reload the page and try again.");
+
+      // Match these names to the EmailJS template variables described in setup.
+      const templateParams = {
+        to_email: to,
+        subject,
+        message: body,
+        reply_to: accountProfile?.email || "",
+        from_name: "ZeroMail",
+        user_email: accountProfile?.email || ""
+      };
+
+      return await window.emailjs.send(
+        config.serviceId,
+        config.templateId,
+        templateParams,
+        {
+          publicKey: config.publicKey,
+          blockHeadless: true,
+          limitRate: { id: "zeromail-outbound", throttle: 1000 }
+        }
+      );
     }
 
     async function handleSendEmail(e) {
       e.preventDefault();
       const { to, subject, body } = getComposeValues();
-      const endpoint = document.getElementById("compose-send-endpoint").value.trim();
-
       if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
         setSendStatus("Enter a valid recipient address.", "error");
+        return;
+      }
+
+      if (!getEmailJSConfig()) {
+        setSendStatus("Connect your free EmailJS account before sending. Your message has not been sent or marked as sent.", "warning");
+        openEmailJSSetup();
         return;
       }
 
       const submitButton = e.submitter || document.querySelector('#compose-modal button[type="submit"]');
       if (submitButton) {
         submitButton.disabled = true;
-        submitButton.textContent = "Working…";
+        submitButton.textContent = "Sending…";
       }
 
       try {
-        // A self-send is a local simulation only. It does not contact Guerrilla Mail.
-        if (accountProfile && to.toLowerCase() === accountProfile.email.toLowerCase()) {
-          await saveEmail({
-            remoteId: "self_" + Date.now(),
-            from: accountProfile.email,
-            to,
-            subject,
-            body,
-            htmlBody: `<div style="font-family:sans-serif;padding:16px"><h3>Local ZeroMail test</h3><pre>${escapeHtml(body)}</pre><p>This message was stored locally; it was not transmitted over the Internet.</p></div>`,
-            folder: "inbox",
-            deliveryStatus: "Local self-test (not Internet-delivered)",
-            timestamp: new Date().toISOString()
-          });
-          logMessage("SUCCESS", "Local self-test copied into the Inbox; no external email was sent.");
-        }
+        setSendStatus("Sending through EmailJS…", "info");
+        logMessage("NETWORK", `Sending outbound email to ${to} through EmailJS.`);
+        const response = await sendThroughEmailJS({ to, subject, body });
 
-        let deliveryStatus = "Saved locally — not sent";
-        if (endpoint) {
-          localStorage.setItem("zm_send_endpoint", endpoint);
-          setSendStatus("Contacting secure outbound endpoint…", "info");
-          logMessage("NETWORK", `Submitting outbound message to secure endpoint for ${to}.`);
-
-          const result = await sendThroughEndpoint(endpoint, {
-            to,
-            subject,
-            text: body,
-            // The endpoint must choose its own verified sender identity.
-            // Do not trust a browser-supplied From address.
-            client: "ZeroMail"
-          });
-
-          deliveryStatus = `Accepted by outbound provider${result.id ? ` (ID: ${result.id})` : ""}`;
-          logMessage("SUCCESS", `Outbound provider accepted the message for ${to}.`, result.id || "");
-          setSendStatus("The outbound endpoint accepted the message. This confirms provider acceptance, not final inbox delivery.", "success");
-        } else {
-          setSendStatus("No secure outbound endpoint is configured. The message will be saved locally only. Use “Dispatch via Native Mailer” to open a mail-app draft.", "warning");
-          logMessage("WARN", "No outbound endpoint configured. Message was not sent.");
-        }
-
+        const deliveryStatus = `Accepted by EmailJS (${response.status || "200"})`;
         await saveEmail({
           to,
-          from: accountProfile ? accountProfile.email : "local-user",
+          from: accountProfile ? accountProfile.email : "ZeroMail",
           subject,
           body,
           htmlBody: `<div style="white-space:pre-wrap">${escapeHtml(body)}</div>`,
@@ -668,31 +748,18 @@
           timestamp: new Date().toISOString()
         });
 
-        if (endpoint) {
-          closeComposer();
-          switchFolder("sent");
-        } else {
-          // Keep the composer open so the user can choose native mail or configure endpoint.
-          await loadFolder("sent");
-        }
+        logMessage("SUCCESS", `EmailJS accepted the message for ${to}.`, response.text || "");
+        setSendStatus("EmailJS accepted the message. This confirms provider acceptance, not final delivery to the recipient's inbox.", "success");
+        closeComposer();
+        switchFolder("sent");
       } catch (err) {
-        logMessage("ERROR", "Outbound send failed: " + err.message);
-        setSendStatus(`Send failed: ${err.message}. The message was not marked as sent.`, "error");
-        // Preserve a local copy as a failed draft for recovery.
-        await saveEmail({
-          to,
-          from: accountProfile ? accountProfile.email : "local-user",
-          subject,
-          body,
-          htmlBody: `<div style="white-space:pre-wrap">${escapeHtml(body)}</div>`,
-          folder: "sent",
-          deliveryStatus: "FAILED — not confirmed sent",
-          timestamp: new Date().toISOString()
-        });
+        const message = err?.text || err?.message || String(err);
+        logMessage("ERROR", "EmailJS send failed: " + message);
+        setSendStatus(`Send failed: ${message}. The message was not marked as sent; your compose text is still here.`, "error");
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = "Save / Send";
+          submitButton.textContent = "Send Email";
         }
       }
     }
@@ -948,7 +1015,7 @@
     }
 
     async function factoryReset() {
-      if (!confirm("⚠️ FACTORY RESET:\n\nThis will completely unpair this device and clear 100% of stored emails from your computer.")) return;
+      if (!confirm("⚠️ FACTORY RESET:\n\nThis will unpair this device, clear locally stored emails, and remove the EmailJS connection saved on this device.")) return;
       if (db) db.close();
       indexedDB.deleteDatabase(DB_NAME);
       localStorage.clear();
@@ -959,8 +1026,9 @@
       document.getElementById("compose-modal").classList.remove("hidden");
       const status = document.getElementById("send-status");
       if (status) status.classList.add("hidden");
-      const endpoint = document.getElementById("compose-send-endpoint");
-      if (endpoint) endpoint.value = localStorage.getItem("zm_send_endpoint") || "";
+      updateEmailJSConnectionStatus();
+      const submit = document.querySelector('#compose-modal button[type="submit"]');
+      if (submit) submit.textContent = "Send Email";
     }
     function closeComposer() { document.getElementById("compose-modal").classList.add("hidden"); }
     function switchFolder(f) { currentFolder = f; loadFolder(f); }
