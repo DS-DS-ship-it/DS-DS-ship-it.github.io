@@ -138,7 +138,7 @@
     <!-- Diagnostic Tabs -->
     <div class="flex border-b border-slate-800 bg-slate-900/50 text-xs font-semibold">
       <button onclick="switchDiagTab('logs')" id="tab-btn-logs" class="px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer">Live Network Logs</button>
-      <button onclick="switchDiagTab('deliverability')" id="tab-btn-deliverability" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Deliverability & Bounces</button>
+      <button onclick="switchDiagTab('deliverability')" id="tab-btn-deliverability" class="px-4 py-2 text-slate-400 hover:text-white cursor-pointer">Deliverability & Troubleshooting</button>
     </div>
 
     <!-- TAB 1: Live Network Console -->
@@ -147,13 +147,13 @@
       <div id="log-stream" class="space-y-1"></div>
     </div>
 
-    <!-- TAB 2: Deliverability & Bounces Breakdown -->
+    <!-- TAB 2: Deliverability Breakdown -->
     <div id="diag-panel-deliverability" class="flex-1 p-5 overflow-y-auto text-xs text-slate-300 space-y-4 hidden leading-relaxed select-text">
       <div class="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-amber-200">
-        <h4 class="font-bold text-amber-300 mb-1">⚠️ Why Mail Delivery Subsystem / Bounces Happen:</h4>
-        <p>1. <strong>The Throwaway Reply-To Filter:</strong> When an email carries a temporary address (like <code>@guerrillamailblock.com</code>) in the hidden <code>Reply-To</code> header, Yahoo and corporate mail filters classify it as an unauthenticated proxy/phishing attempt and return a delivery failure notice.<br>
-           2. <strong>Connected Email Account Quota:</strong> If the email account connected to EmailJS is out of disk space, its outbound mail server will bounce the message.<br>
-           3. <strong>Clean Outbound Protection:</strong> ZeroMail now runs in <em>Clean Outbound Mode</em>, automatically stripping blacklisted throwaway domains from the hidden headers so receiving servers accept the message without bouncing.</p>
+        <h4 class="font-bold text-amber-300 mb-1">📬 Deliverability Tips:</h4>
+        <p>1. <strong>Yahoo & Gmail Inboxes:</strong> When sending to Yahoo, tell the recipient to check their <em>Spam / Bulk</em> folder if it does not appear in Primary.<br>
+           2. <strong>Template Settings:</strong> Ensure your EmailJS template header has <em>"To Email"</em> set to <code>{{to_email}}</code>.<br>
+           3. <strong>Local Disk Storage:</strong> All received and sent emails are saved directly to your computer's IndexedDB file on disk.</p>
       </div>
     </div>
   </div>
@@ -216,12 +216,12 @@
     </div>
   </div>
 
-  <!-- EMAILJS ONE-TIME OUTBOUND SETUP MODAL -->
+  <!-- EMAILJS SETUP MODAL -->
   <div id="emailjs-setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-[60] overflow-y-auto">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-5 sm:p-6 border border-slate-200 my-auto">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
-          <div class="text-[10px] uppercase tracking-wider font-bold text-indigo-600">Anti-Bounce Outbound</div>
+          <div class="text-[10px] uppercase tracking-wider font-bold text-indigo-600">Zero-Server Outbound</div>
           <h2 class="text-lg font-bold text-slate-900">EmailJS Connection Setup</h2>
           <p class="text-xs text-slate-500 mt-1">Configures direct delivery to Yahoo, Gmail, and external inboxes.</p>
         </div>
@@ -230,8 +230,7 @@
 
       <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4 text-xs text-amber-950 space-y-1">
         <div class="font-bold">⚠️ CRITICAL: Check Your Template in EmailJS Dashboard</div>
-        <p>1. In your EmailJS template settings header, set <strong>"To Email"</strong> to: <code class="font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">{"{{"}}to_email{{"}}"}}</code>.<br>
-           2. In the template HTML editor, make sure you delete any markdown backticks (<code class="bg-white px-1">```html</code>) from the first and last lines!</p>
+        <p>In your EmailJS template settings header, set <strong>"To Email"</strong> to: <code class="font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">{"{{"}}to_email{{"}}"}}</code>. If it still has your personal email, EmailJS will send every message to yourself instead of the recipient!</p>
       </div>
 
       <form id="emailjs-setup-form" onsubmit="saveEmailJSSetup(event)" class="space-y-3">
@@ -305,7 +304,7 @@
   <script>
     const DB_NAME = "ZeroMailClientDB";
     const G_API = "https://api.guerrillamail.com/ajax.php";
-    let db;
+    let db = null;
     let currentFolder = "inbox";
     let activeEmail = null;
     let activeEmailId = null;
@@ -392,7 +391,7 @@
       document.getElementById("tab-btn-deliverability").className = tab === 'deliverability' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
     }
 
-    // --- 3. AUTO-RECOVERY & INITIALIZATION (CRASH-PROOF) ---
+    // --- 3. AUTO-RECOVERY & INITIALIZATION (CRASH-PROOF IMMUNITY) ---
     async function initApp() {
       try {
         await initDB();
@@ -404,7 +403,7 @@
         await updateStorageMeter();
       } catch (_) {}
 
-      // Retrieve account profile
+      // Retrieve account profile from any prior configuration key
       try {
         accountProfile = JSON.parse(
           localStorage.getItem("zm_paired_profile") ||
@@ -419,7 +418,7 @@
         accountProfile = null;
       }
 
-      // Auto-recover from existing IndexedDB emails
+      // Auto-recover from existing IndexedDB emails if localStorage was cleared
       if (!accountProfile) {
         try {
           const storedEmails = await getAllEmails();
@@ -443,6 +442,7 @@
         }
       }
 
+      // If still not paired, default to known previous address or open pairing modal
       if (!accountProfile) {
         openPairingModal();
       } else {
@@ -497,13 +497,16 @@
 
     function grantAccess() {
       closePairingModal();
-      document.getElementById("header-email").innerText = accountProfile.email;
-      document.getElementById("live-badge").classList.remove("hidden");
+      if (accountProfile && accountProfile.email) {
+        document.getElementById("header-email").innerText = accountProfile.email;
+        document.getElementById("live-badge").classList.remove("hidden");
+      }
 
       loadFolder("inbox");
       syncMailboxWithGateway(true);
 
-      setInterval(() => syncMailboxWithGateway(false), 14000);
+      if (window.syncInterval) clearInterval(window.syncInterval);
+      window.syncInterval = setInterval(() => syncMailboxWithGateway(false), 14000);
     }
 
     // --- 5. THE INBOUND RELAY ---
@@ -569,7 +572,7 @@
       }
     }
 
-    // --- 6. EMAILJS OUTBOUND DISPATCH (CLEAN ANTI-SPOOFING MODE) ---
+    // --- 6. EMAILJS OUTBOUND DISPATCH ---
     function getEmailJSConfig() {
       try {
         const config = JSON.parse(localStorage.getItem("zm_emailjs_config") || "null");
@@ -582,7 +585,7 @@
       const status = document.getElementById("emailjs-connection-status");
       if (!status) return;
       const connected = !!getEmailJSConfig();
-      status.textContent = connected ? "Connected — Clean Outbound Delivery Active" : "Not connected — click Configure Settings to connect";
+      status.textContent = connected ? "Connected — Ready to send outbound emails" : "Not connected — click Configure Settings to connect";
       status.className = connected ? "text-[10px] text-emerald-700 font-bold" : "text-[10px] text-amber-700 font-semibold";
     }
 
@@ -658,17 +661,15 @@
       el.classList.remove("hidden");
     }
 
-    // Clean Outbound Delivery: Prevents Yahoo / DMARC Phishing Bounces
+    // Clean Outbound Delivery
     async function sendThroughEmailJS({ to, subject, body }) {
       const config = getEmailJSConfig();
       if (!config) throw new Error("EmailJS is not configured yet. Click 'Configure Settings' to connect.");
 
-      // Check if recipient is a strict provider (like Yahoo, AOL, or corporate)
       const isStrictRecipient = to.toLowerCase().includes("@yahoo.") || 
                                 to.toLowerCase().includes("@ymail.") || 
                                 to.toLowerCase().includes("@aol.");
 
-      // To prevent Yahoo anti-spoofing bounces, we do not inject throwaway domains into hidden reply-to
       const cleanReplyTo = isStrictRecipient ? "" : (accountProfile?.email || "");
 
       const templateParams = {
@@ -700,7 +701,7 @@
           );
           return { status: sdkRes.status || 200, text: sdkRes.text || "OK" };
         } catch (sdkErr) {
-          logMessage("WARN", "SDK send hit error, falling back to direct REST API...", sdkErr.text || sdkErr.message);
+          logMessage("WARN", "SDK send hit notice, falling back to direct REST API...", sdkErr.text || sdkErr.message);
         }
       }
 
@@ -798,7 +799,7 @@
       document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent through your ZeroMail outbound relay at ${new Date().toLocaleTimeString()}.\n\nIf EmailJS accepts it, a copy will appear in your Sent folder.`;
     }
 
-    // --- 7. LOCAL STORAGE (IndexedDB v10 + CRASH-PROOF IMMUNITY) ---
+    // --- 7. LOCAL STORAGE (IndexedDB v10 + IMMUNE ERROR RECOVERY) ---
     function initDB() {
       return new Promise((resolve) => {
         try {
@@ -816,6 +817,7 @@
             resolve(db);
           };
           req.onerror = () => {
+            // VersionError immune fallback: open database without specified version
             try {
               const fallbackReq = indexedDB.open(DB_NAME);
               fallbackReq.onsuccess = (fe) => {
@@ -1009,7 +1011,7 @@
       if (remoteId && accountProfile && accountProfile.sidToken) {
         try {
           safeGet(`${G_API}?f=del_email&email_ids[]=${remoteId}&sid_token=${accountProfile.sidToken}`);
-        } catch (_) {}
+        } catch (e) {}
       }
     }
 
@@ -1039,7 +1041,7 @@
     }
 
     async function factoryReset() {
-      if (!confirm("⚠️ FACTORY RESET:\n\nThis will completely unpair this device and clear 100% of stored emails from your computer.")) return;
+      if (!confirm("⚠️ FACTORY RESET:\n\nThis will completely unpair this device, clear locally stored emails, and remove your connection settings.")) return;
       if (db) db.close();
       indexedDB.deleteDatabase(DB_NAME);
       localStorage.clear();
