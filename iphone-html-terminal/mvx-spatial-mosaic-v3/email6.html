@@ -17,7 +17,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
-  <!-- TOP HEADER (NO CLIPPING, FULL TEXT SELECTION) -->
+  <!-- TOP HEADER (RESPONSIVE, NO CLIPPING) -->
   <header class="bg-white border-b border-slate-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shrink-0 shadow-sm relative z-20 w-full overflow-hidden">
     <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
       <div class="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-xl font-bold text-base shadow-sm shrink-0">⚡</div>
@@ -378,11 +378,19 @@
       document.getElementById("tab-btn-emailjs-help").className = tab === 'emailjs-help' ? "px-4 py-2 text-indigo-400 border-b-2 border-indigo-400 cursor-pointer" : "px-4 py-2 text-slate-400 hover:text-white cursor-pointer";
     }
 
-    // --- 3. AUTO-RECOVERY & INITIALIZATION ---
+    // --- 3. AUTO-RECOVERY & INITIALIZATION (CRASH-PROOF) ---
     async function initApp() {
-      await initDB();
-      await updateStorageMeter();
+      try {
+        await initDB();
+      } catch (dbErr) {
+        console.warn("DB init notice:", dbErr);
+      }
 
+      try {
+        await updateStorageMeter();
+      } catch (_) {}
+
+      // Retrieve account profile
       try {
         accountProfile = JSON.parse(
           localStorage.getItem("zm_paired_profile") ||
@@ -397,7 +405,7 @@
         accountProfile = null;
       }
 
-      // Auto-recover from existing IndexedDB emails if localStorage was cleared
+      // Auto-recover from existing IndexedDB emails if localStorage was touched
       if (!accountProfile) {
         try {
           const storedEmails = await getAllEmails();
@@ -594,7 +602,6 @@
         return;
       }
 
-      // Initialize SDK immediately
       if (window.emailjs && typeof window.emailjs.init === "function") {
         try { window.emailjs.init({ publicKey: config.publicKey }); } catch(_) {}
       }
@@ -642,7 +649,6 @@
       const config = getEmailJSConfig();
       if (!config) throw new Error("EmailJS is not configured yet. Click 'Configure Settings' to connect.");
 
-      // Universal Parameter Mapping: Matches EVERY variable in your template!
       const templateParams = {
         to_email: to,
         to: to,
@@ -770,60 +776,87 @@
       document.getElementById("compose-body").value = `Hello ${accountProfile.username}!\n\nThis is a verified test email sent through your ZeroMail outbound relay at ${new Date().toLocaleTimeString()}.\n\nIf EmailJS accepts it, a copy will appear in your Sent folder.`;
     }
 
-    // --- 7. LOCAL STORAGE (IndexedDB v7 + IMMUNE ERROR RECOVERY) ---
+    // --- 7. LOCAL STORAGE (IndexedDB v10 + CRASH-PROOF IMMUNITY) ---
     function initDB() {
       return new Promise((resolve) => {
-        // Version 7 cleanly supersedes all previous versions
-        const req = indexedDB.open(DB_NAME, 7);
-        req.onupgradeneeded = (e) => {
-          const dbInstance = e.target.result;
-          if (!dbInstance.objectStoreNames.contains("emails")) {
-            const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
-            store.createIndex("remoteId", "remoteId", { unique: false });
-            store.createIndex("folder", "folder", { unique: false });
-          }
-        };
-        req.onsuccess = (e) => { db = e.target.result; resolve(db); };
-        req.onerror = () => {
-          // Version-conflict immune fallback
-          const fallbackReq = indexedDB.open(DB_NAME);
-          fallbackReq.onsuccess = (fe) => { db = fe.target.result; resolve(db); };
-          fallbackReq.onerror = () => resolve(null);
-        };
+        // High version (10) upgrades safely over all previous database versions
+        try {
+          const req = indexedDB.open(DB_NAME, 10);
+          req.onupgradeneeded = (e) => {
+            const dbInstance = e.target.result;
+            if (!dbInstance.objectStoreNames.contains("emails")) {
+              const store = dbInstance.createObjectStore("emails", { keyPath: "id", autoIncrement: true });
+              store.createIndex("remoteId", "remoteId", { unique: false });
+              store.createIndex("folder", "folder", { unique: false });
+            }
+          };
+          req.onsuccess = (e) => {
+            db = e.target.result;
+            resolve(db);
+          };
+          req.onerror = () => {
+            // VersionError immune fallback: open database without specified version
+            try {
+              const fallbackReq = indexedDB.open(DB_NAME);
+              fallbackReq.onsuccess = (fe) => {
+                db = fe.target.result;
+                resolve(db);
+              };
+              fallbackReq.onerror = () => resolve(null);
+            } catch (_) {
+              resolve(null);
+            }
+          };
+        } catch (_) {
+          resolve(null);
+        }
       });
     }
 
     function isEmailSavedLocally(remoteId) {
       return new Promise((resolve) => {
         if (!db) return resolve(false);
-        const tx = db.transaction("emails", "readonly");
-        const idx = tx.objectStore("emails").index("remoteId");
-        const req = idx.get(remoteId);
-        req.onsuccess = () => resolve(!!req.result);
-        req.onerror = () => resolve(false);
+        try {
+          const tx = db.transaction("emails", "readonly");
+          const idx = tx.objectStore("emails").index("remoteId");
+          const req = idx.get(remoteId);
+          req.onsuccess = () => resolve(!!req.result);
+          req.onerror = () => resolve(false);
+        } catch (_) {
+          resolve(false);
+        }
       });
     }
 
     function saveEmail(email) {
       return new Promise((resolve) => {
         if (!db) return resolve();
-        const tx = db.transaction("emails", "readwrite");
-        tx.objectStore("emails").add(email);
-        tx.oncomplete = () => {
-          updateStorageMeter();
-          loadFolder(currentFolder);
+        try {
+          const tx = db.transaction("emails", "readwrite");
+          tx.objectStore("emails").add(email);
+          tx.oncomplete = () => {
+            updateStorageMeter();
+            loadFolder(currentFolder);
+            resolve();
+          };
+          tx.onerror = () => resolve();
+        } catch (_) {
           resolve();
-        };
+        }
       });
     }
 
     function getAllEmails() {
       return new Promise((resolve) => {
         if (!db) return resolve([]);
-        const tx = db.transaction("emails", "readonly");
-        const req = tx.objectStore("emails").getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
+        try {
+          const tx = db.transaction("emails", "readonly");
+          const req = tx.objectStore("emails").getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch (_) {
+          resolve([]);
+        }
       });
     }
 
@@ -941,33 +974,39 @@
     }
 
     async function deleteEmail(localId, remoteId) {
-      const tx = db.transaction("emails", "readwrite");
-      tx.objectStore("emails").delete(localId);
-      tx.oncomplete = async () => {
-        logMessage("STORAGE", `Email deleted. Local computer regained storage space.`);
-        await updateStorageMeter();
-        loadFolder(currentFolder);
-        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted. Local disk space reclaimed.</div>`;
-      };
+      if (!db) return;
+      try {
+        const tx = db.transaction("emails", "readwrite");
+        tx.objectStore("emails").delete(localId);
+        tx.oncomplete = async () => {
+          logMessage("STORAGE", `Email deleted. Local computer regained storage space.`);
+          await updateStorageMeter();
+          loadFolder(currentFolder);
+          document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Email deleted. Local disk space reclaimed.</div>`;
+        };
+      } catch (_) {}
 
       if (remoteId && accountProfile && accountProfile.sidToken) {
         try {
           safeGet(`${G_API}?f=del_email&email_ids[]=${remoteId}&sid_token=${accountProfile.sidToken}`);
-        } catch (e) {}
+        } catch (_) {}
       }
     }
 
     async function clearAllStoredEmails() {
       if (!confirm("🧹 CLEAR STORAGE:\n\nDelete all downloaded emails to regain disk space on this computer?\n(Your address pairing remains saved).")) return;
+      if (!db) return;
 
-      const tx = db.transaction("emails", "readwrite");
-      tx.objectStore("emails").clear();
-      tx.oncomplete = async () => {
-        logMessage("STORAGE", "All stored emails cleared. Disk space restored to 0 KB.");
-        await updateStorageMeter();
-        loadFolder(currentFolder);
-        document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Storage cleared. All disk space reclaimed.</div>`;
-      };
+      try {
+        const tx = db.transaction("emails", "readwrite");
+        tx.objectStore("emails").clear();
+        tx.oncomplete = async () => {
+          logMessage("STORAGE", "All stored emails cleared. Disk space restored to 0 KB.");
+          await updateStorageMeter();
+          loadFolder(currentFolder);
+          document.getElementById("reading-pane").innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Storage cleared. All disk space reclaimed.</div>`;
+        };
+      } catch (_) {}
     }
 
     async function updateStorageMeter() {
