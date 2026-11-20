@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>The Comedy Roast Cellar &bull; After-Hours AI Roast Arena</title>
+  <style>
+    :root {
+      --bg-dark: #0a0610;
+      --card-bg: rgba(18, 12, 28, 0.94);
+      --card-inner: #0f0a18;
+      --fighter-one: #00d2ff;
+      --fighter-one-glow: rgba(0, 210, 255, 0.42);
+      --fighter-two: #ff2a85;
+      --fighter-two-glow: rgba(255, 42, 133, 0.42);
+      --neon-amber: #f59e0b;
+      --neon-green: #10b981;
+      --neon-purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #2a1b3d;
+      --reading-highlight: rgba(255, 42, 133, 0.28);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 210, 255, 0.13) 0%, transparent 45%),
+        radial-gradient(circle at 85% 15%, rgba(255, 42, 133, 0.15) 0%, transparent 45%),
+        linear-gradient(rgba(10, 6, 16, 0.95), rgba(10, 6, 16, 0.95)),
+        repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.015) 25px);
+      color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column;
+      padding: calc(0.5rem + var(--safe-top)) 0.8rem calc(240px + var(--safe-bottom)) 0.8rem;
+      overflow-x: hidden;
+    }
+    header { text-align: center; margin-bottom: 0.45rem; }
+    header h1 { font-size: 1.45rem; letter-spacing: 1px; text-transform: uppercase; background: linear-gradient(90deg, var(--fighter-one), #fff, var(--fighter-two)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 25px rgba(255,42,133,0.3); }
+    header p { color: var(--text-muted); font-size: 0.76rem; }
+
+    /* Environment Status Bar */
+    .environment-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; max-width: 1280px; margin: 0 auto 0.5rem auto; width: 100%; font-size: 0.7rem; color: var(--text-muted); }
+    .env-pills-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .env-pill { background: var(--card-bg); border: 1px solid var(--border-color); padding: 0.22rem 0.55rem; border-radius: 20px; display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; user-select: none; }
+    .env-pill.active { border-color: var(--neon-green); color: var(--neon-green); }
+    .env-pill.active-beat { border-color: var(--fighter-two); color: #f472b6; box-shadow: 0 0 10px rgba(236, 72, 153, 0.35); }
+    .pipeline-badge { font-family: ui-monospace, monospace; color: #38bdf8; font-weight: 700; }
+
+    /* Accordion Config Panel */
+    .accordion-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 0.85rem; border-radius: 10px 10px 0 0; width: 100%; max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+    .config-panel { background: var(--card-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; padding: 0.85rem 1rem; max-width: 1280px; margin: 0 auto 0.75rem auto; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 0.7rem; backdrop-filter: blur(12px); }
+    .config-panel.collapsed { display: none; }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .form-group label { font-size: 0.67rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    input, select, textarea { background: var(--card-inner); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.42rem 0.58rem; border-radius: 6px; font-size: 0.78rem; outline: none; width: 100%; }
+    input:focus, select:focus, textarea:focus { border-color: var(--fighter-two); }
+    .preset-chips-row { display: flex; gap: 0.32rem; flex-wrap: wrap; margin-top: 0.15rem; }
+    .tiny-chip-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s ease; }
+    .tiny-chip-btn:hover, .tiny-chip-btn.active-chip { background: rgba(245, 158, 11, 0.18); color: #fff; border-color: var(--neon-amber); }
+    .inline-row { display: flex; gap: 0.35rem; align-items: center; }
+
+    /* Active Heckle Banner */
+    .heckle-banner { max-width: 1280px; margin: 0 auto 0.6rem auto; width: 100%; background: rgba(245, 158, 11, 0.12); border: 1.5px solid var(--neon-amber); padding: 0.48rem 0.85rem; border-radius: 8px; display: none; align-items: center; justify-content: space-between; gap: 0.5rem; animation: pulseGlow 2.5s infinite; }
+    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); } }
+    .heckle-content { font-size: 0.84rem; color: #fef08a; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Arena Grid */
+    .arena-grid { display: grid; grid-template-columns: 1fr 144px 1fr; gap: 0.85rem; max-width: 1280px; margin: 0 auto; width: 100%; align-items: stretch; }
+    @media (max-width: 820px) {
+      .arena-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .arena-center { flex-direction: row !important; flex-wrap: wrap; justify-content: space-between; padding: 0.45rem 0.75rem; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); }
+      .round-number { font-size: 1.4rem !important; }
+    }
+
+    .fighter-card { background: var(--card-bg); border: 2px solid var(--border-color); border-radius: 14px; padding: 0.85rem; display: flex; flex-direction: column; transition: all 0.25s ease; backdrop-filter: blur(14px); min-height: 540px; position: relative; }
+    .card-debater-one { border-top: 4px solid var(--fighter-one); }
+    .card-debater-two { border-top: 4px solid var(--fighter-two); }
+    .card-debater-one.active-speaker { border-color: var(--fighter-one); box-shadow: 0 0 26px var(--fighter-one-glow); }
+    .card-debater-two.active-speaker { border-color: var(--fighter-two); box-shadow: 0 0 26px var(--fighter-two-glow); }
+    .card-debater-one.preloading-speech { border-color: rgba(0, 210, 255, 0.4); }
+    .card-debater-two.preloading-speech { border-color: rgba(255, 42, 133, 0.4); }
+
+    /* Inline Interactive Title & Persona Editor */
+    .fighter-header { display: flex; flex-direction: column; gap: 0.32rem; margin-bottom: 0.42rem; }
+    .fighter-header-top { display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+    .inline-name-input {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      border-radius: 4px;
+      font-size: 1.02rem;
+      font-weight: 900;
+      padding: 0.24rem 0.42rem;
+      width: 100%;
+    }
+    .card-debater-one .inline-name-input { color: var(--fighter-one); }
+    .card-debater-two .inline-name-input { color: var(--fighter-two); }
+    .inline-name-input:focus { border-color: var(--neon-amber); background: rgba(0,0,0,0.6); }
+
+    .inline-persona-input {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      padding: 0.24rem 0.45rem;
+      width: 100%;
+    }
+    .inline-persona-input:focus { border-color: var(--neon-amber); color: #fff; background: rgba(0,0,0,0.6); }
+
+    .meter-wrap { margin-bottom: 0.4rem; }
+    .meter-label { display: flex; justify-content: space-between; font-size: 0.64rem; color: var(--text-muted); font-weight: 800; margin-bottom: 0.18rem; }
+    .meter-bar { height: 6px; background: #060911; border-radius: 3px; overflow: hidden; }
+    .meter-fill { height: 100%; width: 15%; transition: width 0.35s ease; }
+    .card-debater-one .meter-fill { background: linear-gradient(90deg, #0077ff, var(--fighter-one)); }
+    .card-debater-two .meter-fill { background: linear-gradient(90deg, #ff0055, var(--fighter-two)); }
+
+    /* Web Research & Comedy Engine Indicator Tray */
+    .research-indicator-box { background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.32rem 0.52rem; font-size: 0.64rem; color: var(--text-muted); margin-bottom: 0.42rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; }
+
+    /* Selectable Teleprompter Speech Box */
+    .speech-bubble {
+      flex: 1; background: var(--card-inner); border-radius: 10px; padding: 0.85rem;
+      font-size: 0.93rem; line-height: 1.62; border: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto; min-height: 190px; max-height: 255px; scroll-behavior: smooth; display: flex; flex-direction: column; gap: 0.55rem;
+      -webkit-user-select: text !important; user-select: text !important; cursor: text;
+    }
+    .speech-paragraph { margin-bottom: 0.2rem; -webkit-user-select: text !important; user-select: text !important; }
+    .speech-sentence { border-radius: 4px; padding: 0.06rem 0.18rem; transition: background 0.22s ease; display: inline; -webkit-user-select: text !important; user-select: text !important; }
+    .speech-sentence.active-reading { background: var(--reading-highlight); color: #fff; box-shadow: 0 0 10px var(--reading-highlight); }
+    .joke-tag { color: var(--neon-amber); font-weight: 800; text-shadow: 0 0 8px rgba(245, 158, 11, 0.35); }
+
+    /* Expanded Vocal Studio & Prosody Controls */
+    .vocal-modulation-box { margin-top: 0.55rem; background: var(--card-inner); padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.42rem; }
+    .vocal-top-row { display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--text-muted); }
+    .vocal-btn-group { display: flex; gap: 0.28rem; align-items: center; flex-wrap: wrap; }
+    .accent-filter-row { display: flex; gap: 0.25rem; flex-wrap: wrap; align-items: center; }
+    .prosody-sliders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+    .prosody-extra-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; padding-top: 0.35rem; border-top: 1px dashed rgba(255,255,255,0.08); }
+    .prosody-extra-grid.collapsed { display: none; }
+    .slider-label-row { display: flex; justify-content: space-between; font-size: 0.63rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.12rem; }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: #172236; border-radius: 4px; border: 1px solid var(--border-color); outline: none; cursor: pointer; padding: 0; }
+    .card-debater-one input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--fighter-one); cursor: grab; }
+    .card-debater-two input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--fighter-two); cursor: grab; }
+
+    /* Center Stage VS */
+    .arena-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.45rem; text-align: center; }
+    .round-number { font-size: 2.1rem; font-weight: 900; color: #fff; line-height: 1; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
+    .round-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .vs-badge { font-weight: 900; font-size: 1rem; background: var(--card-bg); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-color); color: var(--neon-amber); }
+    .btn-laugh-track { background: #23122c; border: 1px solid var(--fighter-two); color: #f472b6; font-size: 0.7rem; font-weight: 800; padding: 0.34rem 0.58rem; border-radius: 6px; cursor: pointer; width: 100%; }
+
+    /* AURA XP-12 Sound Pad Drawer */
+    .aura-pad-drawer { position: fixed; bottom: calc(74px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 1.2rem); max-width: 1280px; background: #07040d; border: 2px solid #2d1840; border-radius: 12px; box-shadow: 0 -12px 35px rgba(0,0,0,0.95); z-index: 105; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .aura-pad-drawer.collapsed { display: none; }
+    .aura-pads-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
+    @media (max-width: 780px) { .aura-pads-grid { grid-template-columns: repeat(4, 1fr); } }
+    .aura-pad { background: #130a1c; border: 1.5px solid #2a163d; border-radius: 6px; padding: 0.35rem 0.2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50px; cursor: pointer; user-select: none; }
+    .aura-pad:active { transform: translateY(2px) scale(0.97); filter: brightness(1.6); }
+    .pad-title { font-size: 0.62rem; font-weight: 800; color: #f1f5f9; text-align: center; }
+
+    /* Bottom Fixed Dock */
+    .bottom-dock { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(7, 4, 13, 0.96); backdrop-filter: blur(18px); border-top: 1px solid var(--border-color); padding: 0.4rem 0.9rem calc(0.55rem + var(--safe-bottom)) 0.9rem; z-index: 100; display: flex; flex-direction: column; gap: 0.45rem; max-width: 1280px; margin: 0 auto; }
+    .dock-heckle-row { display: flex; gap: 0.45rem; }
+    .dock-heckle-row input { flex: 1; padding: 0.5rem 0.7rem; font-size: 0.82rem; border-color: rgba(245, 158, 11, 0.4); }
+    .btn-heckle-send { background: var(--neon-amber); color: #000; font-size: 0.78rem; padding: 0.5rem 0.8rem; white-space: nowrap; font-weight: 900; }
+    .btn-heckle-cut { background: #7f1d1d; border: 1px solid #f87171; color: #fecaca; font-size: 0.75rem; padding: 0.5rem 0.75rem; white-space: nowrap; font-weight: 800; }
+    
+    .dock-actions-row { display: flex; gap: 0.42rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+    button { cursor: pointer; border: none; border-radius: 8px; font-weight: 800; font-size: 0.8rem; transition: all 0.15s ease; touch-action: manipulation; }
+    .btn-main-start { background: linear-gradient(135deg, var(--fighter-one), var(--fighter-two)); color: #fff; padding: 0.62rem 1rem; flex: 2; min-width: 135px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+    .btn-main-pause { background: #1e1329; border: 1px solid var(--border-color); color: #f1f5f9; padding: 0.62rem 0.75rem; flex: 1; min-width: 72px; }
+    .btn-main-stop { background: #ef4444; color: #fff; padding: 0.62rem 0.75rem; flex: 1; min-width: 72px; }
+    .btn-main-stop:disabled, .btn-main-start:disabled, .btn-main-pause:disabled, .btn-icon-aux:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-icon-aux { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.54rem 0.68rem; font-size: 0.75rem; white-space: nowrap; }
+    .btn-icon-aux.active-glow { background: rgba(236, 72, 153, 0.25); border-color: #ec4899; color: #f472b6; }
+
+    /* Floating Toast Notification */
+    .toast-msg { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background: #064e3b; color: #6ee7b7; border: 1px solid #059669; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 800; z-index: 200; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.8); }
+  </style>
+</head>
+<body>
+
+  <div class="toast-msg" id="toastMsg">Notification</div>
+
+  <!-- Top Environment & Pipelined Generation Bar -->
+  <aside class="environment-bar">
+    <div class="env-pills-group">
+      <div class="env-pill" id="pillPing"><span>📶</span> <span id="pingLabel">Host: Initializing...</span></div>
+      <div class="env-pill" id="pillPipeline"><span>⚡</span> <span class="pipeline-badge" id="pipelineLabel">Pre-Gen Engine: Armed</span></div>
+      <div class="env-pill" id="pillBeat" onclick="toggleBeatPlayback()" style="cursor: pointer;"><span>🎧</span> <span id="beatLabel">Beat: Off</span></div>
+      <div class="env-pill" id="pillAudioHeal" onclick="forceAudioEngineAwake()" style="cursor: pointer;" title="Tap to wake up / unfreeze speech engine anytime"><span>🔊</span> <span id="audioHealthLabel">TTS: Healthy</span></div>
+    </div>
+    <div style="font-size: 0.68rem; color: var(--neon-amber); font-weight: 800;" id="roastStatusBadge">After-Hours Raw &bull; ~200w / Set</div>
+  </aside>
+
+  <header>
+    <h1>🔥 The Comedy Roast Cellar &bull; After-Hours ⚖️</h1>
+    <p><span id="headerTitleOne">B.T. Justice</span> vs. <span id="headerTitleTwo">Roast King Eddie</span> &bull; Unscripted Adult Comedy &bull; Full Vocal Lab</p>
+  </header>
+
+  <!-- Accordion Setup & Audio Tuning -->
+  <div class="accordion-toggle" onclick="toggleConfigAccordion()">
+    <span>⚙️ Matchup Presets, Adult Humor Engine, Pronunciation &amp; Ollama Host</span>
+    <span id="accordionChevron">▲ Collapse</span>
+  </div>
+
+  <section class="config-panel" id="configPanel">
+    <div class="form-group" style="grid-column: span 2;">
+      <div class="inline-row" style="justify-content: space-between;">
+        <label>🎭 Matchup Presets</label>
+        <button type="button" class="tiny-chip-btn" style="color: #38bdf8; border-color: #38bdf8;" onclick="randomizeFullMatchup()">🎲 Random Wild Matchup</button>
+      </div>
+      <div class="preset-chips-row">
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('lawyer_comic')">⚖️ Sleazy Lawyer vs. Street Comic</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('gordon_ramsay')">🍳 Unhinged Chef vs. Waffle House Cook</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('tech_barista')">💻 Coked-Up Tech Bro vs. Broke Barista</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('exes_therapy')">💔 Bitter Exes in Couples Therapy</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('florida_bartender')">🐊 Florida Man vs. Dive Bar Bartender</button>
+        <button type="button" class="tiny-chip-btn" onclick="applyFullMatchupPreset('crypto_stripper')">💸 Crypto Scammer vs. Veteran Stripper</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <div class="inline-row" style="justify-content: space-between;">
+        <label for="roastTopic">Active Roast Topic / Premise</label>
+        <button type="button" class="tiny-chip-btn" style="color: var(--neon-amber); border-color: var(--neon-amber);" onclick="randomizeTopic()">🎲 Random Adult Topic</button>
+      </div>
+      <input type="text" id="roastTopic" value="Terrible Tinder dates, questionable 3AM browser history, and pretending you aren't one overdraft fee away from living in a Honda Civic." />
+    </div>
+
+    <div class="form-group">
+      <label for="humorSpice">🔥 Adult Humor / Spice Rating</label>
+      <select id="humorSpice" onchange="updateStatusBadge()">
+        <option value="raw_adult" selected>🔥 Raw After-Hours (Uncensored Adult)</option>
+        <option value="r_rated">🍸 Late-Night Club (R-Rated / Filthy)</option>
+        <option value="dark_observational">💀 Dark &amp; Twisted Observational</option>
+        <option value="pg13">🎤 TV Roast (PG-13 / Cleanish)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="turnLengthSelect">⏱️ Set Length / Pacing</label>
+      <select id="turnLengthSelect" onchange="updateStatusBadge()">
+        <option value="140">Snappy Club Jab (~140w)</option>
+        <option value="200" selected>Sharp Stand-Up Set (~200w)</option>
+        <option value="290">Extended Headliner (~290w)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="autoCrowdSfx">👏 Auto Crowd Reactions</label>
+      <select id="autoCrowdSfx">
+        <option value="wild" selected>Wild Comedy Club (Auto Laugh/Rimshot/Burn)</option>
+        <option value="subtle">Subtle (Punch Lines Only)</option>
+        <option value="off">Off (Manual SFX Pads Only)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="phoneticEngineMode">🗣️ Pronunciation Engine</label>
+      <select id="phoneticEngineMode">
+        <option value="colloquial" selected>Colloquial Stand-Up Fix (Slang + Acronyms)</option>
+        <option value="crisp">Crisp Broadcast (Expand Acronyms Only)</option>
+        <option value="raw">Raw Unfiltered Text</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="ollamaHost">Ollama Host Endpoint (Port 11434)</label>
+      <div style="display: flex; gap: 0.4rem;">
+        <input type="text" id="ollamaHost" value="" placeholder="http://192.168.4.22:11434" />
+        <button type="button" class="btn-icon-aux" style="border-color: var(--neon-amber); color: var(--neon-amber);" onclick="testAndLoadModels()">🔄 Rescan Models</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="modelDebaterOne" style="color: var(--fighter-one);">Competitor 1 AI Model</label>
+      <select id="modelDebaterOne">
+        <option value="dolphin-mistral" selected>dolphin-mistral</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="modelDebaterTwo" style="color: var(--fighter-two);">Competitor 2 AI Model</label>
+      <select id="modelDebaterTwo">
+        <option value="hf.co/NousResearch/Nous-Hermes-2-Mistral-7B-DPO-GGUF:Q4_K_M" selected>Nous-Hermes-2</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="beatStyleSelect">Cypher Beat Style</label>
+      <select id="beatStyleSelect" onchange="CypherBeat.setStyle(this.value)">
+        <option value="boombap" selected>90s Boom-Bap Cypher (90 BPM)</option>
+        <option value="trap">Modern 808 Trap (138 BPM)</option>
+        <option value="drill">Brooklyn Drill (142 BPM)</option>
+        <option value="phonk">Memphis Phonk (160 BPM)</option>
+        <option value="westcoast">West Coast G-Funk (96 BPM)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="beatVolume">Beat Master Volume</label>
+      <input type="range" id="beatVolume" min="0" max="2.0" step="0.05" value="0.65" oninput="CypherBeat.setVolume(this.value)" />
+    </div>
+
+    <div class="form-group">
+      <label for="roundMode">Round Limit</label>
+      <select id="roundMode">
+        <option value="6" selected>6 Rounds (Full Headliner)</option>
+        <option value="4">4 Rounds (Rapid Shootout)</option>
+        <option value="10">10 Rounds (Deathmatch)</option>
+        <option value="unlimited">Unlimited (&infin;)</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="grid-column: span 2;">
+      <label for="customPronounceMap">📖 Custom Pronunciation Overrides (word=spoken, comma separated)</label>
+      <input type="text" id="customPronounceMap" value="Esq.=Esquire, meme=meem, memes=meems, wifi=why-fye, gif=jiff" placeholder="e.g., gyatt=gee-yat, rizz=rizz, bologna=baloney" />
+    </div>
+  </section>
+
+  <!-- Live Audience Heckle Alert Banner -->
+  <aside class="heckle-banner" id="heckleBanner">
+    <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+      <span style="background: var(--neon-amber); color: #000; font-weight: 900; font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase;">Front-Row Heckle</span>
+      <span class="heckle-content" id="heckleBannerText">"..."</span>
+    </div>
+    <button type="button" class="tiny-chip-btn" onclick="clearActiveHeckle()">Dismiss</button>
+  </aside>
+
+  <!-- Roast Arena Grid -->
+  <main class="arena-grid">
+    <!-- Competitor 1 Card -->
+    <article class="fighter-card card-debater-one" id="cardDebaterOne">
+      <div class="fighter-header">
+        <div class="fighter-header-top">
+          <span style="font-size: 0.64rem; font-weight: 800; color: var(--fighter-one); text-transform: uppercase;">✏️ Comic 1 (Tap to Edit)</span>
+          <div class="vocal-btn-group">
+            <button type="button" class="tiny-chip-btn" onclick="randomizeSingleCharacter(true)">🎲 Random</button>
+            <button type="button" class="tiny-chip-btn" onclick="replayLastTurn(true)">🔁 Replay</button>
+            <span id="modelBadgeDebaterOne" style="font-size: 0.63rem; color: var(--fighter-one); font-family: monospace;">🤖 dolphin-mistral</span>
+          </div>
+        </div>
+        <input type="text" id="nameDebaterOne" value="B.T. Justice" class="inline-name-input" oninput="syncCompetitorTitles()" />
+        <input type="text" id="personaDebaterOne" value="Sleazy strip-mall divorce lawyer with three ex-wives and a questionable spray tan" class="inline-persona-input" oninput="syncCompetitorTitles()" />
+      </div>
+
+      <div class="meter-wrap">
+        <div class="meter-label"><span>CROWD DAMAGE RECEIVED</span><span id="dmgLabelDebaterOne">15%</span></div>
+        <div class="meter-bar"><div class="meter-fill" id="dmgFillDebaterOne" style="width: 15%;"></div></div>
+      </div>
+
+      <div class="research-indicator-box">
+        <span id="researchFeedOne">🔍 Engine: Standby for unscripted adult comedy...</span>
+        <span id="sourceBadgeOne" style="color: var(--neon-green); font-weight: bold;">Ready</span>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterOne">
+        <div class="speech-paragraph">Waiting to take the stage. Every set uses randomized comedy angles, callback memory, and zero prewritten scripts.</div>
+      </div>
+
+      <!-- Expanded Vocal Studio & Prosody Deck -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-top-row">
+          <span>🎙️ <strong id="voiceBadgeDebaterOne" style="color:var(--fighter-one);">Deep Bass</strong></span>
+          <div class="vocal-btn-group">
+            <button type="button" class="tiny-chip-btn" onclick="randomizeVoiceFor(true)">🎲 Voice</button>
+            <button type="button" class="tiny-chip-btn" onclick="previewVoice(true)">🔊 Test</button>
+            <button type="button" class="tiny-chip-btn" style="border-color: var(--fighter-one); color: var(--fighter-one);" onclick="toggleExtraVocalControls(true)" id="btnMoreVocalOne">🎛️ More Options</button>
+          </div>
+        </div>
+
+        <div class="accent-filter-row">
+          <span style="font-size:0.62rem; color:var(--text-muted); font-weight:700;">Region:</span>
+          <button type="button" class="tiny-chip-btn active-chip" id="filterL_all" onclick="setVoiceRegionFilter(true, 'all')">All</button>
+          <button type="button" class="tiny-chip-btn" id="filterL_us" onclick="setVoiceRegionFilter(true, 'us')">US</button>
+          <button type="button" class="tiny-chip-btn" id="filterL_ukau" onclick="setVoiceRegionFilter(true, 'ukau')">UK/AU</button>
+          <button type="button" class="tiny-chip-btn" id="filterL_world" onclick="setVoiceRegionFilter(true, 'world')">World</button>
+          <select id="voicePresetL" onchange="applyVoicePreset(true, this.value)" style="flex:1; min-width:115px; font-size:0.68rem; padding:0.2rem 0.35rem;">
+            <option value="custom">Preset: Custom</option>
+            <option value="deep_bass" selected>Preset: Deep Bass</option>
+            <option value="deadpan_savage">Preset: Deadpan Savage</option>
+            <option value="manic_roaster">Preset: Manic Roaster</option>
+            <option value="fast_heckler">Preset: Fast Heckler</option>
+            <option value="sleazy_dj">Preset: Sleazy Late-Night</option>
+            <option value="unhinged_scream">Preset: Unhinged Scream</option>
+            <option value="british_snob">Preset: British Snob</option>
+            <option value="robot_glitch">Preset: Cold AI / Robot</option>
+          </select>
+        </div>
+
+        <select id="voiceSelectDebaterOne" style="font-size: 0.72rem;"></select>
+
+        <div class="prosody-sliders-grid">
+          <div>
+            <div class="slider-label-row"><span>Pitch:</span><span id="pitchLabelL">0.84x</span></div>
+            <input type="range" id="pitchSliderL" min="0.40" max="1.80" step="0.02" value="0.84" oninput="syncSliderLabel('pitchLabelL', this.value, 'x')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Speed:</span><span id="rateLabelL">1.04x</span></div>
+            <input type="range" id="rateSliderL" min="0.55" max="1.85" step="0.02" value="1.04" oninput="syncSliderLabel('rateLabelL', this.value, 'x')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Volume:</span><span id="volLabelL">100%</span></div>
+            <input type="range" id="volSliderL" min="0" max="1.0" step="0.05" value="1.0" oninput="syncSliderLabel('volLabelL', Math.round(this.value*100), '%')" />
+          </div>
+        </div>
+
+        <div class="prosody-extra-grid" id="extraVocalOne">
+          <div>
+            <div class="slider-label-row"><span>Expressiveness:</span><span id="exprLabelL">65%</span></div>
+            <input type="range" id="exprSliderL" min="0" max="100" step="5" value="65" oninput="syncSliderLabel('exprLabelL', this.value, '%')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Punch Pause:</span><span id="pauseLabelL">220ms</span></div>
+            <input type="range" id="pauseSliderL" min="0" max="750" step="20" value="220" oninput="syncSliderLabel('pauseLabelL', this.value, 'ms')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Cadence Style:</span></div>
+            <select id="cadenceSelectL" style="font-size:0.68rem; padding:0.25rem;">
+              <option value="swagger" selected>Laid-Back Swagger</option>
+              <option value="natural">Natural Comic</option>
+              <option value="deadpan">Deadpan Slow</option>
+              <option value="machinegun">Machine-Gun Fast</option>
+              <option value="hype">Hype / Unhinged</option>
+            </select>
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Energy Swing:</span><span id="energyLabelL">18%</span></div>
+            <input type="range" id="energySliderL" min="0" max="45" step="3" value="18" oninput="syncSliderLabel('energyLabelL', this.value, '%')" />
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Center Stage Controls -->
+    <div class="arena-center">
+      <div>
+        <div class="round-number" id="roundDisplay">1</div>
+        <div class="round-label" id="roundMaxLabel">ROUNDS OF 6</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <button type="button" class="btn-laugh-track" onclick="SoundFX.rimshot()">🥁 Rimshot</button>
+      <button type="button" class="btn-laugh-track" style="border-color: var(--neon-amber); color: #fef08a;" onclick="SoundFX.cheer()">👏 Crowd Laugh</button>
+      <button type="button" class="btn-laugh-track" style="border-color: #ef4444; color: #fca5a5;" onclick="SoundFX.burnOooo()">🔥 Ooooh Burn!</button>
+      <button type="button" class="btn-laugh-track" style="border-color: #38bdf8; color: #7dd3fc;" onclick="SoundFX.sadTrombone()">🎺 Womp Womp</button>
+      <span id="globalState" style="font-size: 0.68rem; color: var(--text-muted);">Cellar Armed</span>
+    </div>
+
+    <!-- Competitor 2 Card -->
+    <article class="fighter-card card-debater-two" id="cardDebaterTwo">
+      <div class="fighter-header">
+        <div class="fighter-header-top">
+          <span style="font-size: 0.64rem; font-weight: 800; color: var(--fighter-two); text-transform: uppercase;">✏️ Comic 2 (Tap to Edit)</span>
+          <div class="vocal-btn-group">
+            <button type="button" class="tiny-chip-btn" onclick="randomizeSingleCharacter(false)">🎲 Random</button>
+            <button type="button" class="tiny-chip-btn" onclick="replayLastTurn(false)">🔁 Replay</button>
+            <span id="modelBadgeDebaterTwo" style="font-size: 0.63rem; color: var(--fighter-two); font-family: monospace;">🤖 Nous-Hermes-2</span>
+          </div>
+        </div>
+        <input type="text" id="nameDebaterTwo" value="Roast King Eddie" class="inline-name-input" oninput="syncCompetitorTitles()" />
+        <input type="text" id="personaDebaterTwo" value="Foul-mouthed basement comic who lives off energy drinks, petty grudges, and bar tabs" class="inline-persona-input" oninput="syncCompetitorTitles()" />
+      </div>
+
+      <div class="meter-wrap">
+        <div class="meter-label"><span>CROWD DAMAGE RECEIVED</span><span id="dmgLabelDebaterTwo">15%</span></div>
+        <div class="meter-bar"><div class="meter-fill" id="dmgFillDebaterTwo" style="width: 15%;"></div></div>
+      </div>
+
+      <div class="research-indicator-box">
+        <span id="researchFeedTwo">🔍 Engine: Standby for unscripted adult comedy...</span>
+        <span id="sourceBadgeTwo" style="color: var(--neon-green); font-weight: bold;">Ready</span>
+      </div>
+
+      <div class="speech-bubble" id="speechDebaterTwo">
+        <div class="speech-paragraph">Holding the mic. Dynamic responses react to live crowd heckles, previous callbacks, and adult humor angles without repeating scripts.</div>
+      </div>
+
+      <!-- Expanded Vocal Studio & Prosody Deck -->
+      <div class="vocal-modulation-box">
+        <div class="vocal-top-row">
+          <span>🎙️ <strong id="voiceBadgeDebaterTwo" style="color:var(--fighter-two);">Manic Roaster</strong></span>
+          <div class="vocal-btn-group">
+            <button type="button" class="tiny-chip-btn" onclick="randomizeVoiceFor(false)">🎲 Voice</button>
+            <button type="button" class="tiny-chip-btn" onclick="previewVoice(false)">🔊 Test</button>
+            <button type="button" class="tiny-chip-btn" style="border-color: var(--fighter-two); color: var(--fighter-two);" onclick="toggleExtraVocalControls(false)" id="btnMoreVocalTwo">🎛️ More Options</button>
+          </div>
+        </div>
+
+        <div class="accent-filter-row">
+          <span style="font-size:0.62rem; color:var(--text-muted); font-weight:700;">Region:</span>
+          <button type="button" class="tiny-chip-btn active-chip" id="filterC_all" onclick="setVoiceRegionFilter(false, 'all')">All</button>
+          <button type="button" class="tiny-chip-btn" id="filterC_us" onclick="setVoiceRegionFilter(false, 'us')">US</button>
+          <button type="button" class="tiny-chip-btn" id="filterC_ukau" onclick="setVoiceRegionFilter(false, 'ukau')">UK/AU</button>
+          <button type="button" class="tiny-chip-btn" id="filterC_world" onclick="setVoiceRegionFilter(false, 'world')">World</button>
+          <select id="voicePresetC" onchange="applyVoicePreset(false, this.value)" style="flex:1; min-width:115px; font-size:0.68rem; padding:0.2rem 0.35rem;">
+            <option value="custom">Preset: Custom</option>
+            <option value="manic_roaster" selected>Preset: Manic Roaster</option>
+            <option value="deep_bass">Preset: Deep Bass</option>
+            <option value="deadpan_savage">Preset: Deadpan Savage</option>
+            <option value="fast_heckler">Preset: Fast Heckler</option>
+            <option value="sleazy_dj">Preset: Sleazy Late-Night</option>
+            <option value="unhinged_scream">Preset: Unhinged Scream</option>
+            <option value="british_snob">Preset: British Snob</option>
+            <option value="robot_glitch">Preset: Cold AI / Robot</option>
+          </select>
+        </div>
+
+        <select id="voiceSelectDebaterTwo" style="font-size: 0.72rem;"></select>
+
+        <div class="prosody-sliders-grid">
+          <div>
+            <div class="slider-label-row"><span>Pitch:</span><span id="pitchLabelC">1.14x</span></div>
+            <input type="range" id="pitchSliderC" min="0.40" max="1.80" step="0.02" value="1.14" oninput="syncSliderLabel('pitchLabelC', this.value, 'x')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Speed:</span><span id="rateLabelC">1.12x</span></div>
+            <input type="range" id="rateSliderC" min="0.55" max="1.85" step="0.02" value="1.12" oninput="syncSliderLabel('rateLabelC', this.value, 'x')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Volume:</span><span id="volLabelC">100%</span></div>
+            <input type="range" id="volSliderC" min="0" max="1.0" step="0.05" value="1.0" oninput="syncSliderLabel('volLabelC', Math.round(this.value*100), '%')" />
+          </div>
+        </div>
+
+        <div class="prosody-extra-grid" id="extraVocalTwo">
+          <div>
+            <div class="slider-label-row"><span>Expressiveness:</span><span id="exprLabelC">75%</span></div>
+            <input type="range" id="exprSliderC" min="0" max="100" step="5" value="75" oninput="syncSliderLabel('exprLabelC', this.value, '%')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Punch Pause:</span><span id="pauseLabelC">160ms</span></div>
+            <input type="range" id="pauseSliderC" min="0" max="750" step="20" value="160" oninput="syncSliderLabel('pauseLabelC', this.value, 'ms')" />
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Cadence Style:</span></div>
+            <select id="cadenceSelectC" style="font-size:0.68rem; padding:0.25rem;">
+              <option value="natural">Natural Comic</option>
+              <option value="hype" selected>Hype / Unhinged</option>
+              <option value="machinegun">Machine-Gun Fast</option>
+              <option value="deadpan">Deadpan Slow</option>
+              <option value="swagger">Laid-Back Swagger</option>
+            </select>
+          </div>
+          <div>
+            <div class="slider-label-row"><span>Energy Swing:</span><span id="energyLabelC">24%</span></div>
+            <input type="range" id="energySliderC" min="0" max="45" step="3" value="24" oninput="syncSliderLabel('energyLabelC', this.value, '%')" />
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <!-- AURA XP-12 Sound Pad Drawer -->
+  <section class="aura-pad-drawer collapsed" id="auraPadDrawer">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #23122c; padding-bottom: 0.35rem;">
+      <span style="font-weight: 900; font-size: 0.75rem; color: var(--fighter-two);">🎛️ AURA XP-12 ROAST SOUND MATRIX</span>
+      <button type="button" class="tiny-chip-btn" onclick="toggleAuraDrawer()">✕ CLOSE</button>
+    </div>
+    <div class="aura-pads-grid">
+      <div class="aura-pad" onclick="SoundFX.subDrop()"><span style="font-size: 1rem;">💣</span><span class="pad-title">808 Boom</span></div>
+      <div class="aura-pad" onclick="SoundFX.rimshot()"><span style="font-size: 1rem;">🥁</span><span class="pad-title">Rimshot</span></div>
+      <div class="aura-pad" onclick="SoundFX.airhorn()"><span style="font-size: 1rem;">📯</span><span class="pad-title">Airhorn</span></div>
+      <div class="aura-pad" onclick="SoundFX.cheer()"><span style="font-size: 1rem;">👏</span><span class="pad-title">Laugh/Cheer</span></div>
+      <div class="aura-pad" onclick="SoundFX.burnOooo()"><span style="font-size: 1rem;">🔥</span><span class="pad-title">Ooooh Burn</span></div>
+      <div class="aura-pad" onclick="SoundFX.sadTrombone()"><span style="font-size: 1rem;">🎺</span><span class="pad-title">Womp Womp</span></div>
+      <div class="aura-pad" onclick="SoundFX.recordScratch()"><span style="font-size: 1rem;">💿</span><span class="pad-title">Scratch</span></div>
+      <div class="aura-pad" onclick="SoundFX.micDrop()"><span style="font-size: 1rem;">🎤</span><span class="pad-title">Mic Drop</span></div>
+      <div class="aura-pad" onclick="SoundFX.boo()"><span style="font-size: 1rem;">👎</span><span class="pad-title">Crowd Groan</span></div>
+      <div class="aura-pad" onclick="SoundFX.gavel()"><span style="font-size: 1rem;">🔨</span><span class="pad-title">Gavel Slam</span></div>
+      <div class="aura-pad" onclick="SoundFX.bellDing()"><span style="font-size: 1rem;">🔔</span><span class="pad-title">Round Bell</span></div>
+      <div class="aura-pad" onclick="SoundFX.laser()"><span style="font-size: 1rem;">⚡</span><span class="pad-title">Synth Stab</span></div>
+    </div>
+  </section>
+
+  <!-- Bottom Fixed Dock -->
+  <footer class="bottom-dock">
+    <div class="dock-heckle-row">
+      <input type="text" id="heckleInput" placeholder="🗣️ Throw a live heckle from the crowd (e.g., 'Ask about his Tinder bio!', 'Tell him his mom pays his rent')..." onkeydown="if(event.key==='Enter') submitLiveHeckle(false)" />
+      <button type="button" class="btn-heckle-send" onclick="submitLiveHeckle(false)">Toss Heckle</button>
+      <button type="button" class="btn-heckle-cut" onclick="submitLiveHeckle(true)" title="Interrupt active speaker immediately with this heckle">🚨 Interrupt!</button>
+    </div>
+    <div class="dock-actions-row">
+      <button type="button" class="btn-main-start" id="btnStart" onclick="startRoastArena()">▶ CALL ROAST TO ORDER</button>
+      <button type="button" class="btn-main-pause" id="btnPause" onclick="togglePauseRoast()" disabled>⏸ Pause</button>
+      <button type="button" class="btn-icon-aux" id="btnSkip" onclick="skipCurrentSpeaker()" disabled title="Skip current comic to next turn">⏭ Skip</button>
+      <button type="button" class="btn-main-stop" id="btnStop" onclick="stopRoastArena()" disabled>■ STOP</button>
+      <button type="button" class="btn-icon-aux" id="btnToggleBeat" onclick="toggleBeatPlayback()">🎧 Beat: OFF</button>
+      <button type="button" class="btn-icon-aux" onclick="toggleAuraDrawer()">🎛️ SFX</button>
+      <button type="button" class="btn-icon-aux" style="color: var(--neon-amber);" onclick="copyFullTranscript()" title="Copy all roasts to clipboard">📋 Copy</button>
+      <button type="button" class="btn-icon-aux" style="color: #67e8f9;" onclick="shareTranscript()" title="Share transcript">📤 Share</button>
+    </div>
+  </footer>
+
+  <script>
+    /* =========================================================================
+       1. SMART AUTO-HOST CONFIGURATION & OLLAMA DISCOVERY
+       ========================================================================= */
+    const hostInput = document.getElementById("ollamaHost");
+    let ollamaOnline = false;
+
+    function resolveAutoHost() {
+      const hn = window.location.hostname;
+      if (!hn || hn === "" || hn === "localhost" || hn === "127.0.0.1") {
+        return "http://localhost:11434";
+      }
+      return `http://${hn}:11434`;
+    }
+
+    hostInput.value = localStorage.getItem("roast_cellar_host") || resolveAutoHost();
+    hostInput.addEventListener("change", () => {
+      localStorage.setItem("roast_cellar_host", hostInput.value.trim());
+    });
+
+    async function testAndLoadModels() {
+      let baseUrl = hostInput.value.trim().replace(/\/+$/, "");
+      const pingLabel = document.getElementById("pingLabel");
+      const pillPing = document.getElementById("pillPing");
+
+      if (baseUrl.includes(":8000")) {
+        baseUrl = baseUrl.replace(":8000", ":11434");
+        hostInput.value = baseUrl;
+      }
+
+      pingLabel.innerText = "Checking Ollama...";
+      pillPing.classList.remove("active");
+
+      try {
+        const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(2800) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        ollamaOnline = true;
+        pingLabel.innerText = "Ollama: Connected";
+        pillPing.classList.add("active");
+
+        if (data.models && data.models.length > 0) {
+          const selL = document.getElementById("modelDebaterOne");
+          const selC = document.getElementById("modelDebaterTwo");
+          selL.innerHTML = "";
+          selC.innerHTML = "";
+
+          data.models.forEach(m => {
+            const opt1 = document.createElement("option"); opt1.value = m.name; opt1.textContent = m.name;
+            const opt2 = document.createElement("option"); opt2.value = m.name; opt2.textContent = m.name;
+            selL.appendChild(opt1);
+            selC.appendChild(opt2);
+          });
+
+          const findDolphin = data.models.find(m => /dolphin/i.test(m.name));
+          const findNous = data.models.find(m => /nous|hermes/i.test(m.name));
+          if (findDolphin) selL.value = findDolphin.name;
+          if (findNous) selC.value = findNous.name;
+          else if (data.models.length > 1) selC.selectedIndex = 1;
+
+          document.getElementById("modelBadgeDebaterOne").innerText = `🤖 ${selL.value}`;
+          document.getElementById("modelBadgeDebaterTwo").innerText = `🤖 ${selC.value}`;
+        }
+      } catch (e) {
+        ollamaOnline = false;
+        pingLabel.innerText = "Ollama: Offline (Backup Engine Ready)";
+        pillPing.classList.remove("active");
+      }
+    }
+    setTimeout(testAndLoadModels, 300);
+
+    function syncSliderLabel(labelId, val, suffix) {
+      document.getElementById(labelId).innerText = val + suffix;
+    }
+
+    function updateStatusBadge() {
+      const spiceMap = {
+        raw_adult: "After-Hours Raw",
+        r_rated: "Late-Night R-Rated",
+        dark_observational: "Dark & Twisted",
+        pg13: "TV Roast PG-13"
+      };
+      const spice = spiceMap[document.getElementById("humorSpice").value] || "After-Hours Raw";
+      const words = document.getElementById("turnLengthSelect").value;
+      document.getElementById("roastStatusBadge").innerText = `${spice} • ~${words}w / Set`;
+    }
+
+    /* =========================================================================
+       2. DYNAMIC COMPETITOR TITLES, RANDOM MATCHUPS & WILD TOPICS
+       ========================================================================= */
+    function syncCompetitorTitles() {
+      const name1 = document.getElementById("nameDebaterOne").value.trim() || "Comic 1";
+      const name2 = document.getElementById("nameDebaterTwo").value.trim() || "Comic 2";
+      document.getElementById("headerTitleOne").innerText = name1;
+      document.getElementById("headerTitleTwo").innerText = name2;
+    }
+
+    const MATCHUP_PRESETS = {
+      lawyer_comic: {
+        name1: "B.T. Justice",
+        persona1: "Sleazy strip-mall divorce lawyer with three ex-wives and a questionable spray tan",
+        name2: "Roast King Eddie",
+        persona2: "Foul-mouthed basement comic who lives off energy drinks, petty grudges, and bar tabs",
+        topic: "Terrible Tinder dates, questionable 3AM browser history, and pretending you aren't one overdraft fee away from living in a Honda Civic."
+      },
+      gordon_ramsay: {
+        name1: "Chef Gordon",
+        persona1: "Explosive Michelin-star control freak who screams at waiters and dates models half his age",
+        name2: "Smokey",
+        persona2: "Waffle House graveyard-shift cook who has survived four bar fights tonight and seasons food with cigarette ash",
+        topic: "Disgusting bedroom habits, weird food crimes, and what really happens in a Waffle House bathroom at 2 in the morning."
+      },
+      tech_barista: {
+        name1: "Chad V.C.",
+        persona1: "Delusional Silicon Valley tech bro on microdosed mushrooms who calls sleeping in his car 'disruptive minimalism'",
+        name2: "Beans",
+        persona2: "Bitter punk-rock barista with five useless degrees who spits in decaf orders for sport",
+        topic: "Fake hustle culture, terrible sex playlists, crypto scams, and paying $2800 a month for an apartment with roommates."
+      },
+      exes_therapy: {
+        name1: "Amber",
+        persona1: "Petty brunch influencer who keys cars over horoscope compatibility and posts thirst traps out of spite",
+        name2: "Marcus",
+        persona2: "Emotionally unavailable gym rat who thinks protein powder counts as a personality and still uses his ex's Netflix",
+        topic: "All the filthy secrets from their failed two-year relationship, terrible stamina in bed, and who actually ruined whose life."
+      },
+      florida_bartender: {
+        name1: "Florida Man Dale",
+        persona1: "Shirtless swamp legend with a pet raccoon, three suspended licenses, and zero impulse control",
+        name2: "Trixie",
+        persona2: "Chain-smoking dive bar bartender who has seen every pathetic pickup line since 1998 and keeps a Louisville Slugger behind the taps",
+        topic: "Mugshots, terrible tattoos, bad life choices after four tequila shots, and getting banned from Applebee's."
+      },
+      crypto_stripper: {
+        name1: "Brad Coin",
+        persona1: "Desperate podcast bro trying to sell a meme coin while dodging child support calls",
+        name2: "Diamond",
+        persona2: "Veteran VIP club entertainer who reads men's bank accounts and insecurities from twenty feet away",
+        topic: "Sad VIP room flexes, fake Rolexes, desperate DMs, and why nobody respects a grown man with a ring light."
+      }
+    };
+
+    const RANDOM_TOPICS = [
+      "Horrible Hinge dates, lying about your height, and crying in the shower after checking your credit score.",
+      "Embarrassing bedroom failures, weird kinks nobody asked for, and why your ex upgraded immediately after dumping you.",
+      "Fake tough guys, receding hairlines hiding under backwards caps, and borrowing money from your mom at thirty-five.",
+      "Getting ghosted by bots, sketchy 3AM Taco Bell decisions, and pretending your situationship actually likes you.",
+      "Toxic workplace drama, HR violations, and why nobody invites you to the group chat anymore.",
+      "Bad plastic surgery, awful tattoos from 2012, and people who put 'entrepreneur' in their bio while selling plasma.",
+      "Horrible hygiene, crusty bedsheets, and people who say 'I'm an empath' right before ruining your whole weekend.",
+      "Drunk texting your ex at 2:14 AM, waking up with a traffic cone, and blaming Mercury in retrograde for being broke."
+    ];
+
+    const RANDOM_ARCHETYPES = [
+      { name: "Slick Rick", persona: "Overconfident club promoter whose VIP list is just three cousins and a guy named Greg" },
+      { name: "Nurse Brenda", persona: "Exhausted ER nurse with pitch-black humor who has pulled too many weird objects out of idiots" },
+      { name: "DJ Redflag", persona: "38-year-old SoundCloud DJ still chasing college girls and paying rent in vape cartridges" },
+      { name: "Uncle Philthy", persona: "Divorced uncle at the cookout who had four beers by noon and zero filter left" },
+      { name: "Vicky Vicious", persona: "Razor-tongued comedy club regular who destroys hecklers before they finish ordering a drink" },
+      { name: "Coach Testosterone", persona: "Bald high school gym teacher who yells about 'alpha energy' while eating gas station hot dogs" },
+      { name: "Pastor Cash", persona: "Flashy megachurch grifter wearing Gucci loafers funded by Sunday collection plates" },
+      { name: "Lil Overdraft", persona: "Broke wannabe influencer flexing in front of strangers' Lamborghinis at red lights" },
+      { name: "HR Karen", persona: "Passive-aggressive corporate HR manager who weaponizes wellness emails and secretly drinks boxed wine at noon" },
+      { name: "Sarge", persona: "Unfiltered retired drill sergeant who roasts everybody's posture, life choices, and weak genetics" }
+    ];
+
+    function applyFullMatchupPreset(presetKey) {
+      const p = MATCHUP_PRESETS[presetKey];
+      if (!p) return;
+      document.getElementById("nameDebaterOne").value = p.name1;
+      document.getElementById("personaDebaterOne").value = p.persona1;
+      document.getElementById("nameDebaterTwo").value = p.name2;
+      document.getElementById("personaDebaterTwo").value = p.persona2;
+      document.getElementById("roastTopic").value = p.topic;
+      syncCompetitorTitles();
+      showToast(`🎭 Loaded: ${p.name1} vs. ${p.name2}`);
+    }
+
+    function randomizeTopic() {
+      const current = document.getElementById("roastTopic").value;
+      const pool = RANDOM_TOPICS.filter(t => t !== current);
+      document.getElementById("roastTopic").value = pool[Math.floor(Math.random() * pool.length)];
+      showToast("🎲 Fresh adult topic loaded!");
+    }
+
+    function randomizeSingleCharacter(isDebaterOne) {
+      const otherName = document.getElementById(isDebaterOne ? "nameDebaterTwo" : "nameDebaterOne").value;
+      const pool = RANDOM_ARCHETYPES.filter(a => a.name !== otherName);
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      document.getElementById(isDebaterOne ? "nameDebaterOne" : "nameDebaterTwo").value = pick.name;
+      document.getElementById(isDebaterOne ? "personaDebaterOne" : "personaDebaterTwo").value = pick.persona;
+      syncCompetitorTitles();
+      showToast(`🎲 Swapped in ${pick.name}!`);
+    }
+
+    function randomizeFullMatchup() {
+      const shuffled = [...RANDOM_ARCHETYPES].sort(() => Math.random() - 0.5);
+      document.getElementById("nameDebaterOne").value = shuffled[0].name;
+      document.getElementById("personaDebaterOne").value = shuffled[0].persona;
+      document.getElementById("nameDebaterTwo").value = shuffled[1].name;
+      document.getElementById("personaDebaterTwo").value = shuffled[1].persona;
+      randomizeTopic();
+      syncCompetitorTitles();
+      showToast(`🔥 Random Matchup: ${shuffled[0].name} vs. ${shuffled[1].name}!`);
+    }
+
+    /* =========================================================================
+       3. FAST WEB RESEARCH (Non-blocking 1.1s timeout)
+       ========================================================================= */
+    async function executeLiveOnlineResearch(topic, isDebaterOne) {
+      const feedEl = document.getElementById(isDebaterOne ? "researchFeedOne" : "researchFeedTwo");
+      const cleanTopic = topic.replace(/[^\w\s]/g, "").split(/\s+/).slice(0, 4).join(" ");
+      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanTopic)}&utf8=&format=json&origin=*`;
+
+      try {
+        const res = await fetch(searchUrl, { signal: AbortSignal.timeout(1100) });
+        if (!res.ok) throw new Error("timeout");
+        const data = await res.json();
+        const results = data.query?.search || [];
+        if (results.length > 0) {
+          const item = results[Math.floor(Math.random() * Math.min(3, results.length))];
+          const cleanSnippet = item.snippet.replace(/<[^>]*>/g, "").slice(0, 140);
+          feedEl.innerText = `📄 Angle Seed: "${item.title}"`;
+          return { title: item.title, snippet: cleanSnippet };
+        }
+      } catch (e) {}
+      feedEl.innerText = `🔥 Adult Angle Randomized`;
+      return null;
+    }
+
+    /* =========================================================================
+       4. PROCEDURAL WEB AUDIO ENGINE & EXPANDED AURA SFX MATRIX
+       ========================================================================= */
+    let audioCtx = null;
+    let keepAliveNode = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        keepAliveNode = audioCtx.createOscillator();
+        const silentGain = audioCtx.createGain();
+        silentGain.gain.setValueAtTime(0.00001, audioCtx.currentTime);
+        keepAliveNode.connect(silentGain);
+        silentGain.connect(audioCtx.destination);
+        keepAliveNode.start();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      return audioCtx;
+    }
+
+    const SoundFX = {
+      rimshot() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const k = ctx.createOscillator(); const kg = ctx.createGain();
+        k.frequency.setValueAtTime(175, t); k.frequency.exponentialRampToValueAtTime(42, t + 0.08);
+        kg.gain.setValueAtTime(0.85, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        k.connect(kg); kg.connect(ctx.destination);
+        k.start(t); k.stop(t + 0.1);
+
+        setTimeout(() => {
+          const t2 = ctx.currentTime;
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const s = ctx.createBufferSource(); s.buffer = buf;
+          const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1600;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.75, t2); g.gain.exponentialRampToValueAtTime(0.001, t2 + 0.12);
+          s.connect(f); f.connect(g); g.connect(ctx.destination);
+          s.start(t2); s.stop(t2 + 0.13);
+        }, 110);
+      },
+
+      airhorn() {
+        const ctx = getAudioCtx();
+        const tones = [587.33, 466.16];
+        for (let i = 0; i < 3; i++) {
+          const st = ctx.currentTime + i * 0.11;
+          tones.forEach(freq => {
+            const osc = ctx.createOscillator(); const g = ctx.createGain();
+            osc.type = "sawtooth"; osc.frequency.setValueAtTime(freq, st);
+            g.gain.setValueAtTime(0.24, st); g.gain.linearRampToValueAtTime(0.001, st + 0.08);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(st); osc.stop(st + 0.09);
+          });
+        }
+      },
+
+      subDrop() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sine"; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(26, t + 0.9);
+        g.gain.setValueAtTime(1.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 1.0);
+      },
+
+      micDrop() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sine"; osc.frequency.setValueAtTime(85, t); osc.frequency.exponentialRampToValueAtTime(28, t + 0.35);
+        g.gain.setValueAtTime(1.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.45);
+      },
+
+      cheer() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.95, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (0.6 + 0.4 * Math.sin(i / 800));
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1150; f.Q.value = 0.85;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.42, t + 0.18); g.gain.exponentialRampToValueAtTime(0.001, t + 0.92);
+        src.connect(f); f.connect(g); g.connect(ctx.destination);
+        src.start(t); src.stop(t + 0.95);
+      },
+
+      burnOooo() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        [220, 277.18, 329.63].forEach((freq, idx) => {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq * 0.92, t);
+          osc.frequency.linearRampToValueAtTime(freq * 1.08, t + 0.25);
+          osc.frequency.linearRampToValueAtTime(freq * 0.96, t + 0.75);
+          g.gain.setValueAtTime(0.001, t);
+          g.gain.linearRampToValueAtTime(0.18, t + 0.12);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(t + idx * 0.02); osc.stop(t + 0.82);
+        });
+      },
+
+      sadTrombone() {
+        const ctx = getAudioCtx();
+        const notes = [293.66, 277.18, 261.63, 246.94];
+        notes.forEach((freq, i) => {
+          const st = ctx.currentTime + i * 0.28;
+          const dur = i === 3 ? 0.65 : 0.24;
+          const osc = ctx.createOscillator(); const f = ctx.createBiquadFilter(); const g = ctx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(freq, st);
+          if (i === 3) osc.frequency.linearRampToValueAtTime(freq * 0.88, st + dur);
+          f.type = "lowpass"; f.frequency.setValueAtTime(950, st);
+          g.gain.setValueAtTime(0.24, st); g.gain.exponentialRampToValueAtTime(0.001, st + dur);
+          osc.connect(f); f.connect(g); g.connect(ctx.destination);
+          osc.start(st); osc.stop(st + dur + 0.02);
+        });
+      },
+
+      recordScratch() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.28, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) {
+          d[i] = Math.sin(i * 0.12 * Math.sin(i / 900)) * (Math.random() * 0.5 + 0.5);
+        }
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(420, t + 0.25);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.65, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.27);
+        src.connect(f); f.connect(g); g.connect(ctx.destination);
+        src.start(t); src.stop(t + 0.28);
+      },
+
+      boo() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sawtooth"; osc.frequency.setValueAtTime(115, t); osc.frequency.linearRampToValueAtTime(60, t + 0.7);
+        g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.8);
+      },
+
+      gavel() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "triangle"; osc.frequency.setValueAtTime(900, t); osc.frequency.exponentialRampToValueAtTime(140, t + 0.04);
+        g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.06);
+      },
+
+      bellDing() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        [1046.5, 1567.98].forEach(freq => {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = "sine"; osc.frequency.setValueAtTime(freq, t);
+          g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+          osc.connect(g); g.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.72);
+        });
+      },
+
+      laser() {
+        const ctx = getAudioCtx();
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.type = "sawtooth"; osc.frequency.setValueAtTime(1800, t); osc.frequency.exponentialRampToValueAtTime(80, t + 0.2);
+        g.gain.setValueAtTime(0.45, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.24);
+      }
+    };
+
+    /* =========================================================================
+       5. CYPHER BEAT SYNTHESIZER
+       ========================================================================= */
+    const CypherBeat = {
+      isPlaying: false, tempo: 90, step: 0, timer: null, vol: 0.65, style: "boombap",
+
+      start() {
+        if (this.isPlaying) return;
+        const ctx = getAudioCtx();
+        this.isPlaying = true;
+        this.step = 0;
+        let nextTime = ctx.currentTime + 0.05;
+
+        const schedule = () => {
+          if (!this.isPlaying) return;
+          const secPerStep = 60 / this.tempo / 4;
+          while (nextTime < ctx.currentTime + 0.12) {
+            this.playStep(nextTime, this.step, ctx);
+            nextTime += secPerStep;
+            this.step = (this.step + 1) % 16;
+          }
+          this.timer = setTimeout(schedule, 28);
+        };
+        schedule();
+        this.updateUI(true);
+      },
+
+      stop() {
+        this.isPlaying = false;
+        if (this.timer) clearTimeout(this.timer);
+        this.updateUI(false);
+      },
+
+      setStyle(val) {
+        this.style = val;
+        const map = { boombap: 90, trap: 138, drill: 142, phonk: 160, westcoast: 96 };
+        this.tempo = map[val] || 90;
+        if (this.isPlaying) this.updateUI(true);
+      },
+
+      setVolume(val) { this.vol = parseFloat(val); },
+
+      updateUI(active) {
+        const btn = document.getElementById("btnToggleBeat");
+        const pill = document.getElementById("pillBeat");
+        const lbl = document.getElementById("beatLabel");
+        btn.innerText = active ? `🎧 Beat: ON (${this.tempo})` : "🎧 Beat: OFF";
+        btn.classList.toggle("active-glow", active);
+        pill.classList.toggle("active-beat", active);
+        lbl.innerText = active ? `${this.style.toUpperCase()} (${this.tempo})` : "Beat: Off";
+      },
+
+      playStep(t, s, ctx) {
+        if (this.vol <= 0) return;
+        if (s === 0 || s === 7 || s === 10) this.kick(t, ctx);
+        if (s === 4 || s === 12) this.snare(t, ctx);
+        if (s % 2 === 0) this.hat(t, ctx, s % 4 === 0);
+      },
+
+      kick(t, ctx) {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.frequency.setValueAtTime(155, t); osc.frequency.exponentialRampToValueAtTime(36, t + 0.15);
+        g.gain.setValueAtTime(0.95 * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.24);
+      },
+
+      snare(t, ctx) {
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const s = ctx.createBufferSource(); s.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1100;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.75 * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        s.connect(f); f.connect(g); g.connect(ctx.destination);
+        s.start(t); s.stop(t + 0.13);
+      },
+
+      hat(t, ctx, accent) {
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const s = ctx.createBufferSource(); s.buffer = buf;
+        const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7500;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime((accent ? 0.38 : 0.2) * this.vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+        s.connect(f); f.connect(g); g.connect(ctx.destination);
+        s.start(t); s.stop(t + 0.04);
+      }
+    };
+
+    function toggleBeatPlayback() {
+      if (CypherBeat.isPlaying) CypherBeat.stop();
+      else CypherBeat.start();
+    }
+
+    /* =========================================================================
+       6. ADVANCED PHONETIC ENGINE, VOICE LAB & PROSODY SYNTHESIS
+       ========================================================================= */
+    const synth = window.speechSynthesis;
+    window._activeUtteranceBin = new Set();
+    let allSystemVoices = [];
+    let regionFilterOne = "all";
+    let regionFilterTwo = "all";
+    let battleSessionId = 0;
+    let transcriptHistory = [];
+    let lastTurnParagraphs = { one: null, two: null };
+    let skipRequested = false;
+
+    // Clean stage cues WITHOUT deleting **bold** emphasized words!
+    function cleanStageDirections(rawText) {
+      if (!rawText) return "";
+      let text = rawText;
+
+      const cuePattern = /\*{1,3}\s*(?:laughs?|chuckles?|snickers?|giggles?|sighs?|groans?|pauses?|beats?|smiles?|grins?|smirks?|winks?|claps?|applause|silence|mic drop|drops mic|clears throat|leans in|looks around|points|shakes head|adjusts[^*\n]{0,30}|takes a[^*\n]{0,30}|walks[^*\n]{0,30})\s*\*{1,3}/gi;
+      text = text.replace(cuePattern, " ");
+
+      text = text.replace(/\[[^\]\n]{1,60}\]/g, " ");
+
+      const parenCue = /\(\s*(?:laughs?|chuckles?|sighs?|groans?|pauses?|crowd[^)\n]{0,30}|applause|laughter|boos?|cheering|rimshot|silence|beat|whispering|shouting|yelling)\s*\)/gi;
+      text = text.replace(parenCue, " ");
+
+      text = text.replace(/\*{1,3}([^*\n]+?)\*{1,3}/g, "$1");
+      text = text.replace(/^[\s*#_-]*(?:[A-Za-z0-9\s._'-]{2,35}):\s*/gm, "");
+      text = text.replace(/[ \t]{2,}/g, " ").trim();
+      return text;
+    }
+
+    // Separate Phoneticizer: keeps display crisp while fixing TTS pronunciation!
+    function phoneticizeForTTS(text) {
+      if (!text) return "";
+      const mode = document.getElementById("phoneticEngineMode")?.value || "colloquial";
+      if (mode === "raw") return text;
+
+      let s = text;
+
+      // Strip emojis & symbols that TTS tries to read literally
+      s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, " ");
+
+      // Unmask censored adult words so TTS doesn't read punctuation
+      s = s.replace(/\bf[\*#@]{1,3}k(ing|ed|er|s)?\b/gi, (_, suf) => "fuck" + (suf || ""));
+      s = s.replace(/\bs[\*#@]{1,3}t(ty|s)?\b/gi, (_, suf) => "shit" + (suf || ""));
+      s = s.replace(/\bsh[\*#@]t(ty|s)?\b/gi, (_, suf) => "shit" + (suf || ""));
+      s = s.replace(/\bb[\*#@]{1,3}ch(es|ing|ed)?\b/gi, (_, suf) => "bitch" + (suf || ""));
+      s = s.replace(/\ba[\*#@]{2}(hole|holes|es)?\b/gi, (_, suf) => "ass" + (suf || ""));
+      s = s.replace(/\bd[\*#@]{1,2}k(s|head)?\b/gi, (_, suf) => "dick" + (suf || ""));
+      s = s.replace(/\bp[\*#@]{2,3}y\b/gi, "pussy");
+      s = s.replace(/\bc[\*#@]{1,2}k(s|sucker)?\b/gi, (_, suf) => "cock" + (suf || ""));
+      s = s.replace(/\bm[\*#@]{3,6}f[\*#@]{2,4}r?\b/gi, "motherfucker");
+
+      const dict = [
+        [/\bpunchlines\b/gi, "punch lines"],
+        [/\bpunchline\b/gi, "punch line"],
+        [/\bEsq\.?\b/gi, "Esquire"],
+        [/\bPh\.?D\.?\b/gi, "P H D"],
+        [/\bDr\.\s/g, "Doctor "],
+        [/\bMr\.\s/g, "Mister "],
+        [/\bMrs\.\s/g, "Missus "],
+        [/\bMs\.\s/g, "Miz "],
+        [/\bJr\.?\b/g, "Junior"],
+        [/\bSr\.?\b/g, "Senior"],
+        [/\bvs\.?\b/gi, "versus"],
+        [/\betc\.?\b/gi, "et cetera"],
+        [/\bw\/\s?/gi, "with "],
+        [/\bb\/c\b/gi, "because"],
+        [/\bLMFAO\b/gi, "laughing my fucking ass off"],
+        [/\bLMAO\b/gi, "laughing my ass off"],
+        [/\bWTF\b/gi, "what the fuck"],
+        [/\bSTFU\b/gi, "shut the fuck up"],
+        [/\bGTFO\b/gi, "get the fuck out"],
+        [/\bSMH\b/gi, "shaking my head"],
+        [/\bNGL\b/gi, "not gonna lie"],
+        [/\bTBH\b/gi, "to be honest"],
+        [/\bIRL\b/gi, "in real life"],
+        [/\bIYKYK\b/gi, "if you know you know"],
+        [/\bNSFW\b/gi, "N S F W"],
+        [/\bTMI\b/gi, "T M I"],
+        [/\bFYI\b/gi, "F Y I"],
+        [/\bPOV\b/gi, "P O V"],
+        [/\bCEO\b/g, "C E O"],
+        [/\bCFO\b/g, "C F O"],
+        [/\bVIP\b/g, "V I P"],
+        [/\bIQ\b/g, "I Q"],
+        [/\bHR\b/g, "H R"],
+        [/\bAI\b/g, "A I"],
+        [/\bDJ\b/g, "D J"],
+        [/\bMC\b/g, "M C"],
+        [/\bV\.?C\.?\b/g, "V C"],
+        [/\bDMs\b/g, "D Ms"],
+        [/\bDM\b/g, "D M"],
+        [/\baf\b/g, "as fuck"],
+        [/\bbs\b/gi, "bullshit"],
+        [/\bTikTok\b/gi, "Tick Tock"],
+        [/\bWi-?Fi\b/gi, "Why Fye"],
+        [/\bbologna\b/gi, "baloney"],
+        [/\bepitome\b/gi, "eh-pit-oh-me"],
+        [/\bhyperbole\b/gi, "hy-per-bow-lee"],
+        [/\bfacade\b/gi, "fah-sod"],
+        [/\b3AM\b/gi, "three A M"],
+        [/\b2AM\b/gi, "two A M"],
+        [/\b1AM\b/gi, "one A M"]
+      ];
+
+      dict.forEach(([pat, rep]) => { s = s.replace(pat, rep); });
+
+      if (mode === "colloquial") {
+        s = s.replace(/\byo mama\b/gi, "yo momma");
+        s = s.replace(/\byour mama\b/gi, "your momma");
+        s = s.replace(/\bbruh\b/gi, "brah");
+        s = s.replace(/\bain't\b/gi, "aint");
+      }
+
+      const customRaw = document.getElementById("customPronounceMap")?.value || "";
+      customRaw.split(",").forEach(pair => {
+        const parts = pair.split("=");
+        if (parts.length === 2) {
+          const from = parts[0].trim();
+          const to = parts[1].trim();
+          if (from && to) {
+            const esc = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            s = s.replace(new RegExp(`\\b${esc}\\b`, "gi"), to);
+          }
+        }
+      });
+
+      s = s.replace(/\.{3,}/g, ", ");
+      s = s.replace(/\s*[—–-]{2,}\s*/g, ", ");
+      s = s.replace(/["“”`#]/g, "");
+      s = s.replace(/\s{2,}/g, " ").trim();
+      return s;
+    }
+
+    function filterVoicesByRegion(voices, region) {
+      if (region === "us") return voices.filter(v => /en[-_]US/i.test(v.lang));
+      if (region === "ukau") return voices.filter(v => /en[-_](GB|AU|IE|NZ|ZA|IN)/i.test(v.lang));
+      if (region === "world") return voices.filter(v => !/^en/i.test(v.lang));
+      return voices;
+    }
+
+    function populateVoicesForSpeaker(isDebaterOne) {
+      if (!synth) return;
+      const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+      const region = isDebaterOne ? regionFilterOne : regionFilterTwo;
+      const prevName = sel.selectedOptions[0]?.dataset?.voiceName || "";
+
+      let list = filterVoicesByRegion(allSystemVoices, region);
+      if (list.length === 0) list = allSystemVoices;
+
+      sel.innerHTML = "";
+      list.forEach(v => {
+        const globalIdx = allSystemVoices.indexOf(v);
+        const opt = document.createElement("option");
+        opt.value = globalIdx;
+        opt.dataset.voiceName = v.name;
+        const tag = v.localService ? "" : " ★";
+        opt.textContent = `${v.name} (${v.lang})${tag}`;
+        sel.appendChild(opt);
+      });
+
+      if (prevName) {
+        const match = Array.from(sel.options).find(o => o.dataset.voiceName === prevName);
+        if (match) { sel.value = match.value; return; }
+      }
+
+      if (isDebaterOne) {
+        const idx = list.findIndex(v => /alex|daniel|guy|george|david|aaron|matthew|male/i.test(v.name));
+        sel.selectedIndex = idx >= 0 ? idx : 0;
+      } else {
+        const idx = list.findIndex(v => /samantha|jenny|karen|moira|fred|tom|junior|victoria|tessa|female/i.test(v.name));
+        sel.selectedIndex = idx >= 0 ? idx : (list.length > 1 ? 1 : 0);
+      }
+    }
+
+    function populateVoices() {
+      if (!synth) return;
+      const all = synth.getVoices();
+      if (!all || !all.length) return;
+      allSystemVoices = [...all].sort((a, b) => {
+        const aEn = a.lang.startsWith("en") ? 0 : 1;
+        const bEn = b.lang.startsWith("en") ? 0 : 1;
+        if (aEn !== bEn) return aEn - bEn;
+        return a.name.localeCompare(b.name);
+      });
+      populateVoicesForSpeaker(true);
+      populateVoicesForSpeaker(false);
+    }
+
+    if (synth) {
+      populateVoices();
+      if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoices;
+    }
+
+    function setVoiceRegionFilter(isDebaterOne, region) {
+      if (isDebaterOne) regionFilterOne = region;
+      else regionFilterTwo = region;
+      const prefix = isDebaterOne ? "filterL_" : "filterC_";
+      ["all", "us", "ukau", "world"].forEach(r => {
+        document.getElementById(prefix + r).classList.toggle("active-chip", r === region);
+      });
+      populateVoicesForSpeaker(isDebaterOne);
+    }
+
+    const VOICE_PRESETS = {
+      deep_bass:       { label: "Deep Bass",        pitch: 0.68, rate: 0.96, expr: 50, pause: 240, cadence: "swagger",    energy: 15 },
+      deadpan_savage:  { label: "Deadpan Savage",   pitch: 0.86, rate: 0.88, expr: 15, pause: 380, cadence: "deadpan",    energy: 6  },
+      manic_roaster:   { label: "Manic Roaster",    pitch: 1.16, rate: 1.18, expr: 85, pause: 130, cadence: "hype",       energy: 27 },
+      fast_heckler:    { label: "Fast Heckler",     pitch: 1.32, rate: 1.34, expr: 70, pause: 80,  cadence: "machinegun", energy: 21 },
+      sleazy_dj:       { label: "Sleazy Late-Night",pitch: 0.78, rate: 0.92, expr: 60, pause: 300, cadence: "swagger",    energy: 18 },
+      unhinged_scream: { label: "Unhinged Scream",  pitch: 1.28, rate: 1.22, expr: 95, pause: 140, cadence: "hype",       energy: 36 },
+      british_snob:    { label: "British Snob",     pitch: 0.96, rate: 1.04, expr: 55, pause: 240, cadence: "natural",    energy: 15, preferLang: /en[-_]GB/i },
+      robot_glitch:    { label: "Cold AI / Robot",  pitch: 0.56, rate: 1.00, expr: 0,  pause: 200, cadence: "deadpan",    energy: 0  }
+    };
+
+    function applyVoicePreset(isDebaterOne, presetKey) {
+      const p = VOICE_PRESETS[presetKey];
+      const suffix = isDebaterOne ? "L" : "C";
+      const badge = document.getElementById(isDebaterOne ? "voiceBadgeDebaterOne" : "voiceBadgeDebaterTwo");
+      if (!p) { badge.innerText = "Custom"; return; }
+
+      document.getElementById(`pitchSlider${suffix}`).value = p.pitch;
+      document.getElementById(`rateSlider${suffix}`).value = p.rate;
+      document.getElementById(`exprSlider${suffix}`).value = p.expr;
+      document.getElementById(`pauseSlider${suffix}`).value = p.pause;
+      document.getElementById(`cadenceSelect${suffix}`).value = p.cadence;
+      document.getElementById(`energySlider${suffix}`).value = p.energy;
+
+      syncSliderLabel(`pitchLabel${suffix}`, p.pitch.toFixed(2), "x");
+      syncSliderLabel(`rateLabel${suffix}`, p.rate.toFixed(2), "x");
+      syncSliderLabel(`exprLabel${suffix}`, p.expr, "%");
+      syncSliderLabel(`pauseLabel${suffix}`, p.pause, "ms");
+      syncSliderLabel(`energyLabel${suffix}`, p.energy, "%");
+
+      if (p.preferLang) {
+        const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+        const matchIdx = allSystemVoices.findIndex(v => p.preferLang.test(v.lang));
+        if (matchIdx >= 0) {
+          setVoiceRegionFilter(isDebaterOne, "ukau");
+          sel.value = matchIdx;
+        }
+      }
+      badge.innerText = p.label;
+      showToast(`🎙️ Applied "${p.label}" voice profile!`);
+    }
+
+    function randomizeVoiceFor(isDebaterOne) {
+      const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+      if (sel.options.length > 0) {
+        sel.selectedIndex = Math.floor(Math.random() * sel.options.length);
+      }
+      const presetKeys = Object.keys(VOICE_PRESETS);
+      const rk = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+      const suffix = isDebaterOne ? "L" : "C";
+      document.getElementById(`voicePreset${suffix}`).value = rk;
+      applyVoicePreset(isDebaterOne, rk);
+    }
+
+    function toggleExtraVocalControls(isDebaterOne) {
+      const el = document.getElementById(isDebaterOne ? "extraVocalOne" : "extraVocalTwo");
+      el.classList.toggle("collapsed");
+    }
+
+    async function resetSpeechAudioHardware() {
+      if (!synth) return;
+      try {
+        synth.cancel();
+        if (synth.paused) synth.resume();
+      } catch (e) {}
+      window._activeUtteranceBin.clear();
+      await new Promise(r => setTimeout(r, 60));
+      try { if (synth.paused) synth.resume(); } catch (e) {}
+    }
+
+    function forceAudioEngineAwake() {
+      getAudioCtx();
+      if (synth) {
+        synth.cancel();
+        if (synth.paused) synth.resume();
+        const silent = new SpeechSynthesisUtterance("Audio active.");
+        silent.volume = 0.5;
+        synth.speak(silent);
+      }
+      document.getElementById("audioHealthLabel").innerText = "TTS: Reset Clean";
+      setTimeout(() => { document.getElementById("audioHealthLabel").innerText = "TTS: Healthy"; }, 2000);
+      showToast("🔊 Audio engine re-synchronized!");
+    }
+
+    setInterval(() => {
+      if (isRunning && !isPaused && synth && synth.speaking) {
+        synth.pause();
+        synth.resume();
+      }
+    }, 8000);
+
+    function previewVoice(isDebaterOne) {
+      getAudioCtx();
+      const name = document.getElementById(isDebaterOne ? "nameDebaterOne" : "nameDebaterTwo").value;
+      const phrase = isDebaterOne
+        ? `Yo ${name} checking the mic! Wait till you hear this next punchline, I'm not gonna lie, it's gonna hurt.`
+        : `What's up crowd! ${name} in the building. Your browser history is wild, and that punchline was tragic!`;
+      speakSentence(phrase, isDebaterOne);
+    }
+
+    async function replayLastTurn(isDebaterOne) {
+      const key = isDebaterOne ? "one" : "two";
+      const paras = lastTurnParagraphs[key];
+      if (!paras || paras.length === 0) {
+        previewVoice(isDebaterOne);
+        return;
+      }
+      getAudioCtx();
+      await resetSpeechAudioHardware();
+      const tempId = ++battleSessionId;
+      isRunning = true;
+      await speakFullTurnTeleprompter(paras, isDebaterOne, tempId);
+      if (battleSessionId === tempId) isRunning = false;
+    }
+
+    function computeSentenceProsody(sentenceText, isDebaterOne) {
+      const suffix = isDebaterOne ? "L" : "C";
+      const basePitch = parseFloat(document.getElementById(`pitchSlider${suffix}`)?.value) || 1.0;
+      const baseRate = parseFloat(document.getElementById(`rateSlider${suffix}`)?.value) || 1.0;
+      const baseVol = parseFloat(document.getElementById(`volSlider${suffix}`)?.value) ?? 1.0;
+      const expr = (parseFloat(document.getElementById(`exprSlider${suffix}`)?.value) || 50) / 100;
+      const energy = (parseFloat(document.getElementById(`energySlider${suffix}`)?.value) || 15) / 100;
+      const cadence = document.getElementById(`cadenceSelect${suffix}`)?.value || "natural";
+
+      let pitch = basePitch;
+      let rate = baseRate;
+
+      if (cadence === "deadpan") { rate *= 0.88; pitch *= 0.95; }
+      else if (cadence === "machinegun") { rate *= 1.18; }
+      else if (cadence === "swagger") { rate *= 0.94; pitch *= 0.97; }
+      else if (cadence === "hype") { rate *= 1.08; pitch *= 1.06; }
+
+      const trimmed = sentenceText.trim();
+      const isQuestion = trimmed.endsWith("?");
+      const isExclaim = trimmed.endsWith("!");
+
+      if (isQuestion) {
+        pitch += 0.14 * expr;
+        rate *= 0.97;
+      } else if (isExclaim) {
+        pitch += 0.10 * expr;
+        rate += 0.06 * energy;
+      } else {
+        const drift = (Math.random() - 0.5) * 0.14 * expr;
+        pitch += drift;
+        rate += (Math.random() - 0.5) * 0.12 * energy;
+      }
+
+      return {
+        pitch: Math.max(0.35, Math.min(1.9, pitch)),
+        rate: Math.max(0.5, Math.min(1.95, rate)),
+        volume: Math.max(0.02, Math.min(1.0, baseVol))
+      };
+    }
+
+    function speakSentence(text, isDebaterOne) {
+      return new Promise(resolve => {
+        if (!synth) { setTimeout(resolve, 750); return; }
+
+        const spokenText = phoneticizeForTTS(cleanStageDirections(text));
+        if (!spokenText || spokenText.length < 2) { resolve(); return; }
+
+        if (synth.paused) synth.resume();
+
+        const sel = document.getElementById(isDebaterOne ? "voiceSelectDebaterOne" : "voiceSelectDebaterTwo");
+        let voiceObj = null;
+        if (sel && sel.value !== "" && !isNaN(parseInt(sel.value))) {
+          voiceObj = allSystemVoices[parseInt(sel.value)];
+        }
+        if (!voiceObj && allSystemVoices.length > 0) {
+          voiceObj = isDebaterOne ? allSystemVoices[0] : (allSystemVoices[1] || allSystemVoices[0]);
+        }
+
+        const prosody = computeSentenceProsody(text, isDebaterOne);
+        const u = new SpeechSynthesisUtterance(spokenText);
+        if (voiceObj) u.voice = voiceObj;
+        u.pitch = prosody.pitch;
+        u.rate = prosody.rate;
+        u.volume = prosody.volume;
+
+        let finished = false;
+        let watchdog = null;
+        const done = () => {
+          if (!finished) {
+            finished = true;
+            if (watchdog) clearTimeout(watchdog);
+            window._activeUtteranceBin.delete(u);
+            resolve();
+          }
+        };
+
+        u.onstart = () => { document.getElementById("audioHealthLabel").innerText = "TTS: Speaking"; };
+        u.onend = () => { document.getElementById("audioHealthLabel").innerText = "TTS: Healthy"; done(); };
+        u.onerror = () => { done(); };
+
+        window._activeUtteranceBin.add(u);
+        const words = spokenText.split(/\s+/).length;
+        const safetyTimeout = Math.max(6500, words * 850);
+        watchdog = setTimeout(done, safetyTimeout);
+
+        try { synth.speak(u); } catch (e) { done(); }
+      });
+    }
+
+    function playSynchronousEmceeIntro(name1, name2, topic) {
+      return new Promise(resolve => {
+        if (!synth) { resolve(); return; }
+        const openers = [
+          `Welcome to the Roast Cellar after hours! Tonight we got ${name1} going head to head with ${name2}. Let's get toxic!`,
+          `Grab a drink and hide your feelings! Tonight in the pit: ${name1} versus ${name2}. No rules, no mercy, go!`,
+          `Live from the basement! It's ${name1} stepping up against ${name2}. Topic on the mic: ${topic}. Let's cook!`
+        ];
+        const introText = openers[Math.floor(Math.random() * openers.length)];
+        const u = new SpeechSynthesisUtterance(phoneticizeForTTS(introText));
+        u.rate = 1.08;
+        u.pitch = 1.0;
+        u.volume = 1.0;
+
+        let done = false;
+        const finish = () => { if (!done) { done = true; window._activeUtteranceBin.delete(u); resolve(); } };
+        u.onend = finish;
+        u.onerror = finish;
+        setTimeout(finish, 7500);
+        window._activeUtteranceBin.add(u);
+        try { synth.speak(u); } catch (e) { finish(); }
+      });
+    }
+
+    async function speakFullTurnTeleprompter(paragraphs, isDebaterOne, sessionId) {
+      const bubbleId = isDebaterOne ? "speechDebaterOne" : "speechDebaterTwo";
+      const suffix = isDebaterOne ? "L" : "C";
+      const autoSfxMode = document.getElementById("autoCrowdSfx")?.value || "wild";
+
+      for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+        const sentenceList = paragraphs[pIdx];
+        for (let sIdx = 0; sIdx < sentenceList.length; sIdx++) {
+          if (!isRunning || battleSessionId !== sessionId || skipRequested) return;
+          if (isPaused) await waitIfPaused();
+
+          const sentObj = sentenceList[sIdx];
+          highlightReadingSentence(bubbleId, sentObj.id);
+
+          await speakSentence(sentObj.text, isDebaterOne);
+          if (battleSessionId !== sessionId || skipRequested) return;
+
+          if (autoSfxMode !== "off") {
+            const isLastOfPara = sIdx === sentenceList.length - 1;
+            const hasExclaim = sentObj.text.trim().endsWith("!");
+            const lower = sentObj.text.toLowerCase();
+            if (isLastOfPara && hasExclaim) {
+              if (autoSfxMode === "wild" && Math.random() < 0.45) SoundFX.burnOooo();
+              else SoundFX.rimshot();
+            } else if (autoSfxMode === "wild" && (lower.includes("tinder") || lower.includes("overdraft") || lower.includes("momma") || lower.includes("daddy") || lower.includes("therapy"))) {
+              if (Math.random() < 0.4) SoundFX.cheer();
+            }
+          }
+
+          const basePause = parseInt(document.getElementById(`pauseSlider${suffix}`)?.value || "180", 10);
+          const extraBeat = sentObj.text.trim().endsWith("?") ? 140 : (sentObj.text.trim().endsWith("!") ? 120 : 0);
+          await new Promise(r => setTimeout(r, Math.max(40, basePause + extraBeat)));
+        }
+      }
+      clearSentenceHighlight(bubbleId);
+    }
+
+    function highlightReadingSentence(bubbleId, sentId) {
+      clearSentenceHighlight(bubbleId);
+      const span = document.getElementById(`${bubbleId}-sent-${sentId}`);
+      const bubble = document.getElementById(bubbleId);
+      if (span && bubble) {
+        span.classList.add("active-reading");
+        const bRect = bubble.getBoundingClientRect();
+        const sRect = span.getBoundingClientRect();
+        bubble.scrollTo({ top: bubble.scrollTop + (sRect.top - bRect.top) - (bubble.clientHeight / 2), behavior: "smooth" });
+      }
+    }
+
+    function clearSentenceHighlight(bubbleId) {
+      document.querySelectorAll(`#${bubbleId} .speech-sentence.active-reading`).forEach(el => el.classList.remove("active-reading"));
+    }
+
+    /* =========================================================================
+       7. ANTI-SCRIPTED ADULT COMEDY ENGINE & CALLBACK MEMORY
+       ========================================================================= */
+    let isRunning = false;
+    let isPaused = false;
+    let pauseResolver = null;
+    let currentRound = 1;
+    let activeHeckleText = "";
+    let prefetchPromise = null;
+    let abortController = null;
+    let recentJokesMemory = [];
+    let usedFallbackIds = new Set();
+
+    const COMEDY_FORMATS = [
+      "RAPID-FIRE BARRAGE: Hit 4 totally different brutal adult jokes back-to-back with sharp setup-twist pacing.",
+      "ABSURD HYPOTHETICAL: Paint an escalating, hilarious R-rated scenario of what happens when they try to go on a date or leave the house.",
+      "CROWD WORK & INTERVENTION: Talk straight to the audience like you're holding a public intervention for their pathetic life choices.",
+      "PETTY VISUAL ROAST: Tear apart hyper-specific details — their posture, haircut, bank account, cologne, and bedroom stamina.",
+      "FAKE CONFESSION / PLOT TWIST: Start like you're giving them a compliment or sympathy, then violently whip-crack into a savage punch line.",
+      "TOXIC THERAPY SESSION: Diagnose their daddy issues, dating failures, and delusion with ruthless comedy club energy.",
+      "UNEXPECTED FAMILY / ORIGIN STORY: Tell an outrageous adult joke about how they were raised or conceived — completely original, NO generic gravity/blood-test clichés."
+    ];
+
+    const ADULT_ANGLES = [
+      "horrible Tinder/Hinge profile & getting ghosted by spam bots",
+      "45-second bedroom stamina & asking 'did you finish?'",
+      "having $11.42 in checking and blaming the economy",
+      "questionable 3AM incognito browser history",
+      "backwards cap hiding a tragic hairline",
+      "bringing a coupon to a first date at Applebee's",
+      "living with a mattress on the floor and zero bedframe",
+      "fake hustle podcast nobody listens to",
+      "smelling like Axe body spray and poor decisions",
+      "still sharing a family phone plan at 34 years old",
+      "getting rejected in a drive-thru",
+      "terrible lower-back or tribal tattoos from 2009",
+      "crying in a Honda Civic during lunch break",
+      "sliding into DMs with 'hey bighead' at 2:17 AM",
+      "pretending to know wine while drinking bottom-shelf tequila",
+      "having the emotional intelligence of a wet toaster"
+    ];
+
+    function pickRandomSubset(arr, count) {
+      return [...arr].sort(() => Math.random() - 0.5).slice(0, count);
+    }
+
+    function generateRandomizedAdultFallback(nameCurrent, personaCurrent, nameOpponent, topic, heckle, round) {
+      const openers = [
+        `First of all, look at you sitting over there like an expired Groupon for bad decisions.`,
+        `I wasn't even gonna go hard tonight, then I saw the posture of somebody who still owes money to a prepaid phone company.`,
+        `Everybody give it up for the bravest person in the building — coming out in public with that haircut takes real delusion.`,
+        `You talk loud for somebody whose entire credit score looks like a bowling average.`,
+        `Look at that nervous little smile, that's the exact face somebody makes right before getting kicked out of an all-you-can-eat buffet.`,
+        `Bro, you look like the 'before' picture in a commercial for depression medication.`,
+        `Hold up, somebody check the door, I think a lost divorced dad wandered onto the stage.`,
+        `I love how confident you look for somebody whose Tinder bio is just three red flags and a blurry mirror selfie.`
+      ];
+
+      const middles = [
+        `Let's talk about your dating life, because it's a horror movie. You bring a girl home, she sees a bare mattress on the floor with one flat pillow, and suddenly her grandma's in the hospital! And when you actually manage to get somebody into bed, it's forty-five seconds of heavy breathing followed by 'so what are we?'`,
+        `You out here acting like a big shot, meanwhile your bank app sends you a wellness check every time you tap your card for a McChicken. Your Uber rating is so low the driver just slows down and yells 'tuck and roll!'`,
+        `Somebody told me you cleared out your browser history before coming tonight because even the FBI agent watching your webcam needed therapy. You're the only person in America whose incognito tab asks 'are you sure you want to do this again?'`,
+        `Why do you dress like you just lost custody in two different zip codes? Look at that outfit — that's the official uniform of 'hey, can I borrow twenty bucks till Friday?'`,
+        `Your momma saw you on the ultrasound and tried to ask the doctor for store credit. And your daddy's still out there looking for milk from 1997 because he saw your report card and chose witness protection!`,
+        `You got that fake-deep podcast voice like you're about to drop life advice, meanwhile your car makes three different dying whale noises just backing out of a driveway.`,
+        `Be honest with the crowd: how many women have blocked your number this month alone? You text 'you up?' at 2:14 AM and even the automated spam bot leaves you on read!`,
+        `You walk around bragging about your grind, bro your whole side hustle is returning half-eaten rotisserie chickens to Costco. Even your own shadow tries to walk three feet behind you so nobody knows you're together.`,
+        `I tried to read your vibe, and all I got was stale weed, unpaid parking tickets, and a Venmo request for half an appetizer. You're the human equivalent of stepping in something wet while wearing socks.`,
+        `Your family group chat literally has a separate chat without you in it just so they can laugh in peace. You look like you clap when the microwave hits zero.`
+      ];
+
+      const closers = [
+        `Take a seat before security mistakes you for lost property!`,
+        `Keep talking and I'll expose what's actually in your Notes app — don't test me!`,
+        `That wasn't even a roast, that was a public service announcement!`,
+        `Go ahead and grab the mic back, try not to choke like you do in real life!`,
+        `I'm done with you — go check your checking account and cry in the parking lot!`,
+        `Round ${round} and you're already sweating like a priest in a strip club!`
+      ];
+
+      function drawFresh(pool, prefix) {
+        let avail = pool.map((_, i) => i).filter(i => !usedFallbackIds.has(prefix + i));
+        if (avail.length === 0) {
+          pool.forEach((_, i) => usedFallbackIds.delete(prefix + i));
+          avail = pool.map((_, i) => i);
+        }
+        const idx = avail[Math.floor(Math.random() * avail.length)];
+        usedFallbackIds.add(prefix + idx);
+        return pool[idx];
+      }
+
+      const heckleLine = heckle
+        ? `Hold on, somebody in the front row just yelled "${heckle}" — and honestly, that heckler just ended your whole career faster than I could! `
+        : "";
+
+      const op = drawFresh(openers, "op");
+      const m1 = drawFresh(middles, "mid");
+      const m2 = drawFresh(middles, "mid");
+      const cl = drawFresh(closers, "cl");
+
+      return `${heckleLine}${op} ${m1} ${m2} ${cl}`;
+    }
+
+    function parseToTeleprompterParagraphs(text) {
+      const cleanedDialogue = cleanStageDirections(text);
+      const rawParas = cleanedDialogue.split(/\n\s*\n+/);
+      const paragraphs = [];
+      let sentIdCounter = 0;
+
+      rawParas.forEach(p => {
+        const cleanP = p.trim().replace(/^#{1,6}\s+.*$/gm, "");
+        if (!cleanP) return;
+        const rawSentences = cleanP.split(/(?<=[.?!])\s+/);
+        const sentList = [];
+        rawSentences.forEach(s => {
+          const cleanS = s.trim();
+          if (cleanS) sentList.push({ id: sentIdCounter++, text: cleanS });
+        });
+        if (sentList.length > 0) paragraphs.push(sentList);
+      });
+      return paragraphs;
+    }
+
+    function renderSpeechToBubble(bubbleId, paragraphs) {
+      const bubble = document.getElementById(bubbleId);
+      bubble.innerHTML = "";
+
+      paragraphs.forEach(pList => {
+        const pEl = document.createElement("div");
+        pEl.className = "speech-paragraph";
+        pList.forEach(sObj => {
+          const sSpan = document.createElement("span");
+          sSpan.className = "speech-sentence";
+          sSpan.id = `${bubbleId}-sent-${sObj.id}`;
+          let highlighted = sObj.text
+            .replace(/(yo mama[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`)
+            .replace(/(yo momma[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`)
+            .replace(/(yo daddy[^\n,.!?]*[.!?]?)/gi, `<span class="joke-tag">$1</span>`);
+          sSpan.innerHTML = highlighted + " ";
+          pEl.appendChild(sSpan);
+        });
+        bubble.appendChild(pEl);
+      });
+      bubble.scrollTop = 0;
+    }
+
+    async function callOllamaSmart(baseUrl, model, systemPrompt, userPrompt, numPredict, signal) {
+      const options = {
+        temperature: 1.06,
+        top_p: 0.94,
+        top_k: 65,
+        repeat_penalty: 1.28,
+        seed: Math.floor(Math.random() * 9999999),
+        num_predict: numPredict
+      };
+
+      let res = await fetch(`${baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal,
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          stream: false,
+          options
+        })
+      });
+
+      if (res.status === 404) {
+        const formatted = `<|im_start|>system\n${systemPrompt}<|im_end|>\n<|im_start|>user\n${userPrompt}<|im_end|>\n<|im_start|>assistant\n`;
+        res = await fetch(`${baseUrl}/api/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal,
+          body: JSON.stringify({ model, prompt: formatted, stream: false, options })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        return d.response || "";
+      }
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.message?.content || data.response || "";
+    }
+
+    async function prefetchNextSpeakerTurn(isDebaterOne, opponentCurrentSpeech, activeHeckle, round) {
+      const baseUrl = hostInput.value.trim().replace(/\/+$/, "");
+      const topic = document.getElementById("roastTopic").value.trim();
+      const model = isDebaterOne
+        ? document.getElementById("modelDebaterOne").value.trim()
+        : document.getElementById("modelDebaterTwo").value.trim();
+
+      const nameCurrent = document.getElementById(isDebaterOne ? "nameDebaterOne" : "nameDebaterTwo").value.trim();
+      const personaCurrent = document.getElementById(isDebaterOne ? "personaDebaterOne" : "personaDebaterTwo").value.trim();
+      const nameOpponent = document.getElementById(isDebaterOne ? "nameDebaterTwo" : "nameDebaterOne").value.trim();
+      const personaOpponent = document.getElementById(isDebaterOne ? "personaDebaterTwo" : "personaDebaterOne").value.trim();
+
+      const wordTarget = parseInt(document.getElementById("turnLengthSelect")?.value || "200", 10);
+      const numPredict = Math.round(wordTarget * 1.65);
+      const spice = document.getElementById("humorSpice")?.value || "raw_adult";
+
+      const spiceRules = {
+        raw_adult: "UNCENSORED LATE-NIGHT COMEDY CLUB (R-RATED / FILTHY ADULT): Don't hold back. Roast dating failures, bedroom disasters, weird kinks, broke lifestyles, shady browser history, toxic exes, and brutal personal flaws. Swear naturally like a real headliner (fuck, shit, ass, bitch) — NEVER censor with asterisks.",
+        r_rated: "LATE-NIGHT R-RATED CLUB: Sharp, edgy, filthy adult humor, clever sexual innuendo, ruthless insults, and zero corporate politeness.",
+        dark_observational: "DARK & TWISTED OBSERVATIONAL: Cynical, pitch-black adult humor, bizarrely specific hypotheticals, and existential burns.",
+        pg13: "TV ROAST BATTLE (PG-13): Brutally funny, creative, and sharp without heavy profanity."
+      };
+
+      const chosenFormat = COMEDY_FORMATS[Math.floor(Math.random() * COMEDY_FORMATS.length)];
+      const chosenAngles = pickRandomSubset(ADULT_ANGLES, 2);
+      const research = await executeLiveOnlineResearch(topic, isDebaterOne);
+
+      const heckleInstruction = activeHeckle
+        ? `\n🚨 LIVE HECKLE FROM FRONT ROW: "${activeHeckle}". Clap back at this heckle OR weaponize it in your opening line!\n`
+        : "";
+
+      const avoidMemory = recentJokesMemory.length > 0
+        ? `\nBANNED REPEATS (DO NOT REUSE ANY OF THESE RECENT CONCEPTS OR LINES):\n- ${recentJokesMemory.slice(-6).join("\n- ")}\n`
+        : "";
+
+      const systemPrompt = `You are ${nameCurrent} performing an unscripted set at an after-hours comedy roast club.
+YOUR VIBE: ${personaCurrent}.
+WHO YOU ARE ROASTING: The person across from you (${personaOpponent}).
+
+HUMOR RATING: ${spiceRules[spice]}
+
+CRITICAL ANTI-SCRIPTED RULES (READ CAREFULLY):
+1. STOP SAYING THEIR NAME CONSTANTLY: Use "you", "bro", "man", or talk to the crowd! Say their actual name ("${nameOpponent}") AT MOST ONCE in the entire set (or ZERO times). Never repeat their job description verbatim — make jokes ABOUT what they do instead of reading their bio out loud.
+2. NEVER SOUND LIKE A TEMPLATE: Do NOT follow a fixed "Part 1 / Part 2 Yo Mama / Part 3 Yo Daddy" checklist. Only drop a yo-mama or yo-daddy joke if it's genuinely twisted and original — NEVER use cliché "bends light", "ladder to an IQ test", or "blood test" jokes.
+3. THIS ROUND'S COMEDY FORMAT: ${chosenFormat}
+4. RANDOMIZED ADULT ANGLES TO WEAVE IN NATURALLY: ${chosenAngles.join(" AND ")}.
+5. LENGTH: Around ${wordTarget} words. Tight, punchy, conversational stand-up rhythm. Short setup, brutal surprise punch line.
+6. PURE SPOKEN WORDS ONLY: NO stage directions, NO asterisks (*laughs*), NO [brackets], NO emojis, NO speaker labels like "${nameCurrent}:". Just raw spoken microphone audio.${avoidMemory}`;
+
+      const researchHook = research ? `\nOPTIONAL WEIRD FACT TO TWIST INTO A DIRTY JOKE: "${research.title} — ${research.snippet}"\n` : "";
+
+      const userPrompt = `STAGE PREMISE: "${topic}"${researchHook}${heckleInstruction}
+WHAT THEY JUST SAID ON THE MIC (MOCK A SPECIFIC LINE OR CALLBACK FROM THIS IF RELEVANT):
+"${opponentCurrentSpeech.slice(0, 1200)}"
+
+Step up to the mic right now as ${nameCurrent} and murder them with original, spontaneous adult comedy:`;
+
+      abortController = new AbortController();
+
+      try {
+        const raw = await callOllamaSmart(baseUrl, model, systemPrompt, userPrompt, numPredict, abortController.signal);
+        let cleaned = cleanStageDirections(raw.replace(/<\|im_end\|>|<\|im_start\|>/gi, ""));
+        if (cleaned.split(/\s+/).length < 35) throw new Error("Response too short");
+
+        document.getElementById(isDebaterOne ? "sourceBadgeOne" : "sourceBadgeTwo").innerText = "Ollama AI";
+        recentJokesMemory.push(cleaned.slice(0, 130).replace(/\n/g, " "));
+        return cleaned;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.warn("AI fallback triggered:", err.message);
+        document.getElementById(isDebaterOne ? "sourceBadgeOne" : "sourceBadgeTwo").innerText = "Backup Deck";
+        return generateRandomizedAdultFallback(nameCurrent, personaCurrent, nameOpponent, topic, activeHeckle, round);
+      }
+    }
+
+    /* =========================================================================
+       8. MAIN ROAST ARENA ENGINE
+       ========================================================================= */
+    async function startRoastArena() {
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+      getAudioCtx();
+      await resetSpeechAudioHardware();
+      stopRoastArena();
+
+      const thisSessionId = ++battleSessionId;
+      isRunning = true;
+      isPaused = false;
+      skipRequested = false;
+      currentRound = 1;
+      transcriptHistory = [];
+      recentJokesMemory = [];
+
+      syncCompetitorTitles();
+
+      document.getElementById("btnStart").disabled = true;
+      document.getElementById("btnPause").disabled = false;
+      document.getElementById("btnSkip").disabled = false;
+      document.getElementById("btnStop").disabled = false;
+
+      const roundMode = document.getElementById("roundMode").value;
+      const maxRounds = roundMode === "unlimited" ? Infinity : parseInt(roundMode, 10);
+      document.getElementById("roundMaxLabel").innerText = roundMode === "unlimited" ? "ROUNDS (∞)" : `ROUNDS OF ${maxRounds}`;
+
+      SoundFX.bellDing();
+
+      const name1 = document.getElementById("nameDebaterOne").value.trim();
+      const name2 = document.getElementById("nameDebaterTwo").value.trim();
+      const topic = document.getElementById("roastTopic").value.trim();
+
+      document.getElementById("globalState").innerText = "Emcee Opening Stage...";
+      const emceePromise = playSynchronousEmceeIntro(name1, name2, topic);
+
+      let lastSpeech = `Tonight's topic is "${topic}". Tear into them with zero mercy.`;
+
+      try {
+        document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name1} Cooking...`;
+        const initialSpeechPromise = prefetchNextSpeakerTurn(true, lastSpeech, activeHeckleText, currentRound);
+
+        await Promise.all([emceePromise, initialSpeechPromise]);
+        let currentSpeechText = await initialSpeechPromise;
+
+        if (battleSessionId !== thisSessionId || !isRunning) return;
+        if (activeHeckleText) clearActiveHeckle();
+
+        while (isRunning && currentRound <= maxRounds && battleSessionId === thisSessionId) {
+          document.getElementById("roundDisplay").innerText = currentRound;
+          skipRequested = false;
+
+          // --- TURN 1 ---
+          const paragraphs1 = parseToTeleprompterParagraphs(currentSpeechText);
+          lastTurnParagraphs.one = paragraphs1;
+          renderSpeechToBubble("speechDebaterOne", paragraphs1);
+          updateDamage(true);
+          setCardSpeakingState(true, true);
+          recordTranscript(name1, currentSpeechText);
+
+          document.getElementById("cardDebaterTwo").classList.add("preloading-speech");
+          document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name2} Cooking...`;
+
+          prefetchPromise = prefetchNextSpeakerTurn(false, currentSpeechText, activeHeckleText, currentRound)
+            .then(res => {
+              if (battleSessionId === thisSessionId) document.getElementById("pipelineLabel").innerText = "Pre-Gen: Ready ⚡";
+              return res;
+            });
+
+          document.getElementById("globalState").innerText = `${name1} on Mic • ${name2} Writing...`;
+          await speakFullTurnTeleprompter(paragraphs1, true, thisSessionId);
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+
+          setCardSpeakingState(true, false);
+          document.getElementById("cardDebaterTwo").classList.remove("preloading-speech");
+          skipRequested = false;
+
+          // --- HANDOFF TO TURN 2 ---
+          document.getElementById("globalState").innerText = `Mic Pass → ${name2}`;
+          SoundFX.recordScratch();
+
+          let speechText2 = await prefetchPromise;
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+          if (activeHeckleText) clearActiveHeckle();
+
+          const paragraphs2 = parseToTeleprompterParagraphs(speechText2);
+          lastTurnParagraphs.two = paragraphs2;
+          renderSpeechToBubble("speechDebaterTwo", paragraphs2);
+          updateDamage(false);
+          setCardSpeakingState(false, true);
+          recordTranscript(name2, speechText2);
+
+          document.getElementById("cardDebaterOne").classList.add("preloading-speech");
+          document.getElementById("pipelineLabel").innerText = `Pre-Gen: ${name1} Cooking...`;
+
+          prefetchPromise = prefetchNextSpeakerTurn(true, speechText2, activeHeckleText, currentRound + 1)
+            .then(res => {
+              if (battleSessionId === thisSessionId) document.getElementById("pipelineLabel").innerText = "Pre-Gen: Ready ⚡";
+              return res;
+            });
+
+          document.getElementById("globalState").innerText = `${name2} on Mic • ${name1} Writing...`;
+          await speakFullTurnTeleprompter(paragraphs2, false, thisSessionId);
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+
+          setCardSpeakingState(false, false);
+          document.getElementById("cardDebaterOne").classList.remove("preloading-speech");
+          skipRequested = false;
+
+          // --- NEXT ROUND ---
+          SoundFX.bellDing();
+          currentSpeechText = await prefetchPromise;
+          if (battleSessionId !== thisSessionId || !isRunning) break;
+          if (activeHeckleText) clearActiveHeckle();
+
+          currentRound++;
+        }
+
+        if (isRunning && battleSessionId === thisSessionId) {
+          SoundFX.cheer();
+          document.getElementById("globalState").innerText = "Standing Ovation! Show Over!";
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Roast error:", err);
+          document.getElementById("globalState").innerText = `Error: ${err.message}`;
+        }
+      } finally {
+        if (battleSessionId === thisSessionId) stopRoastArena();
+      }
+    }
+
+    function skipCurrentSpeaker() {
+      if (!isRunning) return;
+      skipRequested = true;
+      if (synth) synth.cancel();
+      SoundFX.recordScratch();
+      showToast("⏭ Skipping to next comic!");
+    }
+
+    function setCardSpeakingState(isDebaterOne, isSpeaking) {
+      const card = document.getElementById(isDebaterOne ? "cardDebaterOne" : "cardDebaterTwo");
+      card.classList.toggle("active-speaker", isSpeaking);
+    }
+
+    let dmgOne = 15;
+    let dmgTwo = 15;
+    function updateDamage(isDebaterOneTurn) {
+      if (isDebaterOneTurn) {
+        dmgTwo = Math.min(100, dmgTwo + Math.floor(Math.random() * 20) + 12);
+        document.getElementById("dmgFillDebaterTwo").style.width = `${dmgTwo}%`;
+        document.getElementById("dmgLabelDebaterTwo").innerText = `${dmgTwo}%`;
+      } else {
+        dmgOne = Math.min(100, dmgOne + Math.floor(Math.random() * 20) + 12);
+        document.getElementById("dmgFillDebaterOne").style.width = `${dmgOne}%`;
+        document.getElementById("dmgLabelDebaterOne").innerText = `${dmgOne}%`;
+      }
+    }
+
+    /* =========================================================================
+       9. LIVE HECKLE & TRANSCRIPT TOOLS
+       ========================================================================= */
+    function submitLiveHeckle(interruptNow = false) {
+      const input = document.getElementById("heckleInput");
+      const val = input.value.trim();
+      if (!val) return;
+
+      activeHeckleText = val;
+      input.value = "";
+
+      const banner = document.getElementById("heckleBanner");
+      document.getElementById("heckleBannerText").innerText = `"${val}"`;
+      banner.style.display = "flex";
+
+      SoundFX.boo();
+      showToast(`📣 Heckle tossed: "${val}"`);
+
+      if (interruptNow && isRunning) {
+        SoundFX.micDrop();
+        skipRequested = true;
+        if (synth) synth.cancel();
+      }
+    }
+
+    function clearActiveHeckle() {
+      activeHeckleText = "";
+      document.getElementById("heckleBanner").style.display = "none";
+    }
+
+    function recordTranscript(speakerName, speechText) {
+      transcriptHistory.push({
+        round: currentRound,
+        speaker: speakerName,
+        text: cleanStageDirections(speechText),
+        timestamp: new Date().toLocaleTimeString()
+      });
+    }
+
+    function generateFormattedTranscript() {
+      const topic = document.getElementById("roastTopic").value;
+      let out = `=== THE COMEDY ROAST CELLAR AFTER-HOURS ===\nTOPIC: "${topic}"\nDATE: ${new Date().toLocaleString()}\n\n`;
+      transcriptHistory.forEach(t => {
+        out += `[ROUND ${t.round}] ${t.speaker} (${t.timestamp}):\n${t.text}\n\n`;
+      });
+      return out;
+    }
+
+    async function copyFullTranscript() {
+      const text = generateFormattedTranscript();
+      if (!text || transcriptHistory.length === 0) {
+        showToast("⚠️ No roasts recorded yet!");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("📋 Transcript copied!");
+      } catch (e) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 Transcript copied!");
+      }
+    }
+
+    async function shareTranscript() {
+      const text = generateFormattedTranscript();
+      if (!text || transcriptHistory.length === 0) {
+        showToast("⚠️ No roasts recorded yet!");
+        return;
+      }
+      if (navigator.share) {
+        try { await navigator.share({ title: "Comedy Roast Cellar Transcript", text }); } catch (e) {}
+      } else {
+        copyFullTranscript();
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toastMsg");
+      t.innerText = msg;
+      t.style.display = "block";
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { t.style.display = "none"; }, 3200);
+    }
+
+    /* =========================================================================
+       10. PAUSE & STOP CONTROLS
+       ========================================================================= */
+    function togglePauseRoast() {
+      if (!isRunning) return;
+      isPaused = !isPaused;
+      const btn = document.getElementById("btnPause");
+      if (isPaused) {
+        btn.innerText = "▶ Resume";
+        if (synth && synth.speaking) synth.pause();
+        if (CypherBeat.isPlaying) CypherBeat.stop();
+        document.getElementById("globalState").innerText = "Cellar Paused";
+      } else {
+        btn.innerText = "⏸ Pause";
+        if (synth && synth.paused) synth.resume();
+        if (document.getElementById("btnToggleBeat").classList.contains("active-glow")) CypherBeat.start();
+        if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+        document.getElementById("globalState").innerText = "Cellar Resumed";
+      }
+    }
+
+    function waitIfPaused() {
+      if (!isPaused) return Promise.resolve();
+      return new Promise(r => { pauseResolver = r; });
+    }
+
+    function stopRoastArena() {
+      isRunning = false;
+      isPaused = false;
+      skipRequested = false;
+      battleSessionId++;
+      if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+      if (abortController) abortController.abort();
+      if (synth) synth.cancel();
+      window._activeUtteranceBin.clear();
+
+      document.getElementById("btnStart").disabled = false;
+      document.getElementById("btnPause").disabled = true;
+      document.getElementById("btnPause").innerText = "⏸ Pause";
+      document.getElementById("btnSkip").disabled = true;
+      document.getElementById("btnStop").disabled = true;
+
+      document.getElementById("cardDebaterOne").classList.remove("active-speaker", "preloading-speech");
+      document.getElementById("cardDebaterTwo").classList.remove("active-speaker", "preloading-speech");
+      document.getElementById("pipelineLabel").innerText = "Pre-Gen Engine: Armed";
+      document.getElementById("globalState").innerText = "Show Concluded";
+    }
+
+    function toggleConfigAccordion() {
+      const p = document.getElementById("configPanel");
+      const c = document.getElementById("accordionChevron");
+      p.classList.toggle("collapsed");
+      c.innerText = p.classList.contains("collapsed") ? "▼ Expand" : "▲ Collapse";
+    }
+
+    function toggleAuraDrawer() {
+      document.getElementById("auraPadDrawer").classList.toggle("collapsed");
+    }
+
+    syncCompetitorTitles();
+    updateStatusBadge();
+  </script>
+</body>
+</html>
